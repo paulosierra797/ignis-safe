@@ -1,0 +1,70 @@
+.about {
+  padding: 2.5rem 0;
+  background: #ffffff;
+  scroll-margin-top: 90px;
+}
+
+.about-container {
+  max-width: none;
+  margin: 0;
+  padding: 2.5rem 3rem;
+  background: #f7f7f7;
+  border: 1px solid #e9e9e9;
+  border-radius: 16px;
+}
+
+.about-container > h2 {
+  font-size: 1.7rem;
+  font-weight: bold;
+  color: #8B0000;
+  margin: 0 0 1rem 0;
+}
+
+.about-intro {
+  font-size: 1rem;
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 1.75rem;
+}
+
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+}
+
+.value-card {
+  padding: 1.5rem;
+  background: #ffffff;
+  border-radius: 0.75rem;
+  border: 1px solid #ededed;
+}
+
+.value-card.highlight {
+   background: #ffffff;
+  
+}
+
+.value-card h3 {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #8B0000;
+  margin: 0 0 0.9rem 0;
+}
+
+.value-card p {
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0;
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .values-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-container > h2 {
+    font-size: 1.5rem;
+  }
+}

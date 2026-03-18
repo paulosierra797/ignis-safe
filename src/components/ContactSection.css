@@ -1,0 +1,132 @@
+.contact {
+  padding: 2rem 0;
+  background: white;
+  scroll-margin-top: 90px;
+}
+
+.contact-container {
+  max-width: none;
+  margin: 0;
+  padding: 0 2rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.contact-image .image-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: linear-gradient(135deg, #ddd 0%, #999 100%);
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  color: white;
+  font-weight: bold;
+}
+
+.contact-content h2 {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 2rem 0;
+}
+
+.emergency-title {
+  margin-bottom: 2rem;
+}
+
+.emergency-title h3 {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+}
+
+.phone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #DC143C;
+  margin: 0;
+}
+
+.hotline-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  line-height: 1.4;
+}
+
+.hotline-icon {
+  font-size: 1.1rem;
+}
+
+.hotline-label {
+  font-weight: 800;
+}
+
+.hotline-separator {
+  opacity: 0.7;
+}
+
+.phone a {
+  color: #DC143C;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.phone a:hover {
+  text-decoration: underline;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.info-item label {
+  font-weight: bold;
+  color: #333;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.info-item a {
+  color: #DC143C;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: opacity 0.3s;
+}
+
+.info-item a:hover {
+  opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+  .contact-container {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-content h2 {
+    font-size: 1.3rem;
+  }
+
+  .phone {
+    font-size: 1.1rem;
+  }
+}

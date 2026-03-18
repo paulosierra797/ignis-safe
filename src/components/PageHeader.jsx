@@ -1,0 +1,121 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { FaSearch } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
+import './PageHeader.css';
+
+const formatRoleLabel = (role) => {
+  if (!role) {
+    return 'User';
+  }
+
+  return role
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+const getDisplayName = (currentUser) => {
+  if (!currentUser) {
+    return 'User';
+  }
+
+  const fullName = [currentUser.first_name, currentUser.last_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+  const baseName = fullName || currentUser.name || currentUser.email || 'User';
+
+  return `${currentUser.rank || ''} ${baseName}`.trim();
+};
+
+const PageHeader = ({
+  title,
+  searchQuery = '',
+  onSearchChange = () => {},
+  userName,
+  userRole,
+  userAvatar,
+  variant = 'admin',
+  showSearch = true
+}) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const navigate = useNavigate();
+  const { currentUser, logout } = useUser();
+
+  const resolvedUserName = userName ?? getDisplayName(currentUser);
+  const resolvedUserRole = userRole ?? formatRoleLabel(currentUser?.role);
+  const resolvedUserAvatar = userAvatar ?? currentUser?.avatar_url ?? '/user-avatar.png';
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+
+  const variantClass = variant ? `page-header--${variant}` : '';
+  const showAvatar = variant !== 'admin';
+
+  return (
+    <div className={`page-header ${variantClass}`}>
+      <h1 className="page-title">{title}</h1>
+      <div className="page-header-right">
+        {showSearch && (
+          <div className="page-search">
+            <FaSearch className="page-search-icon" />
+            <input
+              type="text"
+              placeholder="Search for anything..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
+          </div>
+        )}
+        <div className="page-user-container" ref={dropdownRef}>
+          <div 
+            className={`page-user ${showAvatar ? '' : 'page-user--no-avatar'}`.trim()} 
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          >
+            {showAvatar && (
+              <img
+                src={resolvedUserAvatar}
+                alt="User"
+                className="page-user-avatar"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = '/user-avatar.png';
+                }}
+              />
+            )}
+            <div className="page-user-info">
+              <span className="page-user-name">{resolvedUserName}</span>
+              <span className="page-user-role">{resolvedUserRole}</span>
+            </div>
+            <span className="page-user-arrow">▼</span>
+          </div>
+          {isDropdownOpen && (
+            <div className="page-user-dropdown">
+              <button className="dropdown-item" onClick={handleLogout}>
+               
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PageHeader;

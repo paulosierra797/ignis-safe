@@ -1,0 +1,228 @@
+.audit-logs-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  font-family: 'Poppins', sans-serif;
+}
+
+.audit-logs-main {
+  flex: 1;
+  margin-left: 250px;
+  padding: 2rem;
+}
+
+.audit-logs-filters {
+  margin-bottom: 1.5rem;
+}
+
+.audit-logs-filter-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+  gap: 1rem;
+  background: white;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  border: 1px solid #e2e8f0;
+  align-items: center;
+}
+
+.audit-logs-search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.audit-logs-search-icon {
+  position: absolute;
+  left: 1rem;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.audit-logs-search-input {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem 0.7rem 2.5rem;
+  font-size: 0.9rem;
+  background: #f9fafb;
+  color: #4b5563;
+  outline: none;
+}
+
+.audit-logs-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.audit-logs-filter {
+  display: flex;
+  align-items: center;
+}
+
+.audit-logs-select {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  font-size: 0.9rem;
+  background: white;
+  color: #4b5563;
+  outline: none;
+  cursor: pointer;
+}
+
+.audit-logs-datepicker-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.audit-logs-datepicker {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.7rem 2.5rem 0.7rem 0.9rem;
+  font-size: 0.9rem;
+  background: white;
+  color: #4b5563;
+  outline: none;
+  cursor: pointer;
+}
+
+.audit-logs-calendar-icon {
+  position: absolute;
+  right: 1.1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  font-size: 1rem;
+  pointer-events: none;
+}
+
+.audit-logs-clear {
+  border: none;
+  background: #e2e8f0;
+  color: #475569;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 0.7rem 1.5rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.audit-logs-table-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  overflow-x: auto;
+}
+
+.audit-logs-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1000px;
+}
+
+.audit-logs-table thead {
+  background: #b91c1c;
+}
+
+.audit-logs-table thead th {
+  padding: 0.9rem 1rem;
+  text-align: left;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: white;
+  font-weight: 700;
+}
+
+.audit-logs-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.audit-logs-table tbody td {
+  padding: 1rem;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.audit-logs-action-badge {
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.audit-logs-action-badge.registration {
+  background: #a855f7;
+  color: white;
+}
+
+.audit-logs-action-badge.edit {
+  background: #fbbf24;
+  color: #1f2937;
+}
+
+.audit-logs-action-badge.submission {
+  background: #22c55e;
+  color: white;
+}
+
+.audit-logs-action-badge.archive {
+  background: #64748b;
+  color: white;
+}
+
+.audit-logs-action-badge.export {
+  background: #0ea5e9;
+  color: white;
+}
+
+.audit-logs-status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.audit-logs-status-badge.success {
+  background: #22c55e;
+  color: white;
+}
+
+.audit-logs-status-badge.failed {
+  background: #ef4444;
+  color: white;
+}
+
+.audit-logs-status-badge.pending {
+  background: #fbbf24;
+  color: #1f2937;
+}
+
+@media (max-width: 1100px) {
+  .audit-logs-filter-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .audit-logs-search-wrapper {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .audit-logs-main {
+    margin-left: 0;
+  }
+}

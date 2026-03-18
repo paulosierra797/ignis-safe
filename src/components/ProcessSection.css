@@ -1,0 +1,109 @@
+.process {
+  padding: 2rem 0;
+  background: #f5f5f5;
+}
+
+.process-container {
+  max-width: none;
+  margin: 0;
+  position: relative;
+  padding: 0 2rem;
+}
+
+.process-container > h2 {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 1rem 0;
+}
+
+.tagalog-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: #DC143C;
+  color: white;
+  border: none;
+  padding: 0.45rem 1rem;
+  font-weight: 600;
+  border-radius: 0.3rem;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.tagalog-btn:hover {
+  background: #8B0000;
+}
+
+.process-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.process-column {
+  background: white;
+  padding: 1.25rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.process-column h3 {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #8B0000;
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+}
+
+.steps-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.steps-list li {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+
+.steps-list li:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  background: #DC143C;
+  color: white;
+  border-radius: 50%;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.step-text {
+  color: #666;
+  line-height: 1.6;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .process-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tagalog-btn {
+    position: static;
+    width: 100%;
+    margin-bottom: 2rem;
+  }
+}

@@ -1,0 +1,1015 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ignis-Safe Test Cases Documentation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #2980b9;
+            font-weight: bold;
+        }
+        td {
+            padding: 10px;
+            border: 1px solid #bdc3c7;
+            vertical-align: top;
+        }
+        tr:nth-child(even) {
+            background-color: #ecf0f1;
+        }
+        .module-header {
+            background-color: #34495e;
+            color: white;
+            padding: 10px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .scenario-id {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <h1>IGNIS-SAFE APPLICATION</h1>
+    <p class="subtitle">Test Cases Documentation</p>
+    <p class="subtitle">Version 1.0 | Date: March 10, 2026</p>
+
+    <!-- Landing Page Module -->
+    <div class="module-header">MODULE 1: LANDING PAGE</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">001</td>
+                <td>Navigation Menu</td>
+                <td>Allow users to navigate to the Home section using the Home link</td>
+                <td>Page scrolls to Home section</td>
+                <td>Click Home</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">002</td>
+                <td>Navigation Menu</td>
+                <td>Allow users to navigate to the About section using the About link</td>
+                <td>Page scrolls to About section</td>
+                <td>Click About</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">003</td>
+                <td>Navigation Menu</td>
+                <td>Allow users to navigate to the contact us section using the Contact link</td>
+                <td>Page scrolls to Contact section</td>
+                <td>Click Contact us</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">004</td>
+                <td>Navigation Menu</td>
+                <td>Allow users to navigate to the FAQ page using the FAQ link</td>
+                <td>Page scrolls to FAQ section</td>
+                <td>Click FAQ</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">005</td>
+                <td>Hero Section</td>
+                <td>Allow users to navigate to the Login page using the Login button</td>
+                <td>Page redirects to Login Page</td>
+                <td>Click Login button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">006</td>
+                <td>Hero Section</td>
+                <td>Display hero section with application title and description</td>
+                <td>Hero section displays properly with text and visuals</td>
+                <td>Load landing page</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">007</td>
+                <td>About Section</td>
+                <td>Display information about the application and its purpose</td>
+                <td>About section displays properly with descriptive text</td>
+                <td>Scroll to About section</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">008</td>
+                <td>Process Section</td>
+                <td>Display the step-by-step process of how to use the application</td>
+                <td>Process steps display in proper order</td>
+                <td>Scroll to Process section</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">009</td>
+                <td>Contact Section</td>
+                <td>Display contact information and contact form</td>
+                <td>Contact section displays with form fields</td>
+                <td>Scroll to Contact section</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">010</td>
+                <td>FAQ Section</td>
+                <td>Allow users to view frequently asked questions</td>
+                <td>FAQ items display and expand when clicked</td>
+                <td>Click FAQ question</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">011</td>
+                <td>Footer</td>
+                <td>Display footer with copyright and additional links</td>
+                <td>Footer displays at bottom of page</td>
+                <td>Scroll to bottom</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Authentication Module -->
+    <div class="module-header">MODULE 2: AUTHENTICATION & LOGIN</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">101</td>
+                <td>Email Login</td>
+                <td>Allow users to login using valid email and password</td>
+                <td>User is authenticated and redirected to Dashboard/Profile based on role</td>
+                <td>Enter email, password, click Login</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">102</td>
+                <td>Email Login</td>
+                <td>Prevent login with invalid credentials</td>
+                <td>Error message displays "Invalid credentials"</td>
+                <td>Enter wrong email/password</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">103</td>
+                <td>Email Login</td>
+                <td>Prevent login with empty email field</td>
+                <td>Validation error displays</td>
+                <td>Leave email empty, enter password</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">104</td>
+                <td>Email Login</td>
+                <td>Prevent login with empty password field</td>
+                <td>Validation error displays</td>
+                <td>Enter email, leave password empty</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">105</td>
+                <td>Password Visibility</td>
+                <td>Allow users to toggle password visibility</td>
+                <td>Password text becomes visible/hidden</td>
+                <td>Click eye icon</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">106</td>
+                <td>Google OAuth</td>
+                <td>Allow users to login using Google account</td>
+                <td>Google OAuth popup opens, user authenticates and is redirected</td>
+                <td>Click "Sign in with Google"</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">107</td>
+                <td>Forgot Password</td>
+                <td>Allow users to request password reset link</td>
+                <td>Password reset email is sent to user's email</td>
+                <td>Click "Forgot Password", enter email</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">108</td>
+                <td>Password Reset</td>
+                <td>Allow users to set new password after receiving reset link</td>
+                <td>User sets new password and can login</td>
+                <td>Enter new password, confirm password</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">109</td>
+                <td>Role-Based Navigation</td>
+                <td>Redirect Admin users to Dashboard after login</td>
+                <td>Admin user redirected to /dashboard</td>
+                <td>Login as admin user</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">110</td>
+                <td>Role-Based Navigation</td>
+                <td>Redirect Personnel users to Profile after login</td>
+                <td>Personnel user redirected to /personnel/profile</td>
+                <td>Login as personnel user</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">111</td>
+                <td>Role-Based Navigation</td>
+                <td>Redirect Intel Unit users to Reports after login</td>
+                <td>Intel Unit user redirected to /intel-unit/reports</td>
+                <td>Login as intel-unit user</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">112</td>
+                <td>Logout</td>
+                <td>Allow users to logout from the application</td>
+                <td>User is logged out and redirected to login page</td>
+                <td>Click Logout button</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Dashboard Module -->
+    <div class="module-header">MODULE 3: DASHBOARD (ADMIN)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">201</td>
+                <td>Dashboard Overview</td>
+                <td>Display personnel overview metrics</td>
+                <td>Total personnel, active/inactive counts display accurately</td>
+                <td>Navigate to Dashboard</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">202</td>
+                <td>Dashboard Overview</td>
+                <td>Display on-duty status metrics</td>
+                <td>On-duty and off-duty personnel counts display</td>
+                <td>View dashboard metrics</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">203</td>
+                <td>Search Function</td>
+                <td>Allow users to search for specific data</td>
+                <td>Search results filter based on input</td>
+                <td>Enter search query in search bar</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">204</td>
+                <td>Sidebar Navigation</td>
+                <td>Allow navigation to Analytics page</td>
+                <td>Page redirects to Analytics</td>
+                <td>Click Analytics in sidebar</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">205</td>
+                <td>Sidebar Navigation</td>
+                <td>Allow navigation to Reports page</td>
+                <td>Page redirects to Reports</td>
+                <td>Click Reports in sidebar</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">206</td>
+                <td>Sidebar Navigation</td>
+                <td>Allow navigation to Accounts page</td>
+                <td>Page redirects to Accounts</td>
+                <td>Click Accounts in sidebar</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">207</td>
+                <td>Sidebar Navigation</td>
+                <td>Allow navigation to Users page</td>
+                <td>Page redirects to Users</td>
+                <td>Click Users in sidebar</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">208</td>
+                <td>Sidebar Navigation</td>
+                <td>Allow navigation to Progress page</td>
+                <td>Page redirects to Progress</td>
+                <td>Click Progress in sidebar</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">209</td>
+                <td>Sidebar Navigation</td>
+                <td>Allow navigation to Audit Logs page</td>
+                <td>Page redirects to Audit Logs</td>
+                <td>Click Audit Logs in sidebar</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">210</td>
+                <td>Page Header</td>
+                <td>Display current page title</td>
+                <td>Page header shows "Dashboard"</td>
+                <td>View page header</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Analytics Module -->
+    <div class="module-header">MODULE 4: ANALYTICS</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">301</td>
+                <td>Activity Trends Chart</td>
+                <td>Display activity trends over time</td>
+                <td>Chart displays with accurate data visualization</td>
+                <td>Navigate to Analytics page</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">302</td>
+                <td>Training Progress Chart</td>
+                <td>Display training progress statistics</td>
+                <td>Chart shows training completion rates</td>
+                <td>View training progress section</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">303</td>
+                <td>User Overview Chart</td>
+                <td>Display user distribution and statistics</td>
+                <td>Chart shows user roles and counts</td>
+                <td>View user overview section</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">304</td>
+                <td>Performance Chart</td>
+                <td>Display performance metrics</td>
+                <td>Chart shows performance data with trends</td>
+                <td>View performance section</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">305</td>
+                <td>Completion Simulation Chart</td>
+                <td>Display completion simulation data</td>
+                <td>Chart shows projected completion rates</td>
+                <td>View completion simulation section</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">306</td>
+                <td>Date Filter</td>
+                <td>Allow filtering analytics by date range</td>
+                <td>Charts update based on selected date range</td>
+                <td>Select date range from filter</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">307</td>
+                <td>Export Data</td>
+                <td>Allow exporting analytics data</td>
+                <td>Data exports to CSV/Excel format</td>
+                <td>Click Export button</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Reports Module -->
+    <div class="module-header">MODULE 5: REPORTS & INVESTIGATION</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">401</td>
+                <td>View Reports</td>
+                <td>Display list of all investigation reports</td>
+                <td>Report list displays with key information</td>
+                <td>Navigate to Reports page</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">402</td>
+                <td>Create Report</td>
+                <td>Allow users to create new investigation report</td>
+                <td>Report creation form opens</td>
+                <td>Click "New Report" button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">403</td>
+                <td>Create Report</td>
+                <td>Save new investigation report with valid data</td>
+                <td>Report is saved and appears in list</td>
+                <td>Fill form, click Save</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">404</td>
+                <td>Create Report</td>
+                <td>Prevent saving report with missing required fields</td>
+                <td>Validation errors display</td>
+                <td>Submit form with empty required fields</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">405</td>
+                <td>Edit Report</td>
+                <td>Allow users to edit existing report</td>
+                <td>Report edit form opens with existing data</td>
+                <td>Click Edit icon on report</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">406</td>
+                <td>Edit Report</td>
+                <td>Save changes to existing report</td>
+                <td>Report updates with new information</td>
+                <td>Modify fields, click Save</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">407</td>
+                <td>Delete Report</td>
+                <td>Allow users to delete report</td>
+                <td>Confirmation prompt appears</td>
+                <td>Click Delete icon on report</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">408</td>
+                <td>Delete Report</td>
+                <td>Confirm deletion of report</td>
+                <td>Report is removed from list</td>
+                <td>Click Confirm on delete prompt</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">409</td>
+                <td>View Report Details</td>
+                <td>Display full details of selected report</td>
+                <td>Report detail view opens with all information</td>
+                <td>Click on report in list</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">410</td>
+                <td>Search Reports</td>
+                <td>Allow searching reports by keyword</td>
+                <td>Report list filters based on search query</td>
+                <td>Enter search term in search bar</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">411</td>
+                <td>Filter Reports</td>
+                <td>Allow filtering reports by status/date</td>
+                <td>Report list filters based on criteria</td>
+                <td>Select filter options</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Attendance Module -->
+    <div class="module-header">MODULE 6: ATTENDANCE MANAGEMENT</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">501</td>
+                <td>Attendance Login</td>
+                <td>Allow personnel to login to attendance system</td>
+                <td>Personnel authenticated and redirected to scan page</td>
+                <td>Enter credentials, click Login</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">502</td>
+                <td>QR Code Scan</td>
+                <td>Allow personnel to scan QR code for attendance</td>
+                <td>Camera opens for QR scanning</td>
+                <td>Click "Scan QR Code" button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">503</td>
+                <td>QR Code Scan</td>
+                <td>Process valid QR code scan</td>
+                <td>Attendance record created, confirmation shown</td>
+                <td>Scan valid QR code</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">504</td>
+                <td>QR Code Scan</td>
+                <td>Reject invalid QR code</td>
+                <td>Error message displays "Invalid QR Code"</td>
+                <td>Scan invalid/expired QR code</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">505</td>
+                <td>Attendance Confirmation</td>
+                <td>Display attendance confirmation with details</td>
+                <td>Confirmation page shows time, date, location</td>
+                <td>Complete attendance scan</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">506</td>
+                <td>Attendance Admin</td>
+                <td>Display attendance records for all personnel</td>
+                <td>Table shows all attendance records</td>
+                <td>Navigate to Attendance Admin</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">507</td>
+                <td>Attendance Admin</td>
+                <td>Filter attendance records by date</td>
+                <td>Records filter based on selected date</td>
+                <td>Select date from date picker</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">508</td>
+                <td>Attendance Admin</td>
+                <td>Filter attendance records by personnel</td>
+                <td>Records filter for selected personnel</td>
+                <td>Select personnel from dropdown</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">509</td>
+                <td>Attendance Admin</td>
+                <td>Export attendance records</td>
+                <td>Attendance data exports to Excel/CSV</td>
+                <td>Click Export button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">510</td>
+                <td>Attendance Personnel View</td>
+                <td>Display attendance history for logged-in personnel</td>
+                <td>Table shows personal attendance records</td>
+                <td>Navigate to Attendance Personnel</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Intel Unit Module -->
+    <div class="module-header">MODULE 7: INTEL UNIT</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">601</td>
+                <td>Intel Reports</td>
+                <td>Display list of intelligence reports</td>
+                <td>Report list displays for intel unit users</td>
+                <td>Navigate to Intel Unit Reports</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">602</td>
+                <td>Intel Reports</td>
+                <td>Create new intelligence report</td>
+                <td>Report form opens for data entry</td>
+                <td>Click "Create Report" button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">603</td>
+                <td>Intel Profile</td>
+                <td>Display intel unit user profile</td>
+                <td>Profile page shows user information</td>
+                <td>Navigate to Intel Unit Profile</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">604</td>
+                <td>Intel Profile</td>
+                <td>Allow editing profile information</td>
+                <td>Profile fields become editable</td>
+                <td>Click Edit Profile button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">605</td>
+                <td>Intel Archive</td>
+                <td>Display archived intelligence reports</td>
+                <td>Archived report list displays</td>
+                <td>Navigate to Intel Unit Archive</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">606</td>
+                <td>Intel Archive</td>
+                <td>Search archived reports</td>
+                <td>Archive list filters based on search</td>
+                <td>Enter search query</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">607</td>
+                <td>Intel Audit Logs</td>
+                <td>Display audit logs for intel unit actions</td>
+                <td>Audit log list displays with timestamps</td>
+                <td>Navigate to Intel Unit Audit Logs</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">608</td>
+                <td>Intel Audit Logs</td>
+                <td>Filter audit logs by action type</td>
+                <td>Logs filter based on selected action</td>
+                <td>Select action type from filter</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- User Management Module -->
+    <div class="module-header">MODULE 8: USER MANAGEMENT</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">701</td>
+                <td>Users List</td>
+                <td>Display list of all users in the system</td>
+                <td>User table displays with key information</td>
+                <td>Navigate to Users page</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">702</td>
+                <td>Create User</td>
+                <td>Allow admin to create new user account</td>
+                <td>User creation form opens</td>
+                <td>Click "Add User" button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">703</td>
+                <td>Create User</td>
+                <td>Save new user with valid data</td>
+                <td>User account is created and appears in list</td>
+                <td>Fill form with valid data, click Save</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">704</td>
+                <td>Create User</td>
+                <td>Prevent creating user with duplicate email</td>
+                <td>Error message "Email already exists"</td>
+                <td>Enter existing email</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">705</td>
+                <td>Edit User</td>
+                <td>Allow admin to edit user information</td>
+                <td>Edit form opens with current user data</td>
+                <td>Click Edit icon on user</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">706</td>
+                <td>Edit User</td>
+                <td>Update user role</td>
+                <td>User role is updated in system</td>
+                <td>Change role, click Save</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">707</td>
+                <td>Delete User</td>
+                <td>Allow admin to delete user account</td>
+                <td>Confirmation prompt appears</td>
+                <td>Click Delete icon on user</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">708</td>
+                <td>Delete User</td>
+                <td>Confirm user deletion</td>
+                <td>User account is removed from system</td>
+                <td>Click Confirm on delete prompt</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">709</td>
+                <td>Search Users</td>
+                <td>Allow searching users by name or email</td>
+                <td>User list filters based on search query</td>
+                <td>Enter search term</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">710</td>
+                <td>Filter Users</td>
+                <td>Allow filtering users by role</td>
+                <td>User list filters by selected role</td>
+                <td>Select role from filter dropdown</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Accounts Module -->
+    <div class="module-header">MODULE 9: ACCOUNTS</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">801</td>
+                <td>Account List</td>
+                <td>Display list of all accounts</td>
+                <td>Account table displays with details</td>
+                <td>Navigate to Accounts page</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">802</td>
+                <td>Create Account</td>
+                <td>Allow creating new account</td>
+                <td>Account creation form opens</td>
+                <td>Click "New Account" button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">803</td>
+                <td>Edit Account</td>
+                <td>Allow editing account details</td>
+                <td>Edit form opens with account data</td>
+                <td>Click Edit icon on account</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">804</td>
+                <td>Deactivate Account</td>
+                <td>Allow deactivating account</td>
+                <td>Account status changes to inactive</td>
+                <td>Click Deactivate button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">805</td>
+                <td>Activate Account</td>
+                <td>Allow activating inactive account</td>
+                <td>Account status changes to active</td>
+                <td>Click Activate button</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Personnel Profile Module -->
+    <div class="module-header">MODULE 10: PERSONNEL PROFILE</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">901</td>
+                <td>View Profile</td>
+                <td>Display personnel profile information</td>
+                <td>Profile page shows personal details</td>
+                <td>Navigate to Personnel Profile</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">902</td>
+                <td>Edit Profile</td>
+                <td>Allow personnel to edit profile information</td>
+                <td>Profile fields become editable</td>
+                <td>Click Edit Profile button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">903</td>
+                <td>Upload Photo</td>
+                <td>Allow uploading profile photo</td>
+                <td>File upload dialog opens</td>
+                <td>Click on profile photo area</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">904</td>
+                <td>Upload Photo</td>
+                <td>Save uploaded profile photo</td>
+                <td>Photo displays in profile</td>
+                <td>Select image file, click Upload</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">905</td>
+                <td>Change Password</td>
+                <td>Allow changing account password</td>
+                <td>Password change form opens</td>
+                <td>Click Change Password button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">906</td>
+                <td>Change Password</td>
+                <td>Update password with valid input</td>
+                <td>Password updated successfully</td>
+                <td>Enter current & new password, click Save</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">907</td>
+                <td>View History</td>
+                <td>Display personnel activity history</td>
+                <td>History page shows records</td>
+                <td>Navigate to History page</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Progress & Training Module -->
+    <div class="module-header">MODULE 11: PROGRESS & TRAINING</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">1001</td>
+                <td>View Progress</td>
+                <td>Display training progress for all personnel</td>
+                <td>Progress page shows completion rates</td>
+                <td>Navigate to Progress page</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1002</td>
+                <td>Progress Chart</td>
+                <td>Display visual progress chart</td>
+                <td>Chart displays training progress data</td>
+                <td>View progress chart section</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1003</td>
+                <td>Filter Progress</td>
+                <td>Filter progress by personnel or department</td>
+                <td>Progress data filters based on selection</td>
+                <td>Select filter criteria</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1004</td>
+                <td>Update Progress</td>
+                <td>Allow updating training completion status</td>
+                <td>Progress record updates</td>
+                <td>Mark training as complete</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Audit Logs Module -->
+    <div class="module-header">MODULE 12: AUDIT LOGS</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">1101</td>
+                <td>View Audit Logs</td>
+                <td>Display system audit logs</td>
+                <td>Audit log table displays with entries</td>
+                <td>Navigate to Audit Logs page</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1102</td>
+                <td>Filter by Action</td>
+                <td>Filter logs by action type (Create, Update, Delete)</td>
+                <td>Logs filter based on action type</td>
+                <td>Select action from filter dropdown</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1103</td>
+                <td>Filter by User</td>
+                <td>Filter logs by user who performed action</td>
+                <td>Logs filter for selected user</td>
+                <td>Select user from filter dropdown</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1104</td>
+                <td>Filter by Date</td>
+                <td>Filter logs by date range</td>
+                <td>Logs filter for selected date range</td>
+                <td>Select date range</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1105</td>
+                <td>Search Logs</td>
+                <td>Search logs by keyword</td>
+                <td>Logs filter based on search query</td>
+                <td>Enter search term</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1106</td>
+                <td>Export Logs</td>
+                <td>Export audit logs to file</td>
+                <td>Logs export to CSV/Excel</td>
+                <td>Click Export button</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1107</td>
+                <td>View Log Details</td>
+                <td>Display detailed information for log entry</td>
+                <td>Modal opens with full log details</td>
+                <td>Click on log entry</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Chart Visualization Module -->
+    <div class="module-header">MODULE 13: CHART VISUALIZATION</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 10%;">Test Case<br>Scenario ID</th>
+                <th style="width: 15%;">Name of the Module/Function</th>
+                <th style="width: 30%;">Test Case Scenario</th>
+                <th style="width: 25%;">Action</th>
+                <th style="width: 20%;">Actual Input</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="scenario-id">1201</td>
+                <td>Chart Display</td>
+                <td>Display interactive data charts</td>
+                <td>Chart page loads with visualizations</td>
+                <td>Navigate to Chart page</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1202</td>
+                <td>Chart Type Selection</td>
+                <td>Allow switching between chart types</td>
+                <td>Chart changes to selected type (bar, line, pie)</td>
+                <td>Select chart type from dropdown</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1203</td>
+                <td>Data Point Hover</td>
+                <td>Display details on hover over data points</td>
+                <td>Tooltip shows data point values</td>
+                <td>Hover over chart data point</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">1204</td>
+                <td>Chart Export</td>
+                <td>Allow exporting chart as image</td>
+                <td>Chart exports to PNG/JPEG</td>
+                <td>Click Export Chart button</td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>

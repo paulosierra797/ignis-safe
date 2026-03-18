@@ -1,0 +1,95 @@
+.header {
+  background: linear-gradient(180deg, #b11217 0%, #b11217 45%, #ffffff 100%);
+  padding: 0.75rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+ 
+}
+
+.header-container {
+  max-width: none;
+  padding: 0 2rem;
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 64px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.logo-icon {
+  width: 100px;
+  height: auto;
+}
+
+.logo-text h4 {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.logo-text p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.nav {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: opacity 0.3s;
+}
+
+.nav a:hover {
+  opacity: 0.8;
+}
+
+.login-btn {
+  background: white;
+  color: #8B0000;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.4rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.login-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+@media (max-width: 768px) {
+  .header-container {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .nav {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .logo-text h1 {
+    font-size: 1rem;
+  }
+}

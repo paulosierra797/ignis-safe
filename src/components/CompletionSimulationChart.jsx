@@ -59,6 +59,25 @@ const data = {
   ]
 };
 
-export default function CompletionSimulationChart() {
-  return <Bar data={data} options={options} />;
+export default function CompletionSimulationChart({ chartData }) {
+  const liveData = {
+    labels: chartData?.labels?.length ? chartData.labels : data.labels,
+    datasets: [
+      {
+        ...data.datasets[0],
+        data: chartData?.completionRate?.length
+          ? chartData.completionRate
+          : data.datasets[0].data,
+      },
+      {
+        ...data.datasets[1],
+        label: 'Assessment Score',
+        data: chartData?.assessmentScore?.length
+          ? chartData.assessmentScore
+          : data.datasets[1].data,
+      },
+    ],
+  };
+
+  return <Bar data={liveData} options={options} />;
 }

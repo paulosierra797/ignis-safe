@@ -56,16 +56,26 @@ export default function Accounts() {
   };
 
   const handleDeleteUser = async (adminId) => {
+    if (!adminId) {
+      alert('Cannot delete this account because its ID is missing.');
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to delete this user?')) {
       return;
     }
 
     try {
       const target = accounts.find((account) => account.admin_id === adminId);
-      const { error } = await deleteUser(adminId);
+      const { error, deletedCount } = await deleteUser(adminId);
       if (error) {
         alert('Error deleting user: ' + error);
       } else {
+        if (!deletedCount) {
+          alert('Delete request completed but no account was removed. Please check permissions/policies.');
+          return;
+        }
+
         await logAdminActivity({
           actorId: currentUser?.admin_id || null,
           actorName: currentUser?.name || currentUser?.email || 'Admin User',
@@ -315,7 +325,7 @@ export default function Accounts() {
                     <td>
                       <button 
                         className="delete-btn"
-                        onClick={() => handleDeleteUser(account.admin_id)}
+                        onClick={() => handleDeleteUser(account.admin_id || account.id)}
                       >
                         Delete
                       </button>

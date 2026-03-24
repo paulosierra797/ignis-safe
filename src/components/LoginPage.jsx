@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signIn, signInWithGoogle, sendPasswordResetEmail, updatePassword, signOut } from '../utils/authService';
+import { signIn, signInWithGoogle, sendPasswordResetEmail, verifyRecoveryCode, updatePassword, signOut } from '../utils/authService';
 import { useUser } from '../context/UserContext';
 import './LoginPage.css';
 import ignissafe from '../assets/logo1.png'
@@ -19,10 +19,12 @@ export default function LoginPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [forgotPasswordStep, setForgotPasswordStep] = useState(null); // null, 'request', 'emailSent', 'setPassword', 'resetDone'
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(null); // null, 'request', 'emailSent', 'verifyCode', 'setPassword', 'resetDone'
   const [resetEmail, setResetEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isRecoveryLinkFlow, setIsRecoveryLinkFlow] = useState(false);
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -79,6 +81,7 @@ export default function LoginPage() {
     const recoveryInQuery = new URLSearchParams(window.location.search).get('type') === 'recovery';
 
     if (recoveryInHash || recoveryInQuery) {
+      setIsRecoveryLinkFlow(true);
       setForgotPasswordStep('setPassword');
       setError('');
     }
@@ -216,11 +219,42 @@ export default function LoginPage() {
     }
   };
 
+  const handleVerifyResetCode = async (e) => {
+    e.preventDefault();
+
+    if (!resetEmail || !resetCode) {
+      setError('Please enter your email and reset code.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+
+    try {
+      const { error: verifyError } = await verifyRecoveryCode(resetEmail.trim(), resetCode.trim());
+      if (verifyError) {
+        setError(`Invalid or expired reset code. ${verifyError}`);
+        setLoading(false);
+        return;
+      }
+
+      setForgotPasswordStep('setPassword');
+      setError('');
+    } catch (err) {
+      setError('Failed to verify reset code. Please try again.');
+      console.error('Verify reset code error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleBackToLogin = () => {
     setForgotPasswordStep(null);
     setResetEmail("");
+    setResetCode("");
     setNewPassword("");
     setConfirmPassword("");
+    setIsRecoveryLinkFlow(false);
     setError("");
     setShowNewPassword(false);
     setShowConfirmPassword(false);
@@ -324,6 +358,54 @@ export default function LoginPage() {
           </div>
         </div>
       </>
+      ) : forgotPasswordStep === 'verifyCode' ? (
+        <>
+          <div className="login-left">
+            <div className="logo-section">
+              <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
+            </div>
+          </div>
+          <div className="login-right">
+            <div className="login-form-container">
+              <h1>Verify reset code</h1>
+              <p className="login-description">
+                Enter the code sent to your email before setting a new password.
+              </p>
+              <form onSubmit={handleVerifyResetCode} className="login-form">
+                <div className="form-group">
+                  <label htmlFor="reset-email-verify">Email Address</label>
+                  <input
+                    type="email"
+                    id="reset-email-verify"
+                    placeholder=" "
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="reset-code-verify">Reset Code</label>
+                  <input
+                    type="text"
+                    id="reset-code-verify"
+                    placeholder=" "
+                    value={resetCode}
+                    onChange={(e) => setResetCode(e.target.value)}
+                    autoComplete="one-time-code"
+                    required
+                  />
+                </div>
+
+                {error && <p className="error-message">{error}</p>}
+                <button type="submit" className="login-button" disabled={loading}>
+                  {loading ? 'Verifying...' : 'Verify Code'}
+                </button>
+                <button type="button" onClick={handleBackToLogin} className="back-button">Back to Login</button>
+              </form>
+            </div>
+          </div>
+        </>
       ) : forgotPasswordStep === 'emailSent' ? (
         <>
           <div className="login-left">
@@ -336,8 +418,9 @@ export default function LoginPage() {
               <div className="confirmation-icon">✓</div>
               <h1>EMAIL SENT</h1>
               <p className="login-description">
-                We sent a reset link to {resetEmail}. Open your email and use the link to set a new password.
+                We sent a reset code to {resetEmail}. Enter the code to set a new password.
               </p>
+              <button onClick={() => setForgotPasswordStep('verifyCode')} className="login-button">Enter Reset Code</button>
               <button onClick={handleBackToLogin} className="login-button">Back to Login</button>
             </div>
           </div>

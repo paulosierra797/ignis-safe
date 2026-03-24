@@ -61,6 +61,22 @@ const data = {
   ]
 };
 
-export default function ActivityTrendsChart() {
-  return <Bar data={data} options={options} />;
+export default function ActivityTrendsChart({ chartData }) {
+  const liveData = {
+    labels: chartData?.labels?.length ? chartData.labels : data.labels,
+    datasets: [
+      {
+        ...data.datasets[0],
+        label: 'Started Attempts',
+        data: chartData?.started?.length ? chartData.started : data.datasets[0].data,
+      },
+      {
+        ...data.datasets[1],
+        label: 'Submitted Attempts',
+        data: chartData?.submitted?.length ? chartData.submitted : data.datasets[1].data,
+      },
+    ],
+  };
+
+  return <Bar data={liveData} options={options} />;
 }

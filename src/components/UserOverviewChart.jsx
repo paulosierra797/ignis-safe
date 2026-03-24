@@ -21,13 +21,21 @@ ChartJS.register(
   Legend
 );
 
-export default function UserOverviewChart() {
+export default function UserOverviewChart({ chartData, isLoading = false }) {
+  const labels = chartData?.labels?.length
+    ? chartData.labels
+    : ['No Data'];
+
+  const values = chartData?.values?.length
+    ? chartData.values
+    : [0];
+
   const data = {
-    labels: ['Nov 01', 'Nov 05', 'Nov 10', 'Nov 15', 'Nov 20', 'Nov 25', 'Nov 30'],
+    labels,
     datasets: [
       {
         label: 'Active Users',
-        data: [140, 180, 120, 190, 160, 210, 180],
+        data: values,
         borderColor: '#f97316',
         backgroundColor: (context) => {
           const ctx = context.chart.ctx;
@@ -55,6 +63,7 @@ export default function UserOverviewChart() {
         display: false
       },
       tooltip: {
+        enabled: !isLoading,
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         padding: 12,
         titleColor: '#fff',

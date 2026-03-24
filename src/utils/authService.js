@@ -1,5 +1,42 @@
 import { supabase } from './supabaseClient';
 
+const splitFullName = (fullName = '') => {
+  const trimmed = String(fullName || '').trim();
+  if (!trimmed) {
+    return { first_name: '', last_name: '' };
+  }
+
+  const [first_name, ...rest] = trimmed.split(/\s+/);
+  return {
+    first_name: first_name || '',
+    last_name: rest.join(' ') || ''
+  };
+};
+
+const resolveNameFields = (source = {}) => {
+  const first = String(source.first_name || '').trim();
+  const last = String(source.last_name || '').trim();
+
+  if (first || last) {
+    return {
+      first_name: first,
+      last_name: last
+    };
+  }
+
+  return splitFullName(source.name || '');
+};
+
+const withDisplayName = (adminData) => {
+  if (!adminData) return adminData;
+
+  const fullName = `${adminData.first_name || ''} ${adminData.last_name || ''}`.trim();
+  return {
+    ...adminData,
+    name: fullName || adminData.email || 'Admin User'
+  };
+};
+
 const syncAdminStatusIfVerified = async (authUser, adminData) => {
   if (!authUser || !adminData) return adminData;
 
@@ -26,11 +63,17 @@ const syncAdminStatusIfVerified = async (authUser, adminData) => {
 // Sign up new admin
 export const signUp = async (email, password, userData = {}) => {
   try {
+    const { first_name, last_name } = resolveNameFields(userData);
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: userData, // Additional metadata like name, rank, etc.
+        data: {
+          ...userData,
+          first_name,
+          last_name
+        }, // Additional metadata for profile and fallback handling.
         emailRedirectTo: `${window.location.origin}/login` // Redirect after email confirmation
       }
     });
@@ -44,7 +87,8 @@ export const signUp = async (email, password, userData = {}) => {
         .insert([{
           admin_id: authData.user.id,
           email: email,
-          name: userData.name || '',
+          first_name,
+          last_name,
           role: userData.role || 'personnel',
           rank: userData.rank || '',
           status: 'Pending Activation', // Will become Active after email verification
@@ -55,7 +99,7 @@ export const signUp = async (email, password, userData = {}) => {
 
       if (adminError) throw adminError;
       
-      return { data: { auth: authData, user: adminData }, error: null };
+      return { data: { auth: authData, user: withDisplayName(adminData) }, error: null };
     }
 
     return { data: authData, error: null };
@@ -108,7 +152,7 @@ export const signIn = async (email, password) => {
         return { 
           data: { 
             auth: authData, 
-            user: adminData 
+            user: withDisplayName(adminData)
           }, 
           error: null 
         };
@@ -116,11 +160,13 @@ export const signIn = async (email, password) => {
 
       // If admin record doesn't exist, create a fallback user object and try to insert record
       console.warn('Admin record not found for user:', authData.user.id, ' - Creating fallback...');
+      const metadataName = resolveNameFields(authData.user.user_metadata || {});
       
       const fallbackUser = {
         admin_id: authData.user.id,
         email: authData.user.email,
-        name: authData.user.user_metadata?.name || 'Admin User',
+        first_name: metadataName.first_name,
+        last_name: metadataName.last_name,
         role: 'admin',
         rank: authData.user.user_metadata?.rank || 'ADMIN',
         status: 'Active',
@@ -141,7 +187,7 @@ export const signIn = async (email, password) => {
           return { 
             data: { 
               auth: authData, 
-              user: insertedData
+              user: withDisplayName(insertedData)
             }, 
             error: null 
           };
@@ -154,7 +200,7 @@ export const signIn = async (email, password) => {
       return { 
         data: { 
           auth: authData, 
-          user: fallbackUser
+          user: withDisplayName(fallbackUser)
         }, 
         error: null 
       };
@@ -235,16 +281,18 @@ export const getCurrentUser = async () => {
       // If admin record exists, return it
       if (adminData) {
         adminData = await syncAdminStatusIfVerified(user, adminData);
-        return { data: adminData, error: null };
+        return { data: withDisplayName(adminData), error: null };
       }
 
       // If admin record doesn't exist, create a fallback user object
       console.warn('Admin record not found for user:', user.id, ' - Creating fallback...');
+      const metadataName = resolveNameFields(user.user_metadata || {});
       
       const fallbackUser = {
         admin_id: user.id,
         email: user.email,
-        name: user.user_metadata?.name || 'Admin User',
+        first_name: metadataName.first_name,
+        last_name: metadataName.last_name,
         role: 'admin',
         rank: user.user_metadata?.rank || 'ADMIN',
         status: 'Active',
@@ -262,14 +310,14 @@ export const getCurrentUser = async () => {
           .single();
 
         if (!insertError && insertedData) {
-          return { data: insertedData, error: null };
+          return { data: withDisplayName(insertedData), error: null };
         }
       } catch (insertError) {
         console.error('Could not insert admin record:', insertError);
       }
 
       // Return fallback user if insertion failed
-      return { data: fallbackUser, error: null };
+      return { data: withDisplayName(fallbackUser), error: null };
     }
 
     return { data: null, error: 'No user found' };
@@ -290,6 +338,23 @@ export const sendPasswordResetEmail = async (email) => {
     return { data, error: null };
   } catch (error) {
     console.error('Error sending reset email:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+// Reset password - Optional OTP step for code-based recovery emails
+export const verifyRecoveryCode = async (email, token) => {
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'recovery'
+    });
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error verifying recovery code:', error);
     return { data: null, error: error.message };
   }
 };

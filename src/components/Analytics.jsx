@@ -7,7 +7,11 @@ import ActivityTrendsChart from './ActivityTrendsChart';
 import TrainingProgressChart from './TrainingProgressChart';
 import CompletionSimulationChart from './CompletionSimulationChart';
 import UserOverviewChart from './UserOverviewChart';
-import { getAnalyticsDashboardStats } from '../utils/knowledgeAnalyticsService';
+import {
+  getAnalyticsDashboardStats,
+  getAnalyticsFilterOptions,
+  getAnalyticsChartsData,
+} from '../utils/knowledgeAnalyticsService';
 
 const DEFAULT_STATS = {
   activeUsers: 0,
@@ -19,23 +23,88 @@ const DEFAULT_STATS = {
   knowledgeGainPercent: 0,
 };
 
+const DEFAULT_CHARTS = {
+  userOverview: { labels: [], values: [] },
+  activityTrends: { labels: [], started: [], submitted: [] },
+  learningByModule: { labels: [], preTest: [], postTest: [] },
+  completionByModule: { labels: [], completionRate: [], assessmentScore: [] },
+  attemptsByModule: { labels: [], attempts: [] },
+};
+
 export default function Analytics() {
   const [searchQuery, setSearchQuery] = useState('');
   const [timeframe, setTimeframe] = useState('All-time');
   const [people, setPeople] = useState('All');
   const [topic, setTopic] = useState('All');
+  const [topics, setTopics] = useState(['All']);
   const [stats, setStats] = useState(DEFAULT_STATS);
+  const [charts, setCharts] = useState(DEFAULT_CHARTS);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+
+  const circularColors = ['#3b82f6', '#14b8a6', '#fbbf24'];
+  const circularRadius = 65;
+  const circularCircumference = 2 * Math.PI * circularRadius;
+
+  const circularEntries = charts.attemptsByModule.labels
+    .map((label, index) => ({
+      label,
+      value: charts.attemptsByModule.attempts[index] || 0,
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 3);
+
+  const circularTotal = circularEntries.reduce((sum, entry) => sum + entry.value, 0);
+
+  let circularProgressOffset = 0;
+  const circularSegments = circularEntries.map((entry, index) => {
+    const ratio = circularTotal > 0 ? entry.value / circularTotal : 0;
+    const arcLength = ratio * circularCircumference;
+    const rotateDeg = circularProgressOffset * 360 - 90;
+    circularProgressOffset += ratio;
+
+    return {
+      ...entry,
+      color: circularColors[index % circularColors.length],
+      arcLength,
+      rotateDeg,
+    };
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFilterOptions = async () => {
+      const { data } = await getAnalyticsFilterOptions();
+
+      if (!isMounted) return;
+
+      const nextTopics = data?.topics?.length ? data.topics : ['All'];
+      setTopics(nextTopics);
+      if (!nextTopics.includes(topic)) {
+        setTopic('All');
+      }
+    };
+
+    loadFilterOptions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadStats = async () => {
       setIsLoadingStats(true);
-      const { data } = await getAnalyticsDashboardStats();
+      const [{ data: statsData }, { data: chartsData }] = await Promise.all([
+        getAnalyticsDashboardStats({ timeframe, people, topic }),
+        getAnalyticsChartsData({ timeframe, people, topic }),
+      ]);
 
       if (isMounted) {
-        setStats(data || DEFAULT_STATS);
+        setStats(statsData || DEFAULT_STATS);
+        setCharts(chartsData || DEFAULT_CHARTS);
         setIsLoadingStats(false);
       }
     };
@@ -45,7 +114,7 @@ export default function Analytics() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [timeframe, people, topic]);
 
   return (
     <div className="analytics-container">
@@ -80,9 +149,11 @@ export default function Analytics() {
           <div className="filter-pill">
             <span className="filter-label">Topic:</span>
             <select value={topic} onChange={(e) => setTopic(e.target.value)}>
-              <option>All</option>
-              <option>Safety</option>
-              <option>Training</option>
+              {topics.map((topicOption) => (
+                <option key={topicOption} value={topicOption}>
+                  {topicOption}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -154,7 +225,7 @@ export default function Analytics() {
           </div>
           <div className="overview-chart">
             <div style={{ height: '220px', padding: '1rem 0.5rem' }}>
-              <UserOverviewChart />
+              <UserOverviewChart chartData={charts.userOverview} isLoading={isLoadingStats} />
             </div>
           </div>
         </div>
@@ -171,7 +242,7 @@ export default function Analytics() {
               </select>
             </div>
             <div style={{ height: '220px', padding: '1rem 0.5rem' }}>
-              <ActivityTrendsChart />
+              <ActivityTrendsChart chartData={charts.activityTrends} />
             </div>
           </div>
 
@@ -179,64 +250,39 @@ export default function Analytics() {
           <div className="analytics-chart-card circular-progress-card">
             <div className="year-navigation">
               <button className="nav-arrow">&lt;</button>
-              <span className="year-display">2025</span>
+              <span className="year-display">{new Date().getFullYear()}</span>
               <button className="nav-arrow">&gt;</button>
             </div>
             <div className="circular-progress-wrapper">
               <svg width="160" height="160" viewBox="0 0 160 160">
                 <circle cx="80" cy="80" r="65" fill="none" stroke="#f0f0f0" strokeWidth="12"/>
-                {/* Blue segment - Module 1 */}
-                <circle 
-                  cx="80" cy="80" r="65" 
-                  fill="none" 
-                  stroke="#3b82f6" 
-                  strokeWidth="12"
-                  strokeDasharray="408"
-                  strokeDashoffset="272"
-                  strokeLinecap="round"
-                  transform="rotate(-90 80 80)"
-                />
-                {/* Teal segment - Module 2 */}
-                <circle 
-                  cx="80" cy="80" r="65" 
-                  fill="none" 
-                  stroke="#14b8a6" 
-                  strokeWidth="12"
-                  strokeDasharray="408"
-                  strokeDashoffset="340"
-                  strokeLinecap="round"
-                  transform="rotate(45 80 80)"
-                />
-                {/* Yellow segment - Module 3 */}
-                <circle 
-                  cx="80" cy="80" r="65" 
-                  fill="none" 
-                  stroke="#fbbf24" 
-                  strokeWidth="12"
-                  strokeDasharray="408"
-                  strokeDashoffset="306"
-                  strokeLinecap="round"
-                  transform="rotate(135 80 80)"
-                />
+                {circularSegments.map((segment) => (
+                  <circle
+                    key={segment.label}
+                    cx="80"
+                    cy="80"
+                    r="65"
+                    fill="none"
+                    stroke={segment.color}
+                    strokeWidth="12"
+                    strokeDasharray={`${segment.arcLength} ${circularCircumference - segment.arcLength}`}
+                    strokeLinecap="round"
+                    transform={`rotate(${segment.rotateDeg} 80 80)`}
+                  />
+                ))}
               </svg>
               <div className="circular-progress-text">
-                <span className="progress-value">22.870</span>
+                <span className="progress-value">{circularTotal.toLocaleString()}</span>
                 <span className="progress-label">Total this year</span>
               </div>
             </div>
             <div className="circular-legend">
-              <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#3b82f6' }}></span>
-                <span>Module 1</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#14b8a6' }}></span>
-                <span>Module 2</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#fbbf24' }}></span>
-                <span>Module 3</span>
-              </div>
+              {circularSegments.map((segment) => (
+                <div className="legend-item" key={segment.label}>
+                  <span className="legend-dot" style={{ background: segment.color }}></span>
+                  <span>{segment.label}</span>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -244,7 +290,7 @@ export default function Analytics() {
           <div className="analytics-chart-card">
             <h3>Learning Improvement by Module</h3>
             <div style={{ height: '240px', padding: '1rem 0.5rem' }}>
-              <TrainingProgressChart />
+              <TrainingProgressChart chartData={charts.learningByModule} />
             </div>
             <div className="training-legend">
               <div className="legend-item">
@@ -260,9 +306,9 @@ export default function Analytics() {
 
           {/* Completion and Simulation */}
           <div className="analytics-chart-card">
-            <h3>Completion and Simulation</h3>
+            <h3>Completion and Assessment</h3>
             <div style={{ height: '240px', padding: '1rem 0.5rem' }}>
-              <CompletionSimulationChart />
+              <CompletionSimulationChart chartData={charts.completionByModule} />
             </div>
             <div className="training-legend">
               <div className="legend-item">
@@ -271,7 +317,7 @@ export default function Analytics() {
               </div>
               <div className="legend-item">
                 <span className="legend-dot" style={{ background: '#fbbf24' }}></span>
-                <span>Simulation Score (%)</span>
+                <span>Assessment Score (%)</span>
               </div>
             </div>
           </div>
@@ -282,7 +328,7 @@ export default function Analytics() {
           <h3>Test Attempts per Module</h3>
           <div className="performance-subheader">Engagement</div>
           <div style={{ height: '200px', padding: '1rem' }}>
-            <PerformanceChart />
+            <PerformanceChart chartData={charts.attemptsByModule} />
           </div>
           <div className="performance-legend">
             <div className="legend-item">

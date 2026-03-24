@@ -59,6 +59,20 @@ const data = {
   ]
 };
 
-export default function TrainingProgressChart() {
-  return <Bar data={data} options={options} />;
+export default function TrainingProgressChart({ chartData }) {
+  const liveData = {
+    labels: chartData?.labels?.length ? chartData.labels : data.labels,
+    datasets: [
+      {
+        ...data.datasets[0],
+        data: chartData?.postTest?.length ? chartData.postTest : data.datasets[0].data,
+      },
+      {
+        ...data.datasets[1],
+        data: chartData?.preTest?.length ? chartData.preTest : data.datasets[1].data,
+      },
+    ],
+  };
+
+  return <Bar data={liveData} options={options} />;
 }

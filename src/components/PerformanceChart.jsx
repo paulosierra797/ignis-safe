@@ -47,10 +47,20 @@ const data = {
   ]
 };
 
-export default function PerformanceChart() {
+export default function PerformanceChart({ chartData }) {
+  const liveData = {
+    labels: chartData?.labels?.length ? chartData.labels : data.labels,
+    datasets: [
+      {
+        ...data.datasets[0],
+        data: chartData?.attempts?.length ? chartData.attempts : data.datasets[0].data,
+      },
+    ],
+  };
+
   return (
     <div style={{ height: '200px', width: '100%' }}>
-      <Bar data={data} options={{ ...options, maintainAspectRatio: false }} />
+      <Bar data={liveData} options={{ ...options, maintainAspectRatio: false }} />
     </div>
   );
 }

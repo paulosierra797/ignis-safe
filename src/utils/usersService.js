@@ -11,15 +11,21 @@ export const getUsersFromProfiles = async () => {
 
     if (profileError) throw profileError;
 
-    const { data: adminRows, error: adminError } = await supabase
-      .from('admin')
-      .select('admin_id, status, last_login, role, rank');
+    const profileIds = (profileRows || []).map((row) => row.id).filter(Boolean);
+    let adminMap = new Map();
 
-    if (adminError) {
-      console.warn('Could not fetch admin metadata while loading profiles:', adminError);
+    if (profileIds.length > 0) {
+      const { data: adminRows, error: adminError } = await supabase
+        .from('admin')
+        .select('admin_id, status, last_login, role, rank')
+        .in('admin_id', profileIds);
+
+      if (adminError) {
+        console.warn('Could not fetch admin metadata while loading profiles:', adminError);
+      } else {
+        adminMap = new Map((adminRows || []).map((row) => [row.admin_id, row]));
+      }
     }
-
-    const adminMap = new Map((adminRows || []).map((row) => [row.admin_id, row]));
 
     const merged = (profileRows || []).map((profile) => {
       const adminMeta = adminMap.get(profile.id) || {};
@@ -34,7 +40,7 @@ export const getUsersFromProfiles = async () => {
         completed_simulations: profile.completed_simulations || 0,
         last_simulation: profile.last_simulation || '-',
         status: adminMeta.status || 'Active',
-        role: adminMeta.role || '-',
+        role: adminMeta.role || 'mobile-user',
         rank: adminMeta.rank || '-',
         last_login: adminMeta.last_login || profile.updated_at || profile.created_at || null
       };
@@ -120,10 +126,17 @@ export const deleteUser = async (adminId) => {
     const { data, error } = await supabase
       .from('admin')
       .delete()
-      .eq('admin_id', adminId);
+      .eq('admin_id', adminId)
+      .select('admin_id');
     
     if (error) throw error;
-    return { data, error: null };
+
+    const deletedCount = Array.isArray(data) ? data.length : 0;
+    if (deletedCount === 0) {
+      throw new Error('No account was deleted. Check admin table DELETE policy (RLS) and target user ID.');
+    }
+
+    return { data, deletedCount, error: null };
   } catch (error) {
     console.error('Error deleting admin:', error);
     return { data: null, error: error.message };

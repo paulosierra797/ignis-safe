@@ -1,0 +1,79 @@
+Test Case Scenario ID,Name of the Module Function,Test Case Scenario,Action,Actual Input
+'001,Navigation Menu,Allow users to navigate to the Home section using the Home link,Page scrolls to Home section,Click Home
+'002,Navigation Menu,Allow users to navigate to the About section using the About link,Page scrolls to About section,Click About
+'003,Navigation Menu,Allow users to navigate to the Contact section using the Contact Us link,Page scrolls to Contact section,Click Contact Us
+'004,Navigation Menu,Allow users to navigate to the FAQ section using the FAQ link,Page scrolls to FAQ section,Click FAQ
+'005,Header,Allow users to open the Login page from landing header,Page redirects to Login page,Click Login
+'006,FAQ Section,Allow users to expand an FAQ item,Selected FAQ answer expands,Click FAQ question
+'007,FAQ Section,Allow users to collapse an expanded FAQ item,Selected FAQ answer collapses,Click expanded FAQ question
+'008,FAQ Section,Allow users to switch FAQ language,FAQ text changes language,Click ENGLISH/TAGALOG toggle
+'009,Footer,Allow users to open Terms page,Navigates to Terms page,Click Terms
+'010,Footer,Allow users to open Privacy page,Navigates to Privacy page,Click Privacy
+'101,Login Form,Allow users to log in using valid credentials,User is authenticated and redirected by role,Enter email/password then click Login
+'102,Login Form,Prevent login with invalid credentials,Error message is shown,Enter invalid email/password then click Login
+'103,Password Visibility,Allow users to toggle password visibility on login form,Password field switches visible/hidden,Click eye icon
+'104,Remember Me,Allow users to enable remember-me option,Email is retained on next visit,Check Remember me then login
+'105,Google OAuth,Allow users to sign in with Google,OAuth flow starts and returns authenticated user,Click Continue with Google
+'106,Forgot Password,Allow users to open password-reset request flow,Reset step screen appears,Click Forgot Password
+'107,Forgot Password,Allow users to send reset code to email,Reset code sent message appears,Enter reset email then click Send Reset Code
+'108,Forgot Password,Allow users to verify reset code,Verification passes and set-password form appears,Enter email and code then click Verify Code
+'109,Forgot Password,Allow users to set a new password,Password is updated successfully,Enter new and confirm password then click Set Password
+'110,Forgot Password,Allow users to return to login from reset flow,Login screen is displayed,Click Back to Login
+'201,Sidebar Admin,Allow admin to navigate to Dashboard,Dashboard page opens,Click Dashboard
+'202,Sidebar Admin,Allow admin to navigate to Chart,Chart page opens,Click Chart
+'203,Sidebar Admin,Allow admin to navigate to Attendance,Attendance Admin page opens,Click Attendance
+'204,Sidebar Admin,Allow admin to navigate to Personnel,Accounts page opens,Click Personnel
+'205,Sidebar App Management,Allow admin to navigate to Users,Users page opens,Click User
+'206,Sidebar App Management,Allow admin to navigate to Analytics,Analytics page opens,Click Analytics
+'207,Sidebar App Management,Allow admin to navigate to Progress,Progress page opens,Click Progress
+'208,Sidebar App Management,Allow admin to navigate to Audit Logs,Audit Logs page opens,Click Audit Logs
+'209,Sidebar Personnel,Allow personnel to navigate to Profile,Personnel Profile opens,Click Profile
+'210,Sidebar Personnel,Allow personnel to navigate to Attendance,Attendance Personnel opens,Click Attendance
+'211,Sidebar Personnel,Allow personnel to navigate to Reports,Reports page opens,Click Reports
+'212,Sidebar Personnel,Allow personnel to navigate to History,History page opens,Click History
+'213,Sidebar Intel Unit,Allow intel user to navigate to Profile,Intel Profile opens,Click Profile
+'214,Sidebar Intel Unit,Allow intel user to navigate to Reports,Intel Reports opens,Click Reports
+'215,Sidebar Intel Unit,Allow intel user to navigate to Archive,Intel Archive opens,Click Archive
+'216,Sidebar Intel Unit,Allow intel user to navigate to Audit Logs,Intel Audit Logs opens,Click Audit Logs
+'301,Attendance Login,Allow attendance login with valid credentials,Redirects to attendance scan or target page,Enter email/password then click Login and Continue
+'302,Attendance Personnel,Allow personnel to switch attendance mode to Time In,Time In mode is selected,Click TIME IN
+'303,Attendance Personnel,Allow personnel to switch attendance mode to Time Out,Time Out mode is selected,Click TIME OUT
+'304,Attendance Personnel,Allow personnel to regenerate attendance QR/session,New QR/session link is generated,Click Refresh QR
+'305,Attendance Personnel,Allow personnel to copy attendance link,Link is copied to clipboard,Click Copy link
+'306,Attendance Scan,Allow scanner user to copy scan URL,URL is copied to clipboard,Click Copy
+'307,Attendance Scan,Allow scanner user to logout,Session ends and returns to attendance login,Click Logout
+'308,Attendance Confirm,Allow user to request device location before confirmation,Location permission prompt appears,Click Request location access
+'309,Attendance Confirm,Allow user to confirm attendance,Attendance record is saved and status shown,Click Confirm Attendance
+'310,Attendance Admin,Allow admin to export attendance as CSV,CSV file is downloaded,Click Export CSV
+'311,Attendance Admin,Allow admin to export attendance as PDF,PDF file is downloaded,Click Export PDF
+'312,Attendance Admin,Allow admin to clear attendance filters,Filters reset and full data reappears,Click Clear Filters
+'401,Reports,Allow personnel to start Fire Operations report creation,Report form opens in create mode,Click Create Report (Fire Operations)
+'402,Reports,Allow personnel to start Spot Investigation report creation,Report form opens in create mode,Click Create Report (Spot Investigation)
+'403,Reports,Allow personnel to start Final Investigation report creation,Report form opens in create mode,Click Create Report (Final Investigation)
+'404,Investigation Form,Allow user to move to next step in multi-step form,Next section or step appears,Click Next
+'405,Investigation Form,Allow user to go back to previous step,Previous section or step appears,Click Previous
+'406,Investigation Form,Allow user to save report as draft,Draft is saved successfully,Click Save Draft
+'407,Investigation Form,Allow user to preview report output,Preview display opens,Click Preview
+'408,Investigation Form,Allow user to submit completed report,Report is submitted successfully,Click Submit Report
+'409,Investigation Form,Allow user to close report form without submitting,Form closes and returns to list or page,Click Close
+'410,History,Allow user to continue editing draft report,Navigates to report form with draft loaded,Click Continue Draft
+'411,History,Allow user to view submitted report,Report PDF or details opens,Click View
+'412,History,Allow user to reset history filters,All filters cleared and list resets,Click Clear Filters
+'501,Accounts,Allow admin to open add personnel modal,Add personnel modal appears,Click ADD NEW PERSONNEL
+'502,Accounts,Allow admin to save new personnel entry,New personnel row appears in list,Fill form then click SAVE
+'503,Accounts,Allow admin to cancel adding personnel,Modal closes without saving,Click CANCEL
+'504,Accounts,Allow admin to delete personnel entry,Personnel is removed after confirmation,Click delete icon and confirm
+'505,Accounts,Allow admin to clear accounts filters,Filter fields reset,Click Clear Filters
+'506,Users,Allow admin to clear user filters,User filters reset to default,Click Clear Filters
+'507,Analytics,Allow admin to filter analytics by timeframe people and topic,Charts and metrics refresh with selected filters,Change dropdown selections
+'508,Progress,Allow admin to clear progress filters,Progress list resets,Click Clear Filters
+'509,Progress,Allow admin to open row details,User or test detail view opens,Click View
+'510,Audit Logs,Allow admin to clear audit-log filters,Logs list resets,Click CLEAR
+'511,Intel Reports,Allow intel user to view report,Report opens,Click View
+'512,Intel Reports,Allow intel user to archive report,Report moves to archive,Click Archive
+'513,Intel Reports,Allow intel user to clear filters,Reports filters reset,Click CLEAR
+'514,Intel Archive,Allow intel user to view archived report,Archived report opens,Click View
+'515,Intel Archive,Allow intel user to restore archived report,Report is restored to active list,Click Restore
+'516,Intel Archive,Allow intel user to permanently delete archived report,Report is permanently removed,Click Permanently Delete
+'517,Intel Audit Logs,Allow intel user to clear audit-log filters,Logs list resets,Click CLEAR
+'518,Organizational Chart,Allow admin to toggle chart edit mode,Nodes become editable or non-editable,Click Edit/Save toggle

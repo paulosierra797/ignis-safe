@@ -60,20 +60,6 @@ export default function IntelUnitReports() {
     setFilterCategory('All Category');
   };
 
-  const handleUpdate = async (id) => {
-    const { error } = await updateReportStatus(id, 'under_review');
-    if (error) {
-      setTableMessage(`Failed to update report: ${error}`);
-      return;
-    }
-
-    setReports((prev) =>
-      prev.map((item) =>
-        item.report_id === id ? { ...item, status: 'under_review' } : item
-      )
-    );
-  };
-
   const handleView = (pdfUrl) => {
     if (!pdfUrl) {
       setTableMessage('No PDF file found for this report.');
@@ -84,6 +70,11 @@ export default function IntelUnitReports() {
   };
 
   const handleArchive = async (id) => {
+    const shouldArchive = window.confirm('Are you sure you want to archive this report?');
+    if (!shouldArchive) {
+      return;
+    }
+
     const { error } = await updateReportStatus(id, 'archived');
     if (error) {
       setTableMessage(`Failed to archive report: ${error}`);
@@ -336,24 +327,6 @@ export default function IntelUnitReports() {
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                        <button
-                          onClick={() => handleUpdate(report.report_id)}
-                          style={{
-                            padding: '0.4rem 0.8rem',
-                            background: '#f59e0b',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '0.4rem',
-                            fontSize: '0.85rem',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'background 0.2s'
-                          }}
-                          onMouseOver={(e) => e.target.style.background = '#d97706'}
-                          onMouseOut={(e) => e.target.style.background = '#f59e0b'}
-                        >
-                          Update
-                        </button>
                         <button
                           onClick={() => handleView(report.pdf_url)}
                           style={{

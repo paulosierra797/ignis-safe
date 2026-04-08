@@ -34,7 +34,13 @@ export default function ContactSection() {
           <div className="contact-info">
             <div className="info-item">
               <label>EMAIL:</label>
-              <a href="mailto:dasmariasfire@gmail.com">dasmariasfire@gmail.com</a>
+              <a
+                href="https://mail.google.com/mail/?view=cm&fs=1&to=dasmariasfire@gmail.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                dasmariasfire@gmail.com
+              </a>
             </div>
             <div className="info-item">
               <label>FACEBOOK:</label>

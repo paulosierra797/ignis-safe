@@ -966,6 +966,18 @@ export default function InvestigationReport({
     }
   };
 
+  const handleBackToReports = () => {
+    const shouldLeave = window.confirm(
+      'Are you sure you want to go back to reports? Your inputted data may not be saved.'
+    );
+
+    if (!shouldLeave) {
+      return;
+    }
+
+    onClose?.();
+  };
+
   return (
     <div className="investigation-page">
       <Sidebar variant="personnel" />
@@ -979,7 +991,7 @@ export default function InvestigationReport({
         />
 
         <div className="investigation-toolbar">
-          <button className="report-close-btn" onClick={onClose}>
+          <button className="report-close-btn" onClick={handleBackToReports}>
             Back to Reports
           </button>
         </div>

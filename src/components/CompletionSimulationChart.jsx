@@ -40,18 +40,18 @@ const options = {
 };
 
 const data = {
-  labels: ['Module 1', 'Module 2', 'Module 3'],
+  labels: [],
   datasets: [
     {
       label: 'Completion Rate',
-      data: [68, 84, 76],
+      data: [],
       backgroundColor: '#a78bfa',
       borderRadius: 4,
       barPercentage: 0.8
     },
     {
       label: 'Simulation Score',
-      data: [72, 78, 81],
+      data: [],
       backgroundColor: '#fbbf24',
       borderRadius: 4,
       barPercentage: 0.8
@@ -71,9 +71,9 @@ export default function CompletionSimulationChart({ chartData }) {
       },
       {
         ...data.datasets[1],
-        label: 'Assessment Score',
-        data: chartData?.assessmentScore?.length
-          ? chartData.assessmentScore
+        label: 'Simulation Completion',
+        data: chartData?.simulationCompletion?.length
+          ? chartData.simulationCompletion
           : data.datasets[1].data,
       },
     ],

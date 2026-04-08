@@ -40,18 +40,18 @@ const options = {
 };
 
 const data = {
-  labels: ['Module 1', 'Module 2', 'Module 3'],
+  labels: [],
   datasets: [
     {
       label: 'Post-Test',
-      data: [50, 65, 42],
+      data: [],
       backgroundColor: '#f99ca2',
       borderRadius: 4,
       barPercentage: 0.8
     },
     {
       label: 'Pre-Test',
-      data: [10, 56, 62],
+      data: [],
       backgroundColor: '#5dc5d8',
       borderRadius: 4,
       barPercentage: 0.8

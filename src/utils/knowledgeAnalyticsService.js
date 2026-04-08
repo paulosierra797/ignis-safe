@@ -1,4 +1,8 @@
 import { supabase } from './supabaseClient';
+import { getUsersFromProfiles } from './usersService';
+
+const ANALYTICS_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
+const ANALYTICS_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
 
 const DEFAULT_STATS = {
   activeUsers: 0,
@@ -18,8 +22,43 @@ const DEFAULT_CHARTS_DATA = {
   userOverview: { labels: [], values: [] },
   activityTrends: { labels: [], started: [], submitted: [] },
   learningByModule: { labels: [], preTest: [], postTest: [] },
-  completionByModule: { labels: [], completionRate: [], assessmentScore: [] },
+  completionByModule: { labels: [], completionRate: [], simulationCompletion: [] },
   attemptsByModule: { labels: [], attempts: [] },
+};
+
+const callAnalyticsApi = async (endpoint, payload = null) => {
+  if (!ANALYTICS_API_URL) return null;
+
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (ANALYTICS_API_KEY) {
+    headers['x-analytics-api-key'] = ANALYTICS_API_KEY;
+  }
+
+  const response = await fetch(`${ANALYTICS_API_URL}${endpoint}`, {
+    method: payload ? 'POST' : 'GET',
+    headers,
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Analytics API request failed (${response.status})`);
+  }
+
+  return response.json();
+};
+
+const tryAnalyticsApi = async (endpoint, payload = null) => {
+  if (!ANALYTICS_API_URL) return null;
+
+  try {
+    return await callAnalyticsApi(endpoint, payload);
+  } catch (error) {
+    console.warn('Analytics API unavailable, using local computation fallback:', error);
+    return null;
+  }
 };
 
 const toNumber = (value, fallback = 0) => {
@@ -89,8 +128,10 @@ const includesByTimeframe = (isoDate, startDate) => {
 };
 
 const includesByPeople = (status, peopleFilter) => {
-  if (peopleFilter === 'Active') return status === 'Active';
-  if (peopleFilter === 'Inactive') return status !== 'Active';
+  const normalizedStatus = String(status || '').toLowerCase().trim();
+
+  if (peopleFilter === 'Active') return normalizedStatus === 'active';
+  if (peopleFilter === 'Inactive') return normalizedStatus !== 'active';
   return true;
 };
 
@@ -104,16 +145,133 @@ const includesByTopic = (moduleData, topicFilter) => {
   return moduleId === selected || moduleTitle === selected;
 };
 
+const buildActivityTrends = (filteredAttempts, view = 'Month') => {
+  const selectedView = String(view || 'Month');
+  const now = new Date();
+
+  if (selectedView === 'Week') {
+    const labels = [];
+    const started = Array(7).fill(0);
+    const submitted = Array(7).fill(0);
+
+    const dayKeys = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(now);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - (6 - index));
+      labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    });
+
+    const keyToIndex = dayKeys.reduce((accumulator, key, index) => {
+      accumulator[key] = index;
+      return accumulator;
+    }, {});
+
+    filteredAttempts.forEach((attempt) => {
+      if (attempt.started_at) {
+        const startedAt = new Date(attempt.started_at);
+        if (!Number.isNaN(startedAt.getTime())) {
+          const key = `${startedAt.getFullYear()}-${String(startedAt.getMonth() + 1).padStart(2, '0')}-${String(startedAt.getDate()).padStart(2, '0')}`;
+          const index = keyToIndex[key];
+          if (Number.isInteger(index)) {
+            started[index] += 1;
+          }
+        }
+      }
+
+      if (attempt.submitted_at) {
+        const submittedAt = new Date(attempt.submitted_at);
+        if (!Number.isNaN(submittedAt.getTime())) {
+          const key = `${submittedAt.getFullYear()}-${String(submittedAt.getMonth() + 1).padStart(2, '0')}-${String(submittedAt.getDate()).padStart(2, '0')}`;
+          const index = keyToIndex[key];
+          if (Number.isInteger(index)) {
+            submitted[index] += 1;
+          }
+        }
+      }
+    });
+
+    return { labels, started, submitted };
+  }
+
+  if (selectedView === 'Year') {
+    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const started = Array(12).fill(0);
+    const submitted = Array(12).fill(0);
+
+    filteredAttempts.forEach((attempt) => {
+      if (attempt.started_at) {
+        const startedAt = new Date(attempt.started_at);
+        if (!Number.isNaN(startedAt.getTime())) {
+          started[startedAt.getMonth()] += 1;
+        }
+      }
+
+      if (attempt.submitted_at) {
+        const submittedAt = new Date(attempt.submitted_at);
+        if (!Number.isNaN(submittedAt.getTime())) {
+          submitted[submittedAt.getMonth()] += 1;
+        }
+      }
+    });
+
+    return { labels, started, submitted };
+  }
+
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const labels = Array.from({ length: daysInMonth }, (_, index) => String(index + 1));
+  const started = Array(daysInMonth).fill(0);
+  const submitted = Array(daysInMonth).fill(0);
+
+  filteredAttempts.forEach((attempt) => {
+    if (attempt.started_at) {
+      const startedAt = new Date(attempt.started_at);
+      if (
+        !Number.isNaN(startedAt.getTime()) &&
+        startedAt.getFullYear() === year &&
+        startedAt.getMonth() === month
+      ) {
+        started[startedAt.getDate() - 1] += 1;
+      }
+    }
+
+    if (attempt.submitted_at) {
+      const submittedAt = new Date(attempt.submitted_at);
+      if (
+        !Number.isNaN(submittedAt.getTime()) &&
+        submittedAt.getFullYear() === year &&
+        submittedAt.getMonth() === month
+      ) {
+        submitted[submittedAt.getDate() - 1] += 1;
+      }
+    }
+  });
+
+  return { labels, started, submitted };
+};
+
 const loadAnalyticsBaseData = async () => {
+  const { data: profileUsers, error: profileUsersError } = await getUsersFromProfiles();
+  if (profileUsersError) throw new Error(profileUsersError);
+
+  const users = (profileUsers || []).map((user) => ({
+    admin_id: user.id,
+    status: user.status,
+  }));
+
   const [
-    { data: users, error: usersError },
     { data: attempts, error: attemptsError },
     { data: answers, error: answersError },
     { data: assessments, error: assessmentsError },
     { data: modules, error: modulesError },
     { data: moduleProgress, error: moduleProgressError },
   ] = await Promise.all([
-    supabase.from('admin').select('admin_id, status'),
     supabase
       .from('assessment_attempts')
       .select('id, user_id, assessment_id, started_at, submitted_at, created_at, status, score'),
@@ -127,7 +285,6 @@ const loadAnalyticsBaseData = async () => {
       .select('user_id, module_id, pre_test_completed_at, simulation_completed_at, post_test_completed_at'),
   ]);
 
-  if (usersError) throw usersError;
   if (attemptsError) throw attemptsError;
   if (answersError) throw answersError;
   if (assessmentsError) throw assessmentsError;
@@ -313,6 +470,11 @@ export const getKnowledgeGainOverview = async () => {
 };
 
 export const getAnalyticsDashboardStats = async (filters = {}) => {
+  const remote = await tryAnalyticsApi('/api/knowledge-analytics/dashboard-stats', filters);
+  if (remote?.data) {
+    return { data: remote.data, error: remote.error || null };
+  }
+
   try {
     const startDate = getTimeframeStartDate(filters.timeframe);
     const peopleFilter = filters.people || 'All';
@@ -361,7 +523,9 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
       : usersByPeople;
 
     const totalUsers = usersScope.length;
-    const activeUsers = usersScope.filter((user) => user.status === 'Active').length;
+    const activeUsers = usersScope.filter(
+      (user) => String(user.status || '').toLowerCase() === 'active',
+    ).length;
 
     const questionsAnswered = answers.filter((answer) => {
       if (!filteredAttemptIds.has(answer.attempt_id)) return false;
@@ -469,6 +633,11 @@ export const getKnowledgeGainByModule = async () => {
 };
 
 export const getAnalyticsFilterOptions = async () => {
+  const remote = await tryAnalyticsApi('/api/knowledge-analytics/filter-options');
+  if (remote?.data) {
+    return { data: remote.data, error: remote.error || null };
+  }
+
   try {
     const { data, error } = await supabase
       .from('modules')
@@ -496,11 +665,22 @@ export const getAnalyticsFilterOptions = async () => {
 };
 
 export const getAnalyticsChartsData = async (filters = {}) => {
+  const remote = await tryAnalyticsApi('/api/knowledge-analytics/charts', filters);
+  if (remote?.data) {
+    return { data: remote.data, error: remote.error || null };
+  }
+
   try {
     const startDate = getTimeframeStartDate(filters.timeframe);
+    const peopleFilter = filters.people || 'All';
     const topicFilter = filters.topic || 'All';
 
-    const { attempts, assessments, modules, moduleProgress } = await loadAnalyticsBaseData();
+    const { users, attempts, assessments, modules, moduleProgress } = await loadAnalyticsBaseData();
+
+    const userById = users.reduce((accumulator, row) => {
+      accumulator[row.admin_id] = row;
+      return accumulator;
+    }, {});
 
     const assessmentsById = assessments.reduce((accumulator, row) => {
       accumulator[row.id] = row;
@@ -518,7 +698,9 @@ export const getAnalyticsChartsData = async (filters = {}) => {
 
       const moduleData = modulesById[assessment.module_id] || null;
       const timestamp = getAttemptTimestamp(attempt);
+      const userStatus = userById[attempt.user_id]?.status || 'Unknown';
 
+      if (!includesByPeople(userStatus, peopleFilter)) return false;
       if (!includesByTopic(moduleData, topicFilter)) return false;
       if (!includesByTimeframe(timestamp, startDate)) return false;
 
@@ -566,31 +748,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       }),
     };
 
-    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const started = Array(12).fill(0);
-    const submitted = Array(12).fill(0);
-
-    filteredAttempts.forEach((attempt) => {
-      if (attempt.started_at) {
-        const startedAt = new Date(attempt.started_at);
-        if (!Number.isNaN(startedAt.getTime())) {
-          started[startedAt.getMonth()] += 1;
-        }
-      }
-
-      if (attempt.submitted_at) {
-        const submittedAt = new Date(attempt.submitted_at);
-        if (!Number.isNaN(submittedAt.getTime())) {
-          submitted[submittedAt.getMonth()] += 1;
-        }
-      }
-    });
-
-    const activityTrends = {
-      labels: monthLabels,
-      started,
-      submitted,
-    };
+    const activityTrends = buildActivityTrends(filteredAttempts, filters.activityTrendsView);
 
     const learningByModuleAccumulator = {};
 
@@ -641,22 +799,32 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       postTest: sortedModules.map((row) => (row.postCount > 0 ? round(row.postTotal / row.postCount, 2) : 0)),
     };
 
+    const modulesForCompletion = (modules || [])
+      .filter((moduleRow) => includesByTopic(moduleRow, topicFilter))
+      .sort((a, b) => {
+        const aNo = toNumber(a.module_no, Number.MAX_SAFE_INTEGER);
+        const bNo = toNumber(b.module_no, Number.MAX_SAFE_INTEGER);
+        if (aNo !== bNo) return aNo - bNo;
+        return String(a.title || '').localeCompare(String(b.title || ''));
+      });
+
     const filteredModuleProgress = (moduleProgress || []).filter((row) => {
       const moduleData = modulesById[row.module_id] || null;
       return includesByTopic(moduleData, topicFilter);
     });
 
-    const completionAccumulator = sortedModules.reduce((accumulator, moduleRow) => {
-      accumulator[moduleRow.name] = {
-        sum: 0,
+    const completionAccumulator = modulesForCompletion.reduce((accumulator, moduleRow) => {
+      accumulator[moduleRow.id] = {
+        completionSum: 0,
+        simulationDone: 0,
         count: 0,
       };
       return accumulator;
     }, {});
 
     filteredModuleProgress.forEach((row) => {
-      const moduleData = modulesById[row.module_id];
-      if (!moduleData || !completionAccumulator[moduleData.title]) return;
+      const bucket = completionAccumulator[row.module_id];
+      if (!bucket) return;
 
       const stepsDone = [
         Boolean(row.pre_test_completed_at),
@@ -664,25 +832,49 @@ export const getAnalyticsChartsData = async (filters = {}) => {
         Boolean(row.post_test_completed_at),
       ].filter(Boolean).length;
 
-      completionAccumulator[moduleData.title].sum += round((stepsDone / 3) * 100, 2);
-      completionAccumulator[moduleData.title].count += 1;
+      bucket.completionSum += round((stepsDone / 3) * 100, 2);
+      bucket.simulationDone += Number(Boolean(row.simulation_completed_at));
+      bucket.count += 1;
     });
 
     const completionByModule = {
-      labels: sortedModules.map((row) => row.name),
-      completionRate: sortedModules.map((row) => {
-        const bucket = completionAccumulator[row.name];
+      labels: modulesForCompletion.map((row) => row.title),
+      completionRate: modulesForCompletion.map((row) => {
+        const bucket = completionAccumulator[row.id];
         if (!bucket || bucket.count === 0) return 0;
-        return round(bucket.sum / bucket.count, 2);
+        return round(bucket.completionSum / bucket.count, 2);
       }),
-      assessmentScore: sortedModules.map((row) =>
-        row.scoreCount > 0 ? round(row.scoreTotal / row.scoreCount, 2) : 0,
-      ),
+      simulationCompletion: modulesForCompletion.map((row) => {
+        const bucket = completionAccumulator[row.id];
+        if (!bucket || bucket.count === 0) return 0;
+        return round((bucket.simulationDone / bucket.count) * 100, 2);
+      }),
     };
 
+    const modulesForAttempts = (modules || [])
+      .filter((moduleRow) => includesByTopic(moduleRow, topicFilter))
+      .sort((a, b) => {
+        const aNo = toNumber(a.module_no, Number.MAX_SAFE_INTEGER);
+        const bNo = toNumber(b.module_no, Number.MAX_SAFE_INTEGER);
+        if (aNo !== bNo) return aNo - bNo;
+        return String(a.title || '').localeCompare(String(b.title || ''));
+      });
+
+    const attemptsAccumulator = modulesForAttempts.reduce((accumulator, moduleRow) => {
+      accumulator[moduleRow.id] = 0;
+      return accumulator;
+    }, {});
+
+    filteredAttempts.forEach((attempt) => {
+      const assessment = assessmentsById[attempt.assessment_id];
+      if (!assessment?.module_id) return;
+      if (typeof attemptsAccumulator[assessment.module_id] !== 'number') return;
+      attemptsAccumulator[assessment.module_id] += 1;
+    });
+
     const attemptsByModule = {
-      labels: sortedModules.map((row) => row.name),
-      attempts: sortedModules.map((row) => row.attempts),
+      labels: modulesForAttempts.map((row) => row.title),
+      attempts: modulesForAttempts.map((row) => attemptsAccumulator[row.id] || 0),
     };
 
     return {

@@ -27,7 +27,7 @@ const DEFAULT_CHARTS = {
   userOverview: { labels: [], values: [] },
   activityTrends: { labels: [], started: [], submitted: [] },
   learningByModule: { labels: [], preTest: [], postTest: [] },
-  completionByModule: { labels: [], completionRate: [], assessmentScore: [] },
+  completionByModule: { labels: [], completionRate: [], simulationCompletion: [] },
   attemptsByModule: { labels: [], attempts: [] },
 };
 
@@ -36,6 +36,7 @@ export default function Analytics() {
   const [timeframe, setTimeframe] = useState('All-time');
   const [people, setPeople] = useState('All');
   const [topic, setTopic] = useState('All');
+  const [activityTrendsView, setActivityTrendsView] = useState('Month');
   const [topics, setTopics] = useState(['All']);
   const [stats, setStats] = useState(DEFAULT_STATS);
   const [charts, setCharts] = useState(DEFAULT_CHARTS);
@@ -99,7 +100,7 @@ export default function Analytics() {
       setIsLoadingStats(true);
       const [{ data: statsData }, { data: chartsData }] = await Promise.all([
         getAnalyticsDashboardStats({ timeframe, people, topic }),
-        getAnalyticsChartsData({ timeframe, people, topic }),
+        getAnalyticsChartsData({ timeframe, people, topic, activityTrendsView }),
       ]);
 
       if (isMounted) {
@@ -114,7 +115,7 @@ export default function Analytics() {
     return () => {
       isMounted = false;
     };
-  }, [timeframe, people, topic]);
+  }, [timeframe, people, topic, activityTrendsView]);
 
   return (
     <div className="analytics-container">
@@ -235,10 +236,14 @@ export default function Analytics() {
           <div className="analytics-chart-card activity-trends">
             <div className="chart-header">
               <h3>User Activity Trends</h3>
-              <select className="chart-timeframe-select">
-                <option>Month</option>
-                <option>Week</option>
-                <option>Year</option>
+              <select
+                className="chart-timeframe-select"
+                value={activityTrendsView}
+                onChange={(e) => setActivityTrendsView(e.target.value)}
+              >
+                <option value="Month">Month</option>
+                <option value="Week">Week</option>
+                <option value="Year">Year</option>
               </select>
             </div>
             <div style={{ height: '220px', padding: '1rem 0.5rem' }}>
@@ -306,7 +311,7 @@ export default function Analytics() {
 
           {/* Completion and Simulation */}
           <div className="analytics-chart-card">
-            <h3>Completion and Assessment</h3>
+            <h3>Completion and Simulation</h3>
             <div style={{ height: '240px', padding: '1rem 0.5rem' }}>
               <CompletionSimulationChart chartData={charts.completionByModule} />
             </div>
@@ -317,7 +322,7 @@ export default function Analytics() {
               </div>
               <div className="legend-item">
                 <span className="legend-dot" style={{ background: '#fbbf24' }}></span>
-                <span>Assessment Score (%)</span>
+                <span>Simulation Completion (%)</span>
               </div>
             </div>
           </div>

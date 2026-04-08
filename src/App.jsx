@@ -30,6 +30,7 @@ import History from './components/History';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import { UserProvider } from './context/UserContext';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -46,25 +47,25 @@ function App() {
             <Footer />
           </>} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/personnel/profile" element={<PersonnelProfile />} />
-          <Route path="/personnel/history" element={<History />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/intel-unit/reports" element={<IntelUnitReports />} />
-          <Route path="/intel-unit/profile" element={<IntelUnitProfile />} />
-          <Route path="/intel-unit/archive" element={<IntelUnitArchive />} />
-          <Route path="/intel-unit/audit-logs" element={<IntelUnitAuditLogs />} />
-          <Route path="/attendance-admin" element={<AttendanceAdmin />} />
-          <Route path="/attendance-personnel" element={<AttendancePersonnel />} />
+          <Route path="/personnel/profile" element={<ProtectedRoute><PersonnelProfile /></ProtectedRoute>} />
+          <Route path="/personnel/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+          <Route path="/intel-unit/reports" element={<ProtectedRoute><IntelUnitReports /></ProtectedRoute>} />
+          <Route path="/intel-unit/profile" element={<ProtectedRoute><IntelUnitProfile /></ProtectedRoute>} />
+          <Route path="/intel-unit/archive" element={<ProtectedRoute><IntelUnitArchive /></ProtectedRoute>} />
+          <Route path="/intel-unit/audit-logs" element={<ProtectedRoute><IntelUnitAuditLogs /></ProtectedRoute>} />
+          <Route path="/attendance-admin" element={<ProtectedRoute><AttendanceAdmin /></ProtectedRoute>} />
+          <Route path="/attendance-personnel" element={<ProtectedRoute><AttendancePersonnel /></ProtectedRoute>} />
           <Route path="/attendance-login" element={<AttendanceLogin />} />
           <Route path="/attendance-scan" element={<AttendanceScan />} />
           <Route path="/attendance-confirm" element={<AttendanceConfirm />} />
-          <Route path="/dashboard/analytics" element={<Analytics />} />
-          <Route path="/dashboard/chart" element={<Chart />} />
-          <Route path="/dashboard/accounts" element={<Accounts />} />
-          <Route path="/dashboard/users" element={<Users />} />
-          <Route path="/dashboard/progress" element={<Progress />} />
-          <Route path="/dashboard/audit-logs" element={<AuditLogs />} />
+          <Route path="/dashboard/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+          <Route path="/dashboard/chart" element={<ProtectedRoute><Chart /></ProtectedRoute>} />
+          <Route path="/dashboard/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
+          <Route path="/dashboard/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+          <Route path="/dashboard/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
+          <Route path="/dashboard/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
         </Routes>

@@ -53,6 +53,17 @@
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
 }
 
+.metric-card.clickable,
+.chart-card.clickable {
+  cursor: pointer;
+}
+
+.metric-card.clickable:focus-visible,
+.chart-card.clickable:focus-visible {
+  outline: 3px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .metric-card.compact {
   flex-direction: column;
   gap: 0;

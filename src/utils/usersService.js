@@ -42,7 +42,9 @@ export const getUsersFromProfiles = async () => {
         status: adminMeta.status || 'Active',
         role: adminMeta.role || 'mobile-user',
         rank: adminMeta.rank || '-',
-        last_login: adminMeta.last_login || profile.updated_at || profile.created_at || null
+        last_login: adminMeta.last_login || profile.updated_at || profile.created_at || null,
+        created_at: profile.created_at || null,
+        updated_at: profile.updated_at || null
       };
     });
 

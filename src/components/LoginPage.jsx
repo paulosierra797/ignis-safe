@@ -10,7 +10,7 @@ const REMEMBERED_EMAIL_KEY = 'remembered_email';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { currentUser } = useUser();
+  const { currentUser, setCurrentUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
@@ -116,7 +116,8 @@ export default function LoginPage() {
           localStorage.removeItem(REMEMBERED_EMAIL_KEY);
         }
 
-        // Store user data in context or local storage
+        // Sync auth state in context immediately so protected pages can load data without reload.
+        setCurrentUser(data.user);
         localStorage.setItem('user', JSON.stringify(data.user));
         navigateByRole(data.user.role);
       }

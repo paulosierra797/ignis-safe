@@ -10,12 +10,18 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 // Singleton pattern to ensure only one Supabase client instance
 let supabaseInstance = null;
 
+const inProcessAuthLock = async (_name, _acquireTimeout, fn) => {
+  // Avoid browser LockManager deadlocks across tabs for this client.
+  return fn();
+};
+
 function getSupabaseClient() {
   if (!supabaseInstance) {
     supabaseInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+        lock: inProcessAuthLock,
       },
     });
   }

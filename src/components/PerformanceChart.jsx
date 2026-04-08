@@ -25,9 +25,8 @@ const options = {
   scales: {
     y: {
       beginAtZero: true,
-      max: 400,
       ticks: {
-        stepSize: 80
+        precision: 0
       }
     }
   }
@@ -38,7 +37,7 @@ const data = {
   datasets: [
     {
       label: 'Attempts',
-      data: [400, 320, 240],
+      data: [0, 0, 0],
       backgroundColor: '#b91c1c',
       borderRadius: 6,
       barPercentage: 0.5,
@@ -48,19 +47,37 @@ const data = {
 };
 
 export default function PerformanceChart({ chartData }) {
+  const liveAttempts = chartData?.attempts?.length ? chartData.attempts : data.datasets[0].data;
+
   const liveData = {
     labels: chartData?.labels?.length ? chartData.labels : data.labels,
     datasets: [
       {
         ...data.datasets[0],
-        data: chartData?.attempts?.length ? chartData.attempts : data.datasets[0].data,
+        data: liveAttempts,
       },
     ],
   };
 
+  const maxAttempt = Math.max(...liveAttempts, 0);
+  const dynamicMax = maxAttempt > 0 ? Math.ceil(maxAttempt * 1.2) : 5;
+
   return (
     <div style={{ height: '200px', width: '100%' }}>
-      <Bar data={liveData} options={{ ...options, maintainAspectRatio: false }} />
+      <Bar
+        data={liveData}
+        options={{
+          ...options,
+          maintainAspectRatio: false,
+          scales: {
+            ...options.scales,
+            y: {
+              ...options.scales.y,
+              max: dynamicMax,
+            },
+          },
+        }}
+      />
     </div>
   );
 }

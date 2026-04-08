@@ -58,6 +58,11 @@ export default function IntelUnitArchive() {
   };
 
   const handleRestore = async (id) => {
+    const shouldRestore = window.confirm('Are you sure you want to restore this report?');
+    if (!shouldRestore) {
+      return;
+    }
+
     const { error } = await restoreArchivedReport(id);
     if (error) {
       setMessage(`Failed to restore report: ${error}`);
@@ -69,16 +74,19 @@ export default function IntelUnitArchive() {
   };
 
   const handlePermanentDelete = async (id) => {
-    if (window.confirm('Are you sure you want to permanently delete this report? This action cannot be undone.')) {
-      const { error } = await permanentlyDeleteReport(id);
-      if (error) {
-        setMessage(`Failed to permanently delete report: ${error}`);
-        return;
-      }
-
-      setArchivedReports((prev) => prev.filter((report) => report.report_id !== id));
-      setMessage('Archived report permanently deleted.');
+    const shouldDelete = window.confirm('Are you sure you want to permanently delete this report? This action cannot be undone.');
+    if (!shouldDelete) {
+      return;
     }
+
+    const { error } = await permanentlyDeleteReport(id);
+    if (error) {
+      setMessage(`Failed to permanently delete report: ${error}`);
+      return;
+    }
+
+    setArchivedReports((prev) => prev.filter((report) => report.report_id !== id));
+    setMessage('Archived report permanently deleted.');
   };
 
   return (

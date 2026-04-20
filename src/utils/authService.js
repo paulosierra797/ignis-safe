@@ -359,6 +359,39 @@ export const verifyRecoveryCode = async (email, token) => {
   }
 };
 
+// Signup confirmation - verify OTP code from email
+export const verifySignupCode = async (email, token) => {
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'signup'
+    });
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error verifying signup code:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+// Signup confirmation - resend OTP code
+export const resendSignupCode = async (email) => {
+  try {
+    const { data, error } = await supabase.auth.resend({
+      type: 'signup',
+      email
+    });
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error resending signup code:', error);
+    return { data: null, error: error.message };
+  }
+};
+
 // Reset password - Step 2: Update password
 export const updatePassword = async (newPassword) => {
   try {

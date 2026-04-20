@@ -77,3 +77,19 @@ Test Case Scenario ID,Name of the Module Function,Test Case Scenario,Action,Actu
 '516,Intel Archive,Allow intel user to permanently delete archived report,Report is permanently removed,Click Permanently Delete
 '517,Intel Audit Logs,Allow intel user to clear audit-log filters,Logs list resets,Click CLEAR
 '518,Organizational Chart,Allow admin to toggle chart edit mode,Nodes become editable or non-editable,Click Edit/Save toggle
+'519,Dashboard Cards,Allow admin to open Personnel page from Total Personnel card,Navigates to Accounts page,Click Total Personnel card
+'520,Dashboard Cards,Allow admin to open Attendance page from On-Duty Status card,Navigates to Attendance Admin page,Click On-Duty Status card
+'521,Dashboard Cards,Allow admin to open Attendance page from Today''s Attendance card,Navigates to Attendance Admin page,Click Today''s Attendance card
+'522,Dashboard Cards,Allow admin to open Users page from Total Registered card,Navigates to Users page,Click Total Registered card
+'523,Dashboard Cards,Allow admin to open Analytics page from Active Users Today card,Navigates to Analytics page,Click Active Users Today card
+'524,Dashboard Cards,Allow admin to open Users page from New Registrations card,Navigates to Users page,Click New Registrations card
+'525,Dashboard Cards,Allow admin to open Progress page from Training Completion card,Navigates to Progress page,Click Training Completion card
+'526,Dashboard Cards,Allow admin to open Analytics page from Starting Knowledge card,Navigates to Analytics page,Click Starting Knowledge card
+'527,Dashboard Cards,Allow admin to open Analytics page from Current Knowledge card,Navigates to Analytics page,Click Current Knowledge card
+'528,Dashboard Cards,Allow admin to open Analytics page from Knowledge Gain card,Navigates to Analytics page,Click Knowledge Gain card
+'529,Dashboard Cards,Allow admin to open Analytics page from User Activity Trends chart card,Navigates to Analytics page,Click User Activity Trends card
+'530,Dashboard Cards,Allow admin to open Progress page from Training Progress Distribution chart card,Navigates to Progress page,Click Training Progress Distribution card
+'531,Dashboard Accessibility,Allow keyboard activation of Total Personnel card using Enter,Navigates to Accounts page,Focus card then press Enter
+'532,Dashboard Accessibility,Allow keyboard activation of Total Personnel card using Space,Navigates to Accounts page,Focus card then press Space
+'533,Dashboard Accessibility,Allow keyboard activation of User Activity Trends chart card using Enter,Navigates to Analytics page,Focus chart card then press Enter
+'534,Dashboard Accessibility,Allow keyboard activation of Training Progress Distribution chart card using Space,Navigates to Progress page,Focus chart card then press Space

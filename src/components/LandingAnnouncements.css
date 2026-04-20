@@ -1,0 +1,123 @@
+.landing-announcements {
+  padding: 1rem 0 2.5rem;
+  background: linear-gradient(180deg, #fff7f7 0%, #ffffff 100%);
+  scroll-margin-top: 90px;
+}
+
+.landing-announcements-container {
+  max-width: none;
+  margin: 0;
+  padding: 0 2rem;
+}
+
+.landing-announcements-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.landing-announcements-eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #b91c1c;
+}
+
+.landing-announcements-header h2 {
+  margin: 0;
+  font-size: 1.6rem;
+  color: #111827;
+}
+
+.landing-announcements-note {
+  margin: 0;
+  max-width: 32rem;
+  font-size: 0.92rem;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.landing-announcements-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.landing-announcement-card {
+  background: #ffffff;
+  border: 1px solid #f1d1d1;
+  border-radius: 14px;
+  padding: 1.1rem 1.15rem;
+  box-shadow: 0 10px 20px rgba(185, 28, 28, 0.06);
+}
+
+.landing-announcement-tag {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.24rem 0.65rem;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.landing-announcement-card h3 {
+  margin: 0.75rem 0 0.6rem;
+  font-size: 1rem;
+  color: #111827;
+}
+
+.landing-announcement-card p {
+  margin: 0;
+  color: #374151;
+  line-height: 1.55;
+  font-size: 0.92rem;
+  white-space: pre-wrap;
+}
+
+.landing-announcement-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.9rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.landing-announcements-empty {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px dashed #e5b7b7;
+  color: #6b7280;
+}
+
+@media (max-width: 1024px) {
+  .landing-announcements-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-announcements-container {
+    padding: 0 1rem;
+  }
+
+  .landing-announcements-header,
+  .landing-announcement-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .landing-announcements-grid {
+    grid-template-columns: 1fr;
+  }
+}

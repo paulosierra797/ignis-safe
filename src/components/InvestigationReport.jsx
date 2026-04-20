@@ -287,9 +287,10 @@ export default function InvestigationReport({
     let cursorY = 48;
 
     // Load and add logos
-    const logoSize = 50;
     const logoY = 30;
-    
+    const defaultLogoSize = 50;
+    let logoBottomY = logoY + defaultLogoSize;
+
     try {
       // Load BFP logo (left)
       const bfpLogoResponse = await fetch('/src/assets/bfp_logo.png');
@@ -299,7 +300,6 @@ export default function InvestigationReport({
         reader.onloadend = () => resolve(reader.result);
         reader.readAsDataURL(bfpLogoBlob);
       });
-      doc.addImage(bfpLogoData, 'PNG', marginX, logoY, logoSize, logoSize);
 
       // Load BFP Dasma logo (right)
       const dasmaLogoResponse = await fetch('/src/assets/bfp_dasma.png');
@@ -309,47 +309,112 @@ export default function InvestigationReport({
         reader.onloadend = () => resolve(reader.result);
         reader.readAsDataURL(dasmaLogoBlob);
       });
-      doc.addImage(dasmaLogoData, 'PNG', pageWidth - marginX - logoSize, logoY, logoSize, logoSize);
+
+      if (reportType === 'spotInvestigation') {
+        const centerX = pageWidth / 2;
+        const slotOffset = 112;
+        const leftCenterX = centerX - slotOffset;
+        const middleCenterX = centerX;
+        const rightCenterX = centerX + slotOffset;
+        const leftSize = 44;
+        const middleRadius = 20;
+        const rightWidth = 28;
+        const rightHeight = 36;
+
+        doc.addImage(bfpLogoData, 'PNG', leftCenterX - leftSize / 2, logoY, leftSize, leftSize);
+        doc.addImage(dasmaLogoData, 'PNG', rightCenterX - rightWidth / 2, logoY + 3, rightWidth, rightHeight);
+
+        // Circular placeholder to mimic the third emblem in the official layout.
+        doc.setDrawColor(0, 0, 0);
+        doc.circle(middleCenterX, logoY + leftSize / 2, middleRadius, 'S');
+        doc.setFont('times', 'normal');
+        doc.setFontSize(5);
+        doc.text('Municipality', middleCenterX, logoY + leftSize / 2 - 2, { align: 'center' });
+        doc.text('Logo', middleCenterX, logoY + leftSize / 2 + 4, { align: 'center' });
+
+        logoBottomY = logoY + leftSize;
+      } else {
+        doc.addImage(bfpLogoData, 'PNG', marginX, logoY, defaultLogoSize, defaultLogoSize);
+        doc.addImage(
+          dasmaLogoData,
+          'PNG',
+          pageWidth - marginX - defaultLogoSize,
+          logoY,
+          defaultLogoSize,
+          defaultLogoSize
+        );
+        logoBottomY = logoY + defaultLogoSize;
+      }
     } catch (error) {
       console.error('Error loading logos:', error);
     }
 
-    cursorY = logoY + logoSize + 10;
+    cursorY = logoBottomY + 10;
 
-    doc.setFont('times', 'normal');
-    doc.setFontSize(9);
-    doc.text('Republic of the Philippines', pageWidth / 2, cursorY, {
-      align: 'center'
-    });
-    cursorY += 12;
-    doc.text('Department of the Interior and Local Government', pageWidth / 2, cursorY, {
-      align: 'center'
-    });
-    cursorY += 12;
-    doc.setFont('times', 'bold');
-    doc.text('Bureau of Fire Protection', pageWidth / 2, cursorY, {
-      align: 'center'
-    });
-    cursorY += 12;
-    doc.setFont('times', 'normal');
-    doc.setFontSize(8);
-    doc.text('(INSERT REGION)', pageWidth / 2, cursorY, { align: 'center' });
-    cursorY += 10;
-    doc.text('(INSERT ADDRESS)', pageWidth / 2, cursorY, {
-      align: 'center'
-    });
-    cursorY += 10;
-    doc.text('(INSERT CONTACT NUMBER / EMAIL ADDRESS)', pageWidth / 2, cursorY, {
-      align: 'center'
-    });
-    cursorY += 20;
+    if (reportType === 'spotInvestigation') {
+      const centerX = pageWidth / 2;
 
-    doc.setFont('times', 'bold');
-    doc.setFontSize(11);
-    doc.text(reportMeta.pdfTitle, pageWidth / 2, cursorY, {
-      align: 'center'
-    });
-    cursorY += 18;
+      doc.setFont('times', 'normal');
+      doc.setFontSize(9);
+      doc.text('Republic of the Philippines', centerX, cursorY, { align: 'center' });
+      cursorY += 11;
+      doc.text('Department of the Interior and Local Government', centerX, cursorY, { align: 'center' });
+      cursorY += 11;
+      doc.setFont('times', 'bold');
+      doc.text('BUREAU OF FIRE PROTECTION NATIONAL HEADQUARTERS', centerX, cursorY, {
+        align: 'center'
+      });
+      cursorY += 11;
+      doc.setFont('times', 'normal');
+      doc.text('Agham Road, Bago Bantay, Quezon City', centerX, cursorY, {
+        align: 'center'
+      });
+      cursorY += 11;
+      doc.text('(Regional/Provincial/District/City/Municipal Letterhead)', centerX, cursorY, {
+        align: 'center'
+      });
+      cursorY += 18;
+
+      doc.setFont('times', 'bold');
+      doc.setFontSize(11);
+      doc.text('MEMORANDUM', centerX, cursorY, { align: 'center' });
+      cursorY += 18;
+    } else {
+      doc.setFont('times', 'normal');
+      doc.setFontSize(9);
+      doc.text('Republic of the Philippines', pageWidth / 2, cursorY, {
+        align: 'center'
+      });
+      cursorY += 12;
+      doc.text('Department of the Interior and Local Government', pageWidth / 2, cursorY, {
+        align: 'center'
+      });
+      cursorY += 12;
+      doc.setFont('times', 'bold');
+      doc.text('Bureau of Fire Protection', pageWidth / 2, cursorY, {
+        align: 'center'
+      });
+      cursorY += 12;
+      doc.setFont('times', 'normal');
+      doc.setFontSize(8);
+      doc.text('(INSERT REGION)', pageWidth / 2, cursorY, { align: 'center' });
+      cursorY += 10;
+      doc.text('(INSERT ADDRESS)', pageWidth / 2, cursorY, {
+        align: 'center'
+      });
+      cursorY += 10;
+      doc.text('(INSERT CONTACT NUMBER / EMAIL ADDRESS)', pageWidth / 2, cursorY, {
+        align: 'center'
+      });
+      cursorY += 20;
+
+      doc.setFont('times', 'bold');
+      doc.setFontSize(11);
+      doc.text(reportMeta.pdfTitle, pageWidth / 2, cursorY, {
+        align: 'center'
+      });
+      cursorY += 18;
+    }
 
     if (reportType === 'fireOperations') {
       doc.setFont('times', 'normal');
@@ -642,74 +707,141 @@ export default function InvestigationReport({
     }
 
     if (reportType === 'spotInvestigation') {
+      const labelX = marginX;
+      const colonX = marginX + 78;
+      const valueX = marginX + 90;
+      const detailsWidth = pageWidth - marginX * 2;
+
+      const writeMemoLine = (label, value) => {
+        doc.setFont('times', 'bold');
+        doc.setFontSize(10);
+        doc.text(label, labelX, cursorY);
+        doc.text(':', colonX, cursorY);
+        doc.setFont('times', 'normal');
+        doc.text(value || '-', valueX, cursorY);
+        cursorY += 18;
+      };
+
+      writeMemoLine('FOR', formValues.memorandumFor);
+      writeMemoLine('SUBJECT', formValues.memorandumSubject || 'Spot Investigation Report (SIR)');
+
+      doc.setFont('times', 'bold');
+      doc.text('DATE', labelX, cursorY);
+      doc.text(':', colonX, cursorY);
       doc.setFont('times', 'normal');
-      doc.text(`FOR: ${formValues.memorandumFor || '-'}`, marginX, cursorY);
-      cursorY += 14;
-      doc.text(`SUBJECT: ${formValues.memorandumSubject || 'Spot Investigation Report (SIR)'}`, marginX, cursorY);
-      cursorY += 14;
-      doc.text(`DATE: ${formValues.memorandumDate || '-'}`, marginX, cursorY);
+      doc.text(formValues.memorandumDate || '', valueX, cursorY);
+      doc.line(valueX, cursorY + 2, pageWidth - marginX, cursorY + 2);
       cursorY += 18;
 
-      autoTable(doc, {
-        startY: cursorY,
-        margin: { left: marginX, right: marginX },
-        theme: 'grid',
-        styles: {
-          font: 'times',
-          fontSize: 9,
-          cellPadding: { top: 4, right: 6, bottom: 4, left: 6 },
-          lineColor: [90, 90, 90],
-          lineWidth: 0.6
-        },
-        columnStyles: {
-          0: { cellWidth: 190, halign: 'left' },
-          1: { cellWidth: pageWidth - marginX * 2 - 190, halign: 'left' }
-        },
-        body: [
-          ['DTPO', formValues.sirDtpo || '-'],
-          ['INVOLVED', formValues.sirInvolved || '-'],
-          ['NAME OF ESTABLISHMENT', formValues.sirEstablishment || '-'],
-          ['OWNER', formValues.sirOwner || '-'],
-          ['OCCUPANT', formValues.sirOccupant || '-'],
-          ['CASUALTY - Fatality', formValues.sirFatality || '-'],
-          ['CASUALTY - Injured', formValues.sirInjured || '-'],
-          ['ESTIMATED DAMAGE', formValues.sirEstimatedDamage || '-'],
-          ['TIME FIRE STARTED', formValues.sirTimeFireStarted || '-'],
-          ['TIME OF FIRE OUT', formValues.sirTimeFireOut || '-'],
-          ['ALARM', formValues.sirAlarm || '-']
-        ]
-      });
+      const writeIncidentLine = (label, value, note) => {
+        doc.setFont('times', 'bold');
+        doc.setFontSize(9);
+        doc.text(label, labelX, cursorY);
+        doc.setFont('times', 'normal');
+        doc.text(':', marginX + 115, cursorY);
+        doc.text(value || '-', marginX + 124, cursorY);
+        if (note) {
+          const noteLines = doc.splitTextToSize(note, 220);
+          doc.setFontSize(8);
+          doc.text(noteLines, pageWidth - marginX - 220, cursorY);
+          doc.setFontSize(9);
+        }
+        cursorY += 13;
+      };
 
-      cursorY = doc.lastAutoTable.finalY + 14;
+      writeIncidentLine('DTPO', formValues.sirDtpo, '(Date, Time and Place of Occurrence)');
+      writeIncidentLine('INVOLVED', formValues.sirInvolved, '(Type of Occupancy / Involved structure)');
+      writeIncidentLine('NAME OF ESTABLISHMENT', formValues.sirEstablishment, '(Complete name of involved establishment)');
+      writeIncidentLine('OWNER', formValues.sirOwner, '(Owner of the property gutted by fire)');
+      writeIncidentLine('OCCUPANT', formValues.sirOccupant, '(Occupant of the property gutted by fire)');
+      writeIncidentLine('CASUALTY  Fatality', formValues.sirFatality, '(No. of person who died)');
+      writeIncidentLine('CASUALTY  Injured', formValues.sirInjured, '(No. of person who are injured)');
+      writeIncidentLine('ESTIMATED DAMAGE', formValues.sirEstimatedDamage, '(Initial aggregated damage in terms of Peso)');
+      writeIncidentLine('TIME FIRE STARTED', formValues.sirTimeFireStarted, '(Exact time the fire started)');
+      writeIncidentLine('TIME OF FIRE OUT', formValues.sirTimeFireOut, '(Exact time the fire was declared fire out)');
+      writeIncidentLine('ALARM', formValues.sirAlarm, '(Highest fire alarm tapped by the FGC)');
+
+      cursorY += 8;
       doc.setFont('times', 'bold');
+      doc.setFontSize(10);
       doc.text('DETAILS OF INVESTIGATION:', marginX, cursorY);
       cursorY += 12;
       doc.setFont('times', 'normal');
-      const detailsLines = doc.splitTextToSize(formValues.sirDetails || '-', pageWidth - marginX * 2);
+      doc.setFontSize(8.5);
+      const detailsGuidance = [
+        'This section should contain:',
+        '  - A complete narration of the details of the fire incident as gathered by the Fire Arson',
+        '    Investigator (FAI) during actual response.',
+        '  - Number of establishments and / or affected establishments.',
+        '  - Estimated area in square meters and estimated amount of damage.',
+        '  - Location of fatalities and initial details as to identity.',
+        '  - Other initial information about the involved establishment and the fire incident.'
+      ].join('\n');
+      doc.text(doc.splitTextToSize(detailsGuidance, detailsWidth), marginX, cursorY);
+      cursorY += 68;
+
+      const detailsLines = doc.splitTextToSize(formValues.sirDetails || '-', detailsWidth);
+      doc.setFontSize(9);
       doc.text(detailsLines, marginX, cursorY);
-      cursorY += detailsLines.length * 12 + 14;
+      cursorY += Math.min(detailsLines.length * 10 + 12, 48);
 
       doc.setFont('times', 'bold');
+      doc.setFontSize(10);
       doc.text('DISPOSITION:', marginX, cursorY);
       cursorY += 12;
       doc.setFont('times', 'normal');
-      const dispositionLines = doc.splitTextToSize(formValues.sirDisposition || '-', pageWidth - marginX * 2);
+      doc.setFontSize(8.5);
+      const dispositionGuidance = [
+        'This section should contain:',
+        '  - The disposition and assessment of the FAI regarding the case.',
+        '  - May also contain whether the case will be turned over to the higher office.'
+      ].join('\n');
+      doc.text(doc.splitTextToSize(dispositionGuidance, detailsWidth), marginX, cursorY);
+      cursorY += 36;
+
+      doc.setFontSize(9);
+      const dispositionLines = doc.splitTextToSize(formValues.sirDisposition || '-', detailsWidth);
       doc.text(dispositionLines, marginX, cursorY);
 
-      doc.addPage();
-      cursorY = 90;
-      doc.setFont('times', 'bold');
-      doc.text('Noted By:', marginX, cursorY);
-      cursorY += 40;
+      const pageHeight = doc.internal.pageSize.getHeight();
+      doc.setFont('times', 'italic');
+      doc.setFontSize(8);
+      doc.text('(Name and signature of the FAI)', pageWidth - marginX - 140, pageHeight - 64);
       doc.setFont('times', 'normal');
-      doc.text(formValues.sirNotedBy || '(Name and signature of the Chief of the Intelligence and Investigation Unit)', marginX, cursorY);
+      doc.setFontSize(6.5);
+      doc.text('BFP-QSF-FAID-002 Rev. 02 (02.03.25) 1 of 2', marginX, pageHeight - 20);
 
-      cursorY += 80;
+      doc.addPage();
+      const page2Height = doc.internal.pageSize.getHeight();
+      cursorY = 120;
+
       doc.setFont('times', 'bold');
-      doc.text('Approved for Submission:', marginX, cursorY);
-      cursorY += 40;
+      doc.setFontSize(12);
+      doc.text('Noted By:', marginX + 20, cursorY);
+      cursorY += 34;
       doc.setFont('times', 'normal');
-      doc.text(formValues.sirApprovedBy || '(Name and Signature of the Head of Office)', marginX, cursorY);
+      doc.setFontSize(10);
+      doc.text(
+        formValues.sirNotedBy || '(Name and signature of the Chief of the Intelligence and Investigation Unit)',
+        marginX + 20,
+        cursorY
+      );
+
+      cursorY += 56;
+      doc.setFont('times', 'bold');
+      doc.setFontSize(12);
+      doc.text('Approved for Submission:', marginX + 20, cursorY);
+      cursorY += 34;
+      doc.setFont('times', 'normal');
+      doc.setFontSize(10);
+      doc.text(
+        formValues.sirApprovedBy || '(Name and Signature of the Head of Office)',
+        marginX + 20,
+        cursorY
+      );
+
+      doc.setFontSize(6.5);
+      doc.text('BFP-QSF-FAID-002 Rev. 02 (02.03.25) 2 of 2', marginX, page2Height - 20);
 
       return doc;
     }

@@ -10,47 +10,64 @@ import {
 import { logAdminActivity } from '../utils/usersService';
 import './Chart.css';
 
+const LEGACY_AVATAR_PLACEHOLDER_PATH = '/user-avatar.png';
+
+const buildAvatarPlaceholder = (name = '') => {
+  const safeName = String(name || '').trim();
+  const initial = safeName ? safeName.charAt(0).toUpperCase() : '?';
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="112" height="112" viewBox="0 0 112 112" role="img" aria-label="User avatar placeholder">
+      <rect width="112" height="112" rx="56" fill="#e2e8f0" />
+      <circle cx="56" cy="42" r="20" fill="#94a3b8" />
+      <path d="M20 96c6-18 20-28 36-28s30 10 36 28" fill="#94a3b8" />
+      <text x="56" y="102" text-anchor="middle" font-size="18" font-family="Arial, sans-serif" font-weight="700" fill="#334155">${initial}</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+};
+
 const initialOrgData = {
   top: {
     id: 'chief-1',
     name: 'FCINSP Michael John V Escano',
-    title: 'Municipal Fire Marshal',
+    title: 'City Fire Marshal',
     avatar_url: '/user-avatar.png'
   },
   second: {
     id: 'chief-2',
-    name: 'FCINSP Michael John V Escano',
-    title: 'Municipal Fire Marshal',
+    name: 'SFO3 Warlock R Bautista',
+    title: 'Deputy City Fire Marshal',
     avatar_url: '/user-avatar.png'
   },
   departments: [
     {
       id: 'admin',
-      name: 'FCINSP Michael John V Escano',
+      name: 'SFO3 John Bryan T Anonuevo',
       title: 'Administrative Section',
       avatar_url: '/user-avatar.png',
       units: [
         {
           id: 'personnel-training',
-          name: 'FCINSP Michael John V Escano',
+          name: 'FO3 Jowan P Bergonio',
           title: 'Personnel and Training Unit',
           avatar_url: '/user-avatar.png'
         },
         {
           id: 'records-legal',
-          name: 'FCINSP Michael John V Escano',
-          title: 'Records and Legal Management Unit',
+          name: 'FO2 Marathess I Ramos',
+          title: 'Records and Leave Management Unit',
           avatar_url: '/user-avatar.png'
         },
         {
           id: 'morale-welfare',
-          name: 'FCINSP Michael John V Escano',
+          name: 'FO2 Karen V Lumbres',
           title: 'Morale and Welfare Unit',
           avatar_url: '/user-avatar.png'
         },
         {
           id: 'finance',
-          name: 'FCINSP Michael John V Escano',
+          name: 'SFO2 Maridae S Cortez',
           title: 'Finance Unit',
           avatar_url: '/user-avatar.png'
         }
@@ -58,19 +75,19 @@ const initialOrgData = {
     },
     {
       id: 'fire-safety',
-      name: 'FCINSP Michael John V Escano',
+      name: 'SFO2 Gringo I Laloon',
       title: 'Fire Safety and Enforcement Section',
       avatar_url: '/user-avatar.png',
       units: [
         {
           id: 'fire-prevention',
-          name: 'FCINSP Michael John V Escano',
-          title: 'Fire Prevention Unit',
+          name: 'SFO2 Maridae S Cortez',
+          title: 'Fire Prevention',
           avatar_url: '/user-avatar.png'
         },
         {
           id: 'community-relations',
-          name: 'FCINSP Michael John V Escano',
+          name: 'SFO3 John Bryan T Anonuevo',
           title: 'Community Relations Unit',
           avatar_url: '/user-avatar.png'
         }
@@ -78,43 +95,31 @@ const initialOrgData = {
     },
     {
       id: 'operations',
-      name: 'FCINSP Michael John V Escano',
-      title: 'Operations Section',
+      name: 'SFO3 Warlock R Bautista',
+      title: 'Chief Operations Section',
       avatar_url: '/user-avatar.png',
       units: [
         {
           id: 'comml',
-          name: 'FCINSP Michael John V Escano',
-          title: 'COMML',
+          name: 'FO3 Dennis B Gumalal',
+          title: 'Chief Comrel',
           avatar_url: '/user-avatar.png'
         },
         {
           id: 'intelligence',
-          name: 'FCINSP Michael John V Escano',
+          name: 'SFO1 Ephraim C Lauretas',
           title: 'Intelligence and Investigation Unit',
           avatar_url: '/user-avatar.png'
         },
         {
           id: 'emergency-medical',
-          name: 'FCINSP Michael John V Escano',
+          name: 'SFO3 John Bryan T Anonuevo',
           title: 'Emergency Medical Services',
           avatar_url: '/user-avatar.png'
         },
         {
-          id: 'rescue',
-          name: 'FCINSP Michael John V Escano',
-          title: 'Rescue Unit',
-          avatar_url: '/user-avatar.png'
-        },
-        {
           id: 'logistics',
-          name: 'FCINSP Michael John V Escano',
-          title: 'Logistics Unit',
-          avatar_url: '/user-avatar.png'
-        },
-        {
-          id: 'fire-engine',
-          name: 'FCINSP Michael John V Escano',
+          name: 'SFO2 Roland C Canteras',
           title: 'Fire Engine Company',
           avatar_url: '/user-avatar.png'
         }
@@ -138,14 +143,25 @@ const updateNode = (node, id, field, value) => {
   return node;
 };
 
+const isDeprecatedRescueUnit = (unit = {}) => {
+  const unitId = String(unit.id || '').toLowerCase();
+  const unitTitle = String(unit.title || '').toLowerCase();
+  return unitId === 'rescue' || unitTitle === 'rescue unit';
+};
+
 const normalizeNode = (node = {}) => {
   const normalized = {
     ...node,
-    avatar_url: node.avatar_url || '/user-avatar.png'
+    avatar_url:
+      node.avatar_url && node.avatar_url !== LEGACY_AVATAR_PLACEHOLDER_PATH
+        ? node.avatar_url
+        : ''
   };
 
   if (Array.isArray(node.units)) {
-    normalized.units = node.units.map((unit) => normalizeNode(unit));
+    normalized.units = node.units
+      .filter((unit) => !isDeprecatedRescueUnit(unit))
+      .map((unit) => normalizeNode(unit));
   }
 
   return normalized;
@@ -171,15 +187,29 @@ const applyNodeUpdate = (data, id, field, value) => ({
 });
 
 const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
+  const fallbackAvatar = useMemo(() => buildAvatarPlaceholder(node.name), [node.name]);
+  const [avatarSrc, setAvatarSrc] = useState(
+    node.avatar_url && node.avatar_url !== LEGACY_AVATAR_PLACEHOLDER_PATH
+      ? node.avatar_url
+      : fallbackAvatar
+  );
+
+  useEffect(() => {
+    setAvatarSrc(
+      node.avatar_url && node.avatar_url !== LEGACY_AVATAR_PLACEHOLDER_PATH
+        ? node.avatar_url
+        : fallbackAvatar
+    );
+  }, [node.avatar_url, fallbackAvatar]);
+
   return (
     <div className="org-card">
       <img
-        src={node.avatar_url || '/user-avatar.png'}
+        src={avatarSrc}
         alt={node.name}
         className="org-avatar"
-        onError={(event) => {
-          event.currentTarget.onerror = null;
-          event.currentTarget.src = '/user-avatar.png';
+        onError={() => {
+          setAvatarSrc((current) => (current === fallbackAvatar ? current : fallbackAvatar));
         }}
       />
       {editMode ? (

@@ -1,6 +1,7 @@
 import './App.css'
 import Header from './components/Header'
 import HeroSection from './components/HeroSection'
+import LandingAnnouncements from './components/LandingAnnouncements'
 import AboutSection from './components/AboutSection'
 import ProcessSection from './components/ProcessSection'
 import ContactSection from './components/ContactSection'
@@ -25,10 +26,12 @@ import Accounts from './components/Accounts';
 import Users from './components/Users';
 import Progress from './components/Progress';
 import AuditLogs from './components/AuditLogs';
+import Announcements from './components/Announcements';
 import PersonnelProfile from './components/PersonnelProfile';
 import History from './components/History';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
+import ConfirmSignupPage from './components/ConfirmSignupPage';
 import { UserProvider } from './context/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -40,6 +43,7 @@ function App() {
           <Route path="/" element={<>
             <Header />
             <HeroSection />
+            <LandingAnnouncements />
             <AboutSection />
             <ProcessSection />
             <ContactSection />
@@ -47,6 +51,7 @@ function App() {
             <Footer />
           </>} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/confirm-signup" element={<ConfirmSignupPage />} />
           <Route path="/personnel/profile" element={<ProtectedRoute><PersonnelProfile /></ProtectedRoute>} />
           <Route path="/personnel/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -66,6 +71,9 @@ function App() {
           <Route path="/dashboard/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
           <Route path="/dashboard/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
           <Route path="/dashboard/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
+          <Route path="/dashboard/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
+          <Route path="/personnel/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
+          <Route path="/intel-unit/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
         </Routes>

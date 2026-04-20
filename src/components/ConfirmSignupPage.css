@@ -1,0 +1,154 @@
+.confirm-signup-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  font-family: 'Poppins', sans-serif;
+  background: radial-gradient(circle at 10% 20%, rgba(183, 28, 28, 0.12), transparent 45%),
+    radial-gradient(circle at 85% 85%, rgba(120, 53, 15, 0.12), transparent 40%),
+    #f7f7f8;
+}
+
+.confirm-signup-card {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border: 1px solid #ececec;
+  border-radius: 14px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.09);
+  padding: 2rem;
+}
+
+.confirm-signup-logo {
+  width: 92px;
+  height: auto;
+  display: block;
+  margin: 0 auto 1rem;
+}
+
+.confirm-signup-card h1 {
+  margin: 0;
+  text-align: center;
+  font-size: 1.85rem;
+  color: #1f2937;
+}
+
+.confirm-signup-description {
+  margin: 0.6rem 0 1.4rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.confirm-signup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.confirm-signup-form label {
+  color: #991b1b;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.confirm-signup-form input {
+  border: 1.5px solid #e5e7eb;
+  border-radius: 9px;
+  padding: 0.85rem 0.95rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.confirm-signup-form input:focus {
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+
+.confirm-signup-message {
+  margin-top: 0.3rem;
+  border-radius: 9px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.9rem;
+}
+
+.confirm-signup-message-success {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+}
+
+.confirm-signup-message-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.confirm-signup-primary,
+.confirm-signup-secondary {
+  border: none;
+  border-radius: 9px;
+  padding: 0.85rem 0.95rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.confirm-signup-primary {
+  margin-top: 0.45rem;
+  background: #b91c1c;
+  color: #fff;
+}
+
+.confirm-signup-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.confirm-signup-primary:hover,
+.confirm-signup-secondary:hover {
+  transform: translateY(-1px);
+}
+
+.confirm-signup-primary:disabled,
+.confirm-signup-secondary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.confirm-signup-footer {
+  margin: 1rem 0 0;
+  text-align: center;
+  color: #4b5563;
+  font-size: 0.92rem;
+}
+
+.confirm-signup-footer a {
+  color: #b91c1c;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.confirm-signup-footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 540px) {
+  .confirm-signup-page {
+    padding: 1rem;
+  }
+
+  .confirm-signup-card {
+    padding: 1.4rem;
+  }
+
+  .confirm-signup-card h1 {
+    font-size: 1.5rem;
+  }
+}

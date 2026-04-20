@@ -1,6 +1,67 @@
 import { supabase } from './supabaseClient';
 
 const ADMIN_ACTIVITY_TABLE = 'admin_activity_logs';
+const SHIFT_SCHEDULE_TABLE = 'shift_schedule';
+const SHIFT_SCHEDULE_KEY = 'main';
+
+export const getShiftScheduleConfig = async () => {
+  try {
+    const { data, error } = await supabase
+      .from(SHIFT_SCHEDULE_TABLE)
+      .select('shift_a_dates, shift_b_dates, updated_at')
+      .eq('config_key', SHIFT_SCHEDULE_KEY)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return {
+      data: {
+        shift_a_dates: Array.isArray(data?.shift_a_dates) ? data.shift_a_dates : [],
+        shift_b_dates: Array.isArray(data?.shift_b_dates) ? data.shift_b_dates : []
+      },
+      updatedAt: data?.updated_at || null,
+      error: null
+    };
+  } catch (error) {
+    console.error('Error fetching shift schedule config:', error);
+    return { data: null, updatedAt: null, error: error.message };
+  }
+};
+
+export const saveShiftScheduleConfig = async (
+  { shift_a_dates = [], shift_b_dates = [] },
+  updatedBy = null
+) => {
+  try {
+    const payload = {
+      config_key: SHIFT_SCHEDULE_KEY,
+      shift_a_dates,
+      shift_b_dates,
+      updated_by: updatedBy,
+      updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from(SHIFT_SCHEDULE_TABLE)
+      .upsert(payload, { onConflict: 'config_key' })
+      .select('shift_a_dates, shift_b_dates, updated_at')
+      .single();
+
+    if (error) throw error;
+
+    return {
+      data: {
+        shift_a_dates: Array.isArray(data?.shift_a_dates) ? data.shift_a_dates : [],
+        shift_b_dates: Array.isArray(data?.shift_b_dates) ? data.shift_b_dates : []
+      },
+      updatedAt: data?.updated_at || null,
+      error: null
+    };
+  } catch (error) {
+    console.error('Error saving shift schedule config:', error);
+    return { data: null, updatedAt: null, error: error.message };
+  }
+};
 
 export const getUsersFromProfiles = async () => {
   try {
@@ -111,11 +172,18 @@ export const updateUser = async (adminId, updates) => {
       .from('admin')
       .update(updates)
       .eq('admin_id', adminId)
-      .select()
-      .single();
+      .select('admin_id');
     
     if (error) throw error;
-    return { data, error: null };
+
+    if (!Array.isArray(data) || data.length === 0) {
+      return {
+        data: null,
+        error: 'No account was updated. Check admin table UPDATE policy (RLS) and target user ID.'
+      };
+    }
+
+    return { data: data[0], error: null };
   } catch (error) {
     console.error('Error updating admin:', error);
     return { data: null, error: error.message };

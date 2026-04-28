@@ -65,6 +65,105 @@
   color: #334155;
 }
 
+.leave-approval-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.leave-approval-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.leave-approval-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #1f2937;
+}
+
+.leave-approval-header span {
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.leave-approval-message {
+  margin-bottom: 0.6rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.leave-approval-empty {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.leave-approval-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.leave-approval-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+.leave-approval-table thead {
+  background: #f8fafc;
+}
+
+.leave-approval-table th,
+.leave-approval-table td {
+  text-align: left;
+  padding: 0.6rem 0.7rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.leave-approve-btn,
+.leave-reject-btn {
+  border: none;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  margin-right: 0.4rem;
+}
+
+.leave-approve-btn {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.leave-reject-btn {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.leave-approve-btn:disabled,
+.leave-reject-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .accounts-filters {
   display: grid;
   grid-template-columns: 1.2fr 0.6fr 0.6fr auto;

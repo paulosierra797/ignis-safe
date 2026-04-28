@@ -3,6 +3,7 @@ import { getUsersFromProfiles } from './usersService';
 
 const ANALYTICS_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 const ANALYTICS_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
+const MAX_SESSION_DURATION_SECONDS = Number(import.meta.env.VITE_MAX_SESSION_DURATION_SECONDS || 7200);
 
 const DEFAULT_STATS = {
   activeUsers: 0,
@@ -24,6 +25,8 @@ const DEFAULT_CHARTS_DATA = {
   learningByModule: { labels: [], preTest: [], postTest: [] },
   completionByModule: { labels: [], completionRate: [], simulationCompletion: [] },
   attemptsByModule: { labels: [], attempts: [] },
+  knowledgeGainTrend: { labels: [], values: [] },
+  riskDistribution: { labels: ['High', 'Moderate', 'Low'], values: [0, 0, 0] },
 };
 
 const callAnalyticsApi = async (endpoint, payload = null) => {
@@ -76,6 +79,23 @@ const formatDuration = (seconds) => {
   const minutes = Math.floor(safeSeconds / 60);
   const remainingSeconds = safeSeconds % 60;
   return `${minutes}m ${String(remainingSeconds).padStart(2, '0')}s`;
+};
+
+const extractValidSessionDurations = (attempts) => {
+  return (attempts || []).reduce((accumulator, attempt) => {
+    if (!attempt?.started_at || !attempt?.submitted_at) return accumulator;
+
+    const startedAt = new Date(attempt.started_at).getTime();
+    const submittedAt = new Date(attempt.submitted_at).getTime();
+    if (!Number.isFinite(startedAt) || !Number.isFinite(submittedAt)) return accumulator;
+
+    const diffSeconds = Math.floor((submittedAt - startedAt) / 1000);
+    if (diffSeconds <= 0) return accumulator;
+    if (diffSeconds > MAX_SESSION_DURATION_SECONDS) return accumulator;
+
+    accumulator.push(diffSeconds);
+    return accumulator;
+  }, []);
 };
 
 const normalizeType = (value) =>
@@ -359,7 +379,7 @@ const buildOverviewRows = ({ attempts, assessmentsById, modulesById, userById, f
       const submittedAt = new Date(attempt.submitted_at).getTime();
       const diffSeconds = Math.max(0, Math.floor((submittedAt - startedAt) / 1000));
 
-      if (Number.isFinite(diffSeconds)) {
+      if (Number.isFinite(diffSeconds) && diffSeconds > 0 && diffSeconds <= MAX_SESSION_DURATION_SECONDS) {
         item.durationSecondsList.push(diffSeconds);
       }
     }
@@ -543,9 +563,11 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
       filters,
     });
 
+    const validSessionDurations = extractValidSessionDurations(filteredAttempts);
+
     const avgDurationSeconds =
-      overview.length > 0
-        ? overview.reduce((sum, row) => sum + row.durationSeconds, 0) / overview.length
+      validSessionDurations.length > 0
+        ? validSessionDurations.reduce((sum, value) => sum + value, 0) / validSessionDurations.length
         : 0;
 
     const startingKnowledge =
@@ -877,6 +899,71 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       attempts: modulesForAttempts.map((row) => attemptsAccumulator[row.id] || 0),
     };
 
+    const overviewRows = buildOverviewRows({
+      attempts: filteredAttempts,
+      assessmentsById,
+      modulesById,
+      userById,
+      filters,
+    });
+
+    const trendAccumulator = overviewRows.reduce((accumulator, row) => {
+      if (!row.latestActivityAt) return accumulator;
+
+      const date = new Date(row.latestActivityAt);
+      if (Number.isNaN(date.getTime())) return accumulator;
+
+      if (startDate && date < startDate) return accumulator;
+
+      const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      if (!accumulator[dateKey]) {
+        accumulator[dateKey] = { gainSum: 0, count: 0 };
+      }
+
+      accumulator[dateKey].gainSum += toNumber(row.normalizedGain, 0) * 100;
+      accumulator[dateKey].count += 1;
+      return accumulator;
+    }, {});
+
+    const sortedTrendKeys = Object.keys(trendAccumulator).sort((a, b) => a.localeCompare(b));
+    const knowledgeGainTrend = {
+      labels: sortedTrendKeys.map((key) => {
+        const date = new Date(`${key}T00:00:00`);
+        return date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
+      }),
+      values: sortedTrendKeys.map((key) => {
+        const bucket = trendAccumulator[key];
+        if (!bucket?.count) return 0;
+        return round(bucket.gainSum / bucket.count, 2);
+      }),
+    };
+
+    const riskDistributionCounts = overviewRows.reduce(
+      (accumulator, row) => {
+        const level = classifyKnowledgeRisk({
+          normalizedGain: row.normalizedGain,
+          completionRate: row.completionRate,
+          simulationScore: row.simulationScore,
+        });
+
+        if (level === 'high') accumulator.high += 1;
+        else if (level === 'moderate') accumulator.moderate += 1;
+        else accumulator.low += 1;
+
+        return accumulator;
+      },
+      { high: 0, moderate: 0, low: 0 },
+    );
+
+    const riskDistribution = {
+      labels: ['High', 'Moderate', 'Low'],
+      values: [
+        riskDistributionCounts.high,
+        riskDistributionCounts.moderate,
+        riskDistributionCounts.low,
+      ],
+    };
+
     return {
       data: {
         userOverview,
@@ -884,6 +971,8 @@ export const getAnalyticsChartsData = async (filters = {}) => {
         learningByModule,
         completionByModule,
         attemptsByModule,
+        knowledgeGainTrend,
+        riskDistribution,
       },
       error: null,
     };

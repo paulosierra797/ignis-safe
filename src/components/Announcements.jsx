@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import LandingContentEditor from './LandingContentEditor';
 import { useUser } from '../context/UserContext';
 import {
   createAnnouncement,
@@ -15,6 +16,34 @@ const AUDIENCE_OPTIONS = [
   { value: 'all_personnel', label: 'All Personnel' },
   { value: 'specific_personnel', label: 'Specific Personnel' }
 ];
+
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_TYPES = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/pjpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+  'image/bmp',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain'
+]);
+
+const formatAttachmentSize = (sizeBytes) => {
+  const size = Number(sizeBytes || 0);
+  if (!size) return '0 B';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const formatDate = (isoDate) => {
   if (!isoDate) return '-';
@@ -32,11 +61,13 @@ const formatDate = (isoDate) => {
 export default function Announcements() {
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('announcements');
   const [announcements, setAnnouncements] = useState([]);
   const [recipients, setRecipients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -47,6 +78,7 @@ export default function Announcements() {
   const role = String(currentUser?.role || '').toLowerCase();
   const isAdmin = role === 'admin';
   const sidebarVariant = role === 'personnel' ? 'personnel' : role === 'intel-unit' ? 'intel-unit' : 'admin';
+  const isAnnouncementTab = !isAdmin || activeTab === 'announcements';
 
   const loadAnnouncements = async () => {
     const { data, error } = await getAnnouncementsForUser(currentUser);
@@ -103,32 +135,94 @@ export default function Announcements() {
 
   const handleSubmitAnnouncement = async (event) => {
     event.preventDefault();
-    setSubmitting(true);
-    setMessage({ type: '', text: '' });
-
-    const payload = {
-      title: formData.title,
-      content: formData.content,
-      audience_type: formData.audience_type,
-      target_personnel_id: formData.target_personnel_id || null
-    };
-
-    const { error } = await createAnnouncement(currentUser, payload);
-    if (error) {
-      setMessage({ type: 'error', text: error });
-      setSubmitting(false);
+    
+    if (!currentUser || !currentUser.admin_id) {
+      setMessage({ type: 'error', text: 'User session not found. Please refresh and try again.' });
+      return;
+    }
+    
+    if (formData.audience_type === 'specific_personnel' && !formData.target_personnel_id) {
+      setMessage({ type: 'error', text: 'Please select a personnel recipient before sending.' });
       return;
     }
 
-    setFormData({
-      title: '',
-      content: '',
-      audience_type: 'public',
-      target_personnel_id: ''
+    setSubmitting(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const payload = {
+        title: formData.title,
+        content: formData.content,
+        audience_type: formData.audience_type,
+        target_personnel_id: formData.target_personnel_id || null,
+        attachments: attachmentFiles
+      };
+
+      const { error } = await createAnnouncement(currentUser, payload);
+      if (error) {
+        setMessage({ type: 'error', text: error });
+        return;
+      }
+
+      setFormData({
+        title: '',
+        content: '',
+        audience_type: 'public',
+        target_personnel_id: ''
+      });
+      setAttachmentFiles([]);
+      setMessage({ type: 'success', text: 'Announcement sent successfully.' });
+      await loadAnnouncements();
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleAttachmentChange = (event) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    if (selectedFiles.length === 0) return;
+
+    const validFiles = [];
+    const rejectedNames = [];
+
+    selectedFiles.forEach((file) => {
+      const mimeType = String(file?.type || '').toLowerCase();
+      const size = Number(file?.size || 0);
+
+      if (!ALLOWED_ATTACHMENT_TYPES.has(mimeType)) {
+        rejectedNames.push(`${file.name} (unsupported type)`);
+        return;
+      }
+
+      if (size > MAX_ATTACHMENT_SIZE) {
+        rejectedNames.push(`${file.name} (over 10MB)`);
+        return;
+      }
+
+      validFiles.push(file);
     });
-    setMessage({ type: 'success', text: 'Announcement sent successfully.' });
-    await loadAnnouncements();
-    setSubmitting(false);
+
+    setAttachmentFiles((prev) => {
+      const next = [...prev, ...validFiles].slice(0, MAX_ATTACHMENTS);
+      if (validFiles.length + prev.length > MAX_ATTACHMENTS) {
+        setMessage({
+          type: 'error',
+          text: `Only ${MAX_ATTACHMENTS} attachments are allowed per announcement.`
+        });
+      } else if (rejectedNames.length > 0) {
+        setMessage({
+          type: 'error',
+          text: `Some files were not added: ${rejectedNames.join(', ')}`
+        });
+      }
+      return next;
+    });
+
+    event.target.value = '';
+  };
+
+  const handleRemoveAttachment = (indexToRemove) => {
+    setAttachmentFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
   return (
@@ -137,11 +231,35 @@ export default function Announcements() {
 
       <div className="announcements-main">
         <PageHeader
-          title="Announcements"
+          title={isAdmin ? 'Content Management' : 'Announcements'}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           variant={sidebarVariant}
+          showSearch={isAnnouncementTab}
         />
+
+        {isAdmin && (
+          <div className="content-tabs" role="tablist" aria-label="Content management tabs">
+            <button
+              type="button"
+              className={`content-tab ${activeTab === 'announcements' ? 'active' : ''}`}
+              onClick={() => setActiveTab('announcements')}
+              role="tab"
+              aria-selected={activeTab === 'announcements'}
+            >
+              Announcements
+            </button>
+            <button
+              type="button"
+              className={`content-tab ${activeTab === 'landing' ? 'active' : ''}`}
+              onClick={() => setActiveTab('landing')}
+              role="tab"
+              aria-selected={activeTab === 'landing'}
+            >
+              Landing Page
+            </button>
+          </div>
+        )}
 
         {message.text && (
           <div className={`announcement-message ${message.type}`}>
@@ -149,7 +267,7 @@ export default function Announcements() {
           </div>
         )}
 
-        {isAdmin && (
+        {isAdmin && isAnnouncementTab && (
           <div className="announcement-card composer-card">
             <h2>Create Announcement</h2>
             <form className="announcement-form" onSubmit={handleSubmitAnnouncement}>
@@ -193,7 +311,6 @@ export default function Announcements() {
                       id="targetPersonnel"
                       value={formData.target_personnel_id}
                       onChange={(event) => setFormData((prev) => ({ ...prev, target_personnel_id: event.target.value }))}
-                      required
                     >
                       <option value="">Choose personnel</option>
                       {recipients.map((person) => (
@@ -202,6 +319,11 @@ export default function Announcements() {
                         </option>
                       ))}
                     </select>
+                    {recipients.length === 0 && (
+                      <small className="form-help-text" style={{ color: '#dc2626' }}>
+                        No active personnel available. Refresh page or contact admin.
+                      </small>
+                    )}
                   </div>
                 </div>
               )}
@@ -221,6 +343,39 @@ export default function Announcements() {
                 </div>
               </div>
 
+              <div className="form-row">
+                <div className="form-field">
+                  <label htmlFor="announcementAttachments">Attachments (optional)</label>
+                  <input
+                    id="announcementAttachments"
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp,image/gif,image/heic,image/heif,image/bmp,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    multiple
+                    onChange={handleAttachmentChange}
+                  />
+                  <small className="form-help-text">
+                    Up to {MAX_ATTACHMENTS} files. Supports photos, PDF, DOC, XLS, and TXT files.
+                  </small>
+
+                  {attachmentFiles.length > 0 && (
+                    <ul className="attachment-selection-list">
+                      {attachmentFiles.map((file, index) => (
+                        <li key={`${file.name}-${index}`} className="attachment-selection-item">
+                          <span>{file.name} ({formatAttachmentSize(file.size)})</span>
+                          <button
+                            type="button"
+                            className="attachment-remove-button"
+                            onClick={() => handleRemoveAttachment(index)}
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
               <div className="form-actions">
                 <button type="submit" disabled={submitting}>
                   {submitting ? 'Sending...' : 'Send Announcement'}
@@ -230,7 +385,12 @@ export default function Announcements() {
           </div>
         )}
 
-        <div className="announcement-card list-card">
+        {isAdmin && activeTab === 'landing' ? (
+          <div className="announcement-card landing-editor-card">
+            <LandingContentEditor embedded />
+          </div>
+        ) : (
+          <div className="announcement-card list-card">
           <div className="list-card-header">
             <h2>{isAdmin ? 'Sent Announcements' : 'Announcement Feed'}</h2>
             <span className="announcement-count">{filteredAnnouncements.length} item(s)</span>
@@ -249,6 +409,33 @@ export default function Announcements() {
                     <span className="announcement-audience">{getAudienceLabel(announcement)}</span>
                   </div>
                   <p className="announcement-content">{announcement.content}</p>
+                  {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
+                    <div className="announcement-attachments">
+                      {announcement.attachments.map((attachment, index) => (
+                        attachment.is_image ? (
+                          <a
+                            key={`${announcement.announcement_id}-img-${index}`}
+                            className="announcement-image-link"
+                            href={attachment.file_url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <img src={attachment.file_url} alt={attachment.file_name || 'Attached image'} loading="lazy" />
+                          </a>
+                        ) : (
+                          <a
+                            key={`${announcement.announcement_id}-file-${index}`}
+                            className="announcement-file-link"
+                            href={attachment.file_url}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {attachment.file_name || 'Attachment'}
+                          </a>
+                        )
+                      ))}
+                    </div>
+                  )}
                   <div className="announcement-meta">
                     <span>By: {announcement.created_by_name}</span>
                     <span>{formatDate(announcement.created_at)}</span>
@@ -257,7 +444,8 @@ export default function Announcements() {
               ))}
             </div>
           )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

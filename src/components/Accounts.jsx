@@ -11,6 +11,11 @@ import {
   getShiftScheduleConfig,
   saveShiftScheduleConfig
 } from '../utils/usersService';
+import {
+  getPendingLeaveRequests,
+  approveLeaveRequest,
+  rejectLeaveRequest
+} from '../utils/personnelOperationsService';
 import { useUser } from '../context/UserContext';
 
 const validPersonnelNamePattern = /^[A-Za-z\s]+$/;
@@ -32,6 +37,10 @@ export default function Accounts() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLeaveSaving, setIsLeaveSaving] = useState(false);
   const [isShiftSaving, setIsShiftSaving] = useState(false);
+  const [pendingRequestsLoading, setPendingRequestsLoading] = useState(true);
+  const [pendingLeaveRequests, setPendingLeaveRequests] = useState([]);
+  const [pendingRequestMessage, setPendingRequestMessage] = useState('');
+  const [processingRequestId, setProcessingRequestId] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [leaveMessage, setLeaveMessage] = useState({ type: '', text: '' });
   const [shiftMessage, setShiftMessage] = useState({ type: '', text: '' });
@@ -108,6 +117,7 @@ export default function Accounts() {
   useEffect(() => {
     fetchAccounts();
     loadShiftSchedule();
+    loadPendingLeaveRequests();
   }, []);
 
   const formatShiftDate = (dateValue) => {
@@ -230,6 +240,124 @@ export default function Accounts() {
     } finally {
       setLoadingAccounts(false);
     }
+  };
+
+  const loadPendingLeaveRequests = async () => {
+    setPendingRequestsLoading(true);
+    setPendingRequestMessage('');
+
+    const { data, error } = await getPendingLeaveRequests();
+    if (error) {
+      setPendingRequestMessage(error);
+      setPendingLeaveRequests([]);
+    } else {
+      setPendingLeaveRequests(data || []);
+    }
+
+    setPendingRequestsLoading(false);
+  };
+
+  const handleApproveLeaveRequest = async (request) => {
+    if (!request?.request_id || !request?.personnel_id) {
+      return;
+    }
+
+    setPendingRequestMessage('');
+    setProcessingRequestId(request.request_id);
+
+    const { data, error } = await approveLeaveRequest({
+      requestId: request.request_id,
+      personnelId: request.personnel_id,
+      startDate: request.start_date,
+      endDate: request.end_date,
+      approvedBy: currentUser?.admin_id || null
+    });
+
+    if (error) {
+      setPendingRequestMessage(`Failed to approve leave request: ${error}`);
+      setProcessingRequestId('');
+      return;
+    }
+
+    setPendingLeaveRequests((prev) => prev.filter((row) => row.request_id !== request.request_id));
+    setAccounts((prev) =>
+      prev.map((account) =>
+        account.admin_id === request.personnel_id
+          ? {
+              ...account,
+              status: 'On Leave',
+              leave_start_date: request.start_date,
+              leave_end_date: request.end_date
+            }
+          : account
+      )
+    );
+
+    const target = accounts.find((account) => account.admin_id === request.personnel_id);
+    logAdminActivity({
+      actorId: currentUser?.admin_id || null,
+      actorName: currentUser?.name || currentUser?.email || 'Admin User',
+      action: 'Leave Request Approved',
+      actionType: 'edit',
+      details: `Approved leave request for ${target?.first_name || ''} ${target?.last_name || ''} (${target?.email || request.personnel_id}) from ${request.start_date} to ${request.end_date}.`,
+      metadata: {
+        request_id: request.request_id,
+        personnel_id: request.personnel_id,
+        start_date: request.start_date,
+        end_date: request.end_date,
+        leave_request_status: data?.request?.status || 'approved'
+      }
+    }).catch((logError) => {
+      console.warn('Unable to write admin activity log:', logError);
+    });
+
+    setProcessingRequestId('');
+  };
+
+  const handleRejectLeaveRequest = async (request) => {
+    if (!request?.request_id || !request?.personnel_id) {
+      return;
+    }
+
+    const rejectionReason = window.prompt('Optional rejection reason:') || '';
+
+    setPendingRequestMessage('');
+    setProcessingRequestId(request.request_id);
+
+    const { data, error } = await rejectLeaveRequest({
+      requestId: request.request_id,
+      rejectedBy: currentUser?.admin_id || null,
+      rejectionReason
+    });
+
+    if (error) {
+      setPendingRequestMessage(`Failed to reject leave request: ${error}`);
+      setProcessingRequestId('');
+      return;
+    }
+
+    setPendingLeaveRequests((prev) => prev.filter((row) => row.request_id !== request.request_id));
+
+    const target = accounts.find((account) => account.admin_id === request.personnel_id);
+    logAdminActivity({
+      actorId: currentUser?.admin_id || null,
+      actorName: currentUser?.name || currentUser?.email || 'Admin User',
+      action: 'Leave Request Rejected',
+      actionType: 'edit',
+      details: `Rejected leave request for ${target?.first_name || ''} ${target?.last_name || ''} (${target?.email || request.personnel_id}) from ${request.start_date} to ${request.end_date}.${rejectionReason ? ` Reason: ${rejectionReason}` : ''}`,
+      metadata: {
+        request_id: request.request_id,
+        personnel_id: request.personnel_id,
+        start_date: request.start_date,
+        end_date: request.end_date,
+        leave_request_status: data?.status || 'rejected',
+        rejection_reason: rejectionReason || null
+      }
+    }).catch((logError) => {
+      console.warn('Unable to write admin activity log:', logError);
+    });
+
+    setProcessingRequestId('');
   };
 
   const handleDeleteUser = async (adminId) => {
@@ -723,6 +851,72 @@ export default function Accounts() {
           <p>
             <strong>Shift B:</strong> {formatShiftDateList(shiftSchedule.shift_b_dates)}
           </p>
+        </div>
+
+        <div className="leave-approval-card">
+          <div className="leave-approval-header">
+            <h3>Pending Leave Requests</h3>
+            <span>{pendingLeaveRequests.length} pending</span>
+          </div>
+
+          {pendingRequestMessage && (
+            <div className="leave-approval-message">{pendingRequestMessage}</div>
+          )}
+
+          {pendingRequestsLoading ? (
+            <p className="leave-approval-empty">Loading leave requests...</p>
+          ) : pendingLeaveRequests.length === 0 ? (
+            <p className="leave-approval-empty">No pending leave requests.</p>
+          ) : (
+            <div className="leave-approval-table-wrap">
+              <table className="leave-approval-table">
+                <thead>
+                  <tr>
+                    <th>Personnel</th>
+                    <th>Email</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Requested</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingLeaveRequests.map((request) => {
+                    const target = accounts.find((account) => account.admin_id === request.personnel_id);
+                    const isProcessing = processingRequestId === request.request_id;
+
+                    return (
+                      <tr key={request.request_id}>
+                        <td>{target ? `${target.first_name || ''} ${target.last_name || ''}`.trim() : request.personnel_id}</td>
+                        <td>{target?.email || '-'}</td>
+                        <td>{formatLeaveDate(request.start_date)}</td>
+                        <td>{formatLeaveDate(request.end_date)}</td>
+                        <td>{new Date(request.created_at).toLocaleDateString('en-US')}</td>
+                        <td>
+                          <button
+                            className="leave-approve-btn"
+                            type="button"
+                            onClick={() => handleApproveLeaveRequest(request)}
+                            disabled={isProcessing}
+                          >
+                            {isProcessing ? 'Processing...' : 'Approve'}
+                          </button>
+                          <button
+                            className="leave-reject-btn"
+                            type="button"
+                            onClick={() => handleRejectLeaveRequest(request)}
+                            disabled={isProcessing}
+                          >
+                            Reject
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="accounts-filters">

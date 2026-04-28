@@ -52,6 +52,33 @@ export default function LandingAnnouncements() {
                 <span className="landing-announcement-tag">Public</span>
                 <h3>{announcement.title}</h3>
                 <p>{announcement.content}</p>
+                {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
+                  <div className="landing-announcement-attachments">
+                    {announcement.attachments.map((attachment, index) => (
+                      attachment.is_image ? (
+                        <a
+                          key={`${announcement.announcement_id}-img-${index}`}
+                          href={attachment.file_url}
+                          className="landing-announcement-image-link"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <img src={attachment.file_url} alt={attachment.file_name || 'Attached image'} loading="lazy" />
+                        </a>
+                      ) : (
+                        <a
+                          key={`${announcement.announcement_id}-file-${index}`}
+                          href={attachment.file_url}
+                          className="landing-announcement-file-link"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          {attachment.file_name || 'Attachment'}
+                        </a>
+                      )
+                    ))}
+                  </div>
+                )}
                 <div className="landing-announcement-meta">
                   <span>BFP Dasmariñas City Fire Station</span>
                   <span>{formatDate(announcement.created_at)}</span>

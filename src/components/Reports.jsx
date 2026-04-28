@@ -16,6 +16,18 @@ export default function Reports() {
 
   useEffect(() => {
     const continueDraft = location.state?.continueDraft;
+    const startReportType = location.state?.startReportType;
+
+    if (startReportType) {
+      setSelectedReportType(startReportType);
+      setDraftReportId(null);
+      setDraftFormValues(null);
+      setShowReportForm(true);
+
+      navigate('/reports', { replace: true, state: {} });
+      return;
+    }
+
     if (!continueDraft) {
       return;
     }

@@ -2,13 +2,143 @@ import { supabase } from './supabaseClient';
 import { logAdminActivity } from './usersService';
 
 const ANNOUNCEMENTS_TABLE = 'announcements';
+const ANNOUNCEMENT_ATTACHMENTS_BUCKET = 'announcement_attachments';
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
+const ATTACHMENT_UPLOAD_TIMEOUT_MS = 120000;
+
+const ALLOWED_ATTACHMENT_TYPES = [
+  'image/jpeg',
+  'image/jpg',
+  'image/pjpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/heic',
+  'image/heif',
+  'image/bmp',
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/plain'
+];
 
 const normalizeRole = (role) => String(role || '').trim().toLowerCase();
+
+const sanitizeFileName = (name = '') =>
+  String(name || 'attachment')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .slice(0, 120);
+
+const withTimeout = (promise, timeoutMs, timeoutMessage) => {
+  let timeoutId;
+
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(timeoutMessage));
+      }, timeoutMs);
+    })
+  ]).finally(() => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  });
+};
+
+const normalizeAttachments = (attachments) => {
+  if (!Array.isArray(attachments)) return [];
+
+  return attachments
+    .map((item) => ({
+      file_name: item?.file_name || item?.name || 'Attachment',
+      file_path: item?.file_path || '',
+      file_url: item?.file_url || item?.url || '',
+      mime_type: item?.mime_type || '',
+      size_bytes: Number(item?.size_bytes || item?.size || 0),
+      is_image: Boolean(item?.is_image)
+    }))
+    .filter((item) => item.file_url || item.file_path);
+};
+
+const uploadAnnouncementAttachments = async (currentUser, files) => {
+  if (!Array.isArray(files) || files.length === 0) {
+    return { data: [], error: null };
+  }
+
+  if (files.length > MAX_ATTACHMENTS) {
+    return { data: [], error: `You can attach up to ${MAX_ATTACHMENTS} files.` };
+  }
+
+  const uploaded = [];
+
+  try {
+    for (const file of files) {
+      const mimeType = String(file?.type || '').toLowerCase();
+      const size = Number(file?.size || 0);
+
+      if (!ALLOWED_ATTACHMENT_TYPES.includes(mimeType)) {
+        return {
+          data: [],
+          error: `Unsupported file type for ${file?.name || 'Unknown file'} (${mimeType || 'unknown'}).`
+        };
+      }
+
+      if (size > MAX_ATTACHMENT_SIZE) {
+        return {
+          data: [],
+          error: `File too large: ${file?.name || 'Unknown file'} (max 10 MB).`
+        };
+      }
+
+      const safeUserId = currentUser?.admin_id || 'unknown-user';
+      const fileName = sanitizeFileName(file?.name);
+      const filePath = `${safeUserId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${fileName}`;
+
+      const { error: uploadError } = await withTimeout(
+        supabase.storage
+          .from(ANNOUNCEMENT_ATTACHMENTS_BUCKET)
+          .upload(filePath, file, {
+            contentType: mimeType || 'application/octet-stream',
+            upsert: false
+          }),
+        ATTACHMENT_UPLOAD_TIMEOUT_MS,
+        `Upload timed out for ${file?.name || 'attachment'}. Check bucket allowed MIME types and retry.`
+      );
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const {
+        data: { publicUrl }
+      } = supabase.storage.from(ANNOUNCEMENT_ATTACHMENTS_BUCKET).getPublicUrl(filePath);
+
+      uploaded.push({
+        file_name: file?.name || 'Attachment',
+        file_path: filePath,
+        file_url: publicUrl || '',
+        mime_type: mimeType,
+        size_bytes: size,
+        is_image: mimeType.startsWith('image/')
+      });
+    }
+
+    return { data: uploaded, error: null };
+  } catch (error) {
+    console.error('Error uploading announcement attachment:', error);
+    return { data: [], error: error.message || 'Failed to upload attachment.' };
+  }
+};
 
 const mapAnnouncement = (row = {}) => ({
   announcement_id: row.announcement_id,
   title: row.title || '',
   content: row.content || '',
+  attachments: normalizeAttachments(row.attachments),
   audience_type: row.audience_type || 'public',
   target_personnel_id: row.target_personnel_id || null,
   created_at: row.created_at || null,
@@ -27,7 +157,7 @@ export const getPublicAnnouncements = async () => {
   try {
     const { data, error } = await supabase
       .from(ANNOUNCEMENTS_TABLE)
-      .select('announcement_id, title, content, created_at')
+      .select('announcement_id, title, content, attachments, created_at')
       .eq('audience_type', 'public')
       .order('created_at', { ascending: false });
 
@@ -38,6 +168,7 @@ export const getPublicAnnouncements = async () => {
         announcement_id: row.announcement_id,
         title: row.title || '',
         content: row.content || '',
+        attachments: normalizeAttachments(row.attachments),
         created_at: row.created_at || null,
         audience_type: 'public'
       })),
@@ -54,7 +185,8 @@ export const getPersonnelRecipients = async () => {
     const { data, error } = await supabase
       .from('admin')
       .select('admin_id, first_name, last_name, rank, email, status')
-      .eq('role', 'personnel')
+      .ilike('role', 'personnel')
+      .eq('status', 'Active')
       .order('first_name', { ascending: true });
 
     if (error) throw error;
@@ -85,6 +217,7 @@ export const getAnnouncementsForUser = async (currentUser) => {
         announcement_id,
         title,
         content,
+        attachments,
         audience_type,
         target_personnel_id,
         created_by,
@@ -95,9 +228,13 @@ export const getAnnouncementsForUser = async (currentUser) => {
       .order('created_at', { ascending: false });
 
     if (role !== 'admin') {
-      query = query
-        .in('audience_type', ['all_personnel'])
-        .or(`audience_type.eq.specific_personnel,target_personnel_id.eq.${userId}`);
+      if (!userId) {
+        query = query.eq('audience_type', 'all_personnel');
+      } else {
+        query = query.or(
+          `audience_type.eq.all_personnel,audience_type.eq.specific_personnel,target_personnel_id.eq.${userId}`
+        );
+      }
     }
 
     const { data, error } = await query;
@@ -134,8 +271,17 @@ export const createAnnouncement = async (currentUser, payload) => {
       throw new Error('Audience type is invalid.');
     }
 
+    if (Array.isArray(payload?.attachments) && payload.attachments.length > MAX_ATTACHMENTS) {
+      throw new Error(`You can attach up to ${MAX_ATTACHMENTS} files.`);
+    }
+
     if (audienceType === 'specific_personnel' && !targetPersonnelId) {
       throw new Error('Please select a personnel recipient.');
+    }
+
+    const uploadedAttachments = await uploadAnnouncementAttachments(currentUser, payload?.attachments || []);
+    if (uploadedAttachments.error) {
+      throw new Error(uploadedAttachments.error);
     }
 
     const { data, error } = await supabase
@@ -143,6 +289,7 @@ export const createAnnouncement = async (currentUser, payload) => {
       .insert({
         title: payload.title.trim(),
         content: payload.content.trim(),
+        attachments: uploadedAttachments.data,
         audience_type: audienceType,
         target_personnel_id: audienceType === 'specific_personnel' ? targetPersonnelId : null,
         created_by: currentUser.admin_id
@@ -162,7 +309,8 @@ export const createAnnouncement = async (currentUser, payload) => {
       metadata: {
         announcementId: data?.announcement_id || null,
         audienceType,
-        targetPersonnelId
+        targetPersonnelId,
+        attachmentCount: uploadedAttachments.data.length
       }
     });
 

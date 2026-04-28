@@ -1,8 +1,13 @@
 import './ContactSection.css'
 import firestation from '../assets/firestation.jpg'
+import { useLandingContent } from '../context/LandingContentContext';
+
+const toPhoneHref = (value) => `tel:${String(value || '').replace(/[^\d+]/g, '')}`;
 
 
 export default function ContactSection() {
+  const { content } = useLandingContent();
+
   return (
     <section className="contact" id="contact">
       <div className="contact-container">
@@ -11,22 +16,22 @@ export default function ContactSection() {
         </div>
         
         <div className="contact-content">
-          <h2>CONTACT INFORMATION</h2>
+          <h2>{content.contact.title}</h2>
           
           <div className="emergency-title">
-            <h3>EMERGENCY HOTLINE OF BFP:</h3>
+            <h3>{content.contact.emergencyTitle}</h3>
             <div className="phone">
               <div className="hotline-row">
                 <span className="hotline-icon" aria-hidden="true">&#9742;</span>
                 <span className="hotline-label">Landline:</span>
-                <a href="tel:0468846131">(046) 884-6131</a>
+                <a href={toPhoneHref(content.contact.landlinePrimary)}>{content.contact.landlinePrimary}</a>
                 <span className="hotline-separator">/</span>
-                <a href="tel:0464160875">416-0875</a>
+                <a href={toPhoneHref(content.contact.landlineSecondary)}>{content.contact.landlineSecondary}</a>
               </div>
               <div className="hotline-row">
                 <span className="hotline-icon" aria-hidden="true">&#128241;</span>
                 <span className="hotline-label">Mobile:</span>
-                <a href="tel:09953369534">0995 336 9534</a>
+                <a href={toPhoneHref(content.contact.mobile)}>{content.contact.mobile}</a>
               </div>
             </div>
           </div>
@@ -35,16 +40,18 @@ export default function ContactSection() {
             <div className="info-item">
               <label>EMAIL:</label>
               <a
-                href="https://mail.google.com/mail/?view=cm&fs=1&to=dasmariasfire@gmail.com"
+                href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(content.contact.email || '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                dasmariasfire@gmail.com
+                {content.contact.email}
               </a>
             </div>
             <div className="info-item">
               <label>FACEBOOK:</label>
-              <a href="https://www.facebook.com/GOLF.E207/">BFP-Dasmariñas FS Cavite</a>
+              <a href={content.contact.facebookUrl} target="_blank" rel="noopener noreferrer">
+                {content.contact.facebookLabel}
+              </a>
             </div>
           </div>
         </div>

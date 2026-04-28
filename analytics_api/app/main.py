@@ -35,6 +35,31 @@ def format_duration(seconds: float) -> str:
     return f"{minutes}m {remaining_seconds:02d}s"
 
 
+MAX_SESSION_DURATION_SECONDS = int(os.getenv("MAX_SESSION_DURATION_SECONDS", "7200"))
+
+
+def extract_valid_session_durations(attempts: List[Dict[str, Any]]) -> List[int]:
+    durations: List[int] = []
+
+    for attempt in attempts:
+        started_at = parse_iso_date(attempt.get("started_at"))
+        submitted_at = parse_iso_date(attempt.get("submitted_at"))
+        if not started_at or not submitted_at:
+            continue
+
+        diff_seconds = int((submitted_at - started_at).total_seconds())
+        if diff_seconds <= 0:
+            continue
+
+        # Guard against abandoned browser tabs that would inflate average session length.
+        if diff_seconds > MAX_SESSION_DURATION_SECONDS:
+            continue
+
+        durations.append(diff_seconds)
+
+    return durations
+
+
 def normalize_type(value: Optional[str]) -> str:
     return str(value or "").lower().replace("-", "_").replace(" ", "_").strip()
 
@@ -287,7 +312,8 @@ def build_overview_rows(data: Dict[str, Any], filters: Filters) -> List[Dict[str
         submitted_at = parse_iso_date(attempt.get("submitted_at"))
         if started_at and submitted_at:
             diff_seconds = max(0, int((submitted_at - started_at).total_seconds()))
-            item["durationSecondsList"].append(diff_seconds)
+            if 0 < diff_seconds <= MAX_SESSION_DURATION_SECONDS:
+                item["durationSecondsList"].append(diff_seconds)
 
         previous_latest = parse_iso_date(item["latestActivityAt"]) if item["latestActivityAt"] else None
         previous_latest_ts = previous_latest.timestamp() if previous_latest else 0
@@ -397,6 +423,60 @@ def build_filter_options(modules: List[Dict[str, Any]]) -> Dict[str, List[str]]:
     return {"topics": ["All", *topics]}
 
 
+def calculate_ai_knowledge_gain_percent(overview_rows: List[Dict[str, Any]]) -> float:
+    # Use linear regression to estimate post-test performance from learner behavior.
+    # This provides a model-based knowledge gain score instead of a direct formula only.
+    candidate_rows = [
+        row
+        for row in overview_rows
+        if row.get("preTestScore") is not None and row.get("postTestScore") is not None
+    ]
+
+    if not candidate_rows:
+        return 0.0
+
+    if len(candidate_rows) < 4:
+        starting = float(np.mean([to_number(row.get("preTestScore"), 0) for row in candidate_rows]))
+        current = float(np.mean([to_number(row.get("postTestScore"), 0) for row in candidate_rows]))
+        if starting >= 100:
+            return 0.0
+        return round_value(((current - starting) / (100 - starting)) * 100, 2)
+
+    X = np.array(
+        [
+            [
+                to_number(row.get("preTestScore"), 0),
+                min(120.0, max(0.0, to_number(row.get("durationSeconds"), 0) / 60.0)),
+                1.0 if to_number(row.get("postTestScore"), 0) > 0 else 0.0,
+            ]
+            for row in candidate_rows
+        ]
+    )
+    y = np.array([to_number(row.get("postTestScore"), 0) for row in candidate_rows])
+
+    try:
+        reg = LinearRegression()
+        reg.fit(X, y)
+
+        predicted_post_scores = np.clip(reg.predict(X), 0, 100)
+        starting_knowledge = float(np.mean(X[:, 0]))
+        predicted_current_knowledge = float(np.mean(predicted_post_scores))
+
+        if starting_knowledge >= 100:
+            return 0.0
+
+        return round_value(
+            ((predicted_current_knowledge - starting_knowledge) / (100 - starting_knowledge)) * 100,
+            2,
+        )
+    except Exception:
+        starting = float(np.mean(X[:, 0]))
+        current = float(np.mean(y))
+        if starting >= 100:
+            return 0.0
+        return round_value(((current - starting) / (100 - starting)) * 100, 2)
+
+
 def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
     start_date = get_timeframe_start_date(filters.timeframe)
     people_filter = filters.people
@@ -453,9 +533,10 @@ def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, A
 
     overview_rows = build_overview_rows(data, filters)
 
+    valid_session_durations = extract_valid_session_durations(filtered_attempts)
     avg_duration_seconds = (
-        sum(row["durationSeconds"] for row in overview_rows) / len(overview_rows)
-        if overview_rows
+        sum(valid_session_durations) / len(valid_session_durations)
+        if valid_session_durations
         else 0
     )
 
@@ -470,9 +551,7 @@ def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, A
         else 0
     )
 
-    knowledge_gain_percent = 0
-    if starting_knowledge < 100:
-        knowledge_gain_percent = round_value(((current_knowledge - starting_knowledge) / (100 - starting_knowledge)) * 100, 2)
+    knowledge_gain_percent = calculate_ai_knowledge_gain_percent(overview_rows)
 
     return {
         "activeUsers": active_users,
@@ -640,12 +719,104 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
         "attempts": [attempts_accumulator.get(row.get("id"), 0) for row in modules_for_attempts],
     }
 
+    overview_rows = build_overview_rows(data, filters)
+
+    trend_accumulator: Dict[str, Dict[str, float]] = {}
+    for row in overview_rows:
+        activity_at = parse_iso_date(row.get("latestActivityAt"))
+        if not activity_at:
+            continue
+
+        if start_date and activity_at < start_date:
+            continue
+
+        bucket_key = activity_at.strftime("%Y-%m-%d")
+        if bucket_key not in trend_accumulator:
+            trend_accumulator[bucket_key] = {"gain_sum": 0.0, "count": 0}
+
+        trend_accumulator[bucket_key]["gain_sum"] += to_number(row.get("normalizedGain"), 0) * 100
+        trend_accumulator[bucket_key]["count"] += 1
+
+    sorted_trend_keys = sorted(trend_accumulator.keys())
+    knowledge_gain_trend = {
+        "labels": [datetime.strptime(key, "%Y-%m-%d").strftime("%b %d") for key in sorted_trend_keys],
+        "values": [
+            round_value(trend_accumulator[key]["gain_sum"] / trend_accumulator[key]["count"], 2)
+            if trend_accumulator[key]["count"] > 0
+            else 0
+            for key in sorted_trend_keys
+        ],
+    }
+
+    risk_distribution = {
+        "labels": ["High", "Moderate", "Low"],
+        "values": [0, 0, 0],
+    }
+
+    if len(overview_rows) >= 6:
+        features = np.array(
+            [
+                [
+                    to_number(row.get("normalizedGain"), 0),
+                    to_number(row.get("preTestScore"), 0) / 100,
+                    to_number(row.get("postTestScore"), 0) / 100,
+                ]
+                for row in overview_rows
+            ]
+        )
+
+        try:
+            kmeans = KMeans(n_clusters=3, n_init=10, random_state=42)
+            labels = kmeans.fit_predict(features)
+            centers = kmeans.cluster_centers_
+
+            ranked = sorted(
+                [(idx, center[0]) for idx, center in enumerate(centers)],
+                key=lambda item: item[1],
+            )
+            label_map = {
+                ranked[0][0]: "High",
+                ranked[1][0]: "Moderate",
+                ranked[2][0]: "Low",
+            }
+
+            counts = {"High": 0, "Moderate": 0, "Low": 0}
+            for cluster_label in labels:
+                counts[label_map[int(cluster_label)]] += 1
+
+            risk_distribution["values"] = [counts["High"], counts["Moderate"], counts["Low"]]
+        except Exception:
+            pass
+
+    if sum(risk_distribution["values"]) == 0 and overview_rows:
+        fallback_counts = {"High": 0, "Moderate": 0, "Low": 0}
+        for row in overview_rows:
+            level = classify_knowledge_risk(
+                to_number(row.get("normalizedGain"), 0),
+                to_number(row.get("completionRate"), 100),
+                to_number(row.get("simulationScore"), 100),
+            )
+            if level == "high":
+                fallback_counts["High"] += 1
+            elif level == "moderate":
+                fallback_counts["Moderate"] += 1
+            else:
+                fallback_counts["Low"] += 1
+
+        risk_distribution["values"] = [
+            fallback_counts["High"],
+            fallback_counts["Moderate"],
+            fallback_counts["Low"],
+        ]
+
     return {
         "userOverview": user_overview,
         "activityTrends": activity_trends,
         "learningByModule": learning_by_module,
         "completionByModule": completion_by_module,
         "attemptsByModule": attempts_by_module,
+        "knowledgeGainTrend": knowledge_gain_trend,
+        "riskDistribution": risk_distribution,
     }
 
 

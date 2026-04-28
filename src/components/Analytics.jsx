@@ -7,6 +7,8 @@ import ActivityTrendsChart from './ActivityTrendsChart';
 import TrainingProgressChart from './TrainingProgressChart';
 import CompletionSimulationChart from './CompletionSimulationChart';
 import UserOverviewChart from './UserOverviewChart';
+import KnowledgeGainTrendChart from './KnowledgeGainTrendChart';
+import RiskDistributionChart from './RiskDistributionChart';
 import {
   getAnalyticsDashboardStats,
   getAnalyticsFilterOptions,
@@ -29,6 +31,8 @@ const DEFAULT_CHARTS = {
   learningByModule: { labels: [], preTest: [], postTest: [] },
   completionByModule: { labels: [], completionRate: [], simulationCompletion: [] },
   attemptsByModule: { labels: [], attempts: [] },
+  knowledgeGainTrend: { labels: [], values: [] },
+  riskDistribution: { labels: ['High', 'Moderate', 'Low'], values: [0, 0, 0] },
 };
 
 export default function Analytics() {
@@ -126,8 +130,6 @@ export default function Analytics() {
           title="Analytics"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          userName="Alex meian"
-          userRole="Product manager"
         />
 
         <div className="analytics-filters">
@@ -324,6 +326,22 @@ export default function Analytics() {
                 <span className="legend-dot" style={{ background: '#fbbf24' }}></span>
                 <span>Simulation Completion (%)</span>
               </div>
+            </div>
+          </div>
+
+          {/* Knowledge Gain Trend */}
+          <div className="analytics-chart-card">
+            <h3>Knowledge Gain Trend (AI)</h3>
+            <div style={{ height: '240px', padding: '1rem 0.5rem' }}>
+              <KnowledgeGainTrendChart chartData={charts.knowledgeGainTrend} />
+            </div>
+          </div>
+
+          {/* Risk Distribution */}
+          <div className="analytics-chart-card">
+            <h3>Learner Risk Distribution</h3>
+            <div style={{ height: '250px', padding: '0.75rem 0.5rem' }}>
+              <RiskDistributionChart chartData={charts.riskDistribution} />
             </div>
           </div>
         </div>

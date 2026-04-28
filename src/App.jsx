@@ -11,10 +11,6 @@ import { Routes, Route } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 import Reports from './components/Reports';
-import IntelUnitReports from './components/IntelUnitReports';
-import IntelUnitProfile from './components/IntelUnitProfile';
-import IntelUnitArchive from './components/IntelUnitArchive';
-import IntelUnitAuditLogs from './components/IntelUnitAuditLogs';
 import AttendanceAdmin from './components/AttendanceAdmin';
 import AttendancePersonnel from './components/AttendancePersonnel';
 import AttendanceLogin from './components/AttendanceLogin';
@@ -61,10 +57,7 @@ function App() {
             <Route path="/personnel/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-            <Route path="/intel-unit/reports" element={<ProtectedRoute><IntelUnitReports /></ProtectedRoute>} />
-            <Route path="/intel-unit/profile" element={<ProtectedRoute><IntelUnitProfile /></ProtectedRoute>} />
-            <Route path="/intel-unit/archive" element={<ProtectedRoute><IntelUnitArchive /></ProtectedRoute>} />
-            <Route path="/intel-unit/audit-logs" element={<ProtectedRoute><IntelUnitAuditLogs /></ProtectedRoute>} />
+        
             <Route path="/attendance-admin" element={<ProtectedRoute><AttendanceAdmin /></ProtectedRoute>} />
             <Route path="/attendance-personnel" element={<ProtectedRoute><AttendancePersonnel /></ProtectedRoute>} />
             <Route path="/attendance-login" element={<AttendanceLogin />} />

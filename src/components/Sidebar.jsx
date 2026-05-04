@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import inlogo from '../assets/inlogo.png';
+import inlogo from '../assets/inLOGO.png';
 import './Dashboard.css';
 import { useUser } from '../context/UserContext';
 

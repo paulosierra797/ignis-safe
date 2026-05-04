@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { resendSignupCode, signOut, verifySignupCode } from '../utils/authService';
 import { useUser } from '../context/UserContext';
-import ignissafe from '../assets/logo1.png';
+import ignissafe from '../assets/Logo1.png';
 import './ConfirmSignupPage.css';
 
 const OTP_REQUEST_TIMEOUT_MS = 15000;

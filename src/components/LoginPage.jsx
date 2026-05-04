@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signIn, signInWithGoogle, sendPasswordResetEmail, verifyRecoveryCode, updatePassword, signOut } from '../utils/authService';
 import { useUser } from '../context/UserContext';
 import './LoginPage.css';
-import ignissafe from '../assets/logo1.png'
+import ignissafe from '../assets/Logo1.png'
 
 const REMEMBER_ME_KEY = 'remember_me';
 const REMEMBERED_EMAIL_KEY = 'remembered_email';

@@ -115,7 +115,7 @@ ALTER TABLE investigation_report_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE investigation_report_attachments ENABLE ROW LEVEL SECURITY;
 
 -- Helper condition note:
--- Reviewer roles are sourced from admin.role and include intel unit, intel-unit.
+-- Reviewer roles are sourced from admin.role and include admin, intel unit, intel-unit.
 
 -- 8) RLS policies: investigation_reports
 DROP POLICY IF EXISTS "Personnel insert own reports" ON investigation_reports;
@@ -138,7 +138,7 @@ USING (
     SELECT 1
     FROM admin a
     WHERE a.admin_id = auth.uid()
-      AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+      AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
   )
 );
 
@@ -167,7 +167,7 @@ USING (
     SELECT 1
     FROM admin a
     WHERE a.admin_id = auth.uid()
-      AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+      AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
   )
 )
 WITH CHECK (
@@ -175,7 +175,7 @@ WITH CHECK (
     SELECT 1
     FROM admin a
     WHERE a.admin_id = auth.uid()
-      AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+      AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
   )
 );
 
@@ -190,7 +190,7 @@ USING (
     SELECT 1
     FROM admin a
     WHERE a.admin_id = auth.uid()
-      AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+      AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
   )
 );
 
@@ -211,7 +211,7 @@ USING (
           SELECT 1
           FROM admin a
           WHERE a.admin_id = auth.uid()
-            AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+            AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
         )
       )
   )
@@ -229,7 +229,7 @@ WITH CHECK (
     SELECT 1
     FROM admin a
     WHERE a.admin_id = auth.uid()
-      AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+      AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
   )
 );
 
@@ -250,7 +250,7 @@ USING (
           SELECT 1
           FROM admin a
           WHERE a.admin_id = auth.uid()
-            AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+            AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
         )
       )
   )
@@ -273,7 +273,7 @@ WITH CHECK (
           SELECT 1
           FROM admin a
           WHERE a.admin_id = auth.uid()
-            AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+            AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
         )
       )
   )
@@ -290,7 +290,7 @@ USING (
     SELECT 1
     FROM admin a
     WHERE a.admin_id = auth.uid()
-      AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+      AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
   )
 );
 
@@ -326,7 +326,7 @@ USING (
   AND EXISTS (
     SELECT 1 FROM admin a
     WHERE a.admin_id = auth.uid()
-      AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+      AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
   )
 )
 WITH CHECK (
@@ -334,7 +334,7 @@ WITH CHECK (
   AND EXISTS (
     SELECT 1 FROM admin a
     WHERE a.admin_id = auth.uid()
-      AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+      AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
   )
 );
 
@@ -350,7 +350,7 @@ USING (
     OR EXISTS (
       SELECT 1 FROM admin a
       WHERE a.admin_id = auth.uid()
-        AND LOWER(a.role) IN ('intel unit', 'intel-unit')
+        AND LOWER(a.role) IN ('admin', 'intel unit', 'intel-unit')
     )
   )
 );

@@ -6,6 +6,7 @@ import { useUser } from '../context/UserContext';
 import {
   createAnnouncement,
   getAnnouncementsForUser,
+  acknowledgeAnnouncement,
   getAudienceLabel,
   getPersonnelRecipients
 } from '../utils/announcementsService';
@@ -66,6 +67,7 @@ export default function Announcements() {
   const [recipients, setRecipients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [acknowledgingId, setAcknowledgingId] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [formData, setFormData] = useState({
@@ -223,6 +225,35 @@ export default function Announcements() {
 
   const handleRemoveAttachment = (indexToRemove) => {
     setAttachmentFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleAcknowledgeAnnouncement = async (announcementId) => {
+    if (!announcementId) return;
+
+    setAcknowledgingId(announcementId);
+    setMessage({ type: '', text: '' });
+
+    const { data, error } = await acknowledgeAnnouncement(currentUser, announcementId);
+    if (error) {
+      setMessage({ type: 'error', text: `Failed to acknowledge announcement: ${error}` });
+      setAcknowledgingId('');
+      return;
+    }
+
+    setAnnouncements((prev) =>
+      prev.map((row) =>
+        row.announcement_id === announcementId
+          ? {
+              ...row,
+              acknowledged_by_current_user: true,
+              acknowledged_at: data?.acknowledged_at || new Date().toISOString()
+            }
+          : row
+      )
+    );
+
+    setMessage({ type: 'success', text: 'Announcement acknowledged.' });
+    setAcknowledgingId('');
   };
 
   return (
@@ -438,8 +469,31 @@ export default function Announcements() {
                   )}
                   <div className="announcement-meta">
                     <span>By: {announcement.created_by_name}</span>
+                    {isAdmin && announcement.acknowledgement_summary?.totalRecipients > 0 && (
+                      <span>
+                        Acknowledged: {announcement.acknowledgement_summary.acknowledgedCount}/
+                        {announcement.acknowledgement_summary.totalRecipients}
+                      </span>
+                    )}
+                    {!isAdmin && (
+                      <span className={`announcement-ack-status ${announcement.acknowledged_by_current_user ? 'acknowledged' : 'pending'}`}>
+                        {announcement.acknowledged_by_current_user ? 'Acknowledged' : 'Pending acknowledgment'}
+                      </span>
+                    )}
                     <span>{formatDate(announcement.created_at)}</span>
                   </div>
+
+                  {!isAdmin && !announcement.acknowledged_by_current_user && (
+                    <div className="announcement-ack-action">
+                      <button
+                        type="button"
+                        onClick={() => handleAcknowledgeAnnouncement(announcement.announcement_id)}
+                        disabled={acknowledgingId === announcement.announcement_id}
+                      >
+                        {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}
+                      </button>
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

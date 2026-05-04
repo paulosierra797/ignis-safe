@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { getShiftScheduleConfig } from './usersService';
+import { getAllUsers, getShiftScheduleConfig } from './usersService';
 
 const ADMIN_TABLE = 'admin';
 const LEAVE_REQUESTS_TABLE = 'leave_requests';
@@ -9,6 +9,23 @@ const toIsoDate = (date) => {
   const month = `${date.getMonth() + 1}`.padStart(2, '0');
   const day = `${date.getDate()}`.padStart(2, '0');
   return `${year}-${month}-${day}`;
+};
+
+const formatPersonnelName = (personnel) => {
+  if (!personnel) return 'Personnel';
+
+  return [personnel.rank, personnel.first_name, personnel.last_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim() || personnel.email || 'Personnel';
+};
+
+const isDateWithinInclusiveRange = (date, startDate, endDate) => {
+  if (!date || !startDate || !endDate) {
+    return false;
+  }
+
+  return date >= startDate && date <= endDate;
 };
 
 export const getPersonnelLeaveRequest = async (adminId) => {
@@ -220,15 +237,39 @@ export const rejectLeaveRequest = async ({ requestId, rejectedBy, rejectionReaso
 
 export const getPersonnelShiftSchedule = async ({ days = 14 } = {}) => {
   try {
-    const { data: config, error } = await getShiftScheduleConfig();
-    if (error) {
-      return { data: null, error };
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + days - 1);
+
+    const [configResult, personnelResult, assignmentResult] = await Promise.all([
+      getShiftScheduleConfig(),
+      getAllUsers(),
+      getShiftAssignmentsForPeriod({
+        startDate: toIsoDate(startDate),
+        endDate: toIsoDate(endDate)
+      })
+    ]);
+
+    if (configResult.error) {
+      return { data: null, error: configResult.error };
     }
+
+    if (personnelResult.error) {
+      return { data: null, error: personnelResult.error };
+    }
+
+    if (assignmentResult.error) {
+      return { data: null, error: assignmentResult.error };
+    }
+
+    const config = configResult.data;
+    const personnelRows = Array.isArray(personnelResult.data) ? personnelResult.data : [];
+    const assignments = Array.isArray(assignmentResult.data) ? assignmentResult.data : [];
+    const personnelById = new Map(personnelRows.map((personnel) => [personnel.admin_id, personnel]));
 
     const shiftA = new Set(config?.shift_a_dates || []);
     const shiftB = new Set(config?.shift_b_dates || []);
-    const startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
 
     const rows = [];
     for (let offset = 0; offset < days; offset += 1) {
@@ -238,6 +279,30 @@ export const getPersonnelShiftSchedule = async ({ days = 14 } = {}) => {
       const isoDate = toIsoDate(targetDate);
       const hasA = shiftA.has(isoDate);
       const hasB = shiftB.has(isoDate);
+      const shiftTypes = [hasA ? 'A' : null, hasB ? 'B' : null].filter(Boolean);
+
+      const onLeavePersonnel = personnelRows
+        .filter((personnel) => String(personnel.status || '').toLowerCase() === 'on leave')
+        .filter((personnel) => isDateWithinInclusiveRange(isoDate, personnel.leave_start_date, personnel.leave_end_date))
+        .map((personnel) => ({
+          admin_id: personnel.admin_id,
+          name: formatPersonnelName(personnel)
+        }));
+
+      const leavePersonnelIds = new Set(onLeavePersonnel.map((personnel) => personnel.admin_id));
+
+      const onDutyPersonnel = assignments
+        .filter((assignment) => shiftTypes.includes(String(assignment.shift_type || '').toUpperCase()))
+        .filter((assignment) => isDateWithinInclusiveRange(isoDate, assignment.start_date, assignment.end_date))
+        .map((assignment) => personnelById.get(assignment.personnel_id) || null)
+        .filter((personnel) => personnel && !leavePersonnelIds.has(personnel.admin_id))
+        .map((personnel) => ({
+          admin_id: personnel.admin_id,
+          name: formatPersonnelName(personnel)
+        }));
+
+      const uniqueOnDutyPersonnel = Array.from(new Map(onDutyPersonnel.map((personnel) => [personnel.admin_id, personnel])).values());
+      const uniqueOnLeavePersonnel = Array.from(new Map(onLeavePersonnel.map((personnel) => [personnel.admin_id, personnel])).values());
 
       let shift = 'Off Duty';
       if (hasA && hasB) {
@@ -256,7 +321,11 @@ export const getPersonnelShiftSchedule = async ({ days = 14 } = {}) => {
           day: 'numeric',
           year: 'numeric'
         }),
-        shift
+        shift,
+        onDutyPersonnel: uniqueOnDutyPersonnel,
+        onLeavePersonnel: uniqueOnLeavePersonnel,
+        onDutyCount: uniqueOnDutyPersonnel.length,
+        onLeaveCount: uniqueOnLeavePersonnel.length
       });
     }
 
@@ -270,6 +339,141 @@ export const getPersonnelShiftSchedule = async ({ days = 14 } = {}) => {
     };
   } catch (error) {
     console.error('Error loading personnel shift schedule:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+const PERSONNEL_SHIFT_ASSIGNMENTS_TABLE = 'personnel_shift_assignments';
+
+export const assignPersonnelToShift = async ({ personnelId, shiftType, startDate, endDate, assignedBy }) => {
+  try {
+    if (!personnelId || !shiftType || !startDate || !endDate) {
+      return { data: null, error: 'Missing required fields for shift assignment.' };
+    }
+
+    if (endDate < startDate) {
+      return { data: null, error: 'End date must be on or after the start date.' };
+    }
+
+    const { data, error } = await supabase
+      .from(PERSONNEL_SHIFT_ASSIGNMENTS_TABLE)
+      .insert({
+        personnel_id: personnelId,
+        shift_type: shiftType.toUpperCase(),
+        start_date: startDate,
+        end_date: endDate,
+        assigned_by: assignedBy
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error assigning personnel to shift:', error);
+    if (error?.code === '42P01' || String(error?.message || '').toLowerCase().includes('personnel_shift')) {
+      return {
+        data: null,
+        error: 'Personnel shift assignments table is missing. Run personnel_shift_assignments_setup.sql first.'
+      };
+    }
+    return { data: null, error: error.message };
+  }
+};
+
+export const getPersonnelShiftAssignments = async (personnelId) => {
+  try {
+    if (!personnelId) {
+      return { data: [], error: 'Missing personnel id.' };
+    }
+
+    const { data, error } = await supabase
+      .from(PERSONNEL_SHIFT_ASSIGNMENTS_TABLE)
+      .select('assignment_id, personnel_id, shift_type, start_date, end_date, assigned_by, created_at')
+      .eq('personnel_id', personnelId)
+      .order('start_date', { ascending: false });
+
+    if (error) throw error;
+
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error('Error fetching personnel shift assignments:', error);
+    return { data: [], error: error.message };
+  }
+};
+
+export const getShiftAssignmentsForPeriod = async ({ startDate, endDate, shiftType }) => {
+  try {
+    let query = supabase
+      .from(PERSONNEL_SHIFT_ASSIGNMENTS_TABLE)
+      .select('assignment_id, personnel_id, shift_type, start_date, end_date, assigned_by, created_at');
+
+    if (shiftType) {
+      query = query.eq('shift_type', shiftType.toUpperCase());
+    }
+
+    const { data, error } = await query
+      .gte('end_date', startDate)
+      .lte('start_date', endDate)
+      .order('start_date', { ascending: true });
+
+    if (error) throw error;
+
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error('Error fetching shift assignments for period:', error);
+    return { data: [], error: error.message };
+  }
+};
+
+export const removeShiftAssignment = async (assignmentId) => {
+  try {
+    if (!assignmentId) {
+      return { data: null, error: 'Missing assignment id.' };
+    }
+
+    const { data, error } = await supabase
+      .from(PERSONNEL_SHIFT_ASSIGNMENTS_TABLE)
+      .delete()
+      .eq('assignment_id', assignmentId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error removing shift assignment:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const updateShiftAssignment = async ({ assignmentId, startDate, endDate }) => {
+  try {
+    if (!assignmentId || !startDate || !endDate) {
+      return { data: null, error: 'Missing required fields for shift assignment update.' };
+    }
+
+    if (endDate < startDate) {
+      return { data: null, error: 'End date must be on or after the start date.' };
+    }
+
+    const { data, error } = await supabase
+      .from(PERSONNEL_SHIFT_ASSIGNMENTS_TABLE)
+      .update({
+        start_date: startDate,
+        end_date: endDate
+      })
+      .eq('assignment_id', assignmentId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error updating shift assignment:', error);
     return { data: null, error: error.message };
   }
 };

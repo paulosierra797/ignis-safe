@@ -14,7 +14,11 @@ import {
 import {
   getPendingLeaveRequests,
   approveLeaveRequest,
-  rejectLeaveRequest
+  rejectLeaveRequest,
+  assignPersonnelToShift,
+  getPersonnelShiftAssignments,
+  getShiftAssignmentsForPeriod,
+  removeShiftAssignment
 } from '../utils/personnelOperationsService';
 import { useUser } from '../context/UserContext';
 
@@ -34,9 +38,16 @@ export default function Accounts() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+  const [isPersonnelShiftModalOpen, setIsPersonnelShiftModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLeaveSaving, setIsLeaveSaving] = useState(false);
   const [isShiftSaving, setIsShiftSaving] = useState(false);
+  const [isPersonnelShiftSaving, setIsPersonnelShiftSaving] = useState(false);
+  const [selectedShiftPersonnel, setSelectedShiftPersonnel] = useState(null);
+  const [shiftAssignments, setShiftAssignments] = useState([]);
+  const [selectedShiftForAssignment, setSelectedShiftForAssignment] = useState('A');
+  const [personnelShiftMessage, setPersonnelShiftMessage] = useState({ type: '', text: '' });
+  const [periodAssignments, setPeriodAssignments] = useState([]);
   const [pendingRequestsLoading, setPendingRequestsLoading] = useState(true);
   const [pendingLeaveRequests, setPendingLeaveRequests] = useState([]);
   const [pendingRequestMessage, setPendingRequestMessage] = useState('');
@@ -46,6 +57,11 @@ export default function Accounts() {
   const [shiftMessage, setShiftMessage] = useState({ type: '', text: '' });
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [shiftSchedule, setShiftSchedule] = useState({ shift_a_dates: [], shift_b_dates: [] });
+  const [shiftScheduleLoading, setShiftScheduleLoading] = useState(true);
+  const [shiftSummaryMonth, setShiftSummaryMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const [shiftSelection, setShiftSelection] = useState({ shift_a_dates: [], shift_b_dates: [] });
   const [activeShift, setActiveShift] = useState('A');
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -143,6 +159,36 @@ export default function Accounts() {
     return dates.map((dateValue) => formatShiftDate(dateValue)).join(', ');
   };
 
+  const formatPersonnelName = (account) => {
+    if (!account) {
+      return 'Personnel';
+    }
+
+    return [account.rank, account.first_name, account.last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim() || account.email || 'Personnel';
+  };
+
+  const isDateWithinInclusiveRange = (dateValue, startDate, endDate) => {
+    if (!dateValue || !startDate || !endDate) {
+      return false;
+    }
+
+    return dateValue >= startDate && dateValue <= endDate;
+  };
+
+  const formatCalendarMonthLabel = (dateValue) => {
+    try {
+      return dateValue.toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric'
+      });
+    } catch {
+      return '';
+    }
+  };
+
   const getCalendarCells = (monthDate) => {
     const year = monthDate.getFullYear();
     const month = monthDate.getMonth();
@@ -214,16 +260,22 @@ export default function Accounts() {
   };
 
   const loadShiftSchedule = async () => {
-    const { data, error } = await getShiftScheduleConfig();
-    if (error) {
-      console.warn('Unable to load shift schedule:', error);
-      return;
-    }
+    setShiftScheduleLoading(true);
 
-    setShiftSchedule({
-      shift_a_dates: data?.shift_a_dates || [],
-      shift_b_dates: data?.shift_b_dates || []
-    });
+    try {
+      const { data, error } = await getShiftScheduleConfig();
+      if (error) {
+        console.warn('Unable to load shift schedule:', error);
+        return;
+      }
+
+      setShiftSchedule({
+        shift_a_dates: data?.shift_a_dates || [],
+        shift_b_dates: data?.shift_b_dates || []
+      });
+    } finally {
+      setShiftScheduleLoading(false);
+    }
   };
 
   const fetchAccounts = async () => {
@@ -579,6 +631,107 @@ export default function Accounts() {
     setMessage({ type: '', text: '' });
   };
 
+  const handleAssignPersonnelToShift = async () => {
+    if (!selectedShiftPersonnel) {
+      setPersonnelShiftMessage({ type: 'error', text: 'Please select a personnel member.' });
+      return;
+    }
+
+    // Get dates from the shift schedule
+    const shiftDates = selectedShiftForAssignment === 'A' 
+      ? shiftSchedule.shift_a_dates 
+      : shiftSchedule.shift_b_dates;
+
+    if (!shiftDates || shiftDates.length === 0) {
+      setPersonnelShiftMessage({ 
+        type: 'error', 
+        text: `Shift ${selectedShiftForAssignment} has no dates set. Please set shift dates first.` 
+      });
+      return;
+    }
+
+    // Get the first and last dates
+    const sortedDates = [...shiftDates].sort();
+    const formStartDate = sortedDates[0];
+    const formEndDate = sortedDates[sortedDates.length - 1];
+
+    setIsPersonnelShiftSaving(true);
+    setPersonnelShiftMessage({ type: '', text: '' });
+
+    const { error } = await assignPersonnelToShift({
+      personnelId: selectedShiftPersonnel.admin_id,
+      shiftType: selectedShiftForAssignment,
+      startDate: formStartDate,
+      endDate: formEndDate,
+      assignedBy: currentUser?.admin_id || null
+    });
+
+    if (error) {
+      if (String(error).toLowerCase().includes('personnel_shift')) {
+        setPersonnelShiftMessage({
+          type: 'error',
+          text: 'Personnel shift assignments table is missing. Run personnel_shift_assignments_setup.sql first.'
+        });
+      } else {
+        setPersonnelShiftMessage({ type: 'error', text: `Failed to assign shift: ${error}` });
+      }
+      setIsPersonnelShiftSaving(false);
+      return;
+    }
+
+    logAdminActivity({
+      actorId: currentUser?.admin_id || null,
+      actorName: currentUser?.name || currentUser?.email || 'Admin User',
+      action: 'Personnel Shift Assigned',
+      actionType: 'edit',
+      details: `Assigned ${selectedShiftPersonnel.first_name || ''} ${selectedShiftPersonnel.last_name || ''} to Shift ${selectedShiftForAssignment}.`,
+      metadata: {
+        target_admin_id: selectedShiftPersonnel.admin_id,
+        shift_type: selectedShiftForAssignment
+      }
+    }).catch((logError) => {
+      console.warn('Unable to write admin activity log:', logError);
+    });
+
+    // Reload assignments for the selected personnel
+    await loadPersonnelShiftAssignments(selectedShiftPersonnel.admin_id);
+
+    setPersonnelShiftMessage({ type: 'success', text: 'Shift assignment saved successfully.' });
+    setIsPersonnelShiftSaving(false);
+  };
+
+  const loadPersonnelShiftAssignments = async (personnelId) => {
+    const { data, error } = await getPersonnelShiftAssignments(personnelId);
+    if (!error) {
+      setShiftAssignments(data || []);
+    }
+  };
+
+  const handleRemoveShiftAssignment = async (assignmentId) => {
+    if (!window.confirm('Are you sure you want to remove this shift assignment?')) {
+      return;
+    }
+
+    const { error } = await removeShiftAssignment(assignmentId);
+    if (error) {
+      setPersonnelShiftMessage({ type: 'error', text: `Failed to remove assignment: ${error}` });
+      return;
+    }
+
+    // Reload assignments
+    if (selectedShiftPersonnel) {
+      await loadPersonnelShiftAssignments(selectedShiftPersonnel.admin_id);
+    }
+
+    setPersonnelShiftMessage({ type: 'success', text: 'Shift assignment removed successfully.' });
+  };
+
+  const handleSelectPersonnelForShift = async (personnel) => {
+    setSelectedShiftPersonnel(personnel);
+    await loadPersonnelShiftAssignments(personnel.admin_id);
+    setPersonnelShiftMessage({ type: '', text: '' });
+  };
+
   const openShiftModal = () => {
     const selectedShiftData = {
       shift_a_dates: [...(shiftSchedule.shift_a_dates || [])].sort(),
@@ -598,6 +751,40 @@ export default function Accounts() {
     setIsShiftModalOpen(true);
   };
 
+  const openPersonnelShiftModal = () => {
+    setSelectedShiftPersonnel(null);
+    setSelectedShiftForAssignment('A');
+    setShiftAssignments([]);
+    setPersonnelShiftMessage({ type: '', text: '' });
+    setIsPersonnelShiftModalOpen(true);
+    // load assignments for the configured shift schedule period so admin can see who is assigned
+    loadShiftAssignmentsForSchedule().catch((err) => {
+      console.warn('Unable to load period assignments:', err);
+    });
+  };
+
+  const loadShiftAssignmentsForSchedule = async () => {
+    // derive period from current shiftSchedule
+    const allDates = [ ...(shiftSchedule.shift_a_dates || []), ...(shiftSchedule.shift_b_dates || []) ];
+    if (!allDates.length) {
+      setPeriodAssignments([]);
+      return;
+    }
+
+    const sorted = [...new Set(allDates)].sort();
+    const startDate = sorted[0];
+    const endDate = sorted[sorted.length - 1];
+
+    const { data, error } = await getShiftAssignmentsForPeriod({ startDate, endDate });
+    if (error) {
+      console.warn('Error loading shift assignments for period:', error);
+      setPeriodAssignments([]);
+      return;
+    }
+
+    setPeriodAssignments(Array.isArray(data) ? data : []);
+  };
+
   const closeShiftModal = () => {
     if (isShiftSaving) {
       return;
@@ -605,6 +792,16 @@ export default function Accounts() {
 
     setIsShiftModalOpen(false);
     setShiftMessage({ type: '', text: '' });
+  };
+
+  const closePersonnelShiftModal = () => {
+    if (isPersonnelShiftSaving) {
+      return;
+    }
+
+    setIsPersonnelShiftModalOpen(false);
+    setPersonnelShiftMessage({ type: '', text: '' });
+    setSelectedShiftPersonnel(null);
   };
 
   const handleSaveShiftSchedule = async () => {
@@ -821,6 +1018,15 @@ export default function Accounts() {
     return matchSearch && matchRank && matchStatus;
   });
 
+  const shiftScheduleASet = new Set(shiftSchedule.shift_a_dates || []);
+  const shiftScheduleBSet = new Set(shiftSchedule.shift_b_dates || []);
+  const shiftSummaryCalendarCells = getCalendarCells(shiftSummaryMonth);
+  const shiftSummaryMonthLabel = formatCalendarMonthLabel(shiftSummaryMonth);
+
+  const handleShiftSummaryMonthShift = (offset) => {
+    setShiftSummaryMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
+  };
+
   return (
     <div className="accounts-container">
       <Sidebar />
@@ -838,6 +1044,9 @@ export default function Accounts() {
             <button className="shift-schedule-btn" onClick={openShiftModal}>
               Set Shift Dates
             </button>
+            <button className="shift-schedule-btn" onClick={openPersonnelShiftModal}>
+              Assign Personnel
+            </button>
             <button className="add-personnel-btn" onClick={() => setIsAddModalOpen(true)}>
               Add Personnel
             </button>
@@ -845,12 +1054,100 @@ export default function Accounts() {
         </div>
 
         <div className="shift-summary-card">
-          <p>
-            <strong>Shift A:</strong> {formatShiftDateList(shiftSchedule.shift_a_dates)}
-          </p>
-          <p>
-            <strong>Shift B:</strong> {formatShiftDateList(shiftSchedule.shift_b_dates)}
-          </p>
+          <div className="shift-summary-calendar-header">
+            <button
+              className="shift-calendar-nav"
+              type="button"
+              onClick={() => handleShiftSummaryMonthShift(-1)}
+              aria-label="Previous month"
+            >
+              {'<'}
+            </button>
+            <div className="shift-summary-calendar-title">
+              {shiftSummaryMonthLabel}
+            </div>
+            <button
+              className="shift-calendar-nav"
+              type="button"
+              onClick={() => handleShiftSummaryMonthShift(1)}
+              aria-label="Next month"
+            >
+              {'>'}
+            </button>
+          </div>
+
+          <div className="shift-summary-calendar-legend">
+            <span><i className="legend-dot legend-shift-a" /> Shift A</span>
+            <span><i className="legend-dot legend-shift-b" /> Shift B</span>
+            <span><i className="legend-dot legend-active" /> Both</span>
+          </div>
+
+          <div className="shift-summary-calendar-grid shift-calendar-weekdays">
+            {CALENDAR_WEEKDAYS.map((weekday) => (
+              <span key={weekday}>{weekday}</span>
+            ))}
+          </div>
+
+          <div className="shift-summary-calendar-grid shift-calendar-days">
+            {shiftScheduleLoading ? (
+              <div className="shift-summary-calendar-loading">Loading shift schedule...</div>
+            ) : (
+              shiftSummaryCalendarCells.map((dayDate, index) => {
+                if (!dayDate) {
+                  return <span key={`shift-empty-${index}`} className="shift-calendar-empty" />;
+                }
+
+                const isoDate = toIsoDate(dayDate);
+                const selectedA = shiftScheduleASet.has(isoDate);
+                const selectedB = shiftScheduleBSet.has(isoDate);
+                const leavePersonnel = accounts
+                  .filter((account) => isPersonnelAccount(account))
+                  .filter((account) => isOnLeave(account))
+                  .filter((account) => isDateWithinInclusiveRange(
+                    isoDate,
+                    account.leave_start_date,
+                    account.leave_end_date
+                  ))
+                  .map((account) => ({
+                    admin_id: account.admin_id,
+                    name: formatPersonnelName(account)
+                  }));
+
+                const uniqueLeavePersonnel = Array.from(
+                  new Map(leavePersonnel.map((personnel) => [personnel.admin_id, personnel])).values()
+                );
+
+                return (
+                  <div
+                    key={isoDate}
+                    className={`shift-summary-day ${selectedA ? 'shift-a' : ''} ${selectedB ? 'shift-b' : ''} ${selectedA && selectedB ? 'both' : ''}`}
+                  >
+                    <span className="shift-summary-day-number">{dayDate.getDate()}</span>
+                    <div className="shift-summary-day-badges">
+                      {selectedA && <span className="shift-summary-day-badge shift-summary-day-badge-a">A</span>}
+                      {selectedB && <span className="shift-summary-day-badge shift-summary-day-badge-b">B</span>}
+                      {!selectedA && !selectedB && <span className="shift-summary-day-empty">Off</span>}
+                    </div>
+
+                    <div className="shift-summary-day-leave">
+                      <span className="shift-summary-day-leave-label">On Leave</span>
+                      <div className="shift-summary-day-leave-list">
+                        {uniqueLeavePersonnel.length ? (
+                          uniqueLeavePersonnel.map((personnel) => (
+                            <span key={personnel.admin_id} className="shift-summary-leave-pill">
+                              {personnel.name}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="shift-summary-day-leave-empty">None</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
 
         <div className="leave-approval-card">
@@ -1391,6 +1688,152 @@ export default function Accounts() {
                   disabled={isShiftSaving}
                 >
                   {isShiftSaving ? 'Saving...' : 'Save Shift Dates'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isPersonnelShiftModalOpen && (
+          <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
+            <div className="accounts-modal accounts-shift-modal">
+              <div className="accounts-modal-header">
+                <h3>Assign Personnel to Shifts</h3>
+                <button
+                  className="accounts-modal-close"
+                  onClick={closePersonnelShiftModal}
+                  aria-label="Close personnel shift assignment modal"
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="accounts-modal-body">
+                <div className="shift-personnel-selector">
+                  <label htmlFor="shift-personnel-dropdown">
+                    <strong>Select Personnel:</strong>
+                  </label>
+                  <select
+                    id="shift-personnel-dropdown"
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const selectedPersonnel = accounts.find((acc) => acc.admin_id === selectedId);
+                      if (selectedPersonnel) {
+                        handleSelectPersonnelForShift(selectedPersonnel);
+                      }
+                    }}
+                    value={selectedShiftPersonnel?.admin_id || ''}
+                  >
+                    <option value="">-- Choose a personnel member --</option>
+                    {accounts
+                      .filter((account) => isPersonnelAccount(account))
+                      .map((account) => (
+                        <option key={account.admin_id} value={account.admin_id}>
+                          {account.first_name} {account.last_name} ({account.rank || 'N/A'})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div className="shift-overview-grid">
+                  <div className="shift-overview-col">
+                    <div className="shift-overview-header">Shift A</div>
+                    <div className="shift-overview-list">
+                      {(() => {
+                        const ids = Array.from(new Set(periodAssignments
+                          .filter(a => String(a.shift_type || '').toUpperCase() === 'A')
+                          .map(a => a.personnel_id)
+                        ));
+                        return ids.length ? (
+                          <div className="shift-overview-count">{ids.length} personnel assigned</div>
+                        ) : (
+                          <div className="shift-overview-empty">No personnel assigned</div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="shift-overview-col">
+                    <div className="shift-overview-header">Shift B</div>
+                    <div className="shift-overview-list">
+                      {(() => {
+                        const ids = Array.from(new Set(periodAssignments
+                          .filter(a => String(a.shift_type || '').toUpperCase() === 'B')
+                          .map(a => a.personnel_id)
+                        ));
+                        return ids.length ? (
+                          <div className="shift-overview-count">{ids.length} personnel assigned</div>
+                        ) : (
+                          <div className="shift-overview-empty">No personnel assigned</div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {selectedShiftPersonnel && (
+                  <div className="shift-assignment-form">
+                    <h4>Assign {selectedShiftPersonnel.first_name} {selectedShiftPersonnel.last_name} to:</h4>
+
+                    <div className="shift-assignment-simple">
+                      <div className="shift-assignment-shift">
+                        <label htmlFor="shift-assignment-type">Shift:</label>
+                        <select
+                          id="shift-assignment-type"
+                          value={selectedShiftForAssignment}
+                          onChange={(e) => setSelectedShiftForAssignment(e.target.value)}
+                        >
+                          <option value="A">Shift A</option>
+                          <option value="B">Shift B</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      className="shift-assign-btn"
+                      onClick={handleAssignPersonnelToShift}
+                      disabled={isPersonnelShiftSaving}
+                    >
+                      {isPersonnelShiftSaving ? 'Assigning...' : 'Add Shift Assignment'}
+                    </button>
+
+                    {shiftAssignments.length > 0 && (
+                      <div className="shift-assignments-list">
+                        <h5>Current Shift Assignments:</h5>
+                        <div className="assignments-table">
+                          {shiftAssignments.map((assignment) => (
+                            <div key={assignment.assignment_id} className="assignment-row">
+                              <div className="assignment-info">
+                                <span className="assignment-shift">Shift {assignment.shift_type}</span>
+                                <span className="assignment-dates">
+                                  {formatShiftDate(assignment.start_date)} - {formatShiftDate(assignment.end_date)}
+                                </span>
+                              </div>
+                              <button
+                                className="assignment-remove-btn"
+                                onClick={() => handleRemoveShiftAssignment(assignment.assignment_id)}
+                                title="Remove this assignment"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {personnelShiftMessage.text && (
+                  <div className={`accounts-modal-message accounts-modal-message-${personnelShiftMessage.type}`}>
+                    {personnelShiftMessage.text}
+                  </div>
+                )}
+              </div>
+
+              <div className="accounts-modal-footer">
+                <button className="accounts-modal-draft" onClick={closePersonnelShiftModal} disabled={isPersonnelShiftSaving}>
+                  Close
                 </button>
               </div>
             </div>

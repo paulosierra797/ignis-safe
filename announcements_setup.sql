@@ -41,7 +41,22 @@ create index if not exists idx_announcements_audience
 create index if not exists idx_announcements_target_personnel
   on public.announcements (target_personnel_id);
 
+create table if not exists public.announcement_acknowledgments (
+  ack_id uuid primary key default gen_random_uuid(),
+  announcement_id uuid not null references public.announcements(announcement_id) on delete cascade,
+  personnel_id uuid not null references public.admin(admin_id) on delete cascade,
+  acknowledged_at timestamptz not null default now(),
+  unique (announcement_id, personnel_id)
+);
+
+create index if not exists idx_announcement_ack_announcement
+  on public.announcement_acknowledgments (announcement_id);
+
+create index if not exists idx_announcement_ack_personnel
+  on public.announcement_acknowledgments (personnel_id);
+
 alter table public.announcements enable row level security;
+alter table public.announcement_acknowledgments enable row level security;
 
 drop policy if exists "announcements_select_public" on public.announcements;
 create policy "announcements_select_public"
@@ -140,6 +155,53 @@ using (
     from public.admin actor
     where actor.admin_id = auth.uid()
       and lower(actor.role) = 'admin'
+  )
+);
+
+drop policy if exists "announcement_ack_select_admin" on public.announcement_acknowledgments;
+create policy "announcement_ack_select_admin"
+on public.announcement_acknowledgments
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin actor
+    where actor.admin_id = auth.uid()
+      and lower(actor.role) = 'admin'
+  )
+);
+
+drop policy if exists "announcement_ack_select_personnel_own" on public.announcement_acknowledgments;
+create policy "announcement_ack_select_personnel_own"
+on public.announcement_acknowledgments
+for select
+to authenticated
+using (
+  personnel_id = auth.uid()
+);
+
+drop policy if exists "announcement_ack_insert_personnel_own" on public.announcement_acknowledgments;
+create policy "announcement_ack_insert_personnel_own"
+on public.announcement_acknowledgments
+for insert
+to authenticated
+with check (
+  personnel_id = auth.uid()
+  and exists (
+    select 1
+    from public.admin actor
+    where actor.admin_id = auth.uid()
+      and lower(actor.role) = 'personnel'
+  )
+  and exists (
+    select 1
+    from public.announcements an
+    where an.announcement_id = announcement_id
+      and (
+        an.audience_type = 'all_personnel'
+        or (an.audience_type = 'specific_personnel' and an.target_personnel_id = auth.uid())
+      )
   )
 );
 

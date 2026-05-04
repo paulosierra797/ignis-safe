@@ -198,6 +198,137 @@
   font-size: 0.86rem;
 }
 
+.shift-calendar-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  padding: 0.9rem;
+}
+
+.shift-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.shift-calendar-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.shift-calendar-nav {
+  border: 1px solid #f59e0b;
+  background: #fff7ed;
+  color: #c2410c;
+  border-radius: 10px;
+  width: 2.1rem;
+  height: 2.1rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.shift-calendar-nav:hover {
+  background: #ffedd5;
+}
+
+.shift-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.shift-calendar-weekdays {
+  margin-bottom: 0.6rem;
+}
+
+.shift-calendar-weekdays span {
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+}
+
+.shift-calendar-days {
+  min-height: 520px;
+}
+
+.shift-calendar-loading {
+  grid-column: 1 / -1;
+  padding: 1.2rem;
+  text-align: center;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.shift-calendar-day-card {
+  min-height: 112px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+}
+
+.shift-calendar-day-card.has-data {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: linear-gradient(180deg, #fff 0%, #fffaf1 100%);
+}
+
+.shift-calendar-day-card.mine {
+  border-color: rgba(16, 185, 129, 0.45);
+  background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
+}
+
+.shift-calendar-day-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.shift-calendar-day-number {
+  font-weight: 800;
+  color: #111827;
+}
+
+.shift-calendar-day-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.shift-calendar-personnel-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.shift-calendar-personnel-block strong {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #6b7280;
+}
+
+.shift-count-text {
+  font-size: 0.74rem;
+  color: #6b7280;
+}
+
+.shift-calendar-no-data {
+  margin-top: auto;
+  color: #9ca3af;
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
 .shift-table-wrap {
   overflow-x: auto;
   border: 1px solid #e5e7eb;
@@ -207,7 +338,7 @@
 .shift-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 420px;
+  min-width: 860px;
 }
 
 .shift-table thead {
@@ -230,6 +361,48 @@
   text-align: center;
   color: #9ca3af;
   font-style: italic;
+}
+
+.schedule-count-inline {
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.schedule-personnel-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.personnel-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.personnel-badge-duty {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.personnel-badge-mine {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.personnel-badge-leave {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.schedule-empty-inline {
+  color: #9ca3af;
+  font-style: italic;
+  font-size: 0.86rem;
 }
 
 .shift-tag.shift-a {
@@ -337,5 +510,17 @@
 
   .ops-link-btn {
     width: 100%;
+  }
+
+  .shift-calendar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shift-calendar-weekdays {
+    display: none;
+  }
+
+  .shift-calendar-day-card {
+    min-height: 132px;
   }
 }

@@ -1,67 +1,79 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import './Reports.css';
-import InvestigationReport from './InvestigationReport';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
+import { submitInvestigationReport } from '../utils/reportsService';
 
 export default function Reports() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [showReportForm, setShowReportForm] = useState(false);
-  const [selectedReportType, setSelectedReportType] = useState('');
-  const [draftReportId, setDraftReportId] = useState(null);
-  const [draftFormValues, setDraftFormValues] = useState(null);
+  const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
+  const [reportTitle, setReportTitle] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
 
-  useEffect(() => {
-    const continueDraft = location.state?.continueDraft;
-    const startReportType = location.state?.startReportType;
-
-    if (startReportType) {
-      setSelectedReportType(startReportType);
-      setDraftReportId(null);
-      setDraftFormValues(null);
-      setShowReportForm(true);
-
-      navigate('/reports', { replace: true, state: {} });
-      return;
-    }
-
-    if (!continueDraft) {
-      return;
-    }
-
-    setSelectedReportType(continueDraft.reportType || 'finalInvestigation');
-    setDraftReportId(continueDraft.reportId || null);
-    setDraftFormValues(continueDraft.formValues || null);
-    setShowReportForm(true);
-
-    navigate('/reports', { replace: true, state: {} });
-  }, [location.state, navigate]);
-
-  const handleCreateReport = (reportType) => {
-    setSelectedReportType(reportType);
-    setDraftReportId(null);
-    setDraftFormValues(null);
-    setShowReportForm(true);
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    setSelectedFile(file);
+    setMessage({ type: '', text: '' });
   };
 
-  if (showReportForm) {
-    return (
-      <InvestigationReport
-        reportType={selectedReportType}
-        initialDraftReportId={draftReportId}
-        initialFormValues={draftFormValues}
-        onClose={() => {
-          setShowReportForm(false);
-          setSelectedReportType('');
-          setDraftReportId(null);
-          setDraftFormValues(null);
-        }}
-      />
-    );
-  }
+  const handleSubmit = async () => {
+    if (isSubmitting) {
+      return;
+    }
+
+    setMessage({ type: '', text: '' });
+
+    if (!currentUser?.admin_id) {
+      setMessage({ type: 'error', text: 'No personnel account found in the current session.' });
+      return;
+    }
+
+    if (!selectedFile) {
+      setMessage({ type: 'error', text: 'Please choose a file to upload.' });
+      return;
+    }
+
+    const fileName = selectedFile.name || 'uploaded-report.pdf';
+    const isPdf = fileName.toLowerCase().endsWith('.pdf') || String(selectedFile.type || '').toLowerCase().includes('pdf');
+    if (!isPdf) {
+      setMessage({ type: 'error', text: 'Only PDF files are supported.' });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await submitInvestigationReport({
+        reportType: 'finalInvestigation',
+        title: reportTitle.trim() || fileName,
+        category: 'Uploaded Report',
+        reportPayload: {
+          source: 'file_upload',
+          original_file_name: fileName
+        },
+        pdfBlob: selectedFile,
+        pdfFileName: fileName,
+        createdBy: currentUser.admin_id,
+        createdByName: currentUser?.name || currentUser?.email || 'Personnel'
+      });
+
+      if (error) {
+        setMessage({ type: 'error', text: `Failed to submit report: ${error}` });
+        return;
+      }
+
+      setReportTitle('');
+      setSelectedFile(null);
+      setMessage({ type: 'success', text: 'Report file submitted successfully for admin review.' });
+    } catch (error) {
+      setMessage({ type: 'error', text: `Failed to submit report: ${String(error?.message || error)}` });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="reports-page-container">
@@ -76,54 +88,57 @@ export default function Reports() {
           variant="personnel"
         />
 
-        {/* Create New Report Section */}
         <div className="reports-content">
           <div className="create-report-header">
-            <h2>Create New Report</h2>
+            <h2>Submit Report File</h2>
             <p className="create-report-description">
-              You can create and submit investigations reports. Select a report type below to begin.
+              Upload a completed report file and submit it directly to admin.
             </p>
             <p className="create-report-hint">
-              Select any type of investigation report to create and submit.
+              No templates are required.
             </p>
           </div>
 
-          <div className="report-cards-grid">
-            {/* Fire Operations Report */}
-            <div className="report-card">
-              <h3>Fire Operations Report</h3>
-              <p>Document operational actions, resource allocations, and response details for fire incidents.</p>
-              <button 
+          <div className="report-upload-card">
+            <label htmlFor="report-title" className="report-upload-label">Report Title (optional)</label>
+            <input
+              id="report-title"
+              type="text"
+              className="report-upload-input"
+              value={reportTitle}
+              onChange={(event) => setReportTitle(event.target.value)}
+              placeholder="Enter report title"
+            />
+
+            <label htmlFor="report-file" className="report-upload-label">Upload PDF File</label>
+            <input
+              id="report-file"
+              type="file"
+              className="report-upload-input"
+              accept=".pdf,application/pdf"
+              onChange={handleFileChange}
+            />
+
+            {selectedFile && (
+              <p className="report-upload-selected">Selected: {selectedFile.name}</p>
+            )}
+
+            <div className="report-upload-actions">
+              <button
                 className="create-report-btn"
-                onClick={() => handleCreateReport('fireOperations')}
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
               >
-                Create Report
+                {isSubmitting ? 'Submitting...' : 'Submit Report'}
               </button>
             </div>
 
-            {/* Spot Investigation Report */}
-            <div className="report-card">
-              <h3>Spot Investigation Report</h3>
-              <p>Quick on-site assessment documenting investigation findings.</p>
-              <button 
-                className="create-report-btn"
-                onClick={() => handleCreateReport('spotInvestigation')}
-              >
-                Create Report
-              </button>
-            </div>
-
-            {/* Final Investigation Report */}
-            <div className="report-card">
-              <h3>Final Investigation Report</h3>
-              <p>Comprehensive investigation detailing findings, analysis, and recommendations.</p>
-              <button 
-                className="create-report-btn"
-                onClick={() => handleCreateReport('finalInvestigation')}
-              >
-                Create Report
-              </button>
-            </div>
+            {message.text && (
+              <div className={`report-upload-message report-upload-message-${message.type}`}>
+                {message.text}
+              </div>
+            )}
           </div>
         </div>
       </div>

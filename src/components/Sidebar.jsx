@@ -11,6 +11,7 @@ export default function Sidebar({ variant = 'admin' }) {
   const menuItems = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard', permission: 'view_dashboard' },
     { id: 'chart', icon: '📈', label: 'Chart', path: '/dashboard/chart', permission: 'view_charts' },
+    { id: 'reports', icon: '📋', label: 'Reports', path: '/dashboard/reports', permission: 'view_dashboard' },
     { id: 'attendance-admin', icon: '📅', label: 'Attendance', path: '/attendance-admin', permission: 'view_attendance' },
     { id: 'accounts', icon: '👥', label: 'Personnel', path: '/dashboard/accounts', permission: 'view_accounts' },
   ];
@@ -33,7 +34,6 @@ export default function Sidebar({ variant = 'admin' }) {
   ];
 
   const personnelMenuItems = [
-    { id: 'profile', icon: '👤', label: 'Profile', path: '/personnel/profile' },
     { id: 'operations', icon: '🗂️', label: 'Operations', path: '/personnel/operations' },
     { id: 'announcements', icon: '🔔', label: 'Announcements', path: '/personnel/announcements' },
     { id: 'attendance-personnel', icon: '🕐', label: 'Attendance', path: '/attendance-personnel' },

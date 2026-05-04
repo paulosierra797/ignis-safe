@@ -28,6 +28,7 @@ export default function LandingContentEditor({ embedded = false }) {
   const { content, setContent, resetContent, defaults, loadingContent } = useLandingContent();
   const [draft, setDraft] = useState(() => deepClone(content));
   const [saveMessage, setSaveMessage] = useState('');
+  const [saving, setSaving] = useState(false);
 
   React.useEffect(() => {
     setDraft(deepClone(content));
@@ -125,26 +126,44 @@ export default function LandingContentEditor({ embedded = false }) {
   };
 
   const handleSave = async () => {
-    const { error } = await setContent(draft);
-    if (error) {
-      setSaveMessage(`Saved locally, but failed to sync to database: ${error}`);
-    } else {
-      setSaveMessage('Landing page content saved.');
+    if (saving) {
+      return;
     }
-    window.setTimeout(() => setSaveMessage(''), 3000);
+
+    setSaving(true);
+    try {
+      const { error } = await setContent(draft);
+      if (error) {
+        setSaveMessage(`Saved locally, but failed to sync to database: ${error}`);
+      } else {
+        setSaveMessage('Landing page content saved.');
+      }
+      window.setTimeout(() => setSaveMessage(''), 3000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDiscard = () => setDraft(deepClone(content));
 
   const handleResetDefaults = async () => {
-    const { error } = await resetContent();
-    setDraft(deepClone(defaults));
-    if (error) {
-      setSaveMessage(`Defaults reset locally, but failed to sync to database: ${error}`);
-    } else {
-      setSaveMessage('Landing page content reset to defaults.');
+    if (saving) {
+      return;
     }
-    window.setTimeout(() => setSaveMessage(''), 3000);
+
+    setSaving(true);
+    try {
+      const { error } = await resetContent();
+      setDraft(deepClone(defaults));
+      if (error) {
+        setSaveMessage(`Defaults reset locally, but failed to sync to database: ${error}`);
+      } else {
+        setSaveMessage('Landing page content reset to defaults.');
+      }
+      window.setTimeout(() => setSaveMessage(''), 3000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const editorContent = (
@@ -157,14 +176,14 @@ export default function LandingContentEditor({ embedded = false }) {
         <div className="landing-editor-toolbar">
           <p>Edit the text shown on your public landing page.</p>
           <div className="landing-editor-actions">
-            <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges}>
+            <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges || saving}>
               Discard changes
             </button>
-            <button type="button" className="btn btn-danger" onClick={handleResetDefaults}>
-              Reset defaults
+            <button type="button" className="btn btn-danger" onClick={handleResetDefaults} disabled={saving}>
+              {saving ? 'Working...' : 'Reset defaults'}
             </button>
-            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!hasChanges}>
-              Save changes
+            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!hasChanges || saving}>
+              {saving ? 'Saving...' : 'Save changes'}
             </button>
           </div>
         </div>
@@ -177,14 +196,14 @@ export default function LandingContentEditor({ embedded = false }) {
             <p>Edit the public landing page sections.</p>
           </div>
           <div className="landing-editor-actions">
-            <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges}>
+            <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges || saving}>
               Discard changes
             </button>
-            <button type="button" className="btn btn-danger" onClick={handleResetDefaults}>
-              Reset defaults
+            <button type="button" className="btn btn-danger" onClick={handleResetDefaults} disabled={saving}>
+              {saving ? 'Working...' : 'Reset defaults'}
             </button>
-            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!hasChanges}>
-              Save changes
+            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!hasChanges || saving}>
+              {saving ? 'Saving...' : 'Save changes'}
             </button>
           </div>
         </div>

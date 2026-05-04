@@ -10,23 +10,8 @@ import {
 } from '../utils/personnelOperationsService';
 import './PersonnelOperations.css';
 
-const REPORT_TYPES = [
-  {
-    id: 'fireOperations',
-    title: 'Fire Operations Report',
-    description: 'Document operational actions, deployments, and response details.'
-  },
-  {
-    id: 'spotInvestigation',
-    title: 'Spot Investigation Report',
-    description: 'Quick on-site fact-gathering report for immediate field findings.'
-  },
-  {
-    id: 'finalInvestigation',
-    title: 'Final Investigation Report',
-    description: 'Comprehensive report with analysis, causes, and recommendations.'
-  }
-];
+const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -40,6 +25,48 @@ const formatDate = (value) => {
   } catch {
     return value;
   }
+};
+
+const toIsoDate = (date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const fromIsoDate = (dateValue) => {
+  const parts = String(dateValue || '').split('-');
+  if (parts.length !== 3) {
+    return null;
+  }
+
+  const year = Number(parts[0]);
+  const month = Number(parts[1]);
+  const day = Number(parts[2]);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(year, month - 1, day);
+};
+
+const getCalendarCells = (monthDate) => {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDayOfMonth = new Date(year, month, 1);
+  const firstWeekday = firstDayOfMonth.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+
+  return Array.from({ length: totalCells }, (_, index) => {
+    const dayOfMonth = index - firstWeekday + 1;
+    if (dayOfMonth < 1 || dayOfMonth > daysInMonth) {
+      return null;
+    }
+
+    return new Date(year, month, dayOfMonth);
+  });
 };
 
 export default function PersonnelOperations() {
@@ -62,6 +89,10 @@ export default function PersonnelOperations() {
   });
   const [shiftRows, setShiftRows] = useState([]);
   const [shiftTotals, setShiftTotals] = useState({ shiftA: 0, shiftB: 0 });
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
 
   useEffect(() => {
     const loadPageData = async () => {
@@ -120,6 +151,38 @@ export default function PersonnelOperations() {
     return shiftRows[0].shift;
   }, [shiftRows]);
 
+  const shiftRowsByDate = useMemo(
+    () => new Map(shiftRows.map((row) => [row.date, row])),
+    [shiftRows]
+  );
+
+  const calendarLabel = useMemo(
+    () =>
+      calendarMonth.toLocaleDateString('en-US', {
+        month: 'long',
+        year: 'numeric'
+      }),
+    [calendarMonth]
+  );
+
+  const calendarCells = useMemo(() => getCalendarCells(calendarMonth), [calendarMonth]);
+
+  const handleCalendarMonthShift = (offset) => {
+    setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
+  };
+
+  const todayDutySummary = useMemo(() => {
+    if (!shiftRows.length) {
+      return null;
+    }
+
+    const [todayRow] = shiftRows;
+    return {
+      onDutyCount: todayRow?.onDutyCount || 0,
+      onLeaveCount: todayRow?.onLeaveCount || 0
+    };
+  }, [shiftRows]);
+
   const handleLeaveInput = (event) => {
     const { name, value } = event.target;
     setLeaveForm((prev) => ({ ...prev, [name]: value }));
@@ -133,36 +196,42 @@ export default function PersonnelOperations() {
       return;
     }
 
-    setLeaveSaving(true);
-    const { data, error } = await submitPersonnelLeaveRequest(currentUser.admin_id, leaveForm);
-    setLeaveSaving(false);
+    try {
+      setLeaveSaving(true);
+      const { data, error } = await submitPersonnelLeaveRequest(currentUser.admin_id, leaveForm);
 
-    if (error) {
-      if (String(error).toLowerCase().includes('leave_start_date') || String(error).toLowerCase().includes('leave_end_date')) {
-        setMessage({
-          type: 'error',
-          text: 'Leave columns are missing in the database. Run leave_dates_setup.sql first, then try again.'
-        });
-      } else if (String(error).toLowerCase().includes('leave_requests')) {
-        setMessage({
-          type: 'error',
-          text: 'Leave request table is missing. Run leave_requests_setup.sql first, then try again.'
-        });
-      } else {
-        setMessage({ type: 'error', text: error });
+      if (error) {
+        if (String(error).toLowerCase().includes('leave_start_date') || String(error).toLowerCase().includes('leave_end_date')) {
+          setMessage({
+            type: 'error',
+            text: 'Leave columns are missing in the database. Run leave_dates_setup.sql first, then try again.'
+          });
+        } else if (String(error).toLowerCase().includes('leave_requests')) {
+          setMessage({
+            type: 'error',
+            text: 'Leave request table is missing. Run leave_requests_setup.sql first, then try again.'
+          });
+        } else {
+          setMessage({ type: 'error', text: error });
+        }
+        return;
       }
-      return;
-    }
 
-    setLeaveRequest((prev) => ({
-      ...prev,
-      latest_request: data
-    }));
-    setLeaveForm({
-      startDate: data.start_date || '',
-      endDate: data.end_date || ''
-    });
-    setMessage({ type: 'success', text: 'Leave request submitted. Waiting for admin approval.' });
+      setLeaveRequest((prev) => ({
+        ...prev,
+        latest_request: data
+      }));
+      setLeaveForm({
+        startDate: data.start_date || '',
+        endDate: data.end_date || ''
+      });
+      setMessage({ type: 'success', text: 'Leave request submitted. Waiting for admin approval.' });
+    } catch (err) {
+      console.error('Unexpected error submitting leave request:', err);
+      setMessage({ type: 'error', text: String(err?.message || err) });
+    } finally {
+      setLeaveSaving(false);
+    }
   };
 
   const requestStatus = String(leaveRequest.latest_request?.status || '').toLowerCase();
@@ -175,12 +244,8 @@ export default function PersonnelOperations() {
     : leaveRequest.current_status || 'Active';
   const badgeClass = requestStatus || String(leaveRequest.current_status || 'active').toLowerCase().replace(/\s+/g, '-');
 
-  const openReportType = (reportType) => {
-    navigate('/reports', {
-      state: {
-        startReportType: reportType
-      }
-    });
+  const openReportsPage = () => {
+    navigate('/reports');
   };
 
   return (
@@ -251,7 +316,15 @@ export default function PersonnelOperations() {
           <section className="ops-card schedule-card">
             <div className="ops-card-header">
               <h2>Shift Schedule</h2>
-              <span className="shift-chip">Today: {todaySchedule}</span>
+              <span className="shift-chip">
+                Today: {todaySchedule}
+                {todayDutySummary && (
+                  <span className="schedule-count-inline">
+                    {' '}
+                    · Duty {todayDutySummary.onDutyCount} · Leave {todayDutySummary.onLeaveCount}
+                  </span>
+                )}
+              </span>
             </div>
 
             <p className="ops-caption">Upcoming duty schedule for the next 21 days.</p>
@@ -261,39 +334,96 @@ export default function PersonnelOperations() {
               <span>Shift B dates configured: {shiftTotals.shiftB}</span>
             </div>
 
-            <div className="shift-table-wrap">
-              <table className="shift-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Day</th>
-                    <th>Scheduled Shift</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {scheduleLoading && (
-                    <tr>
-                      <td colSpan="3" className="shift-empty">Loading shift schedule...</td>
-                    </tr>
-                  )}
-                  {!scheduleLoading && shiftRows.map((row) => (
-                    <tr key={row.date}>
-                      <td>{row.displayDate}</td>
-                      <td>{row.dayLabel}</td>
-                      <td>
-                        <span className={`shift-tag ${row.shift.toLowerCase().replace(/\s+/g, '-')}`}>
-                          {row.shift}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {!scheduleLoading && shiftRows.length === 0 && (
-                    <tr>
-                      <td colSpan="3" className="shift-empty">No schedule data available.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+            <div className="shift-calendar-panel">
+              <div className="shift-calendar-header">
+                <button
+                  className="shift-calendar-nav"
+                  type="button"
+                  onClick={() => handleCalendarMonthShift(-1)}
+                >
+                  {'<'}
+                </button>
+                <div className="shift-calendar-title">{calendarLabel}</div>
+                <button
+                  className="shift-calendar-nav"
+                  type="button"
+                  onClick={() => handleCalendarMonthShift(1)}
+                >
+                  {'>'}
+                </button>
+              </div>
+
+              <div className="shift-calendar-grid shift-calendar-weekdays">
+                {CALENDAR_WEEKDAYS.map((weekday) => (
+                  <span key={weekday}>{weekday}</span>
+                ))}
+              </div>
+
+              <div className="shift-calendar-grid shift-calendar-days">
+                {scheduleLoading && (
+                  <div className="shift-calendar-loading">Loading shift schedule...</div>
+                )}
+
+                {!scheduleLoading && calendarCells.map((dayDate, index) => {
+                  if (!dayDate) {
+                    return <span key={`empty-${index}`} className="shift-calendar-empty" />;
+                  }
+
+                  const isoDate = toIsoDate(dayDate);
+                  const row = shiftRowsByDate.get(isoDate);
+                  const onDuty = row?.onDutyCount || 0;
+                  const onLeave = row?.onLeaveCount || 0;
+                  const hasData = Boolean(row);
+                  const isMineOnDuty = Boolean(row?.onDutyPersonnel?.some((p) => p.admin_id === currentUser?.admin_id));
+
+                  return (
+                    <div key={isoDate} className={`shift-calendar-day-card ${hasData ? 'has-data' : ''} ${isMineOnDuty ? 'mine' : ''}`}>
+                      <div className="shift-calendar-day-top">
+                        <span className="shift-calendar-day-number">{dayDate.getDate()}</span>
+                        {row && (
+                          <span className={`shift-tag ${row.shift.toLowerCase().replace(/\s+/g, '-')}`}>
+                            {row.shift}
+                          </span>
+                        )}
+                      </div>
+
+                      {row ? (
+                        <div className="shift-calendar-day-body">
+                          <div className="shift-calendar-personnel-block">
+                            <strong>On Duty</strong>
+                            <div className="schedule-personnel-list">
+                              {onDuty > 0 ? (
+                                <span className="schedule-empty-inline">{onDuty} personnel</span>
+                              ) : (
+                                <span className="schedule-empty-inline">No one assigned</span>
+                              )}
+                            </div>
+                            <span className="shift-count-text">{onDuty} personnel</span>
+                          </div>
+
+                          <div className="shift-calendar-personnel-block">
+                            <strong>On Leave</strong>
+                            <div className="schedule-personnel-list">
+                              {row.onLeavePersonnel?.length ? (
+                                row.onLeavePersonnel.map((personnel) => (
+                                  <span key={personnel.admin_id} className="personnel-badge personnel-badge-leave">
+                                    {personnel.name}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="schedule-empty-inline">No leave today</span>
+                              )}
+                            </div>
+                            <span className="shift-count-text">{onLeave} personnel</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="shift-calendar-no-data">No shift data</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </section>
 
@@ -302,18 +432,16 @@ export default function PersonnelOperations() {
               <h2>File Reports</h2>
             </div>
 
-            <p className="ops-caption">Create a new file report and submit it through your personnel workflow.</p>
+            <p className="ops-caption">Upload your completed report file and submit it directly to admin.</p>
 
             <div className="report-type-grid">
-              {REPORT_TYPES.map((report) => (
-                <article key={report.id} className="report-type-item">
-                  <h3>{report.title}</h3>
-                  <p>{report.description}</p>
-                  <button type="button" className="ops-secondary-btn" onClick={() => openReportType(report.id)}>
-                    Create This Report
-                  </button>
-                </article>
-              ))}
+              <article className="report-type-item">
+                <h3>Upload Report File</h3>
+                <p>Open the Reports page to upload a PDF file for admin review and approval.</p>
+                <button type="button" className="ops-secondary-btn" onClick={openReportsPage}>
+                  Open Upload Form
+                </button>
+              </article>
             </div>
 
             <div className="report-actions-inline">

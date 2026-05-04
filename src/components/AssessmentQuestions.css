@@ -90,7 +90,7 @@
 .assessment-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1200px;
+  min-width: 1700px;
 }
 
 .assessment-table thead {
@@ -130,6 +130,71 @@
 .assessment-table textarea {
   resize: vertical;
   min-height: 80px;
+}
+
+.assessment-options-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 360px;
+}
+
+.assessment-option-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem;
+  align-items: start;
+  padding: 0.55rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.assessment-option-correct {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #0f766e;
+  white-space: nowrap;
+  padding-top: 0.2rem;
+}
+
+.assessment-option-correct input[type='radio'] {
+  width: auto;
+  margin: 0;
+}
+
+.assessment-option-fields {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr 1fr;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.assessment-option-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.assessment-options-empty {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-style: italic;
+}
+
+.assessment-option-fields input[type='text'] {
+  width: 100%;
+  min-width: 0;
 }
 
 .assessment-active-cell {
@@ -186,5 +251,9 @@
 
   .assessment-filter {
     min-width: 0;
+  }
+
+  .assessment-table {
+    min-width: 1420px;
   }
 }

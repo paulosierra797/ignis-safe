@@ -2,14 +2,34 @@ import { supabase } from './supabaseClient';
 
 const LANDING_CONTENT_TABLE = 'landing_content';
 const LANDING_CONTENT_ID = 'default';
+const LANDING_CONTENT_TIMEOUT_MS = 20000;
+
+const withTimeout = (promise, timeoutMs, timeoutMessage) => {
+  let timeoutId;
+
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    }),
+  ]).finally(() => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  });
+};
 
 export const getLandingContentFromDb = async () => {
   try {
-    const { data, error } = await supabase
-      .from(LANDING_CONTENT_TABLE)
-      .select('content, updated_at')
-      .eq('id', LANDING_CONTENT_ID)
-      .maybeSingle();
+    const { data, error } = await withTimeout(
+      supabase
+        .from(LANDING_CONTENT_TABLE)
+        .select('content, updated_at')
+        .eq('id', LANDING_CONTENT_ID)
+        .maybeSingle(),
+      LANDING_CONTENT_TIMEOUT_MS,
+      'Loading landing content timed out. Please retry.'
+    );
 
     if (error) throw error;
 
@@ -33,11 +53,15 @@ export const saveLandingContentToDb = async ({ content, updatedBy }) => {
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase
-      .from(LANDING_CONTENT_TABLE)
-      .upsert(payload, { onConflict: 'id' })
-      .select('updated_at')
-      .maybeSingle();
+    const { data, error } = await withTimeout(
+      supabase
+        .from(LANDING_CONTENT_TABLE)
+        .upsert(payload, { onConflict: 'id' })
+        .select('updated_at')
+        .maybeSingle(),
+      LANDING_CONTENT_TIMEOUT_MS,
+      'Saving landing content timed out. Please check connection and try again.'
+    );
 
     if (error) throw error;
 

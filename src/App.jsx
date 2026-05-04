@@ -27,6 +27,7 @@ import Announcements from './components/Announcements';
 import PersonnelProfile from './components/PersonnelProfile';
 import History from './components/History';
 import PersonnelOperations from './components/PersonnelOperations';
+import AdminReports from './components/AdminReports';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import ConfirmSignupPage from './components/ConfirmSignupPage';
@@ -67,6 +68,7 @@ function App() {
             <Route path="/dashboard/assessment-questions" element={<ProtectedRoute requiredPermission="manage_users"><AssessmentQuestions /></ProtectedRoute>} />
             <Route path="/dashboard/chart" element={<ProtectedRoute><Chart /></ProtectedRoute>} />
             <Route path="/dashboard/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
+            <Route path="/dashboard/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
             <Route path="/dashboard/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
             <Route path="/dashboard/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
             <Route path="/dashboard/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
@@ -83,3 +85,4 @@ function App() {
 }
 
 export default App;
+ 

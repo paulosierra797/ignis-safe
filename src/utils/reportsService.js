@@ -1,8 +1,8 @@
 import { supabase } from './supabaseClient';
 
-const REPORTS_TABLE = 'investigation_reports';
+const REPORTS_TABLE = 'reports';
 const STORAGE_BUCKET = 'report_files';
-const REPORT_REVIEW_TABLE = 'investigation_report_reviews';
+const REPORT_REVIEW_TABLE = 'report_reviews';
 
 const formatRole = (role = '') => String(role || '').toLowerCase().trim();
 
@@ -278,7 +278,7 @@ export const updateReportStatus = async (reportId, status, internalNotes = '') =
 
 export const canMonitorReports = (currentUser) => {
   const role = formatRole(currentUser?.role);
-  return role === 'intel unit' || role === 'intel-unit';
+  return role === 'admin' || role === 'intel unit' || role === 'intel-unit';
 };
 
 export const getIntelUnitArchivedReports = async () => {
@@ -336,7 +336,7 @@ export const getIntelUnitAuditLogs = async () => {
         .order('submitted_at', { ascending: false }),
       supabase
         .from(REPORT_REVIEW_TABLE)
-        .select('review_id, report_id, action, remarks, acted_by_name, acted_at, investigation_reports(report_no, title, category)')
+        .select('review_id, report_id, action, remarks, acted_by_name, acted_at, reports(report_no, title, category)')
         .order('acted_at', { ascending: false })
     ]);
 
@@ -355,7 +355,7 @@ export const getIntelUnitAuditLogs = async () => {
 
     const reviewLogs = (reviewsData || []).map((row) => {
       const mapped = mapReviewActionToLabel(row.action);
-      const related = row.investigation_reports || {};
+      const related = row.reports || {};
 
       return {
         id: `review-${row.review_id}`,

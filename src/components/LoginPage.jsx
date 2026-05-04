@@ -44,7 +44,7 @@ export default function LoginPage() {
     } else if (userRole === 'personnel') {
       navigate('/personnel/profile', { replace: true });
     } else if (userRole === 'intel-unit' || userRole === 'intel unit') {
-      navigate('/intel-unit/reports', { replace: true });
+      navigate('/dashboard/reports', { replace: true });
     } else {
       navigate('/dashboard', { replace: true });
     }

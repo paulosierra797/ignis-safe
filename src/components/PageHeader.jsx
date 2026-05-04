@@ -64,6 +64,13 @@ const PageHeader = ({
     navigate('/');
   };
 
+  const handleOpenProfile = () => {
+    if (variant === 'personnel') {
+      navigate('/personnel/profile');
+      setIsDropdownOpen(false);
+    }
+  };
+
   const variantClass = variant ? `page-header--${variant}` : '';
   const showAvatar = variant !== 'admin';
 
@@ -106,6 +113,11 @@ const PageHeader = ({
           </div>
           {isDropdownOpen && (
             <div className="page-user-dropdown">
+              {variant === 'personnel' && (
+                <button className="dropdown-item" onClick={handleOpenProfile}>
+                  Profile
+                </button>
+              )}
               <button className="dropdown-item" onClick={handleLogout}>
                
                 Logout

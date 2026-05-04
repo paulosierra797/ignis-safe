@@ -55,14 +55,202 @@
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 0.8rem 1rem;
+  padding: 0.9rem 1rem 1rem;
   margin-bottom: 1rem;
 }
 
-.shift-summary-card p {
-  margin: 0.25rem 0;
-  font-size: 0.85rem;
-  color: #334155;
+.shift-summary-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.shift-summary-calendar-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.shift-summary-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.shift-summary-calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.shift-summary-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.shift-summary-calendar-loading {
+  grid-column: 1 / -1;
+  padding: 0.85rem 0;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.84rem;
+  font-style: italic;
+}
+
+.shift-summary-day {
+  min-height: 54px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.45rem 0.55rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.3rem;
+}
+
+.shift-summary-day.shift-a {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}
+
+.shift-summary-day.shift-b {
+  background: #dbeafe;
+  border-color: #3b82f6;
+}
+
+.shift-summary-day.both {
+  background: linear-gradient(135deg, #fef3c7 0%, #dbeafe 100%);
+  border-color: #7c3aed;
+}
+
+.shift-summary-day-number {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #1f2937;
+}
+
+.shift-summary-day-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.shift-summary-day-leave {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.shift-summary-day-leave-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.shift-summary-day-leave-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.shift-overview-grid {
+  display: flex;
+  gap: 1rem;
+  margin: 0.75rem 0 1rem 0;
+}
+
+.shift-overview-col {
+  flex: 1 1 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.6rem;
+  background: #fff;
+}
+
+.shift-overview-header {
+  font-weight: 700;
+  margin-bottom: 0.45rem;
+}
+
+.shift-overview-list {
+  max-height: 160px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.shift-overview-item {
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  font-size: 0.9rem;
+}
+
+.shift-overview-empty {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.shift-summary-leave-pill,
+.shift-summary-day-leave-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.12rem 0.38rem;
+  font-size: 0.64rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.shift-summary-leave-pill {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.shift-summary-day-leave-empty {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+.shift-summary-day-badge,
+.shift-summary-day-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 999px;
+  padding: 0 0.35rem;
+  font-size: 0.67rem;
+  font-weight: 700;
+}
+
+.shift-summary-day-badge-a {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.shift-summary-day-badge-b {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.shift-summary-day-empty {
+  background: #e2e8f0;
+  color: #475569;
+  min-width: auto;
 }
 
 .leave-approval-card {
@@ -617,6 +805,211 @@
   border-color: #b91c1c;
 }
 
+/* Personnel Shift Assignment Styles */
+.shift-personnel-selector {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+}
+
+.shift-personnel-selector label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #374151;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.shift-personnel-selector select {
+  width: 100%;
+  padding: 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: white;
+  cursor: pointer;
+}
+
+.shift-personnel-selector select:focus {
+  outline: none;
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+}
+
+.shift-assignment-form {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+}
+
+.shift-assignment-form h4 {
+  margin: 0 0 1rem 0;
+  color: #1f2937;
+  font-size: 1rem;
+}
+
+.shift-assignment-inputs {
+  margin-bottom: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1rem;
+}
+
+.shift-assignment-simple {
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.shift-assignment-shift {
+  display: flex;
+  flex-direction: column;
+}
+
+.shift-assignment-shift label {
+  margin-bottom: 0.4rem;
+  color: #4b5563;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.shift-assignment-shift select {
+  padding: 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background-color: white;
+  cursor: pointer;
+}
+
+.shift-assignment-shift select:focus {
+  outline: none;
+  border-color: #b91c1c;
+}
+
+.shift-assignment-dates {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.shift-date-input {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.shift-date-input label {
+  margin-bottom: 0.4rem;
+  color: #4b5563;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.shift-date-input input {
+  padding: 0.6rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.shift-date-input input:focus {
+  outline: none;
+  border-color: #b91c1c;
+}
+
+.shift-assign-btn {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 1rem;
+  background: #b91c1c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.shift-assign-btn:hover:not(:disabled) {
+  background: #991b1b;
+}
+
+.shift-assign-btn:disabled {
+  background: #999;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.shift-assignments-list {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  border-radius: 8px;
+}
+
+.shift-assignments-list h5 {
+  margin: 0 0 0.8rem 0;
+  color: #166534;
+  font-size: 0.95rem;
+}
+
+.assignments-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.assignment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.7rem;
+  background: white;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+}
+
+.assignment-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.assignment-shift {
+  font-weight: 600;
+  color: #16a34a;
+  min-width: 80px;
+}
+
+.assignment-dates {
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.assignment-remove-btn {
+  padding: 0.4rem 0.8rem;
+  background: #fecaca;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.assignment-remove-btn:hover {
+  background: #f87171;
+  color: white;
+  border-color: #f87171;
+}
+
 .accounts-modal-footer {
   display: flex;
   justify-content: flex-end;
@@ -716,5 +1109,14 @@
   .shift-calendar-jump {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .shift-summary-calendar-grid {
+    gap: 0.35rem;
+  }
+
+  .shift-summary-day {
+    min-height: 48px;
+    padding: 0.4rem 0.45rem;
   }
 }

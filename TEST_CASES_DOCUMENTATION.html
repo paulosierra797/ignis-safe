@@ -59,7 +59,7 @@
 <body>
     <h1>IGNIS-SAFE APPLICATION</h1>
     <p class="subtitle">Test Cases Documentation</p>
-    <p class="subtitle">Version 1.0 | Date: March 10, 2026</p>
+    <p class="subtitle">Version 1.1 | Date: April 29, 2026</p>
 
     <!-- Landing Page Module -->
     <div class="module-header">MODULE 1: LANDING PAGE</div>
@@ -240,9 +240,9 @@
             <tr>
                 <td class="scenario-id">111</td>
                 <td>Role-Based Navigation</td>
-                <td>Redirect Intel Unit users to Reports after login</td>
-                <td>Intel Unit user redirected to /intel-unit/reports</td>
-                <td>Login as intel-unit user</td>
+                <td>Redirect legacy intel-unit users to Admin Reports route</td>
+                <td>User is redirected to /dashboard/reports</td>
+                <td>Login with legacy intel-unit role</td>
             </tr>
             <tr>
                 <td class="scenario-id">112</td>
@@ -420,80 +420,80 @@
         <tbody>
             <tr>
                 <td class="scenario-id">401</td>
-                <td>View Reports</td>
-                <td>Display list of all investigation reports</td>
-                <td>Report list displays with key information</td>
+                <td>Report Upload Form</td>
+                <td>Display upload-only report submission form for personnel</td>
+                <td>Page shows title input, PDF picker, and submit button</td>
                 <td>Navigate to Reports page</td>
             </tr>
             <tr>
                 <td class="scenario-id">402</td>
-                <td>Create Report</td>
-                <td>Allow users to create new investigation report</td>
-                <td>Report creation form opens</td>
-                <td>Click "New Report" button</td>
+                <td>Report Upload Validation</td>
+                <td>Prevent submitting when no file is selected</td>
+                <td>Error message is shown and submission does not proceed</td>
+                <td>Click Submit Report without selecting a file</td>
             </tr>
             <tr>
                 <td class="scenario-id">403</td>
-                <td>Create Report</td>
-                <td>Save new investigation report with valid data</td>
-                <td>Report is saved and appears in list</td>
-                <td>Fill form, click Save</td>
+                <td>Report Upload Validation</td>
+                <td>Reject non-PDF files in report upload flow</td>
+                <td>Error message shows only PDF files are supported</td>
+                <td>Select DOCX file then click Submit Report</td>
             </tr>
             <tr>
                 <td class="scenario-id">404</td>
-                <td>Create Report</td>
-                <td>Prevent saving report with missing required fields</td>
-                <td>Validation errors display</td>
-                <td>Submit form with empty required fields</td>
+                <td>Report Submission</td>
+                <td>Allow personnel to submit a valid PDF report</td>
+                <td>Report is saved with status submitted and success message appears</td>
+                <td>Select PDF file then click Submit Report</td>
             </tr>
             <tr>
                 <td class="scenario-id">405</td>
-                <td>Edit Report</td>
-                <td>Allow users to edit existing report</td>
-                <td>Report edit form opens with existing data</td>
-                <td>Click Edit icon on report</td>
+                <td>Report Submission State</td>
+                <td>Reset loading state when report submission fails</td>
+                <td>Button returns from "Submitting..." to "Submit Report"</td>
+                <td>Trigger a failed submit (e.g., invalid report_type / DB error)</td>
             </tr>
             <tr>
                 <td class="scenario-id">406</td>
-                <td>Edit Report</td>
-                <td>Save changes to existing report</td>
-                <td>Report updates with new information</td>
-                <td>Modify fields, click Save</td>
+                <td>Admin Reports Table</td>
+                <td>Display submitted reports in Admin Reports page</td>
+                <td>Table shows title, submitted by, date, status, file, actions</td>
+                <td>Navigate to /dashboard/reports</td>
             </tr>
             <tr>
                 <td class="scenario-id">407</td>
-                <td>Delete Report</td>
-                <td>Allow users to delete report</td>
-                <td>Confirmation prompt appears</td>
-                <td>Click Delete icon on report</td>
+                <td>Admin Reports Filter</td>
+                <td>Allow searching reports by title and submitter</td>
+                <td>Rows are filtered based on search text</td>
+                <td>Type keyword in reports search filter</td>
             </tr>
             <tr>
                 <td class="scenario-id">408</td>
-                <td>Delete Report</td>
-                <td>Confirm deletion of report</td>
-                <td>Report is removed from list</td>
-                <td>Click Confirm on delete prompt</td>
+                <td>Admin Reports Status</td>
+                <td>Allow admin to move report to Under Review</td>
+                <td>Selected report status updates to under_review</td>
+                <td>Click Review action on a report row</td>
             </tr>
             <tr>
                 <td class="scenario-id">409</td>
-                <td>View Report Details</td>
-                <td>Display full details of selected report</td>
-                <td>Report detail view opens with all information</td>
-                <td>Click on report in list</td>
+                <td>Admin Reports Status</td>
+                <td>Allow admin to approve a submitted report</td>
+                <td>Selected report status updates to approved</td>
+                <td>Click Approve action on a report row</td>
             </tr>
             <tr>
                 <td class="scenario-id">410</td>
-                <td>Search Reports</td>
-                <td>Allow searching reports by keyword</td>
-                <td>Report list filters based on search query</td>
-                <td>Enter search term in search bar</td>
+                <td>Admin Reports Status</td>
+                <td>Allow admin to reject a report with optional notes</td>
+                <td>Selected report status updates to rejected</td>
+                <td>Click Reject action and provide optional reason</td>
             </tr>
             <tr>
                 <td class="scenario-id">411</td>
-                <td>Filter Reports</td>
-                <td>Allow filtering reports by status/date</td>
-                <td>Report list filters based on criteria</td>
-                <td>Select filter options</td>
+                <td>Admin Reports File Access</td>
+                <td>Allow admin to open uploaded report file</td>
+                <td>Report file opens in new tab from storage URL</td>
+                <td>Click Open File in reports table</td>
             </tr>
         </tbody>
     </table>
@@ -584,8 +584,8 @@
         </tbody>
     </table>
 
-    <!-- Intel Unit Module -->
-    <div class="module-header">MODULE 7: INTEL UNIT</div>
+    <!-- Announcements Module -->
+    <div class="module-header">MODULE 7: ANNOUNCEMENTS & ACKNOWLEDGMENT</div>
     <table>
         <thead>
             <tr>
@@ -599,59 +599,59 @@
         <tbody>
             <tr>
                 <td class="scenario-id">601</td>
-                <td>Intel Reports</td>
-                <td>Display list of intelligence reports</td>
-                <td>Report list displays for intel unit users</td>
-                <td>Navigate to Intel Unit Reports</td>
+                <td>Announcements UI</td>
+                <td>Display announcements header aligned with page container</td>
+                <td>Header and content cards align consistently on desktop</td>
+                <td>Open announcements page as admin/personnel</td>
             </tr>
             <tr>
                 <td class="scenario-id">602</td>
-                <td>Intel Reports</td>
-                <td>Create new intelligence report</td>
-                <td>Report form opens for data entry</td>
-                <td>Click "Create Report" button</td>
+                <td>Announcement Composer</td>
+                <td>Allow admin to send announcement to all personnel</td>
+                <td>Announcement appears in personnel announcement feed</td>
+                <td>Create announcement with audience all_personnel</td>
             </tr>
             <tr>
                 <td class="scenario-id">603</td>
-                <td>Intel Profile</td>
-                <td>Display intel unit user profile</td>
-                <td>Profile page shows user information</td>
-                <td>Navigate to Intel Unit Profile</td>
+                <td>Announcement Composer</td>
+                <td>Allow admin to send announcement to specific personnel</td>
+                <td>Only targeted personnel account sees the announcement</td>
+                <td>Create announcement with audience specific_personnel</td>
             </tr>
             <tr>
                 <td class="scenario-id">604</td>
-                <td>Intel Profile</td>
-                <td>Allow editing profile information</td>
-                <td>Profile fields become editable</td>
-                <td>Click Edit Profile button</td>
+                <td>Personnel Acknowledgment</td>
+                <td>Show pending acknowledgment status for unread announcement</td>
+                <td>Announcement card shows "Pending acknowledgment" badge</td>
+                <td>Login as personnel with new announcement</td>
             </tr>
             <tr>
                 <td class="scenario-id">605</td>
-                <td>Intel Archive</td>
-                <td>Display archived intelligence reports</td>
-                <td>Archived report list displays</td>
-                <td>Navigate to Intel Unit Archive</td>
+                <td>Personnel Acknowledgment</td>
+                <td>Allow personnel to acknowledge an announcement</td>
+                <td>Status updates to acknowledged and timestamp is saved</td>
+                <td>Click Acknowledge on pending announcement</td>
             </tr>
             <tr>
                 <td class="scenario-id">606</td>
-                <td>Intel Archive</td>
-                <td>Search archived reports</td>
-                <td>Archive list filters based on search</td>
-                <td>Enter search query</td>
+                <td>Access Gate</td>
+                <td>Require personnel to acknowledge pending announcements before other pages</td>
+                <td>Personnel is redirected to /personnel/announcements when pending exists</td>
+                <td>Open Personnel Operations with pending acknowledgment</td>
             </tr>
             <tr>
                 <td class="scenario-id">607</td>
-                <td>Intel Audit Logs</td>
-                <td>Display audit logs for intel unit actions</td>
-                <td>Audit log list displays with timestamps</td>
-                <td>Navigate to Intel Unit Audit Logs</td>
+                <td>Access Gate</td>
+                <td>Allow personnel to access other pages after all announcements are acknowledged</td>
+                <td>Personnel can open profile, operations, reports, and history</td>
+                <td>Acknowledge all pending announcements then navigate</td>
             </tr>
             <tr>
                 <td class="scenario-id">608</td>
-                <td>Intel Audit Logs</td>
-                <td>Filter audit logs by action type</td>
-                <td>Logs filter based on selected action</td>
-                <td>Select action type from filter</td>
+                <td>Admin Acknowledgment Metrics</td>
+                <td>Display acknowledgement summary for each announcement</td>
+                <td>Admin sees acknowledged count versus total recipients</td>
+                <td>View announcement feed as admin</td>
             </tr>
         </tbody>
     </table>
@@ -812,6 +812,13 @@
                 <td>Display personnel profile information</td>
                 <td>Profile page shows personal details</td>
                 <td>Navigate to Personnel Profile</td>
+            </tr>
+            <tr>
+                <td class="scenario-id">908</td>
+                <td>Header Dropdown Navigation</td>
+                <td>Allow personnel to open profile from header dropdown</td>
+                <td>Profile route opens from user menu near Logout</td>
+                <td>Click Profile in page header dropdown</td>
             </tr>
             <tr>
                 <td class="scenario-id">902</td>

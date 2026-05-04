@@ -3,6 +3,7 @@ import { logAdminActivity } from './usersService';
 
 const ANNOUNCEMENTS_TABLE = 'announcements';
 const ANNOUNCEMENT_ATTACHMENTS_BUCKET = 'announcement_attachments';
+const ANNOUNCEMENT_ACK_TABLE = 'announcement_acknowledgments';
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 const ATTACHMENT_UPLOAD_TIMEOUT_MS = 120000;
@@ -240,13 +241,149 @@ export const getAnnouncementsForUser = async (currentUser) => {
     const { data, error } = await query;
     if (error) throw error;
 
+    const announcements = (data || []).map(mapAnnouncement);
+
+    if (!announcements.length) {
+      return { data: announcements, error: null };
+    }
+
+    const announcementIds = announcements.map((row) => row.announcement_id);
+
+    if (role === 'personnel' && userId) {
+      const { data: ackRows, error: ackError } = await supabase
+        .from(ANNOUNCEMENT_ACK_TABLE)
+        .select('announcement_id, acknowledged_at')
+        .eq('personnel_id', userId)
+        .in('announcement_id', announcementIds);
+
+      if (ackError) throw ackError;
+
+      const ackByAnnouncement = new Map((ackRows || []).map((row) => [row.announcement_id, row.acknowledged_at]));
+
+      return {
+        data: announcements.map((row) => ({
+          ...row,
+          acknowledged_by_current_user: ackByAnnouncement.has(row.announcement_id),
+          acknowledged_at: ackByAnnouncement.get(row.announcement_id) || null
+        })),
+        error: null
+      };
+    }
+
+    if (role === 'admin') {
+      const [personnelResult, ackResult] = await Promise.all([
+        supabase
+          .from('admin')
+          .select('admin_id')
+          .ilike('role', 'personnel')
+          .eq('status', 'Active'),
+        supabase
+          .from(ANNOUNCEMENT_ACK_TABLE)
+          .select('announcement_id, personnel_id')
+          .in('announcement_id', announcementIds)
+      ]);
+
+      if (personnelResult.error) throw personnelResult.error;
+      if (ackResult.error) throw ackResult.error;
+
+      const activePersonnelIds = new Set((personnelResult.data || []).map((row) => row.admin_id));
+      const ackMap = new Map();
+
+      (ackResult.data || []).forEach((row) => {
+        if (!activePersonnelIds.has(row.personnel_id)) return;
+        const existing = ackMap.get(row.announcement_id) || new Set();
+        existing.add(row.personnel_id);
+        ackMap.set(row.announcement_id, existing);
+      });
+
+      return {
+        data: announcements.map((row) => {
+          const acknowledgedCount = (ackMap.get(row.announcement_id) || new Set()).size;
+          const totalRecipients = row.audience_type === 'all_personnel'
+            ? activePersonnelIds.size
+            : row.audience_type === 'specific_personnel'
+              ? 1
+              : 0;
+
+          return {
+            ...row,
+            acknowledgement_summary: {
+              acknowledgedCount,
+              totalRecipients
+            }
+          };
+        }),
+        error: null
+      };
+    }
+
     return {
-      data: (data || []).map(mapAnnouncement),
+      data: announcements,
       error: null
     };
   } catch (error) {
     console.error('Error fetching announcements:', error);
     return { data: [], error: error.message };
+  }
+};
+
+export const acknowledgeAnnouncement = async (currentUser, announcementId) => {
+  try {
+    const role = normalizeRole(currentUser?.role);
+    const personnelId = currentUser?.admin_id;
+
+    if (role !== 'personnel') {
+      return { data: null, error: 'Only personnel can acknowledge announcements.' };
+    }
+
+    if (!personnelId || !announcementId) {
+      return { data: null, error: 'Missing personnel or announcement id.' };
+    }
+
+    const { data, error } = await supabase
+      .from(ANNOUNCEMENT_ACK_TABLE)
+      .upsert(
+        {
+          announcement_id: announcementId,
+          personnel_id: personnelId,
+          acknowledged_at: new Date().toISOString()
+        },
+        {
+          onConflict: 'announcement_id,personnel_id',
+          ignoreDuplicates: false
+        }
+      )
+      .select('ack_id, announcement_id, personnel_id, acknowledged_at')
+      .single();
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error acknowledging announcement:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const getPendingAcknowledgementCount = async (currentUser) => {
+  try {
+    const role = normalizeRole(currentUser?.role);
+    const personnelId = currentUser?.admin_id;
+
+    if (role !== 'personnel' || !personnelId) {
+      return { data: { pendingCount: 0 }, error: null };
+    }
+
+    const { data: announcements, error: announcementError } = await getAnnouncementsForUser(currentUser);
+    if (announcementError) {
+      return { data: { pendingCount: 0 }, error: announcementError };
+    }
+
+    const pendingCount = (announcements || []).filter((row) => !row.acknowledged_by_current_user).length;
+    return { data: { pendingCount }, error: null };
+  } catch (error) {
+    console.error('Error loading pending acknowledgements:', error);
+    return { data: { pendingCount: 0 }, error: error.message };
   }
 };
 

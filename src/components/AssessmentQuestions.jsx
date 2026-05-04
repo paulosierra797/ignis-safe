@@ -10,6 +10,9 @@ import {
   createAssessmentQuestion,
   updateAssessmentQuestion,
   deleteAssessmentQuestion,
+  getAssessmentOptionsByQuestionIds,
+  syncAssessmentQuestionOptions,
+  buildDefaultAssessmentOptions,
 } from '../utils/assessmentQuestionsService';
 
 const DEFAULT_NEW_QUESTION = {
@@ -19,6 +22,24 @@ const DEFAULT_NEW_QUESTION = {
   explanation: '',
   explanation_tl: '',
   is_active: true,
+};
+
+const mergeQuestionsWithOptions = (questionRows = [], optionRows = []) => {
+  const optionsByQuestionId = optionRows.reduce((accumulator, option) => {
+    if (!accumulator[option.question_id]) {
+      accumulator[option.question_id] = [];
+    }
+
+    accumulator[option.question_id].push(option);
+    return accumulator;
+  }, {});
+
+  return questionRows.map((question) => ({
+    ...question,
+    options: question.question_type === 'multiple_choice'
+      ? (optionsByQuestionId[question.id] || buildDefaultAssessmentOptions())
+      : []
+  }));
 };
 
 export default function AssessmentQuestions() {
@@ -71,7 +92,15 @@ export default function AssessmentQuestions() {
         setQuestions(data || []);
       }
 
+      const questionIds = (data || []).map((row) => row.id);
+      const { data: optionRows, error: optionError } = await getAssessmentOptionsByQuestionIds(questionIds);
+
+      if (optionError) {
+        console.warn('Failed to load assessment options:', optionError);
+      }
+
       setIsLoadingQuestions(false);
+      setQuestions(mergeQuestionsWithOptions(data || [], optionRows || []));
     };
 
     loadQuestions();
@@ -110,6 +139,37 @@ export default function AssessmentQuestions() {
     )));
   };
 
+  const setOptionValue = (questionId, optionKey, field, value) => {
+    setQuestions((prev) => prev.map((question) => {
+      if (question.id !== questionId) {
+        return question;
+      }
+
+      return {
+        ...question,
+        options: (question.options || []).map((option) => (
+          option.option_key === optionKey ? { ...option, [field]: value } : option
+        ))
+      };
+    }));
+  };
+
+  const setCorrectOption = (questionId, optionKey) => {
+    setQuestions((prev) => prev.map((question) => {
+      if (question.id !== questionId) {
+        return question;
+      }
+
+      return {
+        ...question,
+        options: (question.options || []).map((option) => ({
+          ...option,
+          is_correct: option.option_key === optionKey
+        }))
+      };
+    }));
+  };
+
   const setRowSaving = (id, isSaving) => {
     setSavingRowIds((prev) => ({ ...prev, [id]: isSaving }));
   };
@@ -128,11 +188,23 @@ export default function AssessmentQuestions() {
 
     const { data, error } = await createAssessmentQuestion(payload);
 
-    if (error) {
+    if (!data) {
       setMessage({ type: 'error', text: `Unable to add question: ${error}` });
     } else {
-      setQuestions((prev) => [...prev, data].sort((a, b) => a.question_no - b.question_no));
-      setMessage({ type: 'success', text: `Question ${data.question_no} added.` });
+      const questionToAdd = {
+        ...data,
+        options: data.options?.length ? data.options : (data.question_type === 'multiple_choice' ? buildDefaultAssessmentOptions() : [])
+      };
+
+      setQuestions((prev) => [...prev, {
+        ...questionToAdd
+      }].sort((a, b) => a.question_no - b.question_no));
+      setMessage({
+        type: 'success',
+        text: error
+          ? `Question ${data.question_no} added, but default choices need attention: ${error}`
+          : `Question ${data.question_no} added.`
+      });
 
       await logAdminActivity({
         actorId: currentUser?.admin_id || null,
@@ -158,6 +230,33 @@ export default function AssessmentQuestions() {
       return;
     }
 
+    const normalizedOptions = question.question_type === 'multiple_choice'
+      ? (question.options || [])
+        .map((option, index) => ({
+          ...option,
+          option_key: String(option.option_key || '').trim().toUpperCase(),
+          option_text: String(option.option_text || '').trim(),
+          option_text_tl: String(option.option_text_tl || '').trim(),
+          display_order: Number.isFinite(Number(option.display_order)) ? Number(option.display_order) : index + 1,
+        }))
+        .filter((option) => option.option_key)
+      : [];
+
+    if (question.question_type === 'multiple_choice') {
+      const filledOptions = normalizedOptions.filter((option) => option.option_text.length > 0);
+      const correctOptions = filledOptions.filter((option) => option.is_correct);
+
+      if (filledOptions.length < 2) {
+        setMessage({ type: 'error', text: `Question ${question.question_no}: add at least two choices.` });
+        return;
+      }
+
+      if (correctOptions.length !== 1) {
+        setMessage({ type: 'error', text: `Question ${question.question_no}: select exactly one correct answer.` });
+        return;
+      }
+    }
+
     setRowSaving(question.id, true);
     setMessage({ type: '', text: '' });
 
@@ -176,9 +275,37 @@ export default function AssessmentQuestions() {
     if (error) {
       setMessage({ type: 'error', text: `Unable to save question ${question.question_no}: ${error}` });
     } else {
-      setQuestions((prev) => prev
-        .map((item) => (item.id === data.id ? data : item))
-        .sort((a, b) => a.question_no - b.question_no));
+      if (question.question_type === 'multiple_choice') {
+        const { error: optionsError, data: savedOptions } = await syncAssessmentQuestionOptions(data.id, normalizedOptions);
+
+        if (optionsError) {
+          setMessage({ type: 'error', text: `Question ${data.question_no} saved, but choices failed: ${optionsError}` });
+          setQuestions((prev) => prev
+            .map((item) => (item.id === data.id ? { ...data, options: normalizedOptions } : item))
+            .sort((a, b) => a.question_no - b.question_no));
+          setRowSaving(question.id, false);
+          return;
+        }
+
+        setQuestions((prev) => prev
+          .map((item) => (item.id === data.id ? { ...data, options: savedOptions || normalizedOptions } : item))
+          .sort((a, b) => a.question_no - b.question_no));
+      } else {
+        const { error: optionsError } = await syncAssessmentQuestionOptions(data.id, []);
+
+        if (optionsError) {
+          setMessage({ type: 'error', text: `Question ${data.question_no} saved, but choices cleanup failed: ${optionsError}` });
+          setQuestions((prev) => prev
+            .map((item) => (item.id === data.id ? { ...data, options: [] } : item))
+            .sort((a, b) => a.question_no - b.question_no));
+          setRowSaving(question.id, false);
+          return;
+        }
+
+        setQuestions((prev) => prev
+          .map((item) => (item.id === data.id ? { ...data, options: [] } : item))
+          .sort((a, b) => a.question_no - b.question_no));
+      }
       setMessage({ type: 'success', text: `Question ${data.question_no} saved.` });
 
       await logAdminActivity({
@@ -289,6 +416,7 @@ export default function AssessmentQuestions() {
               <tr>
                 <th>No.</th>
                 <th>Type</th>
+                <th>Choices / Correct Answer</th>
                 <th>Prompt (EN)</th>
                 <th>Prompt (TL)</th>
                 <th>Explanation (EN)</th>
@@ -300,14 +428,17 @@ export default function AssessmentQuestions() {
             <tbody>
               {isLoadingQuestions ? (
                 <tr>
-                  <td colSpan="8" className="assessment-empty-row">Loading questions...</td>
+                  <td colSpan="9" className="assessment-empty-row">Loading questions...</td>
                 </tr>
               ) : filteredQuestions.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="assessment-empty-row">No questions found for this assessment.</td>
+                  <td colSpan="9" className="assessment-empty-row">No questions found for this assessment.</td>
                 </tr>
               ) : filteredQuestions.map((question) => {
                 const isSaving = Boolean(savingRowIds[question.id]);
+                const questionOptions = question.question_type === 'multiple_choice'
+                  ? (question.options?.length ? question.options : buildDefaultAssessmentOptions())
+                  : [];
 
                 return (
                   <tr key={question.id}>
@@ -327,6 +458,42 @@ export default function AssessmentQuestions() {
                         <option value="multiple_choice">Multiple Choice</option>
                         <option value="essay">Essay</option>
                       </select>
+                    </td>
+                    <td>
+                      {question.question_type === 'multiple_choice' ? (
+                        <div className="assessment-options-grid">
+                          {questionOptions.map((option) => (
+                            <div key={option.option_key} className="assessment-option-row">
+                              <label className="assessment-option-correct">
+                                <input
+                                  type="radio"
+                                  name={`correct-${question.id}`}
+                                  checked={Boolean(option.is_correct)}
+                                  onChange={() => setCorrectOption(question.id, option.option_key)}
+                                />
+                                Correct
+                              </label>
+                              <div className="assessment-option-fields">
+                                <div className="assessment-option-key">{option.option_key}</div>
+                                <input
+                                  type="text"
+                                  value={option.option_text}
+                                  onChange={(event) => setOptionValue(question.id, option.option_key, 'option_text', event.target.value)}
+                                  placeholder={`Option ${option.option_key}`}
+                                />
+                                <input
+                                  type="text"
+                                  value={option.option_text_tl}
+                                  onChange={(event) => setOptionValue(question.id, option.option_key, 'option_text_tl', event.target.value)}
+                                  placeholder={`Option ${option.option_key} (TL)`}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="assessment-options-empty">Essay questions do not use choices.</span>
+                      )}
                     </td>
                     <td>
                       <textarea

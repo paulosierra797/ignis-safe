@@ -1,0 +1,265 @@
+.admin-reports-container {
+  display: flex;
+  min-height: 100vh;
+  background: #f3f4f6;
+  font-family: 'Poppins', sans-serif;
+}
+
+.admin-reports-main {
+  flex: 1;
+  margin-left: 250px;
+  padding: 2rem;
+}
+
+.admin-reports-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 1rem;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+}
+
+.admin-reports-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.admin-reports-toolbar-left {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.admin-reports-toolbar-left h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.admin-reports-toolbar-left span {
+  color: #6b7280;
+  font-size: 0.86rem;
+}
+
+.admin-reports-toolbar-right {
+  display: flex;
+  gap: 0.55rem;
+}
+
+.admin-reports-toolbar-right button {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  background: #fff;
+  font-weight: 600;
+}
+
+.admin-reports-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.8rem;
+}
+
+.report-stat-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.22rem 0.62rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.chip-all {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.chip-submitted {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.chip-review {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.chip-approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.chip-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.admin-reports-filterbar {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.55rem;
+  margin-bottom: 0.9rem;
+}
+
+.admin-reports-filterbar input,
+.admin-reports-filterbar select,
+.admin-reports-filterbar button {
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  padding: 0.5rem 0.72rem;
+  background: #fff;
+  font-size: 0.9rem;
+}
+
+.admin-reports-filterbar input:focus,
+.admin-reports-filterbar select:focus {
+  outline: 2px solid rgba(249, 157, 45, 0.25);
+  border-color: #f59e0b;
+}
+
+.admin-reports-clear {
+  font-weight: 600;
+}
+
+.admin-reports-message {
+  margin-bottom: 0.75rem;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.admin-reports-message-success {
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #166534;
+}
+
+.admin-reports-message-error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+}
+
+.admin-reports-empty {
+  padding: 1rem;
+  color: #6b7280;
+}
+
+.admin-reports-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-reports-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 880px;
+}
+
+.admin-reports-table th,
+.admin-reports-table td {
+  text-align: left;
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.9rem;
+}
+
+.admin-reports-table thead {
+  background: #fff7ed;
+}
+
+.admin-reports-table thead th {
+  color: #374151;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.admin-reports-table tbody tr:hover {
+  background: #fffbeb;
+}
+
+.report-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+.status-submitted {
+  background: #e0f2fe;
+  color: #075985;
+}
+
+.status-under-review {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.admin-reports-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.admin-reports-actions button {
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  background: #fff;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.admin-reports-actions .action-review {
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fcd34d;
+}
+
+.admin-reports-actions .action-approve {
+  color: #166534;
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.admin-reports-actions .action-reject {
+  color: #991b1b;
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.admin-reports-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .admin-reports-main {
+    margin-left: 0;
+    padding: 1rem;
+  }
+
+  .admin-reports-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-reports-filterbar {
+    grid-template-columns: 1fr;
+  }
+}

@@ -27,14 +27,14 @@ Test Case Scenario ID,Name of the Module Function,Test Case Scenario,Action,Actu
 '206,Sidebar App Management,Allow admin to navigate to Analytics,Analytics page opens,Click Analytics
 '207,Sidebar App Management,Allow admin to navigate to Progress,Progress page opens,Click Progress
 '208,Sidebar App Management,Allow admin to navigate to Audit Logs,Audit Logs page opens,Click Audit Logs
-'209,Sidebar Personnel,Allow personnel to navigate to Profile,Personnel Profile opens,Click Profile
+'209,Header Dropdown,Allow personnel to navigate to Profile from header menu,Personnel Profile opens,Click Profile in header dropdown
 '210,Sidebar Personnel,Allow personnel to navigate to Attendance,Attendance Personnel opens,Click Attendance
 '211,Sidebar Personnel,Allow personnel to navigate to Reports,Reports page opens,Click Reports
 '212,Sidebar Personnel,Allow personnel to navigate to History,History page opens,Click History
-'213,Sidebar Intel Unit,Allow intel user to navigate to Profile,Intel Profile opens,Click Profile
-'214,Sidebar Intel Unit,Allow intel user to navigate to Reports,Intel Reports opens,Click Reports
-'215,Sidebar Intel Unit,Allow intel user to navigate to Archive,Intel Archive opens,Click Archive
-'216,Sidebar Intel Unit,Allow intel user to navigate to Audit Logs,Intel Audit Logs opens,Click Audit Logs
+'213,Legacy Role Redirect,Redirect legacy intel-unit role to admin reports route,User is redirected to /dashboard/reports,Login with intel-unit role
+'214,Admin Reports Route,Allow admin to open reports management page,Reports Management page opens,Open /dashboard/reports
+'215,Admin Reports Search,Allow admin to search report list by title or submitter,Table rows are filtered,Type keyword in reports filter
+'216,Admin Reports Filter,Allow admin to filter report list by status,Only selected status rows are shown,Select status value from dropdown
 '301,Attendance Login,Allow attendance login with valid credentials,Redirects to attendance scan or target page,Enter email/password then click Login and Continue
 '302,Attendance Personnel,Allow personnel to switch attendance mode to Time In,Time In mode is selected,Click TIME IN
 '303,Attendance Personnel,Allow personnel to switch attendance mode to Time Out,Time Out mode is selected,Click TIME OUT
@@ -47,17 +47,17 @@ Test Case Scenario ID,Name of the Module Function,Test Case Scenario,Action,Actu
 '310,Attendance Admin,Allow admin to export attendance as CSV,CSV file is downloaded,Click Export CSV
 '311,Attendance Admin,Allow admin to export attendance as PDF,PDF file is downloaded,Click Export PDF
 '312,Attendance Admin,Allow admin to clear attendance filters,Filters reset and full data reappears,Click Clear Filters
-'401,Reports,Allow personnel to start Fire Operations report creation,Report form opens in create mode,Click Create Report (Fire Operations)
-'402,Reports,Allow personnel to start Spot Investigation report creation,Report form opens in create mode,Click Create Report (Spot Investigation)
-'403,Reports,Allow personnel to start Final Investigation report creation,Report form opens in create mode,Click Create Report (Final Investigation)
-'404,Investigation Form,Allow user to move to next step in multi-step form,Next section or step appears,Click Next
-'405,Investigation Form,Allow user to go back to previous step,Previous section or step appears,Click Previous
-'406,Investigation Form,Allow user to save report as draft,Draft is saved successfully,Click Save Draft
-'407,Investigation Form,Allow user to preview report output,Preview display opens,Click Preview
-'408,Investigation Form,Allow user to submit completed report,Report is submitted successfully,Click Submit Report
-'409,Investigation Form,Allow user to close report form without submitting,Form closes and returns to list or page,Click Close
-'410,History,Allow user to continue editing draft report,Navigates to report form with draft loaded,Click Continue Draft
-'411,History,Allow user to view submitted report,Report PDF or details opens,Click View
+'401,Reports Upload,Display upload-only report submission form for personnel,Title field file picker and submit button are visible,Navigate to /reports
+'402,Reports Upload Validation,Prevent report submission without a selected file,Validation error is shown,Click Submit Report without file
+'403,Reports Upload Validation,Reject non-PDF report submission,Validation error indicates PDF only,Select DOCX file and submit
+'404,Reports Upload Submit,Allow personnel to submit valid PDF report,Report is inserted with submitted status and success message appears,Select PDF and click Submit Report
+'405,Reports Upload Submit State,Reset submit button state after failed submit,Button returns from Submitting to Submit Report,Trigger DB/storage error during submit
+'406,Admin Reports Review,Allow admin to mark report as under_review,Selected report status updates in table,Click Review action
+'407,Admin Reports Approve,Allow admin to approve submitted report,Selected report status updates to approved,Click Approve action
+'408,Admin Reports Reject,Allow admin to reject report with optional reason,Selected report status updates to rejected,Click Reject action and provide reason
+'409,Admin Reports File Access,Allow admin to open uploaded report file,File opens in new tab,Click Open File
+'410,History,Allow personnel to view submitted report history entries,History shows submitted under_review approved and rejected reports,Navigate to /personnel/history
+'411,History,Allow user to view submitted report file from history,Report PDF opens in a new tab,Click View on history entry
 '412,History,Allow user to reset history filters,All filters cleared and list resets,Click Clear Filters
 '501,Accounts,Allow admin to open add personnel modal,Add personnel modal appears,Click ADD NEW PERSONNEL
 '502,Accounts,Allow admin to save new personnel entry,New personnel row appears in list,Fill form then click SAVE
@@ -69,13 +69,13 @@ Test Case Scenario ID,Name of the Module Function,Test Case Scenario,Action,Actu
 '508,Progress,Allow admin to clear progress filters,Progress list resets,Click Clear Filters
 '509,Progress,Allow admin to open row details,User or test detail view opens,Click View
 '510,Audit Logs,Allow admin to clear audit-log filters,Logs list resets,Click CLEAR
-'511,Intel Reports,Allow intel user to view report,Report opens,Click View
-'512,Intel Reports,Allow intel user to archive report,Report moves to archive,Click Archive
-'513,Intel Reports,Allow intel user to clear filters,Reports filters reset,Click CLEAR
-'514,Intel Archive,Allow intel user to view archived report,Archived report opens,Click View
-'515,Intel Archive,Allow intel user to restore archived report,Report is restored to active list,Click Restore
-'516,Intel Archive,Allow intel user to permanently delete archived report,Report is permanently removed,Click Permanently Delete
-'517,Intel Audit Logs,Allow intel user to clear audit-log filters,Logs list resets,Click CLEAR
+'511,Announcements UI,Display announcements header aligned with content cards,Header and cards are aligned consistently,Open announcements page
+'512,Announcements Admin Publish,Allow admin to send announcement to all personnel,Announcement appears in personnel feed,Create announcement with all_personnel audience
+'513,Announcements Targeting,Allow admin to send announcement to specific personnel,Only selected personnel receives announcement,Create announcement with specific_personnel audience
+'514,Acknowledgment Status,Show pending acknowledgment state for personnel,Pending acknowledgment badge is visible,Open personnel announcements with new post
+'515,Acknowledgment Action,Allow personnel to acknowledge announcement,Announcement state changes to acknowledged,Click Acknowledge
+'516,Acknowledgment Gate,Require personnel to acknowledge before accessing other modules,Redirects to /personnel/announcements with pending acknowledgments,Open personnel operations before acknowledging
+'517,Acknowledgment Metrics,Show admin acknowledgment summary counts per announcement,Admin sees acknowledged versus total recipients,View sent announcements list as admin
 '518,Organizational Chart,Allow admin to toggle chart edit mode,Nodes become editable or non-editable,Click Edit/Save toggle
 '519,Dashboard Cards,Allow admin to open Personnel page from Total Personnel card,Navigates to Accounts page,Click Total Personnel card
 '520,Dashboard Cards,Allow admin to open Attendance page from On-Duty Status card,Navigates to Attendance Admin page,Click On-Duty Status card

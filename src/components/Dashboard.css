@@ -26,6 +26,10 @@
   letter-spacing: 0.5px;
 }
 
+.dashboard-main .section-title {
+  color: #1f2937;
+}
+
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

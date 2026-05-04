@@ -64,15 +64,29 @@ export default function ProtectedRoute({ children, requiredPermission }) {
   }
 
   if (checkingAcknowledgement) {
+    // render the protected children immediately and show a small non-blocking
+    // indicator while the pending-acknowledgement check runs. This avoids
+    // a full-page blocking overlay (which interrupts flows such as saving
+    // profile/password) while still informing the user that a background
+    // check is in progress.
     return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh'
-      }}>
-        <p>Checking announcements...</p>
-      </div>
+      <>
+        {children}
+        <div style={{
+          position: 'fixed',
+          top: 16,
+          right: 16,
+          background: 'rgba(255,255,255,0.95)',
+          padding: '8px 12px',
+          borderRadius: 10,
+          boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
+          zIndex: 9999,
+          fontSize: '0.95rem',
+          color: '#374151'
+        }}>
+          Checking announcements...
+        </div>
+      </>
     );
   }
 

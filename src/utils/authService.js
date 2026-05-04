@@ -1,5 +1,7 @@
 import { supabase } from './supabaseClient';
 
+const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
+
 const splitFullName = (fullName = '') => {
   const trimmed = String(fullName || '').trim();
   if (!trimmed) {
@@ -25,6 +27,20 @@ const resolveNameFields = (source = {}) => {
   }
 
   return splitFullName(source.name || '');
+};
+
+const adminExistsForEmail = async (email) => {
+  const { data, error } = await supabase
+    .from('admin')
+    .select('admin_id')
+    .eq('email', email)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return !!data;
 };
 
 const withDisplayName = (adminData) => {
@@ -330,7 +346,17 @@ export const getCurrentUser = async () => {
 // Reset password - Step 1: Send reset email
 export const sendPasswordResetEmail = async (email) => {
   try {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
+      return { data: null, error: 'Please enter your email address.' };
+    }
+
+    const exists = await adminExistsForEmail(normalizedEmail);
+    if (!exists) {
+      return { data: null, error: 'No account found for that email address.' };
+    }
+
+    const { data, error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${window.location.origin}/login`
     });
 
@@ -338,7 +364,7 @@ export const sendPasswordResetEmail = async (email) => {
     return { data, error: null };
   } catch (error) {
     console.error('Error sending reset email:', error);
-    return { data: null, error: error.message };
+    return { data: null, error: error?.message || 'Password reset failed.' };
   }
 };
 

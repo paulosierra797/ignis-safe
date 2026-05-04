@@ -170,6 +170,11 @@ export default function Accounts() {
       .trim() || account.email || 'Personnel';
   };
 
+  const getPersonnelNameById = (personnelId) => {
+    const match = accounts.find((account) => account.admin_id === personnelId);
+    return formatPersonnelName(match);
+  };
+
   const isDateWithinInclusiveRange = (dateValue, startDate, endDate) => {
     if (!dateValue || !startDate || !endDate) {
       return false;
@@ -1413,7 +1418,7 @@ export default function Accounts() {
                       <option value="">Select a role...</option>
                       <option value="admin">Admin</option>
                       <option value="personnel">Personnel</option>
-                      <option value="intel unit">Intel Unit</option>
+                     
                     </select>
                   </div>
 
@@ -1745,7 +1750,14 @@ export default function Accounts() {
                           .map(a => a.personnel_id)
                         ));
                         return ids.length ? (
-                          <div className="shift-overview-count">{ids.length} personnel assigned</div>
+                          <>
+                            <div className="shift-overview-count">{ids.length} personnel assigned</div>
+                            {ids.map((personnelId) => (
+                              <div key={personnelId} className="shift-overview-item">
+                                {getPersonnelNameById(personnelId)}
+                              </div>
+                            ))}
+                          </>
                         ) : (
                           <div className="shift-overview-empty">No personnel assigned</div>
                         );
@@ -1762,7 +1774,14 @@ export default function Accounts() {
                           .map(a => a.personnel_id)
                         ));
                         return ids.length ? (
-                          <div className="shift-overview-count">{ids.length} personnel assigned</div>
+                          <>
+                            <div className="shift-overview-count">{ids.length} personnel assigned</div>
+                            {ids.map((personnelId) => (
+                              <div key={personnelId} className="shift-overview-item">
+                                {getPersonnelNameById(personnelId)}
+                              </div>
+                            ))}
+                          </>
                         ) : (
                           <div className="shift-overview-empty">No personnel assigned</div>
                         );

@@ -11,6 +11,18 @@
   border-radius: 0;
 }
 
+/* Compact header variant used by some pages */
+.page-header--compact {
+  padding: 0.6rem 1.25rem;
+  padding-bottom: 0.6rem;
+  margin: -1.25rem -3rem 0.8rem -3rem;
+  box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+}
+
+.page-header--compact .page-title {
+  font-size: 1.4rem;
+}
+
 .page-header--personnel {
   background-color: white;
 }

@@ -247,6 +247,10 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
+a
+{
+  color: blue; 
+}
 
 @media (max-width: 768px) {
   .admin-reports-main {

@@ -89,16 +89,20 @@
 }
 
 .org-card {
+  box-sizing: border-box;
   background: #f97316;
   color: white;
-  padding: 0.7rem 1rem;
+  width: 220px;
+  height: 140px;
+  padding: 0.8rem 1rem;
   border-radius: 10px;
   text-align: center;
-  min-width: 190px;
   box-shadow: 0 4px 10px rgba(249, 115, 22, 0.25);
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .org-avatar {
@@ -112,9 +116,15 @@
 
 .org-name {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 700;
   letter-spacing: 0.2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.12;
 }
 
 .org-title {
@@ -122,6 +132,9 @@
   font-size: 0.75rem;
   font-weight: 500;
   opacity: 0.95;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .org-input {
@@ -198,5 +211,18 @@
 
   .org-chart {
     padding: 2rem 1.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .org-card {
+    width: 90%;
+    height: auto;
+    padding: 0.6rem;
+  }
+
+  .org-name,
+  .org-title {
+    white-space: normal;
   }
 }

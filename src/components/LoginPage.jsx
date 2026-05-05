@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signIn, signInWithGoogle, sendPasswordResetEmail, verifyRecoveryCode, updatePassword, signOut } from '../utils/authService';
 import { useUser } from '../context/UserContext';
@@ -24,7 +24,7 @@ export default function LoginPage() {
   const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isRecoveryLinkFlow, setIsRecoveryLinkFlow] = useState(false);
+  const isResetFlowActiveRef = useRef(false);
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -38,7 +38,7 @@ export default function LoginPage() {
     setShowConfirmPassword(!showConfirmPassword);
   };
 
-  const navigateByRole = (userRole) => {
+  const navigateByRole = useCallback((userRole) => {
     if (userRole === 'admin') {
       navigate('/dashboard', { replace: true });
     } else if (userRole === 'personnel') {
@@ -48,7 +48,7 @@ export default function LoginPage() {
     } else {
       navigate('/dashboard', { replace: true });
     }
-  };
+  }, [navigate]);
 
   useEffect(() => {
     const savedRememberMe = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
@@ -67,24 +67,34 @@ export default function LoginPage() {
       sessionStorage.removeItem('oauth_login_in_progress');
       navigateByRole(currentUser.role);
     }
-  }, [currentUser]);
+  }, [currentUser, navigateByRole]);
 
   useEffect(() => {
-    // If the user is already authenticated, do not let /login stay visible.
-    if (currentUser?.role) {
+    if (currentUser?.role && !forgotPasswordStep) {
       navigateByRole(currentUser.role);
     }
-  }, [currentUser]);
+  }, [currentUser, forgotPasswordStep, navigateByRole]);
 
   useEffect(() => {
     const recoveryInHash = window.location.hash.includes('type=recovery');
     const recoveryInQuery = new URLSearchParams(window.location.search).get('type') === 'recovery';
 
     if (recoveryInHash || recoveryInQuery) {
-      setIsRecoveryLinkFlow(true);
       setForgotPasswordStep('setPassword');
       setError('');
     }
+  }, []);
+
+  useEffect(() => {
+    isResetFlowActiveRef.current = Boolean(forgotPasswordStep);
+  }, [forgotPasswordStep]);
+
+  useEffect(() => {
+    return () => {
+      if (isResetFlowActiveRef.current) {
+        void signOut();
+      }
+    };
   }, []);
 
   const handleLogin = async (event) => {
@@ -155,13 +165,13 @@ export default function LoginPage() {
       setError("Please enter your email address.");
       return;
     }
-    
+
     setError("");
     setLoading(true);
 
     try {
       const { error: resetError } = await sendPasswordResetEmail(resetEmail);
-      
+
       if (resetError) {
         setError(resetError);
         setLoading(false);
@@ -176,6 +186,25 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    isResetFlowActiveRef.current = Boolean(forgotPasswordStep);
+  }, [forgotPasswordStep]);
+
+  useEffect(() => {
+    return () => {
+      if (isResetFlowActiveRef.current) {
+        void signOut();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    // If the user is already authenticated, do not let /login stay visible.
+    if (currentUser?.role && !forgotPasswordStep) {
+      navigateByRole(currentUser.role);
+    }
+  }, [currentUser, forgotPasswordStep, navigateByRole]);
 
   const handleSetPassword = async (e) => {
     e.preventDefault();
@@ -249,13 +278,14 @@ export default function LoginPage() {
     }
   };
 
-  const handleBackToLogin = () => {
+  const handleBackToLogin = async () => {
+    await signOut();
+    setCurrentUser(null);
     setForgotPasswordStep(null);
     setResetEmail("");
     setResetCode("");
     setNewPassword("");
     setConfirmPassword("");
-    setIsRecoveryLinkFlow(false);
     setError("");
     setShowNewPassword(false);
     setShowConfirmPassword(false);

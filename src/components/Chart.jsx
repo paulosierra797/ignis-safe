@@ -241,8 +241,8 @@ const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
         </>
       ) : (
         <>
-          <p className="org-name">{node.name}</p>
-          <p className="org-title">{node.title}</p>
+          <p className="org-name" title={node.name} aria-label={node.name}>{node.name}</p>
+          <p className="org-title" title={node.title} aria-label={node.title}>{node.title}</p>
         </>
       )}
     </div>

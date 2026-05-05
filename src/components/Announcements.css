@@ -13,9 +13,14 @@
   gap: 1.2rem;
 }
 
-/* Keep header aligned with announcement content area */
+/* Reduce header size for Announcements page */
 .announcements-main .page-header {
-  margin: -2rem -2rem 1.2rem -2rem;
+  padding: 0.6rem 1.5rem !important;
+  margin: -2rem -2rem 1.5rem -2rem !important;
+}
+
+.announcements-main .page-title {
+  font-size: 1.5rem;
 }
 
 .announcement-card {

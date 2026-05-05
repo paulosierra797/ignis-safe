@@ -150,6 +150,34 @@
 .report-card .create-report-btn:hover {
   background-color: #111827;
 }
+.button {
+   background-color: #111827;
+}
+
+/* Ensure the submit button inside the upload card uses the intended primary color */
+.report-upload-card .create-report-btn,
+.report-upload-actions .create-report-btn {
+  padding: 0.65rem 1.1rem;
+  background: linear-gradient(135deg,#f59e0b,#ea580c);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(234,88,12,0.12);
+}
+
+.report-upload-card .create-report-btn:disabled,
+.report-upload-actions .create-report-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.report-upload-card .create-report-btn:hover,
+.report-upload-actions .create-report-btn:hover {
+  filter: brightness(0.95);
+}
 
 @media (max-width: 768px) {
   .reports-main {

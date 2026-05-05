@@ -1323,28 +1323,30 @@ export default function Accounts() {
                       )}
                     </td>
                     <td>
-                      {isPersonnelAccount(account) && (
-                        <button
-                          className="leave-btn"
-                          onClick={() => openLeaveModal(account)}
+                      <div className="action-buttons">
+                        {isPersonnelAccount(account) && (
+                          <button
+                            className="leave-btn"
+                            onClick={() => openLeaveModal(account)}
+                          >
+                            Set Leave
+                          </button>
+                        )}
+                        {isPersonnelAccount(account) && isOnLeave(account) && (
+                          <button
+                            className="leave-clear-btn"
+                            onClick={() => handleClearLeaveDate(account)}
+                          >
+                            Clear Leave
+                          </button>
+                        )}
+                        <button 
+                          className="delete-btn"
+                          onClick={() => handleDeleteUser(account.admin_id || account.id)}
                         >
-                          Set Leave
+                          Delete
                         </button>
-                      )}
-                      {isPersonnelAccount(account) && isOnLeave(account) && (
-                        <button
-                          className="leave-clear-btn"
-                          onClick={() => handleClearLeaveDate(account)}
-                        >
-                          Clear Leave
-                        </button>
-                      )}
-                      <button 
-                        className="delete-btn"
-                        onClick={() => handleDeleteUser(account.admin_id || account.id)}
-                      >
-                        Delete
-                      </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

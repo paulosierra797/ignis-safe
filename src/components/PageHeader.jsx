@@ -37,7 +37,8 @@ const PageHeader = ({
   userRole,
   userAvatar,
   variant = 'admin',
-  showSearch = true
+  showSearch = true,
+  compact = false
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -72,10 +73,11 @@ const PageHeader = ({
   };
 
   const variantClass = variant ? `page-header--${variant}` : '';
+  const compactClass = compact ? 'page-header--compact' : '';
   const showAvatar = variant !== 'admin';
 
   return (
-    <div className={`page-header ${variantClass}`}>
+    <div className={`page-header ${variantClass} ${compactClass}`.trim()}>
       <h1 className="page-title">{title}</h1>
       <div className="page-header-right">
         {showSearch && (

@@ -96,9 +96,7 @@ const AttendancePersonnel = () => {
           title="Attendance Management"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          userName="Alex meian"
-          userRole="Product manager"
-          variant="personnel"
+          
         />
 
         <div className="attendance-personnel-qr">

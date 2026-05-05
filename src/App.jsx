@@ -7,7 +7,7 @@ import ProcessSection from './components/ProcessSection'
 import ContactSection from './components/ContactSection'
 import FAQSection from './components/FAQSection'
 import Footer from './components/Footer'
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 import Reports from './components/Reports';
@@ -53,6 +53,7 @@ function App() {
             </>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/confirm-signup" element={<ConfirmSignupPage />} />
+            <Route path="/personnel" element={<Navigate to="/personnel/operations" replace />} />
             <Route path="/personnel/profile" element={<ProtectedRoute><PersonnelProfile /></ProtectedRoute>} />
             <Route path="/personnel/operations" element={<ProtectedRoute><PersonnelOperations /></ProtectedRoute>} />
             <Route path="/personnel/history" element={<ProtectedRoute><History /></ProtectedRoute>} />

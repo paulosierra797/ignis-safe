@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -94,54 +94,70 @@ export default function PersonnelOperations() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
-  useEffect(() => {
-    const loadPageData = async () => {
-      if (!currentUser?.admin_id) {
-        setLoading(false);
-        setScheduleLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setScheduleLoading(true);
-
-      const [leaveRes, scheduleRes] = await Promise.all([
-        getPersonnelLeaveRequest(currentUser.admin_id),
-        getPersonnelShiftSchedule({ days: 21 })
-      ]);
-
-      if (leaveRes.error) {
-        setMessage({ type: 'error', text: `Failed to load leave request: ${leaveRes.error}` });
-      } else if (leaveRes.data) {
-        setLeaveRequest(leaveRes.data);
-        const request = leaveRes.data.latest_request;
-        setLeaveForm({
-          startDate: request?.start_date || leaveRes.data.leave_start_date || '',
-          endDate: request?.end_date || leaveRes.data.leave_end_date || ''
-        });
-      }
-
-      if (scheduleRes.error) {
-        setMessage((prev) => ({
-          type: 'error',
-          text: prev.text
-            ? `${prev.text} Failed to load shift schedule: ${scheduleRes.error}`
-            : `Failed to load shift schedule: ${scheduleRes.error}`
-        }));
-      } else {
-        setShiftRows(scheduleRes.data?.rows || []);
-        setShiftTotals({
-          shiftA: scheduleRes.data?.totalShiftADates || 0,
-          shiftB: scheduleRes.data?.totalShiftBDates || 0
-        });
-      }
-
+  const loadPageData = useCallback(async () => {
+    if (!currentUser?.admin_id) {
       setLoading(false);
       setScheduleLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setScheduleLoading(true);
+
+    const [leaveRes, scheduleRes] = await Promise.all([
+      getPersonnelLeaveRequest(currentUser.admin_id),
+      getPersonnelShiftSchedule({ days: 21 })
+    ]);
+
+    if (leaveRes.error) {
+      setMessage({ type: 'error', text: `Failed to load leave request: ${leaveRes.error}` });
+    } else if (leaveRes.data) {
+      setLeaveRequest(leaveRes.data);
+      const request = leaveRes.data.latest_request;
+      setLeaveForm({
+        startDate: request?.start_date || leaveRes.data.leave_start_date || '',
+        endDate: request?.end_date || leaveRes.data.leave_end_date || ''
+      });
+    }
+
+    if (scheduleRes.error) {
+      setMessage((prev) => ({
+        type: 'error',
+        text: prev.text
+          ? `${prev.text} Failed to load shift schedule: ${scheduleRes.error}`
+          : `Failed to load shift schedule: ${scheduleRes.error}`
+      }));
+    } else {
+      setShiftRows(scheduleRes.data?.rows || []);
+      setShiftTotals({
+        shiftA: scheduleRes.data?.totalShiftADates || 0,
+        shiftB: scheduleRes.data?.totalShiftBDates || 0
+      });
+    }
+
+    setLoading(false);
+    setScheduleLoading(false);
+  }, [currentUser?.admin_id]);
+
+  useEffect(() => {
+    loadPageData();
+  }, [loadPageData]);
+
+  useEffect(() => {
+    const handleFocusOrVisible = () => {
+      if (document.visibilityState === 'visible') {
+        loadPageData();
+      }
     };
 
-    loadPageData();
-  }, [currentUser?.admin_id]);
+    window.addEventListener('focus', handleFocusOrVisible);
+    document.addEventListener('visibilitychange', handleFocusOrVisible);
+
+    return () => {
+      window.removeEventListener('focus', handleFocusOrVisible);
+      document.removeEventListener('visibilitychange', handleFocusOrVisible);
+    };
+  }, [loadPageData]);
 
   const todaySchedule = useMemo(() => {
     if (!shiftRows.length) {
@@ -244,10 +260,6 @@ export default function PersonnelOperations() {
     : leaveRequest.current_status || 'Active';
   const badgeClass = requestStatus || String(leaveRequest.current_status || 'active').toLowerCase().replace(/\s+/g, '-');
 
-  const openReportsPage = () => {
-    navigate('/reports');
-  };
-
   return (
     <div className="personnel-ops-container">
       <Sidebar variant="personnel" />
@@ -262,57 +274,6 @@ export default function PersonnelOperations() {
         />
 
         <div className="personnel-ops-grid">
-          <section className="ops-card leave-card">
-            <div className="ops-card-header">
-              <h2>Leave Request</h2>
-              <span className={`leave-status ${badgeClass}`}>
-                {badgeLabel}
-              </span>
-            </div>
-
-            <p className="ops-caption">Set your leave period and submit your request for admin approval.</p>
-
-            {leaveRequest.latest_request && (
-              <div className="leave-request-meta">
-                <p><strong>Last Request:</strong> {formatDate(leaveRequest.latest_request.start_date)} to {formatDate(leaveRequest.latest_request.end_date)}</p>
-                <p><strong>Status:</strong> {String(leaveRequest.latest_request.status || '').toUpperCase()}</p>
-                {leaveRequest.latest_request.rejection_reason && (
-                  <p><strong>Rejection Reason:</strong> {leaveRequest.latest_request.rejection_reason}</p>
-                )}
-              </div>
-            )}
-
-            <div className="leave-current-range">
-              <p><strong>Current Start:</strong> {formatDate(leaveRequest.leave_start_date)}</p>
-              <p><strong>Current End:</strong> {formatDate(leaveRequest.leave_end_date)}</p>
-            </div>
-
-            <div className="leave-form-grid">
-              <label htmlFor="leave-start-date">Leave Start Date</label>
-              <input
-                id="leave-start-date"
-                type="date"
-                name="startDate"
-                value={leaveForm.startDate}
-                onChange={handleLeaveInput}
-              />
-
-              <label htmlFor="leave-end-date">Leave End Date</label>
-              <input
-                id="leave-end-date"
-                type="date"
-                name="endDate"
-                min={leaveForm.startDate || undefined}
-                value={leaveForm.endDate}
-                onChange={handleLeaveInput}
-              />
-            </div>
-
-            <button className="ops-primary-btn" type="button" onClick={handleSubmitLeave} disabled={leaveSaving || loading}>
-              {leaveSaving ? 'Submitting...' : 'Submit Leave Request'}
-            </button>
-          </section>
-
           <section className="ops-card schedule-card">
             <div className="ops-card-header">
               <h2>Shift Schedule</h2>
@@ -398,7 +359,6 @@ export default function PersonnelOperations() {
                                 <span className="schedule-empty-inline">No one assigned</span>
                               )}
                             </div>
-                            <span className="shift-count-text">{onDuty} personnel</span>
                           </div>
 
                           <div className="shift-calendar-personnel-block">
@@ -427,31 +387,55 @@ export default function PersonnelOperations() {
             </div>
           </section>
 
-          <section className="ops-card report-card-ops">
+          <section className="ops-card leave-card">
             <div className="ops-card-header">
-              <h2>File Reports</h2>
+              <h2>Leave Request</h2>
+              <span className={`leave-status ${badgeClass}`}>
+                {badgeLabel}
+              </span>
             </div>
 
-            <p className="ops-caption">Upload your completed report file and submit it directly to admin.</p>
+            <p className="ops-caption">Set your leave period and submit your request for admin approval.</p>
 
-            <div className="report-type-grid">
-              <article className="report-type-item">
-                <h3>Upload Report File</h3>
-                <p>Open the Reports page to upload a PDF file for admin review and approval.</p>
-                <button type="button" className="ops-secondary-btn" onClick={openReportsPage}>
-                  Open Upload Form
-                </button>
-              </article>
+            {leaveRequest.latest_request && (
+              <div className="leave-request-meta">
+                <p><strong>Last Request:</strong> {formatDate(leaveRequest.latest_request.start_date)} to {formatDate(leaveRequest.latest_request.end_date)}</p>
+                <p><strong>Status:</strong> {String(leaveRequest.latest_request.status || '').toUpperCase()}</p>
+                {leaveRequest.latest_request.rejection_reason && (
+                  <p><strong>Rejection Reason:</strong> {leaveRequest.latest_request.rejection_reason}</p>
+                )}
+              </div>
+            )}
+
+            <div className="leave-current-range">
+              <p><strong>Current Start:</strong> {formatDate(leaveRequest.leave_start_date)}</p>
+              <p><strong>Current End:</strong> {formatDate(leaveRequest.leave_end_date)}</p>
             </div>
 
-            <div className="report-actions-inline">
-              <button className="ops-link-btn" type="button" onClick={() => navigate('/reports')}>
-                Open Reports Page
-              </button>
-              <button className="ops-link-btn" type="button" onClick={() => navigate('/personnel/history')}>
-                View Draft and Submitted History
-              </button>
+            <div className="leave-form-grid">
+              <label htmlFor="leave-start-date">Leave Start Date</label>
+              <input
+                id="leave-start-date"
+                type="date"
+                name="startDate"
+                value={leaveForm.startDate}
+                onChange={handleLeaveInput}
+              />
+
+              <label htmlFor="leave-end-date">Leave End Date</label>
+              <input
+                id="leave-end-date"
+                type="date"
+                name="endDate"
+                min={leaveForm.startDate || undefined}
+                value={leaveForm.endDate}
+                onChange={handleLeaveInput}
+              />
             </div>
+
+            <button className="ops-primary-btn" type="button" onClick={handleSubmitLeave} disabled={leaveSaving || loading}>
+              {leaveSaving ? 'Submitting...' : 'Submit Leave Request'}
+            </button>
           </section>
         </div>
 

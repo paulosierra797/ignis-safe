@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -11,44 +11,57 @@ export default function History() {
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState('');
-  const [filterCategory, setFilterCategory] = useState('All Category');
   const [reports, setReports] = useState([]);
   const [loadingReports, setLoadingReports] = useState(true);
   const [tableMessage, setTableMessage] = useState('');
 
-  useEffect(() => {
-    const loadHistory = async () => {
-      if (!currentUser?.admin_id) {
-        setReports([]);
-        setLoadingReports(false);
-        return;
-      }
-
-      setLoadingReports(true);
-      setTableMessage('');
-
-      const { data, error } = await getPersonnelReportHistory(currentUser.admin_id);
-      if (error) {
-        setTableMessage(`Failed to load report history: ${error}`);
-        setReports([]);
-      } else {
-        setReports(data || []);
-      }
-
+  const loadHistory = useCallback(async () => {
+    if (!currentUser?.admin_id) {
+      setReports([]);
       setLoadingReports(false);
+      return;
+    }
+
+    setLoadingReports(true);
+    setTableMessage('');
+
+    const { data, error } = await getPersonnelReportHistory(currentUser.admin_id);
+    if (error) {
+      setTableMessage(`Failed to load report history: ${error}`);
+      setReports([]);
+    } else {
+      setReports(data || []);
+    }
+
+    setLoadingReports(false);
+  }, [currentUser?.admin_id]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
+
+  useEffect(() => {
+    const handleFocusOrVisible = () => {
+      if (document.visibilityState === 'visible') {
+        loadHistory();
+      }
     };
 
-    loadHistory();
-  }, [currentUser?.admin_id]);
+    window.addEventListener('focus', handleFocusOrVisible);
+    document.addEventListener('visibilitychange', handleFocusOrVisible);
+
+    return () => {
+      window.removeEventListener('focus', handleFocusOrVisible);
+      document.removeEventListener('visibilitychange', handleFocusOrVisible);
+    };
+  }, [loadHistory]);
 
   // Calculate statistics
   const totalReports = reports.length;
-  const draftReports = reports.filter((r) => r.status === 'draft').length;
   const submittedReports = reports.filter((r) => r.status !== 'draft').length;
 
   const handleClearFilters = () => {
     setFilterDate('');
-    setFilterCategory('All Category');
     setSearchQuery('');
   };
 
@@ -66,11 +79,10 @@ export default function History() {
         String(report.title || '').toLowerCase().includes(normalizedSearch) ||
         String(report.created_by_name || '').toLowerCase().includes(normalizedSearch) ||
         String(report.report_no || '').toLowerCase().includes(normalizedSearch);
-      const matchesCategory = filterCategory === 'All Category' || report.category === filterCategory;
       const matchesDate = !filterDate || dateAsInput === filterDate;
-      return matchesSearch && matchesCategory && matchesDate;
+      return matchesSearch && matchesDate;
     });
-  }, [reports, searchQuery, filterCategory, filterDate]);
+  }, [reports, searchQuery, filterDate]);
 
   const getStatusClass = (status) => {
     const normalized = String(status || '').toLowerCase();
@@ -144,20 +156,6 @@ export default function History() {
               />
             </div>
 
-            <div className="filter-section">
-              <label>Filter by Category</label>
-              <select
-                className="filter-select"
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-              >
-                <option value="All Category">All Category</option>
-                <option value="After Fire Operations">After Fire Operations</option>
-                <option value="Spot Investigation">Spot Investigation</option>
-                <option value="Final Investigation">Final Investigation</option>
-              </select>
-            </div>
-
             <button className="clear-filters-btn" onClick={handleClearFilters}>
               CLEAR FILTERS
             </button>
@@ -167,10 +165,6 @@ export default function History() {
             <div className="stat-card">
               <div className="stat-label">Total Reports</div>
               <div className="stat-value">{totalReports}</div>
-            </div>
-            <div className="stat-card">
-              <div className="stat-label">Draft Reports</div>
-              <div className="stat-value">{draftReports}</div>
             </div>
             <div className="stat-card">
               <div className="stat-label">Submitted Reports</div>

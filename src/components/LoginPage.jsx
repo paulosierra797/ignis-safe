@@ -42,7 +42,7 @@ export default function LoginPage() {
     if (userRole === 'admin') {
       navigate('/dashboard', { replace: true });
     } else if (userRole === 'personnel') {
-      navigate('/personnel/profile', { replace: true });
+      navigate('/personnel/operations', { replace: true });
     } else if (userRole === 'intel-unit' || userRole === 'intel unit') {
       navigate('/dashboard/reports', { replace: true });
     } else {

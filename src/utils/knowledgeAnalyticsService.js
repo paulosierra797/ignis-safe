@@ -345,7 +345,7 @@ const buildOverviewRows = ({ attempts, assessmentsById, modulesById, userById, f
       grouped[key] = {
         adminId: attempt.user_id,
         moduleId: assessment.module_id,
-        moduleName: moduleData?.module_no ? `Module ${moduleData.module_no}` : (moduleData?.title || assessment.title || 'Unknown Module'),
+        moduleName: moduleData?.title || assessment.title || 'Unknown Module',
         preAttempt: null,
         postAttempt: null,
         durationSecondsList: [],
@@ -781,8 +781,6 @@ export const getAnalyticsChartsData = async (filters = {}) => {
 
       if (!learningByModuleAccumulator[moduleData.id]) {
         learningByModuleAccumulator[moduleData.id] = {
-          module_no: toNumber(moduleData.module_no, Number.MAX_SAFE_INTEGER),
-          title: moduleData.title,
           name: moduleData.title,
           preTotal: 0,
           preCount: 0,
@@ -813,15 +811,12 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       row.attempts += 1;
     });
 
-    const sortedModules = Object.values(learningByModuleAccumulator).sort((a, b) => {
-      const aNo = toNumber(a.module_no, Number.MAX_SAFE_INTEGER);
-      const bNo = toNumber(b.module_no, Number.MAX_SAFE_INTEGER);
-      if (aNo !== bNo) return aNo - bNo;
-      return String(a.title || '').localeCompare(String(b.title || ''));
-    });
+    const sortedModules = Object.values(learningByModuleAccumulator).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
 
     const learningByModule = {
-      labels: sortedModules.map((row) => (row.module_no ? `Module ${row.module_no}` : row.title || row.name)),
+      labels: sortedModules.map((row) => row.name),
       preTest: sortedModules.map((row) => (row.preCount > 0 ? round(row.preTotal / row.preCount, 2) : 0)),
       postTest: sortedModules.map((row) => (row.postCount > 0 ? round(row.postTotal / row.postCount, 2) : 0)),
     };
@@ -865,7 +860,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
     });
 
     const completionByModule = {
-      labels: modulesForCompletion.map((row) => (row.module_no ? `Module ${row.module_no}` : row.title)),
+      labels: modulesForCompletion.map((row) => row.title),
       completionRate: modulesForCompletion.map((row) => {
         const bucket = completionAccumulator[row.id];
         if (!bucket || bucket.count === 0) return 0;
@@ -900,7 +895,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
     });
 
     const attemptsByModule = {
-      labels: modulesForAttempts.map((row) => (row.module_no ? `Module ${row.module_no}` : row.title)),
+      labels: modulesForAttempts.map((row) => row.title),
       attempts: modulesForAttempts.map((row) => attemptsAccumulator[row.id] || 0),
     };
 

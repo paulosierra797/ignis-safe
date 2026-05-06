@@ -107,7 +107,6 @@ export const signUp = async (email, password, userData = {}) => {
           last_name,
           role: userData.role || 'personnel',
           rank: userData.rank || '',
-          contact_number: userData.contact_number || null,
           status: 'Pending Activation', // Will become Active after email verification
           permissions: userData.permissions || []
         }])
@@ -186,7 +185,6 @@ export const signIn = async (email, password) => {
         last_name: metadataName.last_name,
         role: 'admin',
         rank: authData.user.user_metadata?.rank || 'ADMIN',
-        contact_number: authData.user.user_metadata?.contact_number || null,
         status: 'Active',
         permissions: ['view_dashboard', 'view_charts', 'view_attendance', 'view_accounts', 'manage_users', 'view_analytics', 'view_progress', 'view_audit_logs', 'view_reports', 'manage_reports'],
         last_login: new Date().toISOString(),
@@ -313,7 +311,6 @@ export const getCurrentUser = async () => {
         last_name: metadataName.last_name,
         role: 'admin',
         rank: user.user_metadata?.rank || 'ADMIN',
-        contact_number: user.user_metadata?.contact_number || null,
         status: 'Active',
         permissions: ['view_dashboard', 'view_charts', 'view_attendance', 'view_accounts', 'manage_users', 'view_analytics', 'view_progress', 'view_audit_logs', 'view_reports', 'manage_reports'],
         last_login: new Date().toISOString(),

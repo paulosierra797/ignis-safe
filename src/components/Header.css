@@ -3,18 +3,19 @@
   padding: 0.75rem 0;
   position: sticky;
   top: 0;
-  z-index: 1000;
- 
+  z-index: 50;
 }
 
 .header-container {
   max-width: none;
-  padding: 0 2rem;
+  padding: 0 1rem;
   margin: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
   min-height: 64px;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .logo {
@@ -48,6 +49,8 @@
   display: flex;
   gap: 1.5rem;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .nav a {
@@ -81,15 +84,18 @@
   .header-container {
     flex-direction: column;
     gap: 1rem;
+    padding: 0 1rem;
   }
 
   .nav {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
+    width: 100%;
   }
 
   .logo-text h1 {
     font-size: 1rem;
   }
 }
+

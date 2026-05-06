@@ -96,7 +96,7 @@ const AttendancePersonnel = () => {
           title="Attendance Management"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
-          
+          variant="personnel"
         />
 
         <div className="attendance-personnel-qr">

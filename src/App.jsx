@@ -34,53 +34,56 @@ import ConfirmSignupPage from './components/ConfirmSignupPage';
 import { UserProvider } from './context/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { LandingContentProvider } from './context/LandingContentContext';
+import { LayoutProvider } from './context/LayoutContext';
 
 function App() {
   return (
     <UserProvider>
-      <LandingContentProvider>
-        <div className="app">
-          <Routes>
-            <Route path="/" element={<>
-              <Header />
-              <HeroSection />
-              <LandingAnnouncements />
-              <AboutSection />
-              <ProcessSection />
-              <ContactSection />
-              <FAQSection />
-              <Footer />
-            </>} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/confirm-signup" element={<ConfirmSignupPage />} />
-            <Route path="/personnel" element={<Navigate to="/personnel/operations" replace />} />
-            <Route path="/personnel/profile" element={<ProtectedRoute><PersonnelProfile /></ProtectedRoute>} />
-            <Route path="/personnel/operations" element={<ProtectedRoute><PersonnelOperations /></ProtectedRoute>} />
-            <Route path="/personnel/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+      <LayoutProvider>
+        <LandingContentProvider>
+          <div className="app">
+            <Routes>
+              <Route path="/" element={<>
+                <Header />
+                <HeroSection />
+                <LandingAnnouncements />
+                <AboutSection />
+                <ProcessSection />
+                <ContactSection />
+                <FAQSection />
+                <Footer />
+              </>} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/confirm-signup" element={<ConfirmSignupPage />} />
+              <Route path="/personnel" element={<Navigate to="/personnel/operations" replace />} />
+              <Route path="/personnel/profile" element={<ProtectedRoute><PersonnelProfile /></ProtectedRoute>} />
+              <Route path="/personnel/operations" element={<ProtectedRoute><PersonnelOperations /></ProtectedRoute>} />
+              <Route path="/personnel/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
         
-            <Route path="/attendance-admin" element={<ProtectedRoute><AttendanceAdmin /></ProtectedRoute>} />
-            <Route path="/attendance-personnel" element={<ProtectedRoute><AttendancePersonnel /></ProtectedRoute>} />
-            <Route path="/attendance-login" element={<AttendanceLogin />} />
-            <Route path="/attendance-scan" element={<AttendanceScan />} />
-            <Route path="/attendance-confirm" element={<AttendanceConfirm />} />
-            <Route path="/dashboard/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-            <Route path="/dashboard/assessment-questions" element={<ProtectedRoute requiredPermission="manage_users"><AssessmentQuestions /></ProtectedRoute>} />
-            <Route path="/dashboard/chart" element={<ProtectedRoute><Chart /></ProtectedRoute>} />
-            <Route path="/dashboard/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
-            <Route path="/dashboard/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
-            <Route path="/dashboard/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
-            <Route path="/dashboard/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
-            <Route path="/dashboard/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
-            <Route path="/dashboard/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
-            <Route path="/personnel/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
-            <Route path="/intel-unit/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-          </Routes>
-        </div>
-      </LandingContentProvider>
+              <Route path="/attendance-admin" element={<ProtectedRoute><AttendanceAdmin /></ProtectedRoute>} />
+              <Route path="/attendance-personnel" element={<ProtectedRoute><AttendancePersonnel /></ProtectedRoute>} />
+              <Route path="/attendance-login" element={<AttendanceLogin />} />
+              <Route path="/attendance-scan" element={<AttendanceScan />} />
+              <Route path="/attendance-confirm" element={<AttendanceConfirm />} />
+              <Route path="/dashboard/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+              <Route path="/dashboard/assessment-questions" element={<ProtectedRoute requiredPermission="manage_users"><AssessmentQuestions /></ProtectedRoute>} />
+              <Route path="/dashboard/chart" element={<ProtectedRoute><Chart /></ProtectedRoute>} />
+              <Route path="/dashboard/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
+              <Route path="/dashboard/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
+              <Route path="/dashboard/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+              <Route path="/dashboard/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
+              <Route path="/dashboard/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
+              <Route path="/dashboard/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
+              <Route path="/personnel/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
+              <Route path="/intel-unit/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+            </Routes>
+          </div>
+        </LandingContentProvider>
+      </LayoutProvider>
     </UserProvider>
   );
 }

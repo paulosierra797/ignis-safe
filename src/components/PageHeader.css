@@ -9,6 +9,50 @@
   padding: 1.5rem 2rem;
   margin: -2rem -3rem 2rem -3rem;
   border-radius: 0;
+  position: relative;
+  z-index: 101;
+}
+
+.page-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.sidebar-toggle-btn {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #b91c1c;
+  color: white;
+  box-shadow: 0 6px 16px rgba(185, 28, 28, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+/* Hide toggle on wider screens; show only on small viewports */
+.sidebar-toggle-btn {
+  display: none;
+}
+
+.page-header--personnel .sidebar-toggle-btn {
+  background: #f59e0b;
+  box-shadow: 0 6px 16px rgba(245, 158, 11, 0.24);
+}
+
+.sidebar-toggle-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(185, 28, 28, 0.28);
+}
+
+.page-header--personnel .sidebar-toggle-btn:hover {
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.28);
+}
+
+.sidebar-toggle-btn svg {
+  font-size: 1rem;
 }
 
 /* Compact header variant used by some pages */
@@ -177,6 +221,18 @@
     gap: 1rem;
   }
 
+  .page-header-left {
+    width: 100%;
+  }
+
+  .sidebar-toggle-btn {
+    display: inline-flex;
+    position: fixed;
+    top: 0.9rem;
+    left: 0.9rem;
+    z-index: 1500;
+  }
+
   .page-header-right {
     width: 100%;
     justify-content: space-between;
@@ -188,6 +244,21 @@
 }
 
 @media (max-width: 600px) {
+  .page-header-left {
+    gap: 0.75rem;
+  }
+
+  .sidebar-toggle-btn {
+    position: fixed;
+    top: 0.9rem;
+    left: 0.9rem;
+    z-index: 1500;
+  }
+
+  .page-header-left {
+    padding-left: 3.5rem;
+  }
+
   .page-header-right {
     flex-direction: column;
     align-items: stretch;

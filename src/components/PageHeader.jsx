@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaSearch } from 'react-icons/fa';
+import { FaBars, FaSearch } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
+import { useLayout } from '../context/LayoutContext';
 import './PageHeader.css';
 
 const formatRoleLabel = (role) => {
@@ -44,6 +45,7 @@ const PageHeader = ({
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const { currentUser, logout } = useUser();
+  const { isSidebarCollapsed, toggleSidebar, toggleMobileSidebar } = useLayout();
 
   const resolvedUserName = userName ?? getDisplayName(currentUser);
   const resolvedUserRole = userRole ?? formatRoleLabel(currentUser?.role);
@@ -78,7 +80,18 @@ const PageHeader = ({
 
   return (
     <div className={`page-header ${variantClass} ${compactClass}`.trim()}>
-      <h1 className="page-title">{title}</h1>
+      <div className="page-header-left">
+        <button
+          type="button"
+          className="sidebar-toggle-btn"
+          onClick={toggleMobileSidebar}
+          aria-label={isSidebarCollapsed ? 'Expand side bar' : 'Toggle navigation menu'}
+          title={isSidebarCollapsed ? 'Expand side bar' : 'Toggle navigation menu'}
+        >
+          <FaBars />
+        </button>
+        <h1 className="page-title">{title}</h1>
+      </div>
       <div className="page-header-right">
         {showSearch && (
           <div className="page-search">

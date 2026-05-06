@@ -1,29 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import inlogo from '../assets/inLOGO.png';
 import './Dashboard.css';
 import { useUser } from '../context/UserContext';
+import { useLayout } from '../context/LayoutContext';
 
 export default function Sidebar({ variant = 'admin' }) {
   const location = useLocation();
   const { hasPermission } = useUser();
-  const [isDesktop, setIsDesktop] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(min-width: 1024px)');
-
-    const syncSidebarState = () => {
-      const desktopMatches = mediaQuery.matches;
-      setIsDesktop(desktopMatches);
-      setIsMobileSidebarOpen(desktopMatches);
-    };
-
-    syncSidebarState();
-    mediaQuery.addEventListener('change', syncSidebarState);
-
-    return () => mediaQuery.removeEventListener('change', syncSidebarState);
-  }, []);
+  const { isSidebarCollapsed, isMobileSidebarOpen, closeMobileSidebar } = useLayout();
 
   const menuItems = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard', permission: 'view_dashboard' },
@@ -69,52 +54,25 @@ export default function Sidebar({ variant = 'admin' }) {
     : appManagementItems.filter(item => hasPermission(item.permission));
 
   const variantClass = variant ? `sidebar--${variant}` : '';
-  const sidebarOpenClass = isMobileSidebarOpen ? 'sidebar--open' : '';
-
-  const closeSidebarOnMobile = () => {
-    if (!isDesktop) {
-      setIsMobileSidebarOpen(false);
-    }
-  };
+  const collapsedClass = isSidebarCollapsed ? 'sidebar--collapsed' : '';
+  const mobileOpenClass = isMobileSidebarOpen ? 'sidebar--mobile-open' : '';
 
   return (
     <>
-      {!isDesktop && !isMobileSidebarOpen && (
+      {/* Backdrop for mobile menu */}
+      {isMobileSidebarOpen && (
         <button
-          type="button"
-          className="sidebar-toggle"
-          onClick={() => setIsMobileSidebarOpen(true)}
-          aria-label="Open navigation menu"
-          aria-expanded={isMobileSidebarOpen}
-        >
-          <span className="sidebar-toggle-icon" aria-hidden="true">☰</span>
-        </button>
-      )}
-
-      {!isDesktop && isMobileSidebarOpen && (
-        <button
-          type="button"
           className="sidebar-backdrop"
-          onClick={() => setIsMobileSidebarOpen(false)}
           aria-label="Close navigation menu"
+          onClick={closeMobileSidebar}
         />
       )}
 
-      <aside className={`sidebar ${variantClass} ${sidebarOpenClass}`.trim()}>
-      <div className="sidebar-header">
-        <img src={inlogo} alt="Ignis Safe" className="sidebar-logo" />
-        <span className="sidebar-title">IGNIS SAFE</span>
-        {!isDesktop && (
-          <button
-            type="button"
-            className="sidebar-close"
-            onClick={() => setIsMobileSidebarOpen(false)}
-            aria-label="Close navigation menu"
-          >
-            ×
-          </button>
-        )}
-      </div>
+      <aside className={`sidebar ${variantClass} ${collapsedClass} ${mobileOpenClass}`.trim()} aria-hidden={!isMobileSidebarOpen && undefined}>
+        <div className="sidebar-header">
+          <img src={inlogo} alt="Ignis Safe" className="sidebar-logo" />
+          <span className="sidebar-title">IGNIS SAFE</span>
+        </div>
 
       <nav className="sidebar-nav">
         <ul className="nav-list">
@@ -123,7 +81,6 @@ export default function Sidebar({ variant = 'admin' }) {
               <Link
                 to={item.path}
                 className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
-                onClick={closeSidebarOnMobile}
               >
                 <span className="nav-icon">{item.icon}</span>
                 <span className="nav-label">{item.label}</span>
@@ -141,7 +98,6 @@ export default function Sidebar({ variant = 'admin' }) {
                   <Link
                     to={item.path}
                     className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
-                    onClick={closeSidebarOnMobile}
                   >
                     <span className="nav-icon">{item.icon}</span>
                     <span className="nav-label">{item.label}</span>

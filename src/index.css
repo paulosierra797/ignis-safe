@@ -32,6 +32,10 @@ body {
   color: #333;
 }
 
+body.sidebar-collapsed {
+  --sidebar-width: 72px;
+}
+
 a {
   color: inherit;
   text-decoration: none;

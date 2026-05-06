@@ -1,26 +1,22 @@
 .footer {
-  background: white;
+  background:white;
   color: #222;
-  padding: 1.5rem 1rem;
+  padding: 1.5rem 0;
 }
 
 .footer-container {
   max-width: none;
   margin: 0;
-  padding: 0 1rem;
+  padding: 0 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1.5rem;
-  flex-wrap: wrap;
 }
 
 .footer-logo {
   display: flex;
   align-items: center;
   gap: 1rem;
-  justify-content: center;
-  flex: 1 1 auto;
 }
 
 .logo-icon {
@@ -36,15 +32,12 @@
 .footer-links {
   display: flex;
   gap: 2rem;
-  flex-wrap: wrap;
-  justify-content: center;
 }
 
 .footer-links a {
   color: #222;
   text-decoration: none;
   transition: color 0.3s;
-  font-size: 0.9rem;
 }
 
 .footer-links a:hover {
@@ -60,11 +53,5 @@
 
   .footer-logo {
     justify-content: center;
-    flex: 1 1 100%;
-  }
-
-  .footer-links {
-    flex-direction: column;
-    gap: 1rem;
   }
 }

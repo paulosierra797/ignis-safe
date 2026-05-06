@@ -42,6 +42,25 @@ const mergeQuestionsWithOptions = (questionRows = [], optionRows = []) => {
   }));
 };
 
+const formatAssessmentLabel = (assessment = {}) => {
+  const moduleNo = Number(assessment.module_no || 0);
+  const moduleText = moduleNo > 0 ? `Module ${moduleNo}` : 'Module';
+  const typeText = assessment.type_label || assessment.type || '';
+
+  if (!typeText) {
+    return moduleText;
+  }
+
+  return `${moduleText} - ${typeText}`;
+};
+
+const isPreferredAssessment = (assessment = {}) => {
+  const moduleNo = Number(assessment.module_no || 0);
+  const typeLabel = String(assessment.type_label || '').toLowerCase();
+
+  return moduleNo >= 1 && moduleNo <= 5 && (typeLabel === 'pre-test' || typeLabel === 'post-test');
+};
+
 export default function AssessmentQuestions() {
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
@@ -63,9 +82,11 @@ export default function AssessmentQuestions() {
         setMessage({ type: 'error', text: `Failed to load assessments: ${error}` });
         setAssessments([]);
       } else {
-        setAssessments(data || []);
-        if ((data || []).length > 0) {
-          setSelectedAssessmentId(data[0].id);
+        const loadedAssessments = data || [];
+        setAssessments(loadedAssessments);
+        if (loadedAssessments.length > 0) {
+          const preferred = loadedAssessments.find((row) => isPreferredAssessment(row));
+          setSelectedAssessmentId(preferred?.id || loadedAssessments[0].id);
         }
       }
 
@@ -106,10 +127,15 @@ export default function AssessmentQuestions() {
     loadQuestions();
   }, [selectedAssessmentId]);
 
+  const displayAssessments = useMemo(() => {
+    const preferred = assessments.filter((row) => isPreferredAssessment(row));
+    return preferred.length > 0 ? preferred : assessments;
+  }, [assessments]);
+
   const selectedAssessmentLabel = useMemo(() => {
     const selected = assessments.find((row) => row.id === selectedAssessmentId);
     if (!selected) return '';
-    return `${selected.title}${selected.type ? ` (${selected.type})` : ''}`;
+    return formatAssessmentLabel(selected);
   }, [assessments, selectedAssessmentId]);
 
   const filteredQuestions = useMemo(() => {
@@ -378,16 +404,16 @@ export default function AssessmentQuestions() {
             <select
               value={selectedAssessmentId}
               onChange={(event) => setSelectedAssessmentId(event.target.value)}
-              disabled={isLoadingAssessments || assessments.length === 0}
+              disabled={isLoadingAssessments || displayAssessments.length === 0}
             >
               {isLoadingAssessments ? (
                 <option>Loading...</option>
-              ) : assessments.length === 0 ? (
+              ) : displayAssessments.length === 0 ? (
                 <option value="">No assessments found</option>
               ) : (
-                assessments.map((row) => (
+                displayAssessments.map((row) => (
                   <option key={row.id} value={row.id}>
-                    {row.title} {row.type ? `(${row.type})` : ''}
+                    {formatAssessmentLabel(row)}
                   </option>
                 ))
               )}

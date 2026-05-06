@@ -38,19 +38,60 @@ export const buildDefaultAssessmentOptions = () => DEFAULT_OPTION_KEYS.map((opti
 
 export const getAssessmentOptions = async () => {
   try {
-    const { data, error } = await supabase
-      .from('assessments')
-      .select('id, title, type, module_id')
-      .order('title', { ascending: true });
+    const [{ data: assessments, error: assessmentsError }, { data: modules, error: modulesError }] = await Promise.all([
+      supabase
+        .from('assessments')
+        .select('id, title, type, module_id'),
+      supabase
+        .from('modules')
+        .select('id, module_no')
+    ]);
 
-    if (error) throw error;
+    if (assessmentsError) throw assessmentsError;
+    if (modulesError) throw modulesError;
+
+    const moduleNumberById = (modules || []).reduce((accumulator, moduleRow) => {
+      accumulator[moduleRow.id] = Number(moduleRow.module_no || 0) || null;
+      return accumulator;
+    }, {});
+
+    const normalizeTypeLabel = (rawType) => {
+      const value = String(rawType || '').trim().toLowerCase();
+      if (value === 'pre_test' || value === 'pre-test' || value === 'pretest') {
+        return 'Pre-test';
+      }
+      if (value === 'post_test' || value === 'post-test' || value === 'posttest') {
+        return 'Post-test';
+      }
+      return '';
+    };
+
+    const normalizeTypeOrder = (typeLabel) => {
+      if (typeLabel === 'Pre-test') return 1;
+      if (typeLabel === 'Post-test') return 2;
+      return 99;
+    };
+
+    const sortedAssessments = (assessments || []).slice().sort((a, b) => {
+      const moduleNoA = moduleNumberById[a.module_id] ?? Number.MAX_SAFE_INTEGER;
+      const moduleNoB = moduleNumberById[b.module_id] ?? Number.MAX_SAFE_INTEGER;
+      if (moduleNoA !== moduleNoB) return moduleNoA - moduleNoB;
+
+      const typeOrderA = normalizeTypeOrder(normalizeTypeLabel(a.type));
+      const typeOrderB = normalizeTypeOrder(normalizeTypeLabel(b.type));
+      if (typeOrderA !== typeOrderB) return typeOrderA - typeOrderB;
+
+      return String(a.title || '').localeCompare(String(b.title || ''));
+    });
 
     return {
-      data: (data || []).map((row) => ({
+      data: sortedAssessments.map((row) => ({
         id: row.id,
         title: row.title || 'Untitled Assessment',
         type: row.type || '',
-        module_id: row.module_id || null
+        module_id: row.module_id || null,
+        module_no: moduleNumberById[row.module_id] ?? null,
+        type_label: normalizeTypeLabel(row.type)
       })),
       error: null
     };

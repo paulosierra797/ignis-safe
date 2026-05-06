@@ -7,10 +7,47 @@ import { updateUser } from '../utils/usersService';
 import { updatePassword, verifyCurrentPassword } from '../utils/authService';
 import './PersonnelProfile.css';
 
+const validContactNumberPattern = /^09\d{9}$/;
+const OTHER_RANK_VALUE = '__OTHER__';
+const RANK_OPTIONS = [
+  { value: 'FDIR', label: 'FDIR - Fire Director' },
+  { value: 'DFDIR', label: 'DFDIR - Deputy Fire Director' },
+  { value: 'SSUPT', label: 'SSUPT - Senior Fire Superintendent' },
+  { value: 'SUPT', label: 'SUPT - Fire Superintendent' },
+  { value: 'CINSP', label: 'CINSP - Fire Chief Inspector' },
+  { value: 'SINSP', label: 'SINSP - Fire Senior Inspector' },
+  { value: 'INSP', label: 'INSP - Fire Inspector' },
+  { value: 'SFO4', label: 'SFO4 - Senior Fire Officer IV' },
+  { value: 'SFO3', label: 'SFO3 - Senior Fire Officer III' },
+  { value: 'SFO2', label: 'SFO2 - Senior Fire Officer II' },
+  { value: 'SFO1', label: 'SFO1 - Senior Fire Officer I' },
+  { value: 'FO3', label: 'FO3 - Fire Officer III' },
+  { value: 'FO2', label: 'FO2 - Fire Officer II' },
+  { value: 'FO1', label: 'FO1 - Fire Officer I' },
+  { value: OTHER_RANK_VALUE, label: 'Other (Specify)' }
+];
+
+const resolveRankState = (rankValue) => {
+  const normalized = String(rankValue || '').trim().toUpperCase();
+  const isPredefined = RANK_OPTIONS.some((option) => option.value === normalized);
+
+  if (isPredefined) {
+    return { rankSelection: normalized, customRank: '' };
+  }
+
+  return {
+    rankSelection: normalized ? OTHER_RANK_VALUE : '',
+    customRank: normalized
+  };
+};
+
 export default function PersonnelProfile() {
   const { currentUser, setCurrentUser } = useUser();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [rankSelection, setRankSelection] = useState('');
+  const [customRank, setCustomRank] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -22,11 +59,16 @@ export default function PersonnelProfile() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const displayName = `${currentUser?.rank || ''} ${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'Personnel';
-  const displayPhone = currentUser?.phone || currentUser?.phone_number || currentUser?.mobile || 'Not available';
+  const effectiveRank = rankSelection === OTHER_RANK_VALUE ? customRank.trim().toUpperCase() : rankSelection;
+  const displayName = `${effectiveRank || currentUser?.rank || ''} ${firstName || currentUser?.first_name || ''} ${lastName || currentUser?.last_name || ''}`.trim() || 'Personnel';
+  const displayPhone = contactNumber || currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || currentUser?.mobile || 'Not available';
   const [isSaving, setIsSaving] = useState(false);
   const [isPasswordSaving, setIsPasswordSaving] = useState(false);
-  const hasNameChanges = (firstName !== (currentUser?.first_name || '')) || (lastName !== (currentUser?.last_name || ''));
+  const hasProfileChanges =
+    (firstName !== (currentUser?.first_name || '')) ||
+    (lastName !== (currentUser?.last_name || '')) ||
+    (effectiveRank !== String(currentUser?.rank || '').trim().toUpperCase()) ||
+    (contactNumber !== String(currentUser?.contact_number || '').trim());
 
   useEffect(() => {
     if (currentUser) {
@@ -37,6 +79,10 @@ export default function PersonnelProfile() {
       if (currentUser.last_name) {
         setLastName(currentUser.last_name);
       }
+      const { rankSelection: nextRankSelection, customRank: nextCustomRank } = resolveRankState(currentUser.rank);
+      setRankSelection(nextRankSelection);
+      setCustomRank(nextCustomRank);
+      setContactNumber(String(currentUser.contact_number || '').trim());
       // Set profile image
       if (currentUser.avatar_url) {
         setProfileImage(currentUser.avatar_url);
@@ -106,11 +152,23 @@ export default function PersonnelProfile() {
       }
     }
 
+    if (!effectiveRank) {
+      alert('Please select or enter your rank.');
+      return;
+    }
+
+    if (!validContactNumberPattern.test(contactNumber)) {
+      alert('Contact number must be 11 digits and start with 09.');
+      return;
+    }
+
     try {
       setIsSaving(true);
       const { error } = await updateUser(currentUser.admin_id, {
         first_name: firstName,
-        last_name: lastName
+        last_name: lastName,
+        rank: effectiveRank,
+        contact_number: contactNumber
       });
 
       if (error) {
@@ -126,7 +184,13 @@ export default function PersonnelProfile() {
 
         // Update local user context
         if (setCurrentUser) {
-          setCurrentUser({ ...currentUser, first_name: firstName, last_name: lastName });
+          setCurrentUser({
+            ...currentUser,
+            first_name: firstName,
+            last_name: lastName,
+            rank: effectiveRank,
+            contact_number: contactNumber
+          });
         }
         setEnablePasswordChange(false);
         setCurrentPassword('');
@@ -254,7 +318,7 @@ export default function PersonnelProfile() {
                 <div className="profile-card-header">
                   <div>
                     <h3>General Information</h3>
-                    <p>Manage the name shown on your account.</p>
+                    <p>Manage your account details.</p>
                   </div>
                 </div>
 
@@ -282,17 +346,54 @@ export default function PersonnelProfile() {
 
                 <div className="form-field-full">
                   <label htmlFor="rank">Rank</label>
-                  <div className="input-with-icon">
-                    <input id="rank" type="text" value={currentUser?.rank || ''} disabled />
-                    <span className="lock-icon">🔒</span>
+                  <select
+                    id="rank"
+                    value={rankSelection}
+                    onChange={(e) => {
+                      setRankSelection(e.target.value);
+                      if (e.target.value !== OTHER_RANK_VALUE) {
+                        setCustomRank('');
+                      }
+                    }}
+                  >
+                    <option value="">Select a rank...</option>
+                    {RANK_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {rankSelection === OTHER_RANK_VALUE && (
+                  <div className="form-field-full">
+                    <label htmlFor="customRank">Custom Rank</label>
+                    <input
+                      id="customRank"
+                      type="text"
+                      value={customRank}
+                      onChange={(e) => setCustomRank(e.target.value)}
+                      placeholder="Enter rank"
+                    />
                   </div>
+                )}
+
+                <div className="form-field-full">
+                  <label htmlFor="phone">Contact Number</label>
+                  <input
+                    id="phone"
+                    type="text"
+                    value={contactNumber}
+                    onChange={(e) => setContactNumber(e.target.value.replace(/\D/g, '').slice(0, 11))}
+                    placeholder="09XXXXXXXXX"
+                    inputMode="numeric"
+                    maxLength={11}
+                  />
                 </div>
 
                 <div className="form-actions">
                   <button
                     className="save-btn"
                     onClick={handleSaveChanges}
-                    disabled={!hasNameChanges || isSaving}
+                    disabled={!hasProfileChanges || isSaving}
                     type="button"
                   >
                     {isSaving ? 'Saving...' : 'Save Changes'}
@@ -312,11 +413,6 @@ export default function PersonnelProfile() {
                   <div className="form-field-full">
                     <label htmlFor="email">Email</label>
                     <input id="email" type="email" value={currentUser?.email || ''} disabled />
-                  </div>
-
-                  <div className="form-field-full">
-                    <label htmlFor="phone">Phone Number</label>
-                    <input id="phone" type="text" value={displayPhone} disabled />
                   </div>
                 </div>
 

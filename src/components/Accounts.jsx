@@ -16,14 +16,30 @@ import {
   approveLeaveRequest,
   rejectLeaveRequest,
   assignPersonnelToShift,
-  getPersonnelShiftAssignments,
-  getShiftAssignmentsForPeriod,
-  removeShiftAssignment
+  getShiftAssignmentsForPeriod
 } from '../utils/personnelOperationsService';
 import { useUser } from '../context/UserContext';
 
 const validPersonnelNamePattern = /^[A-Za-z\s]+$/;
-const DEFAULT_PERSONNEL_PASSWORD = import.meta.env.VITE_DEFAULT_PERSONNEL_PASSWORD || 'IgnisSafe@123';
+const validContactNumberPattern = /^09\d{9}$/;
+const OTHER_RANK_VALUE = '__OTHER__';
+const RANK_OPTIONS = [
+  { value: 'FDIR', label: 'FDIR - Fire Director' },
+  { value: 'DFDIR', label: 'DFDIR - Deputy Fire Director' },
+  { value: 'SSUPT', label: 'SSUPT - Senior Fire Superintendent' },
+  { value: 'SUPT', label: 'SUPT - Fire Superintendent' },
+  { value: 'CINSP', label: 'CINSP - Fire Chief Inspector' },
+  { value: 'SINSP', label: 'SINSP - Fire Senior Inspector' },
+  { value: 'INSP', label: 'INSP - Fire Inspector' },
+  { value: 'SFO4', label: 'SFO4 - Senior Fire Officer IV' },
+  { value: 'SFO3', label: 'SFO3 - Senior Fire Officer III' },
+  { value: 'SFO2', label: 'SFO2 - Senior Fire Officer II' },
+  { value: 'SFO1', label: 'SFO1 - Senior Fire Officer I' },
+  { value: 'FO3', label: 'FO3 - Fire Officer III' },
+  { value: 'FO2', label: 'FO2 - Fire Officer II' },
+  { value: 'FO1', label: 'FO1 - Fire Officer I' },
+  { value: OTHER_RANK_VALUE, label: 'Other (Specify)' }
+];
 const ADD_PERSONNEL_TIMEOUT_MS = 25000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -43,9 +59,8 @@ export default function Accounts() {
   const [isLeaveSaving, setIsLeaveSaving] = useState(false);
   const [isShiftSaving, setIsShiftSaving] = useState(false);
   const [isPersonnelShiftSaving, setIsPersonnelShiftSaving] = useState(false);
-  const [selectedShiftPersonnel, setSelectedShiftPersonnel] = useState(null);
-  const [shiftAssignments, setShiftAssignments] = useState([]);
-  const [selectedShiftForAssignment, setSelectedShiftForAssignment] = useState('A');
+  const [selectedShiftPersonnelIds, setSelectedShiftPersonnelIds] = useState([]);
+  const [shiftPersonnelSearch, setShiftPersonnelSearch] = useState('');
   const [personnelShiftMessage, setPersonnelShiftMessage] = useState({ type: '', text: '' });
   const [periodAssignments, setPeriodAssignments] = useState([]);
   const [pendingRequestsLoading, setPendingRequestsLoading] = useState(true);
@@ -75,7 +90,11 @@ export default function Accounts() {
     last_name: '',
     email: '',
     role: '',
-    rank: ''
+    rank: '',
+    custom_rank: '',
+    contact_number: '',
+    password: '',
+    confirm_password: ''
   });
   const [leaveFormData, setLeaveFormData] = useState({
     start_date: '',
@@ -463,6 +482,15 @@ export default function Accounts() {
     const { id, value } = e.target;
     const fieldName = id.replace('personnel-', '').replace(/-/g, '_');
 
+    if (fieldName === 'contact_number') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 11);
+      setFormData(prev => ({
+        ...prev,
+        contact_number: digitsOnly
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [fieldName]: value
@@ -473,9 +501,30 @@ export default function Accounts() {
     // Validation
     const firstName = formData.first_name.trim();
     const lastName = formData.last_name.trim();
+    const rankValue = formData.rank === OTHER_RANK_VALUE
+      ? formData.custom_rank.trim().toUpperCase()
+      : formData.rank;
+    const contactNumber = String(formData.contact_number || '').trim();
+    const password = String(formData.password || '');
+    const confirmPassword = String(formData.confirm_password || '');
 
-    if (!firstName || !lastName || !formData.email || !formData.role || !formData.rank) {
+    if (!firstName || !lastName || !formData.email || !formData.role || !formData.rank || !contactNumber || !password || !confirmPassword) {
       setMessage({ type: 'error', text: 'Please fill in all required fields.' });
+      return;
+    }
+
+    if (formData.rank === OTHER_RANK_VALUE && !formData.custom_rank.trim()) {
+      setMessage({ type: 'error', text: 'Please enter a custom rank.' });
+      return;
+    }
+
+    if (!validContactNumberPattern.test(contactNumber)) {
+      setMessage({ type: 'error', text: 'Contact number must be 11 digits and start with 09.' });
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setMessage({ type: 'error', text: 'Password and confirm password do not match.' });
       return;
     }
 
@@ -492,18 +541,20 @@ export default function Accounts() {
       last_name: lastName,
       email: formData.email,
       role: formData.role,
-      rank: formData.rank
+      rank: rankValue,
+      contact_number: contactNumber
     };
 
     try {
       console.log('Attempting to add personnel with email verification...');
 
       // Use signUp to create auth user and send verification email
-      const signupAttempt = signUp(formData.email, DEFAULT_PERSONNEL_PASSWORD, {
+      const signupAttempt = signUp(formData.email, password, {
         first_name: firstName,
         last_name: lastName,
         role: formData.role,
-        rank: formData.rank
+        rank: rankValue,
+        contact_number: contactNumber
       });
 
       const timeoutAttempt = new Promise((resolve) => {
@@ -546,7 +597,11 @@ export default function Accounts() {
             last_name: '',
             email: '',
             role: '',
-            rank: ''
+            rank: '',
+            custom_rank: '',
+            contact_number: '',
+            password: '',
+            confirm_password: ''
           });
 
           setTimeout(() => {
@@ -608,7 +663,11 @@ export default function Accounts() {
         last_name: '',
         email: '',
         role: '',
-        rank: ''
+        rank: '',
+        custom_rank: '',
+        contact_number: '',
+        password: '',
+        confirm_password: ''
       });
 
       // Close modal after success
@@ -631,31 +690,76 @@ export default function Accounts() {
       last_name: '',
       email: '',
       role: '',
-      rank: ''
+      rank: '',
+      custom_rank: '',
+      contact_number: '',
+      password: '',
+      confirm_password: ''
     });
     setMessage({ type: '', text: '' });
   };
 
-  const handleAssignPersonnelToShift = async () => {
-    if (!selectedShiftPersonnel) {
-      setPersonnelShiftMessage({ type: 'error', text: 'Please select a personnel member.' });
+  const handleTogglePersonnelSelection = (personnelId) => {
+    setSelectedShiftPersonnelIds((prev) => {
+      if (prev.includes(personnelId)) {
+        return prev.filter((id) => id !== personnelId);
+      }
+
+      return [...prev, personnelId];
+    });
+  };
+
+  const handleSelectAllPersonnelForShift = () => {
+    const query = shiftPersonnelSearch.trim().toLowerCase();
+    const allPersonnelIds = accounts
+      .filter((account) => isPersonnelAccount(account))
+      .filter((account) => {
+        if (!query) return true;
+
+        const haystack = [
+          account.first_name,
+          account.last_name,
+          account.rank,
+          account.email
+        ].join(' ').toLowerCase();
+
+        return haystack.includes(query);
+      })
+      .map((account) => account.admin_id)
+      .filter(Boolean);
+
+    setSelectedShiftPersonnelIds((prev) => {
+      const selectedFromFiltered = allPersonnelIds.filter((id) => prev.includes(id));
+      const shouldClearFiltered = selectedFromFiltered.length === allPersonnelIds.length && allPersonnelIds.length > 0;
+
+      if (shouldClearFiltered) {
+        return prev.filter((id) => !allPersonnelIds.includes(id));
+      }
+
+      const next = new Set(prev);
+      allPersonnelIds.forEach((id) => next.add(id));
+      return Array.from(next);
+    });
+  };
+
+  const handleAssignSelectedPersonnelToShift = async (shiftType) => {
+    if (!selectedShiftPersonnelIds.length) {
+      setPersonnelShiftMessage({ type: 'error', text: 'Please select at least one personnel member.' });
       return;
     }
 
-    // Get dates from the shift schedule
-    const shiftDates = selectedShiftForAssignment === 'A' 
-      ? shiftSchedule.shift_a_dates 
+    const shiftDates = shiftType === 'A'
+      ? shiftSchedule.shift_a_dates
       : shiftSchedule.shift_b_dates;
 
     if (!shiftDates || shiftDates.length === 0) {
-      setPersonnelShiftMessage({ 
-        type: 'error', 
-        text: `Shift ${selectedShiftForAssignment} has no dates set. Please set shift dates first.` 
+      setPersonnelShiftMessage({
+        type: 'error',
+        text: `Shift ${shiftType} has no dates set. Please set shift dates first.`
       });
       return;
     }
 
-    // Get the first and last dates
     const sortedDates = [...shiftDates].sort();
     const formStartDate = sortedDates[0];
     const formEndDate = sortedDates[sortedDates.length - 1];
@@ -663,78 +767,76 @@ export default function Accounts() {
     setIsPersonnelShiftSaving(true);
     setPersonnelShiftMessage({ type: '', text: '' });
 
-    const { error } = await assignPersonnelToShift({
-      personnelId: selectedShiftPersonnel.admin_id,
-      shiftType: selectedShiftForAssignment,
-      startDate: formStartDate,
-      endDate: formEndDate,
-      assignedBy: currentUser?.admin_id || null
-    });
+    const failedAssignments = [];
+    const successfulAssignments = [];
 
-    if (error) {
-      if (String(error).toLowerCase().includes('personnel_shift')) {
-        setPersonnelShiftMessage({
-          type: 'error',
-          text: 'Personnel shift assignments table is missing. Run personnel_shift_assignments_setup.sql first.'
-        });
+    for (const personnelId of selectedShiftPersonnelIds) {
+      const { error } = await assignPersonnelToShift({
+        personnelId,
+        shiftType,
+        startDate: formStartDate,
+        endDate: formEndDate,
+        assignedBy: currentUser?.admin_id || null
+      });
+
+      if (error) {
+        if (String(error).toLowerCase().includes('personnel_shift')) {
+          setPersonnelShiftMessage({
+            type: 'error',
+            text: 'Personnel shift assignments table is missing. Run personnel_shift_assignments_setup.sql first.'
+          });
+          setIsPersonnelShiftSaving(false);
+          return;
+        }
+
+        failedAssignments.push({ personnelId, error: String(error) });
       } else {
-        setPersonnelShiftMessage({ type: 'error', text: `Failed to assign shift: ${error}` });
+        successfulAssignments.push(personnelId);
       }
-      setIsPersonnelShiftSaving(false);
-      return;
     }
 
-    logAdminActivity({
-      actorId: currentUser?.admin_id || null,
-      actorName: currentUser?.name || currentUser?.email || 'Admin User',
-      action: 'Personnel Shift Assigned',
-      actionType: 'edit',
-      details: `Assigned ${selectedShiftPersonnel.first_name || ''} ${selectedShiftPersonnel.last_name || ''} to Shift ${selectedShiftForAssignment}.`,
-      metadata: {
-        target_admin_id: selectedShiftPersonnel.admin_id,
-        shift_type: selectedShiftForAssignment
-      }
-    }).catch((logError) => {
-      console.warn('Unable to write admin activity log:', logError);
-    });
+    await loadShiftAssignmentsForSchedule();
 
-    // Reload assignments for the selected personnel
-    await loadPersonnelShiftAssignments(selectedShiftPersonnel.admin_id);
+    if (successfulAssignments.length > 0) {
+      const assignedNames = successfulAssignments
+        .map((personnelId) => {
+          const match = accounts.find((account) => account.admin_id === personnelId);
+          return `${match?.first_name || ''} ${match?.last_name || ''}`.trim() || personnelId;
+        });
 
-    setPersonnelShiftMessage({ type: 'success', text: 'Shift assignment saved successfully.' });
+      logAdminActivity({
+        actorId: currentUser?.admin_id || null,
+        actorName: currentUser?.name || currentUser?.email || 'Admin User',
+        action: 'Personnel Shift Assigned',
+        actionType: 'edit',
+        details: `Assigned ${successfulAssignments.length} personnel to Shift ${shiftType}: ${assignedNames.join(', ')}.`,
+        metadata: {
+          target_admin_ids: successfulAssignments,
+          shift_type: shiftType,
+          assignment_count: successfulAssignments.length,
+          period_start: formStartDate,
+          period_end: formEndDate
+        }
+      }).catch((logError) => {
+        console.warn('Unable to write admin activity log:', logError);
+      });
+    }
+
+    if (failedAssignments.length > 0) {
+      setPersonnelShiftMessage({
+        type: 'error',
+        text: `Assigned ${successfulAssignments.length} personnel to Shift ${shiftType}. ${failedAssignments.length} failed. Please retry.`
+      });
+      setSelectedShiftPersonnelIds(failedAssignments.map((entry) => entry.personnelId));
+    } else {
+      setPersonnelShiftMessage({
+        type: 'success',
+        text: `Successfully assigned ${successfulAssignments.length} personnel to Shift ${shiftType}.`
+      });
+      setSelectedShiftPersonnelIds([]);
+    }
+
     setIsPersonnelShiftSaving(false);
-  };
-
-  const loadPersonnelShiftAssignments = async (personnelId) => {
-    const { data, error } = await getPersonnelShiftAssignments(personnelId);
-    if (!error) {
-      setShiftAssignments(data || []);
-    }
-  };
-
-  const handleRemoveShiftAssignment = async (assignmentId) => {
-    if (!window.confirm('Are you sure you want to remove this shift assignment?')) {
-      return;
-    }
-
-    const { error } = await removeShiftAssignment(assignmentId);
-    if (error) {
-      setPersonnelShiftMessage({ type: 'error', text: `Failed to remove assignment: ${error}` });
-      return;
-    }
-
-    // Reload assignments
-    if (selectedShiftPersonnel) {
-      await loadPersonnelShiftAssignments(selectedShiftPersonnel.admin_id);
-    }
-
-    setPersonnelShiftMessage({ type: 'success', text: 'Shift assignment removed successfully.' });
-  };
-
-  const handleSelectPersonnelForShift = async (personnel) => {
-    setSelectedShiftPersonnel(personnel);
-    await loadPersonnelShiftAssignments(personnel.admin_id);
-    setPersonnelShiftMessage({ type: '', text: '' });
   };
 
   const openShiftModal = () => {
@@ -757,9 +859,8 @@ export default function Accounts() {
   };
 
   const openPersonnelShiftModal = () => {
-    setSelectedShiftPersonnel(null);
-    setSelectedShiftForAssignment('A');
-    setShiftAssignments([]);
+    setSelectedShiftPersonnelIds([]);
+    setShiftPersonnelSearch('');
     setPersonnelShiftMessage({ type: '', text: '' });
     setIsPersonnelShiftModalOpen(true);
     // load assignments for the configured shift schedule period so admin can see who is assigned
@@ -806,7 +907,8 @@ export default function Accounts() {
 
     setIsPersonnelShiftModalOpen(false);
     setPersonnelShiftMessage({ type: '', text: '' });
-    setSelectedShiftPersonnel(null);
+    setSelectedShiftPersonnelIds([]);
+    setShiftPersonnelSearch('');
   };
 
   const handleSaveShiftSchedule = async () => {
@@ -1022,6 +1124,26 @@ export default function Accounts() {
     const matchStatus = statusFilter === 'All Status' || account.status === statusFilter;
     return matchSearch && matchRank && matchStatus;
   });
+
+  const filteredShiftPersonnelAccounts = accounts
+    .filter((account) => isPersonnelAccount(account))
+    .filter((account) => {
+      const query = shiftPersonnelSearch.trim().toLowerCase();
+      if (!query) return true;
+
+      const haystack = [
+        account.first_name,
+        account.last_name,
+        account.rank,
+        account.email
+      ].join(' ').toLowerCase();
+
+      return haystack.includes(query);
+    });
+
+  const selectedFromFilteredCount = filteredShiftPersonnelAccounts
+    .filter((account) => selectedShiftPersonnelIds.includes(account.admin_id))
+    .length;
 
   const shiftScheduleASet = new Set(shiftSchedule.shift_a_dates || []);
   const shiftScheduleBSet = new Set(shiftSchedule.shift_b_dates || []);
@@ -1404,7 +1526,7 @@ export default function Accounts() {
                     <input
                       id="personnel-email"
                       type="email"
-                      placeholder="michaelescano21@gmail.com"
+                      placeholder="youremail@gmail.com"
                       value={formData.email}
                       onChange={handleInputChange}
                     />
@@ -1432,21 +1554,58 @@ export default function Accounts() {
                       onChange={handleInputChange}
                     >
                       <option value="">Select a rank...</option>
-                      <option value="FDIR">FDIR - Fire Director</option>
-                      <option value="DFDIR">DFDIR - Deputy Fire Director</option>
-                      <option value="SSUPT">SSUPT - Senior Fire Superintendent</option>
-                      <option value="SUPT">SUPT - Fire Superintendent</option>
-                      <option value="CINSP">CINSP - Fire Chief Inspector</option>
-                      <option value="SINSP">SINSP - Fire Senior Inspector</option>
-                      <option value="INSP">INSP - Fire Inspector</option>
-                      <option value="SFO4">SFO4 - Senior Fire Officer IV</option>
-                      <option value="SFO3">SFO3 - Senior Fire Officer III</option>
-                      <option value="SFO2">SFO2 - Senior Fire Officer II</option>
-                      <option value="SFO1">SFO1 - Senior Fire Officer I</option>
-                      <option value="FO3">FO3 - Fire Officer III</option>
-                      <option value="FO2">FO2 - Fire Officer II</option>
-                      <option value="FO1">FO1 - Fire Officer I</option>
+                      {RANK_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
                     </select>
+                  </div>
+                  {formData.rank === OTHER_RANK_VALUE && (
+                    <div className="accounts-modal-field">
+                      <label htmlFor="personnel-custom-rank">Custom Rank</label>
+                      <input
+                        id="personnel-custom-rank"
+                        type="text"
+                        placeholder="Enter rank"
+                        value={formData.custom_rank}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  )}
+                   <div className="accounts-modal-field">
+                    <label htmlFor="personnel-contact-number">Contact number</label>
+                    <input
+                      id="personnel-contact-number"
+                      type="text"
+                      placeholder="09XXXXXXXXX"
+                      value={formData.contact_number}
+                      onChange={handleInputChange}
+                      inputMode="numeric"
+                      maxLength={11}
+                      pattern="09[0-9]{9}"
+                      title="Use 11 digits starting with 09"
+                    />
+                  </div>
+
+                  <div className="accounts-modal-field">
+                    <label htmlFor="personnel-password">Password</label>
+                    <input
+                      id="personnel-password"
+                      type="password"
+                      placeholder="Enter password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="accounts-modal-field">
+                    <label htmlFor="personnel-confirm-password">Confirm Password</label>
+                    <input
+                      id="personnel-confirm-password"
+                      type="password"
+                      placeholder="Confirm password"
+                      value={formData.confirm_password}
+                      onChange={handleInputChange}
+                    />
                   </div>
 
                 </div>
@@ -1717,29 +1876,76 @@ export default function Accounts() {
 
               <div className="accounts-modal-body">
                 <div className="shift-personnel-selector">
-                  <label htmlFor="shift-personnel-dropdown">
-                    <strong>Select Personnel:</strong>
-                  </label>
-                  <select
-                    id="shift-personnel-dropdown"
-                    onChange={(e) => {
-                      const selectedId = e.target.value;
-                      const selectedPersonnel = accounts.find((acc) => acc.admin_id === selectedId);
-                      if (selectedPersonnel) {
-                        handleSelectPersonnelForShift(selectedPersonnel);
-                      }
-                    }}
-                    value={selectedShiftPersonnel?.admin_id || ''}
-                  >
-                    <option value="">-- Choose a personnel member --</option>
-                    {accounts
-                      .filter((account) => isPersonnelAccount(account))
-                      .map((account) => (
-                        <option key={account.admin_id} value={account.admin_id}>
-                          {account.first_name} {account.last_name} ({account.rank || 'N/A'})
-                        </option>
-                      ))}
-                  </select>
+                  <div className="shift-personnel-selector-header">
+                    <label>
+                      <strong>Select Personnel</strong>
+                    </label>
+                    <button
+                      type="button"
+                      className="shift-select-all-btn"
+                      onClick={handleSelectAllPersonnelForShift}
+                      disabled={isPersonnelShiftSaving}
+                    >
+                      {selectedFromFilteredCount === filteredShiftPersonnelAccounts.length && filteredShiftPersonnelAccounts.length > 0
+                        ? 'Clear Selection'
+                        : 'Select All'}
+                    </button>
+                  </div>
+
+                  <input
+                    type="text"
+                    className="shift-personnel-search-input"
+                    placeholder="Search personnel by name, rank, or email"
+                    value={shiftPersonnelSearch}
+                    onChange={(event) => setShiftPersonnelSearch(event.target.value)}
+                    disabled={isPersonnelShiftSaving}
+                  />
+
+                  <div className="shift-selected-count">
+                    {selectedShiftPersonnelIds.length} selected
+                  </div>
+
+                  <div className="shift-personnel-checkbox-list">
+                    {filteredShiftPersonnelAccounts.length === 0 ? (
+                      <div className="shift-personnel-empty">No personnel matched your search.</div>
+                    ) : (
+                      filteredShiftPersonnelAccounts.map((account) => {
+                        const isChecked = selectedShiftPersonnelIds.includes(account.admin_id);
+                        return (
+                          <label key={account.admin_id} className="shift-personnel-checkbox-item">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => handleTogglePersonnelSelection(account.admin_id)}
+                              disabled={isPersonnelShiftSaving}
+                            />
+                            <span>
+                              {account.first_name} {account.last_name} ({account.rank || 'N/A'})
+                            </span>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <div className="shift-bulk-actions">
+                    <button
+                      type="button"
+                      className="shift-assign-btn"
+                      onClick={() => handleAssignSelectedPersonnelToShift('A')}
+                      disabled={isPersonnelShiftSaving || selectedShiftPersonnelIds.length === 0}
+                    >
+                      {isPersonnelShiftSaving ? 'Assigning...' : 'Assign to Shift A'}
+                    </button>
+                    <button
+                      type="button"
+                      className="shift-assign-btn"
+                      onClick={() => handleAssignSelectedPersonnelToShift('B')}
+                      disabled={isPersonnelShiftSaving || selectedShiftPersonnelIds.length === 0}
+                    >
+                      {isPersonnelShiftSaving ? 'Assigning...' : 'Assign to Shift B'}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="shift-overview-grid">
@@ -1791,59 +1997,6 @@ export default function Accounts() {
                     </div>
                   </div>
                 </div>
-
-                {selectedShiftPersonnel && (
-                  <div className="shift-assignment-form">
-                    <h4>Assign {selectedShiftPersonnel.first_name} {selectedShiftPersonnel.last_name} to:</h4>
-
-                    <div className="shift-assignment-simple">
-                      <div className="shift-assignment-shift">
-                        <label htmlFor="shift-assignment-type">Shift:</label>
-                        <select
-                          id="shift-assignment-type"
-                          value={selectedShiftForAssignment}
-                          onChange={(e) => setSelectedShiftForAssignment(e.target.value)}
-                        >
-                          <option value="A">Shift A</option>
-                          <option value="B">Shift B</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <button
-                      className="shift-assign-btn"
-                      onClick={handleAssignPersonnelToShift}
-                      disabled={isPersonnelShiftSaving}
-                    >
-                      {isPersonnelShiftSaving ? 'Assigning...' : 'Add Shift Assignment'}
-                    </button>
-
-                    {shiftAssignments.length > 0 && (
-                      <div className="shift-assignments-list">
-                        <h5>Current Shift Assignments:</h5>
-                        <div className="assignments-table">
-                          {shiftAssignments.map((assignment) => (
-                            <div key={assignment.assignment_id} className="assignment-row">
-                              <div className="assignment-info">
-                                <span className="assignment-shift">Shift {assignment.shift_type}</span>
-                                <span className="assignment-dates">
-                                  {formatShiftDate(assignment.start_date)} - {formatShiftDate(assignment.end_date)}
-                                </span>
-                              </div>
-                              <button
-                                className="assignment-remove-btn"
-                                onClick={() => handleRemoveShiftAssignment(assignment.assignment_id)}
-                                title="Remove this assignment"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {personnelShiftMessage.text && (
                   <div className={`accounts-modal-message accounts-modal-message-${personnelShiftMessage.type}`}>

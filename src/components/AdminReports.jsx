@@ -36,6 +36,9 @@ export default function AdminReports() {
   const [reports, setReports] = useState([]);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [processingId, setProcessingId] = useState('');
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+const [rejectNotes, setRejectNotes] = useState('');
+const [selectedReport, setSelectedReport] = useState(null);
 
   const loadReports = async () => {
     setLoading(true);
@@ -58,38 +61,77 @@ export default function AdminReports() {
   }, []);
 
   const handleStatusChange = async (report, nextStatus) => {
-    if (!report?.report_id || !nextStatus) {
-      return;
-    }
+  if (!report?.report_id || !nextStatus) return;
 
-    let notes = '';
-    if (nextStatus === 'rejected') {
-      notes = window.prompt('Optional rejection reason:') || '';
-    }
+  // 🔥 NEW: reject modal flow
+  if (nextStatus === 'rejected') {
+    setSelectedReport(report);
+    setRejectModalOpen(true);
+    return;
+  }
 
-    setProcessingId(report.report_id);
-    const { error } = await updateReportStatus(report.report_id, nextStatus, notes);
+  let notes = '';
 
-    if (error) {
-      setMessage({ type: 'error', text: `Failed to update status: ${error}` });
-      setProcessingId('');
-      return;
-    }
+  setProcessingId(report.report_id);
 
+  const { error } = await updateReportStatus(
+    report.report_id,
+    nextStatus,
+    notes
+  );
+
+  if (error) {
+    setMessage({ type: 'error', text: `Failed to update status: ${error}` });
+    setProcessingId('');
+    return;
+  }
+
+  setReports((prev) =>
+    prev.map((row) =>
+      row.report_id === report.report_id
+        ? { ...row, status: nextStatus }
+        : row
+    )
+  );
+
+  setMessage({
+    type: 'success',
+    text: `Report marked as ${nextStatus.replace('_', ' ')}.`
+  });
+
+  setProcessingId('');
+};
+
+const confirmReject = async () => {
+  if (!selectedReport) return;
+
+  setProcessingId(selectedReport.report_id);
+
+  const { error } = await updateReportStatus(
+    selectedReport.report_id,
+    'rejected',
+    rejectNotes
+  );
+
+  if (error) {
+    setMessage({ type: 'error', text: `Failed to reject report: ${error}` });
+  } else {
     setReports((prev) =>
       prev.map((row) =>
-        row.report_id === report.report_id
-          ? {
-              ...row,
-              status: nextStatus
-            }
+        row.report_id === selectedReport.report_id
+          ? { ...row, status: 'rejected' }
           : row
       )
     );
 
-    setMessage({ type: 'success', text: `Report marked as ${nextStatus.replace('_', ' ')}.` });
-    setProcessingId('');
-  };
+    setMessage({ type: 'success', text: 'Report rejected.' });
+  }
+
+  setProcessingId('');
+  setRejectModalOpen(false);
+  setRejectNotes('');
+  setSelectedReport(null);
+};
 
   const filteredReports = reports.filter((report) => {
     const statusOk = statusFilter === 'all' || String(report.status || '').toLowerCase() === statusFilter;
@@ -214,7 +256,45 @@ export default function AdminReports() {
                 </tbody>
               </table>
             </div>
+            
           )}
+          {rejectModalOpen && (
+  <div className="modal-overlay">
+    <div className="modal-box">
+      <h3>Reject Report</h3>
+
+      <p>Optional reason for rejection:</p>
+
+      <textarea
+        value={rejectNotes}
+        onChange={(e) => setRejectNotes(e.target.value)}
+        placeholder="Enter reason..."
+        rows={4}
+      />
+
+      <div className="modal-actions">
+  <button
+    className="modal-btn cancel-btn"
+    onClick={() => {
+      setRejectModalOpen(false);
+      setRejectNotes('');
+      setSelectedReport(null);
+    }}
+  >
+    Cancel
+  </button>
+
+  <button
+    className="modal-btn confirm-btn"
+    onClick={confirmReject}
+    disabled={processingId}
+  >
+    Confirm Reject
+  </button>
+</div>
+    </div>
+  </div>
+)}
         </div>
       </div>
     </div>

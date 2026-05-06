@@ -229,14 +229,15 @@ const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
             onChange={(event) => onChange(node.id, 'title', event.target.value)}
           />
           {canEdit && (
-            <label className="org-avatar-upload">
-              Add avatar
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(event) => onImageChange(node.id, event)}
-              />
-            </label>
+           <label className="button-style">
+  Add avatar
+  <input
+    type="file"
+    accept="image/*"
+    onChange={(event) => onImageChange(node.id, event)}
+    hidden
+  />
+</label>
           )}
         </>
       ) : (

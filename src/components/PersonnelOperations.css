@@ -9,7 +9,7 @@
 .personnel-ops-content {
   flex: 1;
   margin-left: 250px;
-  padding: 2rem;
+  padding: 2rem 3rem;
 }
 
 .personnel-ops-grid {
@@ -17,6 +17,7 @@
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 1.25rem;
 }
+
 
 .ops-card {
   background: #ffffff;

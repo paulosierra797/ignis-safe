@@ -18,6 +18,7 @@ import AttendanceScan from './components/AttendanceScan';
 import AttendanceConfirm from './components/AttendanceConfirm';
 import Analytics from './components/Analytics';
 import AssessmentQuestions from './components/AssessmentQuestions';
+import LearningMaterials from './components/LearningMaterials';
 import Chart from './components/Chart';
 import Accounts from './components/Accounts';
 import Users from './components/Users';
@@ -69,6 +70,7 @@ function App() {
               <Route path="/attendance-confirm" element={<AttendanceConfirm />} />
               <Route path="/dashboard/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/dashboard/assessment-questions" element={<ProtectedRoute requiredPermission="manage_users"><AssessmentQuestions /></ProtectedRoute>} />
+              <Route path="/dashboard/learning-materials" element={ <ProtectedRoute><LearningMaterials /></ProtectedRoute>}/>
               <Route path="/dashboard/chart" element={<ProtectedRoute><Chart /></ProtectedRoute>} />
               <Route path="/dashboard/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
               <Route path="/dashboard/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />

@@ -18,17 +18,13 @@ export default function Sidebar({ variant = 'admin' }) {
     { id: 'accounts', icon: '👥', label: 'Personnel', path: '/dashboard/accounts', permission: 'view_accounts' },
   ];
 
-  const intelUnitMenuItems = [
-    { id: 'profile', icon: '👤', label: 'Profile', path: '/intel-unit/profile' },
-    { id: 'announcements', icon: '🔔', label: 'Announcements', path: '/intel-unit/announcements' },
-    { id: 'reports', icon: '📋', label: 'Reports', path: '/intel-unit/reports', permission: 'view_reports' },
-    { id: 'archive', icon: '🗄️', label: 'Archive', path: '/intel-unit/archive' },
-    { id: 'audit-logs', icon: '📊', label: 'Audit Logs', path: '/intel-unit/audit-logs', permission: 'view_audit_logs' }
-  ];
+ 
 
   const appManagementItems = [
     { id: 'users', icon: '👤', label: 'User', path: '/dashboard/users', permission: 'manage_users' },
     { id: 'assessment-questions', icon: '❓', label: 'Questions', path: '/dashboard/assessment-questions', permission: 'manage_users' },
+    { id: 'learning-materials', icon: '📚', label: 'Learning Materials', path: '/dashboard/learning-materials', permission: 'manage_users'},
+
     { id: 'announcements', icon: '🔔', label: 'Content Management', path: '/dashboard/announcements', permission: 'manage_users' },
     { id: 'analytics', icon: '📊', label: 'Analytics', path: '/dashboard/analytics', permission: 'view_analytics' },
     { id: 'progress', icon: '📈', label: 'Progress', path: '/dashboard/progress', permission: 'view_analytics' },

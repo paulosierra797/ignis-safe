@@ -9,6 +9,7 @@ import CompletionSimulationChart from './CompletionSimulationChart';
 import UserOverviewChart from './UserOverviewChart';
 import KnowledgeGainTrendChart from './KnowledgeGainTrendChart';
 import RiskDistributionChart from './RiskDistributionChart';
+import ModuleRecommendations from './ModuleRecommendations';
 import {
   getAnalyticsDashboardStats,
   getAnalyticsFilterOptions,
@@ -360,6 +361,9 @@ export default function Analytics() {
             </div>
           </div>
         </div>
+
+        {/* AI Module Recommendations */}
+        <ModuleRecommendations />
       </div>
     </div>
   );

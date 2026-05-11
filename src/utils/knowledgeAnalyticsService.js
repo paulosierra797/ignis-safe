@@ -981,3 +981,134 @@ export const getAnalyticsChartsData = async (filters = {}) => {
     return { data: DEFAULT_CHARTS_DATA, error: error.message };
   }
 };
+
+export const getModuleRecommendations = async () => {
+  const remote = await tryAnalyticsApi('/api/knowledge-analytics/module-recommendations');
+  if (remote?.data) {
+    return { data: remote.data || [], error: remote.error || null };
+  }
+
+  try {
+    const { users, attempts, assessments, modules } = await loadAnalyticsBaseData();
+
+    const assessmentsById = assessments.reduce((acc, row) => {
+      acc[row.id] = row;
+      return acc;
+    }, {});
+
+    const modulesById = modules.reduce((acc, row) => {
+      acc[row.id] = row;
+      return acc;
+    }, {});
+
+    const moduleStats = {};
+
+    attempts.forEach((attempt) => {
+      const assessment = assessmentsById[attempt.assessment_id];
+      if (!assessment) return;
+
+      const moduleId = assessment.module_id;
+      const moduleData = modulesById[moduleId];
+      if (!moduleData) return;
+
+      if (!moduleStats[moduleId]) {
+        moduleStats[moduleId] = {
+          moduleId,
+          moduleName: moduleData.title || 'Unknown Module',
+          scores: [],
+          attemptsCount: 0,
+          completionCount: 0,
+        };
+      }
+
+      const score = toNumber(attempt.score, 0);
+      moduleStats[moduleId].scores.push(score);
+      moduleStats[moduleId].attemptsCount += 1;
+      if (score >= 70) {
+        moduleStats[moduleId].completionCount += 1;
+      }
+    });
+
+    const recommendations = Object.entries(moduleStats)
+      .map(([moduleId, stats]) => {
+        if (!stats.scores.length) return null;
+
+        const avgScore = round(
+          stats.scores.reduce((sum, score) => sum + score, 0) / stats.scores.length,
+          2
+        );
+
+        const passRate = round(
+          stats.attemptsCount > 0 ? (stats.completionCount / stats.attemptsCount) * 100 : 0,
+          2
+        );
+
+        let level = 'excellent';
+        let color = 'green';
+        let emoji = '✅';
+
+        if (avgScore < 80) {
+          level = 'good';
+          color = 'blue';
+          emoji = '👍';
+        }
+
+        if (avgScore < 65) {
+          level = 'moderate';
+          color = 'orange';
+          emoji = '⚠️';
+        }
+
+        if (avgScore < 50) {
+          level = 'low';
+          color = 'red';
+          emoji = '🚨';
+        }
+
+        const recommendationsText = [];
+
+        if (avgScore >= 80) {
+          recommendationsText.push('✓ Module is performing well — consider using as a template for other modules');
+          if (passRate < 100) {
+            recommendationsText.push(`• ${100 - passRate}% of learners need support — review edge cases`);
+          }
+        } else if (avgScore >= 65) {
+          recommendationsText.push('• Add more interactive examples to reinforce concepts');
+          recommendationsText.push('• Consider adding practice questions between sections');
+          if (passRate < 80) {
+            recommendationsText.push('• Extend practice time for struggling learners');
+          }
+        } else if (avgScore >= 50) {
+          recommendationsText.push('🔴 Content may be too advanced — simplify explanations');
+          recommendationsText.push('• Break module into smaller, focused segments');
+          recommendationsText.push('• Add prerequisite knowledge review section');
+          recommendationsText.push('• Increase simulation/practice opportunities');
+        } else {
+          recommendationsText.push('🔴 URGENT: Module requires significant revision');
+          recommendationsText.push('• Completely rewrite confusing sections');
+          recommendationsText.push('• Add detailed visual aids and step-by-step walkthroughs');
+          recommendationsText.push('• Create guided simulation with hints');
+          recommendationsText.push('• Consider splitting into multiple modules');
+        }
+
+        return {
+          moduleId,
+          moduleName: stats.moduleName,
+          averageScore: avgScore,
+          passRate,
+          attemptCount: stats.attemptsCount,
+          level,
+          color,
+          emoji,
+          recommendations: recommendationsText,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.averageScore - b.averageScore);
+
+    return { data: recommendations, error: null };
+  } catch (error) {
+    console.error('Error fetching module recommendations:', error);
+    return { data: [], error: error.message };
+  }
+};

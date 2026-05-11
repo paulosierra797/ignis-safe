@@ -910,6 +910,109 @@ def build_ai_insights(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
     }
 
 
+def build_module_recommendations(data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Analyze module performance and generate AI-driven recommendations."""
+    assessments_by_id = {row.get("id"): row for row in data["assessments"]}
+    modules_by_id = {row.get("id"): row for row in data["modules"]}
+    
+    module_stats: Dict[str, Dict[str, Any]] = {}
+    
+    # Aggregate scores by module
+    for attempt in data["attempts"]:
+        assessment = assessments_by_id.get(attempt.get("assessment_id"))
+        if not assessment:
+            continue
+            
+        module_id = assessment.get("module_id")
+        module_data = modules_by_id.get(module_id)
+        if not module_data:
+            continue
+            
+        if module_id not in module_stats:
+            module_stats[module_id] = {
+                "module_id": module_id,
+                "module_name": module_data.get("title", "Unknown Module"),
+                "scores": [],
+                "attempts_count": 0,
+                "completion_count": 0,
+            }
+        
+        score = to_number(attempt.get("score"), 0)
+        module_stats[module_id]["scores"].append(score)
+        module_stats[module_id]["attempts_count"] += 1
+        if score >= 70:
+            module_stats[module_id]["completion_count"] += 1
+    
+    # Calculate averages and generate recommendations
+    recommendations: List[Dict[str, Any]] = []
+    
+    for module_id, stats in sorted(module_stats.items(), key=lambda x: x[1]["module_name"]):
+        if not stats["scores"]:
+            continue
+            
+        avg_score = round_value(float(np.mean(stats["scores"])), 2)
+        pass_rate = round_value((stats["completion_count"] / stats["attempts_count"] * 100) if stats["attempts_count"] > 0 else 0, 2)
+        
+        # Classify performance level
+        if avg_score >= 80:
+            level = "excellent"
+            color = "green"
+            emoji = "✅"
+        elif avg_score >= 65:
+            level = "good"
+            color = "blue"
+            emoji = "👍"
+        elif avg_score >= 50:
+            level = "moderate"
+            color = "orange"
+            emoji = "⚠️"
+        else:
+            level = "low"
+            color = "red"
+            emoji = "🚨"
+        
+        # Generate AI recommendations based on performance
+        recommendations_text = []
+        
+        if avg_score >= 80:
+            recommendations_text.append("✓ Module is performing well — consider using as a template for other modules")
+            if pass_rate < 100:
+                recommendations_text.append(f"• {100 - pass_rate}% of learners need support — review edge cases")
+        elif avg_score >= 65:
+            recommendations_text.append("• Add more interactive examples to reinforce concepts")
+            recommendations_text.append("• Consider adding practice questions between sections")
+            if pass_rate < 80:
+                recommendations_text.append("• Extend practice time for struggling learners")
+        elif avg_score >= 50:
+            recommendations_text.append("🔴 Content may be too advanced — simplify explanations")
+            recommendations_text.append("• Break module into smaller, focused segments")
+            recommendations_text.append("• Add prerequisite knowledge review section")
+            recommendations_text.append("• Increase simulation/practice opportunities")
+        else:
+            recommendations_text.append("🔴 URGENT: Module requires significant revision")
+            recommendations_text.append("• Completely rewrite confusing sections")
+            recommendations_text.append("• Add detailed visual aids and step-by-step walkthroughs")
+            recommendations_text.append("• Create guided simulation with hints")
+            recommendations_text.append("• Consider splitting into multiple modules")
+        
+        recommendations.append({
+            "moduleId": module_id,
+            "moduleName": stats["module_name"],
+            "averageScore": avg_score,
+            "passRate": pass_rate,
+            "attemptCount": stats["attempts_count"],
+            "level": level,
+            "color": color,
+            "emoji": emoji,
+            "recommendations": recommendations_text,
+        })
+    
+    # Sort by average score (low first) so urgent items appear on top
+    recommendations.sort(key=lambda x: x["averageScore"])
+    
+    return recommendations
+
+
 @app.get("/health")
 def health_check() -> Dict[str, str]:
     return {"status": "ok"}
@@ -943,5 +1046,16 @@ def get_dashboard_bundle(filters: Filters) -> Dict[str, Any]:
             "filterOptions": build_filter_options(data["modules"]),
             "aiInsights": build_ai_insights(data, filters),
         },
+        "error": None,
+    }
+
+
+@app.get("/api/knowledge-analytics/module-recommendations", dependencies=[Depends(require_api_key)])
+def get_module_recommendations() -> Dict[str, Any]:
+    """Get AI-generated recommendations for each module based on performance metrics."""
+    data = load_analytics_base_data()
+    recommendations = build_module_recommendations(data)
+    return {
+        "data": recommendations,
         "error": None,
     }

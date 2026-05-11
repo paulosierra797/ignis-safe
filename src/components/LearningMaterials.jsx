@@ -24,7 +24,49 @@ export default function LearningMaterials() {
 const [editedText, setEditedText] = useState('');
 const [saving, setSaving] = useState(false);
 const [editedTextTl, setEditedTextTl] = useState('');
+const [editingModule, setEditingModule] = useState(null);
+const [editedModule, setEditedModule] = useState(null);
+const [currentPages, setCurrentPages] = useState({});
 
+const handleSaveModule = async () => {
+  try {
+    setSaving(true);
+
+    // Save all pages and blocks
+    for (const page of editedModule.pages) {
+      for (const block of page.blocks) {
+        await updateLearningMaterialBlock(block.id, {
+          text_en: block.text_en,
+          text_tl: block.text_tl
+        });
+      }
+    }
+
+    // Update local state
+    setModules((prev) =>
+      prev.map((m) =>
+        m.module_no === editedModule.module_no
+          ? editedModule
+          : m
+      )
+    );
+
+    setMessage({
+      type: 'success',
+      text: 'Module updated successfully.'
+    });
+
+    setEditingModule(null);
+    setEditedModule(null);
+  } catch (error) {
+    setMessage({
+      type: 'error',
+      text: 'Failed to save module.'
+    });
+  } finally {
+    setSaving(false);
+  }
+};
   useEffect(() => {
     let mounted = true;
 
@@ -162,16 +204,102 @@ const handleSaveBlock = async (blockId) => {
           <div className="learning-materials-empty">No learning materials matched your search.</div>
         ) : (
           <div className="learning-materials-grid">
-            {displayedModules.map((moduleEntry) => (
+           {displayedModules.map((moduleEntry) => {
+
+  const currentPageIndex =
+    currentPages[moduleEntry.module_no] || 0;
+
+  const currentPage =
+    moduleEntry.pages[currentPageIndex];
+
+  return (
+              
               <section key={moduleEntry.module_no} className="learning-material-card">
                 <header className="learning-material-card-header">
+                  <button
+  className="learning-material-edit-btn"
+  onClick={() => {
+    setEditingModule(moduleEntry.module_no);
+    setEditedModule(JSON.parse(JSON.stringify(moduleEntry)));
+  }}
+>
+  Edit Module
+</button>
                   <div>
                     <p className="learning-material-module-number">Module {moduleEntry.module_no}</p>
-                    <h3>{moduleEntry.title || 'Untitled module'}</h3>
-                    {moduleEntry.title_tl && <p className="learning-material-title-tl">{moduleEntry.title_tl}</p>}
-                    {moduleEntry.subtitle && <p className="learning-material-subtitle">{moduleEntry.subtitle}</p>}
-                    {moduleEntry.subtitle_tl && <p className="learning-material-subtitle-tl">{moduleEntry.subtitle_tl}</p>}
-                  </div>
+                    {editingModule === moduleEntry.module_no ? (
+  <input
+    type="text"
+    value={editedModule.title || ''}
+    onChange={(e) =>
+      setEditedModule({
+        ...editedModule,
+        title: e.target.value
+      })
+    }
+  />
+) : (
+  <h3>{moduleEntry.title || 'Untitled module'}</h3>
+)}
+                    {editingModule === moduleEntry.module_no ? (
+  <input
+    className="learning-material-title-tl"
+    type="text"
+    value={editedModule.title_tl || ''}
+    onChange={(e) =>
+      setEditedModule({
+        ...editedModule,
+        title_tl: e.target.value
+      })
+    }
+  />
+) : (
+  moduleEntry.title_tl && (
+    <p className="learning-material-title-tl">
+      {moduleEntry.title_tl}
+    </p>
+  )
+)}
+{editingModule === moduleEntry.module_no ? (
+  <input
+    className="learning-material-subtitle"
+    type="text"
+    value={editedModule.subtitle || ''}
+    onChange={(e) =>
+      setEditedModule({
+        ...editedModule,
+        subtitle: e.target.value
+      })
+    }
+  />
+) : (
+  moduleEntry.subtitle && (
+    <p className="learning-material-subtitle">
+      {moduleEntry.subtitle}
+    </p>
+  )
+)}
+{editingModule === moduleEntry.module_no ? (
+  <input
+    className="learning-material-subtitle-tl"
+    type="text"
+    value={editedModule.subtitle_tl || ''}
+    onChange={(e) =>
+      setEditedModule({
+        ...editedModule,
+        subtitle_tl: e.target.value
+      })
+    }
+  />
+) : (
+  moduleEntry.subtitle_tl && (
+    <p className="learning-material-subtitle-tl">
+      {moduleEntry.subtitle_tl}
+    </p>
+  )
+)}
+
+               </div>
                   <div className="learning-material-card-metrics">
                     <span>{formatCount(moduleEntry.pages.length)} pages</span>
                     <span>{formatCount(moduleEntry.blockCount)} blocks</span>
@@ -191,7 +319,26 @@ const handleSaveBlock = async (blockId) => {
                       <div className="learning-material-page-header">
                         <div>
                           <p className="learning-material-page-number">Page {page.page_no}</p>
-                          <h4>{page.title_en || 'Untitled page'}</h4>
+                         {editingModule === moduleEntry.module_no ? (
+  <input
+    type="text"
+    value={editedModule.pages.find(p => p.page_no === page.page_no)?.title_en || ''}
+    onChange={(e) => {
+      const updatedPages = editedModule.pages.map((p) =>
+        p.page_no === page.page_no
+          ? { ...p, title_en: e.target.value }
+          : p
+      );
+
+      setEditedModule({
+        ...editedModule,
+        pages: updatedPages
+      });
+    }}
+  />
+) : (
+  <h4>{page.title_en || 'Untitled page'}</h4>
+)}
                           {page.title_tl && <p className="learning-material-page-title-tl">{page.title_tl}</p>}
                         </div>
                         <span className="learning-material-page-key">{page.page_key || '-'}</span>
@@ -242,28 +389,79 @@ const handleSaveBlock = async (blockId) => {
     </div>
   </div>
 ) : (<>
+  {editingModule === moduleEntry.module_no ? (
+  <textarea
+    className="learning-material-textarea"
+    value={
+      editedModule.pages
+        .find((p) => p.page_no === page.page_no)
+        ?.blocks.find((b) => b.id === block.id)?.text_en || ''
+    }
+    onChange={(e) => {
+      const updatedPages = editedModule.pages.map((p) => {
+        if (p.page_no !== page.page_no) return p;
+
+        return {
+          ...p,
+          blocks: p.blocks.map((b) =>
+            b.id === block.id
+              ? { ...b, text_en: e.target.value }
+              : b
+          )
+        };
+      });
+
+      setEditedModule({
+        ...editedModule,
+        pages: updatedPages
+      });
+    }}
+  />
+) : (
   <p className="learning-material-block-en">
     {block.text_en || 'No English text found.'}
   </p>
+)}
+{editingModule === moduleEntry.module_no ? (
+  <textarea
+    className="learning-material-textarea learning-material-block-tl"
+    value={
+      editedModule.pages
+        .find((p) => p.page_no === page.page_no)
+        ?.blocks.find((b) => b.id === block.id)?.text_tl || ''
+    }
+    onChange={(e) => {
+      const updatedPages = editedModule.pages.map((p) => {
+        if (p.page_no !== page.page_no) return p;
 
-  {block.text_tl && (
+        return {
+          ...p,
+          blocks: p.blocks.map((b) =>
+            b.id === block.id
+              ? { ...b, text_tl: e.target.value }
+              : b
+          )
+        };
+      });
+
+      setEditedModule({
+        ...editedModule,
+        pages: updatedPages
+      });
+    }}
+  />
+) : (
+  block.text_tl && (
     <p className="learning-material-block-tl">
       {block.text_tl}
     </p>
-  )}
+  )
+)}
 
-  <button
-    className="learning-material-edit-btn"
-    onClick={() => {
-      setEditingBlock(block.id);
-      setEditedText(block.text_en || '');
-      setEditedTextTl(block.text_tl || '');
-    }}
-  >
-    Edit
-  </button>
+  
 </>
 )}
+
   
                             
                               {block.source_file && <p className="learning-material-block-source">Source: {block.source_file}</p>}
@@ -276,8 +474,26 @@ const handleSaveBlock = async (blockId) => {
                     </article>
                   ))}
                 </div>
+                {editingModule === moduleEntry.module_no && (
+  <div className="learning-material-module-actions">
+    <button onClick={handleSaveModule}>
+      Save Module
+    </button>
+
+    <button
+      onClick={() => {
+        setEditingModule(null);
+        setEditedModule(null);
+      }}
+    >
+      Cancel
+    </button>
+  </div>
+)}
+                
               </section>
-            ))}
+           );
+})}
           </div>
         )}
 

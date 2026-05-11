@@ -8,6 +8,7 @@ const deepClone = (value) => JSON.parse(JSON.stringify(value));
 const toPhoneHref = (value) => `tel:${String(value || '').replace(/[^\d+]/g, '')}`;
 const toLines = (value) => (Array.isArray(value) ? value : [String(value || '')]).join('\n');
 const fromLines = (value) => String(value || '').split('\n').map((line) => line.trim()).filter(Boolean);
+const mobileNumberRegex = /^09\d{9}$/;
 
 const Field = ({ label, children }) => (
   <label>
@@ -127,6 +128,13 @@ export default function LandingContentEditor({ embedded = false }) {
 
   const handleSave = async () => {
     if (saving) {
+      return;
+    }
+
+    const mobileNumber = String(draft?.contact?.mobile || '').trim();
+    if (mobileNumber && !mobileNumberRegex.test(mobileNumber)) {
+      setSaveMessage('Mobile number must start with 09 and be exactly 11 digits.');
+      window.setTimeout(() => setSaveMessage(''), 3000);
       return;
     }
 
@@ -262,7 +270,16 @@ export default function LandingContentEditor({ embedded = false }) {
             <input type="text" value={draft.contact.landlineSecondary} onChange={(e) => updateField('contact', 'landlineSecondary', e.target.value)} />
           </Field>
           <Field label="Mobile">
-            <input type="text" value={draft.contact.mobile} onChange={(e) => updateField('contact', 'mobile', e.target.value)} />
+            <input
+              type="text"
+              value={draft.contact.mobile}
+              onChange={(e) => updateField('contact', 'mobile', e.target.value)}
+              placeholder="09XXXXXXXXX"
+              pattern="^09[0-9]{9}$"
+              maxLength={11}
+              inputMode="numeric"
+              title="Must start with 09 and be exactly 11 digits"
+            />
           </Field>
           <Field label="Email">
             <input type="text" value={draft.contact.email} onChange={(e) => updateField('contact', 'email', e.target.value)} />

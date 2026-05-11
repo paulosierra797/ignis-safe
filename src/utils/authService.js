@@ -107,6 +107,7 @@ export const signUp = async (email, password, userData = {}) => {
           last_name,
           role: userData.role || 'personnel',
           rank: userData.rank || '',
+          contact_number: userData.contact_number || null,
           status: 'Pending Activation', // Will become Active after email verification
           permissions: userData.permissions || []
         }])

@@ -7,10 +7,29 @@ import { updateUser } from '../utils/usersService';
 import { updatePassword, verifyCurrentPassword } from '../utils/authService';
 import './PersonnelProfile.css';
 
+const RANK_OPTIONS = [
+  'FDIR',
+  'DFDIR',
+  'SSUPT',
+  'SUPT',
+  'CINSP',
+  'SINSP',
+  'INSP',
+  'SFO4',
+  'SFO3',
+  'SFO2',
+  'SFO1',
+  'FO3',
+  'FO2',
+  'FO1'
+];
+
 export default function PersonnelProfile() {
   const { currentUser, setCurrentUser } = useUser();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [rank, setRank] = useState('');
+  const [rankCustom, setRankCustom] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -22,11 +41,14 @@ export default function PersonnelProfile() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const displayName = `${currentUser?.rank || ''} ${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'Personnel';
-  const displayPhone = currentUser?.phone || currentUser?.phone_number || currentUser?.mobile || 'Not available';
+  const resolvedRank = rank === 'OTHER' ? rankCustom.trim() : rank;
+  const displayName = `${resolvedRank || currentUser?.rank || ''} ${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'Personnel';
+  const displayPhone = currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || currentUser?.mobile || 'Not available';
   const [isSaving, setIsSaving] = useState(false);
   const [isPasswordSaving, setIsPasswordSaving] = useState(false);
-  const hasNameChanges = (firstName !== (currentUser?.first_name || '')) || (lastName !== (currentUser?.last_name || ''));
+  const hasNameChanges = (firstName !== (currentUser?.first_name || ''))
+    || (lastName !== (currentUser?.last_name || ''))
+    || (resolvedRank !== (currentUser?.rank || ''));
 
   useEffect(() => {
     if (currentUser) {
@@ -36,6 +58,14 @@ export default function PersonnelProfile() {
       }
       if (currentUser.last_name) {
         setLastName(currentUser.last_name);
+      }
+      const currentRank = currentUser.rank || '';
+      if (!currentRank || RANK_OPTIONS.includes(currentRank)) {
+        setRank(currentRank);
+        setRankCustom('');
+      } else {
+        setRank('OTHER');
+        setRankCustom(currentRank);
       }
       // Set profile image
       if (currentUser.avatar_url) {
@@ -107,10 +137,16 @@ export default function PersonnelProfile() {
     }
 
     try {
+      if (!resolvedRank) {
+        alert('Please select your rank.');
+        return;
+      }
+
       setIsSaving(true);
       const { error } = await updateUser(currentUser.admin_id, {
         first_name: firstName,
-        last_name: lastName
+        last_name: lastName,
+        rank: resolvedRank
       });
 
       if (error) {
@@ -126,7 +162,7 @@ export default function PersonnelProfile() {
 
         // Update local user context
         if (setCurrentUser) {
-          setCurrentUser({ ...currentUser, first_name: firstName, last_name: lastName });
+          setCurrentUser({ ...currentUser, first_name: firstName, last_name: lastName, rank: resolvedRank });
         }
         setEnablePasswordChange(false);
         setCurrentPassword('');
@@ -254,7 +290,7 @@ export default function PersonnelProfile() {
                 <div className="profile-card-header">
                   <div>
                     <h3>General Information</h3>
-                    <p>Manage the name shown on your account.</p>
+                    <p>Manage the profile details shown on your account.</p>
                   </div>
                 </div>
 
@@ -282,11 +318,31 @@ export default function PersonnelProfile() {
 
                 <div className="form-field-full">
                   <label htmlFor="rank">Rank</label>
-                  <div className="input-with-icon">
-                    <input id="rank" type="text" value={currentUser?.rank || ''} disabled />
-                    <span className="lock-icon">🔒</span>
-                  </div>
+                  <select
+                    id="rank"
+                    value={rank}
+                    onChange={(e) => setRank(e.target.value)}
+                  >
+                    <option value="">Select rank...</option>
+                    {RANK_OPTIONS.map((rankOption) => (
+                      <option key={rankOption} value={rankOption}>{rankOption}</option>
+                    ))}
+                    <option value="OTHER">Other (Specify)</option>
+                  </select>
                 </div>
+
+                {rank === 'OTHER' && (
+                  <div className="form-field-full">
+                    <label htmlFor="rankCustom">Custom Rank</label>
+                    <input
+                      id="rankCustom"
+                      type="text"
+                      value={rankCustom}
+                      onChange={(e) => setRankCustom(e.target.value)}
+                      placeholder="Enter your rank"
+                    />
+                  </div>
+                )}
 
                 <div className="form-actions">
                   <button

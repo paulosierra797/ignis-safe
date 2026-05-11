@@ -877,6 +877,43 @@
   box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
 }
 
+.shift-personnel-checkbox-list {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+}
+
+.shift-personnel-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.shift-personnel-checkbox-item:last-child {
+  border-bottom: none;
+}
+
+.shift-personnel-checkbox-item input {
+  width: 15px;
+  height: 15px;
+  accent-color: #b91c1c;
+  cursor: pointer;
+}
+
+.shift-personnel-selection-count {
+  margin-top: 0.5rem;
+  color: #6b7280;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .shift-assignment-form {
   margin-top: 1.5rem;
   padding: 1rem;

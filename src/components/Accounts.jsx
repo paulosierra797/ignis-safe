@@ -54,6 +54,15 @@ export default function Accounts() {
   const [pendingLeaveRequests, setPendingLeaveRequests] = useState([]);
   const [pendingRequestMessage, setPendingRequestMessage] = useState('');
   const [processingRequestId, setProcessingRequestId] = useState('');
+  const [pendingRejectRequest, setPendingRejectRequest] = useState(null);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectReasonInput, setRejectReasonInput] = useState('');
+  const [pendingDeleteUserId, setPendingDeleteUserId] = useState('');
+  const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState(false);
+  const [isDeleteUserProcessing, setIsDeleteUserProcessing] = useState(false);
+  const [pendingConfirmAction, setPendingConfirmAction] = useState(null);
+  const [isConfirmActionModalOpen, setIsConfirmActionModalOpen] = useState(false);
+  const [isConfirmActionProcessing, setIsConfirmActionProcessing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [leaveMessage, setLeaveMessage] = useState({ type: '', text: '' });
   const [shiftMessage, setShiftMessage] = useState({ type: '', text: '' });
@@ -381,7 +390,28 @@ export default function Accounts() {
       return;
     }
 
-    const rejectionReason = window.prompt('Optional rejection reason:') || '';
+    setPendingRejectRequest(request);
+    setRejectReasonInput('');
+    setIsRejectModalOpen(true);
+  };
+
+  const closeRejectModal = () => {
+    if (processingRequestId) {
+      return;
+    }
+
+    setIsRejectModalOpen(false);
+    setPendingRejectRequest(null);
+    setRejectReasonInput('');
+  };
+
+  const confirmRejectLeaveRequest = async () => {
+    const request = pendingRejectRequest;
+    if (!request?.request_id || !request?.personnel_id) {
+      return;
+    }
+
+    const rejectionReason = rejectReasonInput.trim();
 
     setPendingRequestMessage('');
     setProcessingRequestId(request.request_id);
@@ -420,6 +450,9 @@ export default function Accounts() {
     });
 
     setProcessingRequestId('');
+    setIsRejectModalOpen(false);
+    setPendingRejectRequest(null);
+    setRejectReasonInput('');
   };
 
   const handleDeleteUser = async (adminId) => {
@@ -428,9 +461,26 @@ export default function Accounts() {
       return;
     }
 
-    if (!window.confirm('Are you sure you want to delete this user?')) {
+    setPendingDeleteUserId(adminId);
+    setIsDeleteUserModalOpen(true);
+  };
+
+  const closeDeleteUserModal = () => {
+    if (isDeleteUserProcessing) {
       return;
     }
+
+    setIsDeleteUserModalOpen(false);
+    setPendingDeleteUserId('');
+  };
+
+  const confirmDeleteUser = async () => {
+    const adminId = pendingDeleteUserId;
+    if (!adminId) {
+      return;
+    }
+
+    setIsDeleteUserProcessing(true);
 
     try {
       const target = accounts.find((account) => account.admin_id === adminId);
@@ -458,9 +508,13 @@ export default function Accounts() {
 
         alert('User deleted successfully');
         fetchAccounts(); // Refresh the list
+        setIsDeleteUserModalOpen(false);
+        setPendingDeleteUserId('');
       }
     } catch (err) {
       alert('Error deleting user: ' + err.message);
+    } finally {
+      setIsDeleteUserProcessing(false);
     }
   };
 
@@ -824,10 +878,21 @@ export default function Accounts() {
   };
 
   const handleRemoveShiftAssignment = async (assignmentId) => {
-    if (!window.confirm('Are you sure you want to remove this shift assignment?')) {
+    if (!assignmentId) {
       return;
     }
 
+    setPendingConfirmAction({
+      action: 'remove-shift-assignment',
+      payload: { assignmentId },
+      title: 'Remove Shift Assignment',
+      message: 'Are you sure you want to remove this shift assignment?',
+      confirmLabel: 'Remove'
+    });
+    setIsConfirmActionModalOpen(true);
+  };
+
+  const executeRemoveShiftAssignment = async (assignmentId) => {
     const { error } = await removeShiftAssignment(assignmentId);
     if (error) {
       setPersonnelShiftMessage({ type: 'error', text: `Failed to remove assignment: ${error}` });
@@ -1117,10 +1182,17 @@ export default function Accounts() {
       return;
     }
 
-    if (!window.confirm(`Clear leave dates for ${account.first_name || ''} ${account.last_name || ''}?`)) {
-      return;
-    }
+    setPendingConfirmAction({
+      action: 'clear-leave-date',
+      payload: { account },
+      title: 'Clear Leave Dates',
+      message: `Clear leave dates for ${account.first_name || ''} ${account.last_name || ''}?`,
+      confirmLabel: 'Clear Leave'
+    });
+    setIsConfirmActionModalOpen(true);
+  };
 
+  const executeClearLeaveDate = async (account) => {
     const updates = {
       status: 'Active',
       leave_start_date: null,
@@ -1156,6 +1228,35 @@ export default function Accounts() {
     }).catch((logError) => {
       console.warn('Unable to write admin activity log:', logError);
     });
+  };
+
+  const closeConfirmActionModal = () => {
+    if (isConfirmActionProcessing) {
+      return;
+    }
+
+    setIsConfirmActionModalOpen(false);
+    setPendingConfirmAction(null);
+  };
+
+  const confirmActionModal = async () => {
+    if (!pendingConfirmAction?.action) {
+      return;
+    }
+
+    setIsConfirmActionProcessing(true);
+
+    if (pendingConfirmAction.action === 'remove-shift-assignment') {
+      await executeRemoveShiftAssignment(pendingConfirmAction.payload.assignmentId);
+    }
+
+    if (pendingConfirmAction.action === 'clear-leave-date') {
+      await executeClearLeaveDate(pendingConfirmAction.payload.account);
+    }
+
+    setIsConfirmActionProcessing(false);
+    setIsConfirmActionModalOpen(false);
+    setPendingConfirmAction(null);
   };
 
   const filteredAccounts = accounts.filter((account) => {
@@ -2067,6 +2168,106 @@ export default function Accounts() {
               <div className="accounts-modal-footer">
                 <button className="accounts-modal-draft" onClick={closePersonnelShiftModal} disabled={isPersonnelShiftSaving}>
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isDeleteUserModalOpen && (
+          <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
+            <div className="accounts-modal accounts-confirm-modal">
+              <div className="accounts-modal-header">
+                <h3>Delete User</h3>
+                <button
+                  className="accounts-modal-close"
+                  onClick={closeDeleteUserModal}
+                  aria-label="Close delete confirmation modal"
+                  disabled={isDeleteUserProcessing}
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="accounts-modal-body">
+                <p>Are you sure you want to delete this user?</p>
+              </div>
+
+              <div className="accounts-modal-footer">
+                <button className="accounts-modal-draft" onClick={closeDeleteUserModal} disabled={isDeleteUserProcessing}>
+                  Cancel
+                </button>
+                <button className="delete-btn" onClick={confirmDeleteUser} disabled={isDeleteUserProcessing}>
+                  {isDeleteUserProcessing ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isRejectModalOpen && (
+          <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
+            <div className="accounts-modal accounts-confirm-modal">
+              <div className="accounts-modal-header">
+                <h3>Reject Leave Request</h3>
+                <button
+                  className="accounts-modal-close"
+                  onClick={closeRejectModal}
+                  aria-label="Close reject leave modal"
+                  disabled={Boolean(processingRequestId)}
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="accounts-modal-body">
+                <p>Optional reason for rejection:</p>
+                <textarea
+                  className="accounts-modal-textarea"
+                  rows={4}
+                  value={rejectReasonInput}
+                  onChange={(event) => setRejectReasonInput(event.target.value)}
+                  placeholder="Enter reason..."
+                />
+              </div>
+
+              <div className="accounts-modal-footer">
+                <button className="accounts-modal-draft" onClick={closeRejectModal} disabled={Boolean(processingRequestId)}>
+                  Cancel
+                </button>
+                <button className="leave-reject-btn" onClick={confirmRejectLeaveRequest} disabled={Boolean(processingRequestId)}>
+                  {processingRequestId ? 'Rejecting...' : 'Confirm Reject'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isConfirmActionModalOpen && pendingConfirmAction && (
+          <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
+            <div className="accounts-modal accounts-confirm-modal">
+              <div className="accounts-modal-header">
+                <h3>{pendingConfirmAction.title}</h3>
+                <button
+                  className="accounts-modal-close"
+                  onClick={closeConfirmActionModal}
+                  aria-label="Close confirmation modal"
+                  disabled={isConfirmActionProcessing}
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="accounts-modal-body">
+                <p>{pendingConfirmAction.message}</p>
+              </div>
+
+              <div className="accounts-modal-footer">
+                <button className="accounts-modal-draft" onClick={closeConfirmActionModal} disabled={isConfirmActionProcessing}>
+                  Cancel
+                </button>
+                <button className="leave-reject-btn" onClick={confirmActionModal} disabled={isConfirmActionProcessing}>
+                  {isConfirmActionProcessing ? 'Processing...' : pendingConfirmAction.confirmLabel}
                 </button>
               </div>
             </div>

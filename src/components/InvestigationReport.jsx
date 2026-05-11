@@ -32,6 +32,7 @@ export default function InvestigationReport({
   const [draftReportId, setDraftReportId] = useState(null);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBackConfirmOpen, setIsBackConfirmOpen] = useState(false);
   const [submitMessage, setSubmitMessage] = useState({ type: '', text: '' });
   const [formValues, setFormValues] = useState({
     memorandumFor: '',
@@ -1099,14 +1100,19 @@ export default function InvestigationReport({
   };
 
   const handleBackToReports = () => {
-    const shouldLeave = window.confirm(
-      'Are you sure you want to go back to reports? Your inputted data may not be saved.'
-    );
+    setIsBackConfirmOpen(true);
+  };
 
-    if (!shouldLeave) {
+  const closeBackConfirmModal = () => {
+    if (isSubmitting) {
       return;
     }
 
+    setIsBackConfirmOpen(false);
+  };
+
+  const confirmBackToReports = () => {
+    setIsBackConfirmOpen(false);
     onClose?.();
   };
 
@@ -2096,6 +2102,33 @@ export default function InvestigationReport({
         </div>
       )}
         </section>
+
+        {isBackConfirmOpen && (
+          <div className="investigation-modal-overlay" role="dialog" aria-modal="true">
+            <div className="investigation-modal-box">
+              <h3>Leave Report Form?</h3>
+              <p>Are you sure you want to go back to reports? Your inputted data may not be saved.</p>
+              <div className="investigation-modal-actions">
+                <button
+                  type="button"
+                  className="investigation-modal-cancel"
+                  onClick={closeBackConfirmModal}
+                  disabled={isSubmitting}
+                >
+                  Stay Here
+                </button>
+                <button
+                  type="button"
+                  className="investigation-modal-confirm"
+                  onClick={confirmBackToReports}
+                  disabled={isSubmitting}
+                >
+                  Leave
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

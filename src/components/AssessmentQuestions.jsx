@@ -71,6 +71,7 @@ export default function AssessmentQuestions() {
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [savingRowIds, setSavingRowIds] = useState({});
+  const [pendingDeleteQuestion, setPendingDeleteQuestion] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   useEffect(() => {
@@ -354,8 +355,21 @@ export default function AssessmentQuestions() {
   const handleDeleteQuestion = async (question) => {
     if (!question?.id) return;
 
-    const confirmed = window.confirm(`Delete question ${question.question_no}?`);
-    if (!confirmed) return;
+    setPendingDeleteQuestion(question);
+  };
+
+  const closeDeleteQuestionModal = () => {
+    const isProcessing = pendingDeleteQuestion?.id && Boolean(savingRowIds[pendingDeleteQuestion.id]);
+    if (isProcessing) {
+      return;
+    }
+
+    setPendingDeleteQuestion(null);
+  };
+
+  const confirmDeleteQuestion = async () => {
+    const question = pendingDeleteQuestion;
+    if (!question?.id) return;
 
     setRowSaving(question.id, true);
     setMessage({ type: '', text: '' });
@@ -385,6 +399,7 @@ export default function AssessmentQuestions() {
     });
 
     setRowSaving(question.id, false);
+    setPendingDeleteQuestion(null);
   };
 
   return (
@@ -582,6 +597,33 @@ export default function AssessmentQuestions() {
             </tbody>
           </table>
         </div>
+
+        {pendingDeleteQuestion && (
+          <div className="assessment-modal-overlay" role="dialog" aria-modal="true">
+            <div className="assessment-modal-box">
+              <h3>Delete Question</h3>
+              <p>Are you sure you want to delete question {pendingDeleteQuestion.question_no}?</p>
+              <div className="assessment-modal-actions">
+                <button
+                  type="button"
+                  className="assessment-modal-cancel"
+                  onClick={closeDeleteQuestionModal}
+                  disabled={Boolean(savingRowIds[pendingDeleteQuestion.id])}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="assessment-modal-confirm"
+                  onClick={confirmDeleteQuestion}
+                  disabled={Boolean(savingRowIds[pendingDeleteQuestion.id])}
+                >
+                  {savingRowIds[pendingDeleteQuestion.id] ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

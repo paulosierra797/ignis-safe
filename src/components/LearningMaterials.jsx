@@ -6,7 +6,9 @@ import {
   filterLearningMaterialModules,
   getLearningMaterialFireClassGuides,
   getLearningMaterialsAdminView,
-  updateLearningMaterialBlock
+  updateLearningMaterialBlock,
+  updateLearningMaterialModule,
+  updateLearningMaterialPage
 } from '../utils/learningMaterialsService';
 import './LearningMaterials.css';
 
@@ -20,29 +22,77 @@ export default function LearningMaterials() {
   const [fireGuides, setFireGuides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [editingBlock, setEditingBlock] = useState(null);
-const [editedText, setEditedText] = useState('');
-const [saving, setSaving] = useState(false);
-const [editedTextTl, setEditedTextTl] = useState('');
-const [editingModule, setEditingModule] = useState(null);
-const [editedModule, setEditedModule] = useState(null);
-const [currentPages, setCurrentPages] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [editingModule, setEditingModule] = useState(null);
+  const [editedModule, setEditedModule] = useState(null);
+  const [currentPages, setCurrentPages] = useState({});
 
-const handleSaveModule = async () => {
-  try {
+  const handlePageChange = (moduleNo, nextIndex, totalPages) => {
+    const safeMax = Math.max(totalPages - 1, 0);
+    const safeIndex = Math.min(Math.max(nextIndex, 0), safeMax);
+
+    setCurrentPages((prev) => ({
+      ...prev,
+      [moduleNo]: safeIndex
+    }));
+  };
+
+  const handleSaveModule = async () => {
+    if (!editedModule) {
+      return;
+    }
+
     setSaving(true);
+    setMessage({ type: '', text: '' });
 
-    // Save all pages and blocks
+    const moduleResult = await updateLearningMaterialModule(editedModule.module_no, {
+      title_en: editedModule.title,
+      title_tl: editedModule.title_tl,
+      subtitle_en: editedModule.subtitle,
+      subtitle_tl: editedModule.subtitle_tl
+    });
+
+    if (moduleResult.error) {
+      setMessage({
+        type: 'error',
+        text: `Failed to update module details: ${moduleResult.error}`
+      });
+      setSaving(false);
+      return;
+    }
+
     for (const page of editedModule.pages) {
+      const pageResult = await updateLearningMaterialPage(editedModule.module_no, page.page_no, {
+        title_en: page.title_en,
+        title_tl: page.title_tl
+      });
+
+      if (pageResult.error) {
+        setMessage({
+          type: 'error',
+          text: `Failed to update page ${page.page_no}: ${pageResult.error}`
+        });
+        setSaving(false);
+        return;
+      }
+
       for (const block of page.blocks) {
-        await updateLearningMaterialBlock(block.id, {
+        const blockResult = await updateLearningMaterialBlock(block.id, {
           text_en: block.text_en,
           text_tl: block.text_tl
         });
+
+        if (blockResult.error) {
+          setMessage({
+            type: 'error',
+            text: `Failed to update block ${block.block_no ?? '-'} on page ${page.page_no}: ${blockResult.error}`
+          });
+          setSaving(false);
+          return;
+        }
       }
     }
 
-    // Update local state
     setModules((prev) =>
       prev.map((m) =>
         m.module_no === editedModule.module_no
@@ -51,22 +101,14 @@ const handleSaveModule = async () => {
       )
     );
 
+    setEditingModule(null);
+    setEditedModule(null);
     setMessage({
       type: 'success',
       text: 'Module updated successfully.'
     });
-
-    setEditingModule(null);
-    setEditedModule(null);
-  } catch (error) {
-    setMessage({
-      type: 'error',
-      text: 'Failed to save module.'
-    });
-  } finally {
     setSaving(false);
-  }
-};
+  };
   useEffect(() => {
     let mounted = true;
 
@@ -108,48 +150,6 @@ const handleSaveModule = async () => {
 
   const visiblePages = displayedModules.reduce((c, m) => c + (m.pages?.length || 0), 0);
   const visibleBlocks = displayedModules.reduce((c, m) => c + (m.pages?.reduce((pc, p) => pc + (p.blocks?.length || 0), 0) || 0), 0);
-const handleSaveBlock = async (blockId) => {
-  setSaving(true);
-
-  const result = await updateLearningMaterialBlock(blockId, {
-    text_en: editedText,
-     text_tl: editedTextTl
-  });
-
-  if (result.error) {
-    setMessage({
-      type: 'error',
-      text: result.error
-    });
-  } else {
-    setModules((prev) =>
-      prev.map((module) => ({
-        ...module,
-        pages: module.pages.map((page) => ({
-          ...page,
-          blocks: page.blocks.map((block) =>
-            block.id === blockId
-              ? {
-    ...block,
-    text_en: editedText,
-    text_tl: editedTextTl
-  }
-              : block
-          )
-        }))
-      }))
-    );
-
-    setEditingBlock(null);
-
-    setMessage({
-      type: 'success',
-      text: 'Block updated successfully.'
-    });
-  }
-
-  setSaving(false);
-};
   return (
     <div className="learning-materials-container">
       <Sidebar variant="admin" />
@@ -205,12 +205,15 @@ const handleSaveBlock = async (blockId) => {
         ) : (
           <div className="learning-materials-grid">
            {displayedModules.map((moduleEntry) => {
-
-  const currentPageIndex =
-    currentPages[moduleEntry.module_no] || 0;
-
-  const currentPage =
-    moduleEntry.pages[currentPageIndex];
+  const activeModule = editingModule === moduleEntry.module_no && editedModule
+    ? editedModule
+    : moduleEntry;
+  const totalPages = activeModule.pages.length;
+  const currentPageIndex = Math.min(
+    currentPages[moduleEntry.module_no] ?? 0,
+    Math.max(totalPages - 1, 0)
+  );
+  const page = activeModule.pages[currentPageIndex] || null;
 
   return (
               
@@ -218,6 +221,7 @@ const handleSaveBlock = async (blockId) => {
                 <header className="learning-material-card-header">
                   <button
   className="learning-material-edit-btn"
+  disabled={saving || (editingModule !== null && editingModule !== moduleEntry.module_no)}
   onClick={() => {
     setEditingModule(moduleEntry.module_no);
     setEditedModule(JSON.parse(JSON.stringify(moduleEntry)));
@@ -313,8 +317,28 @@ const handleSaveBlock = async (blockId) => {
                   </div>
                 )}
 
+                {totalPages > 0 && (
+                  <div className="learning-material-page-nav">
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(moduleEntry.module_no, currentPageIndex - 1, totalPages)}
+                      disabled={currentPageIndex === 0}
+                    >
+                      Previous Page
+                    </button>
+                    <span>{`Page ${currentPageIndex + 1} of ${totalPages}`}</span>
+                    <button
+                      type="button"
+                      onClick={() => handlePageChange(moduleEntry.module_no, currentPageIndex + 1, totalPages)}
+                      disabled={currentPageIndex >= totalPages - 1}
+                    >
+                      Next Page
+                    </button>
+                  </div>
+                )}
+
                 <div className="learning-material-pages">
-                  {moduleEntry.pages.map((page) => (
+                  {page ? (
                     <article key={`${moduleEntry.module_no}-${page.page_no}`} className="learning-material-page">
                       <div className="learning-material-page-header">
                         <div>
@@ -339,7 +363,27 @@ const handleSaveBlock = async (blockId) => {
 ) : (
   <h4>{page.title_en || 'Untitled page'}</h4>
 )}
-                          {page.title_tl && <p className="learning-material-page-title-tl">{page.title_tl}</p>}
+                          {editingModule === moduleEntry.module_no ? (
+                            <input
+                              className="learning-material-page-title-tl"
+                              type="text"
+                              value={editedModule.pages.find((p) => p.page_no === page.page_no)?.title_tl || ''}
+                              onChange={(e) => {
+                                const updatedPages = editedModule.pages.map((p) =>
+                                  p.page_no === page.page_no
+                                    ? { ...p, title_tl: e.target.value }
+                                    : p
+                                );
+
+                                setEditedModule({
+                                  ...editedModule,
+                                  pages: updatedPages
+                                });
+                              }}
+                            />
+                          ) : (
+                            page.title_tl && <p className="learning-material-page-title-tl">{page.title_tl}</p>
+                          )}
                         </div>
                         <span className="learning-material-page-key">{page.page_key || '-'}</span>
                       </div>
@@ -354,41 +398,7 @@ const handleSaveBlock = async (blockId) => {
                                 <span>{formatSourceLine(block.source_line)}</span>
                               </div>
                               <p className="learning-material-block-key">{block.block_key || 'Unnamed block'}</p>
-                             {editingBlock === block.id ? (
-  <div className="learning-material-editor">
-    <label>English</label>
-    <textarea
-      className="learning-material-textarea"
-      value={editedText}
-      onChange={(e) => setEditedText(e.target.value)}
-    />
-    <label>Tagalog</label>
-    <textarea
-  className="learning-material-textarea"
-  value={editedTextTl}
-  onChange={(e) => setEditedTextTl(e.target.value)}
-  placeholder="Tagalog translation"
-/>
-
-    <div className="learning-material-editor-actions">
-      <button
-        onClick={() => handleSaveBlock(block.id)}
-        disabled={saving}
-      >
-        {saving ? 'Saving...' : 'Save'}
-      </button>
-
-      <button
-        onClick={() => {
-          setEditingBlock(null);
-          setEditedText('');
-        }}
-      >
-        Cancel
-      </button>
-    </div>
-  </div>
-) : (<>
+                             <>
   {editingModule === moduleEntry.module_no ? (
   <textarea
     className="learning-material-textarea"
@@ -460,7 +470,7 @@ const handleSaveBlock = async (blockId) => {
 
   
 </>
-)}
+
 
   
                             
@@ -472,15 +482,18 @@ const handleSaveBlock = async (blockId) => {
                         <div className="learning-material-blocks-empty">No active blocks linked to this page.</div>
                       )}
                     </article>
-                  ))}
+                  ) : (
+                    <div className="learning-material-blocks-empty">No pages available for this module.</div>
+                  )}
                 </div>
                 {editingModule === moduleEntry.module_no && (
   <div className="learning-material-module-actions">
-    <button onClick={handleSaveModule}>
-      Save Module
+    <button onClick={handleSaveModule} disabled={saving}>
+      {saving ? 'Saving...' : 'Save Module'}
     </button>
 
     <button
+      disabled={saving}
       onClick={() => {
         setEditingModule(null);
         setEditedModule(null);

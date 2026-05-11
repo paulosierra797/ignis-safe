@@ -233,6 +233,39 @@
   gap: 0.9rem;
 }
 
+.learning-material-page-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 0 0.9rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.learning-material-page-nav span {
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.learning-material-page-nav button {
+  border: none;
+  border-radius: 9px;
+  padding: 0.55rem 0.85rem;
+  background: #0f766e;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.learning-material-page-nav button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .learning-material-page {
   padding: 1rem;
   background: linear-gradient(180deg, rgba(248, 250, 252, 0.9) 0%, rgba(255, 255, 255, 0.95) 100%);
@@ -455,6 +488,40 @@
   margin-top: 0.75rem;
   background: #0f766e;
   color: white;
+}
+
+.learning-material-edit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.learning-material-module-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.learning-material-module-actions button {
+  border: none;
+  border-radius: 10px;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.learning-material-module-actions button:first-child {
+  background: #0f766e;
+  color: white;
+}
+
+.learning-material-module-actions button:last-child {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.learning-material-module-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .learning-material-editor-actions button:first-child {
   background: #0f766e;

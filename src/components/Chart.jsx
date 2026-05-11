@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { useUser } from '../context/UserContext';
@@ -188,6 +188,7 @@ const applyNodeUpdate = (data, id, field, value) => ({
 
 const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
   const fallbackAvatar = useMemo(() => buildAvatarPlaceholder(node.name), [node.name]);
+  const fileInputRef = useRef(null);
   const [avatarSrc, setAvatarSrc] = useState(
     node.avatar_url && node.avatar_url !== LEGACY_AVATAR_PLACEHOLDER_PATH
       ? node.avatar_url
@@ -229,15 +230,22 @@ const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
             onChange={(event) => onChange(node.id, 'title', event.target.value)}
           />
           {canEdit && (
-           <label className="button-style">
-  Add avatar
-  <input
-    type="file"
-    accept="image/*"
-    onChange={(event) => onImageChange(node.id, event)}
-    hidden
-  />
-</label>
+            <>
+              <button
+                type="button"
+                className="org-avatar-upload"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Add avatar
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={(event) => onImageChange(node.id, event)}
+                hidden
+              />
+            </>
           )}
         </>
       ) : (

@@ -165,6 +165,45 @@ const includesByTopic = (moduleData, topicFilter) => {
   return moduleId === selected || moduleTitle === selected;
 };
 
+const formatModuleLabel = (moduleNo) => {
+  const value = String(moduleNo ?? '').trim();
+  return value ? `Module ${value}` : 'Module -';
+};
+
+const normalizeSimulationSessionRow = (row = {}) => ({
+  admin_id: row.admin_id || row.user_id || row.profile_id || null,
+  module_id: row.module_id || null,
+  completion_rate: row.completion_rate ?? null,
+  simulation_score: row.simulation_score ?? row.score ?? null,
+  duration_seconds: row.duration_seconds ?? row.duration ?? row.seconds ?? null,
+  error_count: row.error_count ?? row.errors ?? 0,
+  hint_count: row.hint_count ?? row.hints ?? 0,
+  completed_at: row.completed_at || row.submitted_at || row.created_at || null,
+});
+
+const fetchSimulationSessions = async () => {
+  const tableNames = ['simulation_attempts', 'training_simulation_sessions'];
+
+  let lastError = null;
+  for (const tableName of tableNames) {
+    const { data, error } = await supabase.from(tableName).select('*');
+    if (!error) {
+      return (data || []).map(normalizeSimulationSessionRow);
+    }
+
+    lastError = error;
+    if (error?.code !== 'PGRST205' && error?.code !== '42P01') {
+      break;
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return [];
+};
+
 const buildActivityTrends = (filteredAttempts, view = 'Month') => {
   const selectedView = String(view || 'Month');
   const now = new Date();
@@ -311,6 +350,8 @@ const loadAnalyticsBaseData = async () => {
   if (modulesError) throw modulesError;
   if (moduleProgressError) throw moduleProgressError;
 
+  const simulationSessions = await fetchSimulationSessions();
+
   return {
     users: users || [],
     attempts: attempts || [],
@@ -318,10 +359,11 @@ const loadAnalyticsBaseData = async () => {
     assessments: assessments || [],
     modules: modules || [],
     moduleProgress: moduleProgress || [],
+    simulationSessions: simulationSessions || [],
   };
 };
 
-const buildOverviewRows = ({ attempts, assessmentsById, modulesById, userById, filters }) => {
+const buildOverviewRows = ({ attempts, assessmentsById, modulesById, userById, filters, simulationSessions = [] }) => {
   const startDate = getTimeframeStartDate(filters?.timeframe);
   const peopleFilter = filters?.people || 'All';
   const topicFilter = filters?.topic || 'All';
@@ -390,19 +432,67 @@ const buildOverviewRows = ({ attempts, assessmentsById, modulesById, userById, f
     }
   });
 
+  // pick latest simulation session per admin/module, respecting filters and timeframe
+    const latestSimByKey = (simulationSessions || []).reduce((acc, sim) => {
+    const adminId = sim.admin_id;
+    const moduleId = sim.module_id;
+    if (!adminId || !moduleId) return acc;
+
+    const moduleData = modulesById[moduleId] || null;
+    const userStatus = userById[adminId]?.status || 'Unknown';
+    const completedAt = sim.completed_at || sim.created_at || null;
+
+    if (!includesByPeople(userStatus, filters?.people || 'All')) return acc;
+    if (!includesByTopic(moduleData, filters?.topic || 'All')) return acc;
+    if (!includesByTimeframe(completedAt, getTimeframeStartDate(filters?.timeframe || 'All-time'))) return acc;
+
+    const key = `${adminId}-${moduleId}`;
+    const prev = acc[key];
+    const prevTs = prev && prev.completed_at ? new Date(prev.completed_at).getTime() : 0;
+    const thisTs = completedAt ? new Date(completedAt).getTime() : 0;
+    if (!prev || thisTs > prevTs) acc[key] = sim;
+    return acc;
+  }, {});
+
   return Object.values(grouped).map((row) => {
     const preTestScore = toNumber(row.preAttempt?.score, 0);
     const postTestScore = toNumber(row.postAttempt?.score, 0);
-    const durationSeconds =
-      row.durationSecondsList.length > 0
-        ? row.durationSecondsList.reduce((sum, value) => sum + value, 0) /
-          row.durationSecondsList.length
-        : 0;
 
-    const normalizedGain =
-      row.preAttempt && row.postAttempt
-        ? calculateNormalizedGain(preTestScore, postTestScore)
-        : 0;
+    let preDuration = 0;
+    let postDuration = 0;
+
+    if (row.preAttempt && row.preAttempt.started_at && row.preAttempt.submitted_at) {
+      const started = new Date(row.preAttempt.started_at).getTime();
+      const submitted = new Date(row.preAttempt.submitted_at).getTime();
+      if (Number.isFinite(started) && Number.isFinite(submitted)) {
+        const diff = Math.max(0, Math.floor((submitted - started) / 1000));
+        if (diff > 0 && diff <= MAX_SESSION_DURATION_SECONDS) preDuration = diff;
+      }
+    }
+
+    if (row.postAttempt && row.postAttempt.started_at && row.postAttempt.submitted_at) {
+      const started = new Date(row.postAttempt.started_at).getTime();
+      const submitted = new Date(row.postAttempt.submitted_at).getTime();
+      if (Number.isFinite(started) && Number.isFinite(submitted)) {
+        const diff = Math.max(0, Math.floor((submitted - started) / 1000));
+        if (diff > 0 && diff <= MAX_SESSION_DURATION_SECONDS) postDuration = diff;
+      }
+    }
+
+    const sim = latestSimByKey[`${row.adminId}-${row.moduleId}`];
+    let simDuration = 0;
+    let simulationScore = 0;
+    let completionRate = 0;
+    if (sim) {
+      const d = toNumber(sim.duration_seconds, 0);
+      if (d > 0 && d <= MAX_SESSION_DURATION_SECONDS) simDuration = Math.floor(d);
+      simulationScore = toNumber(sim.simulation_score, 0);
+      completionRate = toNumber(sim.completion_rate, 0);
+    }
+
+    const totalDuration = preDuration + simDuration + postDuration;
+
+    const normalizedGain = row.preAttempt && row.postAttempt ? calculateNormalizedGain(preTestScore, postTestScore) : 0;
 
     return {
       adminId: row.adminId,
@@ -410,18 +500,17 @@ const buildOverviewRows = ({ attempts, assessmentsById, modulesById, userById, f
       moduleName: row.moduleName,
       preTestScore,
       postTestScore,
-      completionRate: 0,
-      simulationScore: 0,
-      durationSeconds: toNumber(durationSeconds, 0),
+      completionRate,
+      simulationScore,
+      durationSeconds: toNumber(totalDuration, 0),
+      preDurationSeconds: preDuration,
+      postDurationSeconds: postDuration,
+      simulationDurationSeconds: simDuration,
       errorCount: 0,
       hintCount: 0,
       normalizedGain,
       rawGain: round(postTestScore - preTestScore, 2),
-      riskLevel: classifyKnowledgeRisk({
-        normalizedGain,
-        completionRate: 100,
-        simulationScore: 100,
-      }),
+      riskLevel: classifyKnowledgeRisk({ normalizedGain, completionRate, simulationScore }),
       latestActivityAt: row.latestActivityAt,
     };
   });
@@ -457,7 +546,7 @@ export const classifyKnowledgeRisk = ({
 
 export const getKnowledgeGainOverview = async () => {
   try {
-    const { users, attempts, assessments, modules } = await loadAnalyticsBaseData();
+    const { users, attempts, assessments, modules, simulationSessions } = await loadAnalyticsBaseData();
 
     const userById = users.reduce((accumulator, row) => {
       accumulator[row.admin_id] = row;
@@ -480,6 +569,7 @@ export const getKnowledgeGainOverview = async () => {
       modulesById,
       userById,
       filters: { timeframe: 'All-time', people: 'All', topic: 'All' },
+      simulationSessions,
     });
 
     return { data: rows, error: null };
@@ -500,7 +590,7 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
     const peopleFilter = filters.people || 'All';
     const topicFilter = filters.topic || 'All';
 
-    const { users, attempts, answers, assessments, modules } = await loadAnalyticsBaseData();
+    const { users, attempts, answers, assessments, modules, simulationSessions } = await loadAnalyticsBaseData();
 
     const userById = users.reduce((accumulator, row) => {
       accumulator[row.admin_id] = row;
@@ -561,14 +651,12 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
       modulesById,
       userById,
       filters,
+      simulationSessions,
     });
 
-    const validSessionDurations = extractValidSessionDurations(filteredAttempts);
-
-    const avgDurationSeconds =
-      validSessionDurations.length > 0
-        ? validSessionDurations.reduce((sum, value) => sum + value, 0) / validSessionDurations.length
-        : 0;
+    // compute average from per-user/module total session seconds (pre + simulation + post)
+    const sessionTotals = overview.length > 0 ? overview.map((r) => toNumber(r.durationSeconds, 0)).filter((v) => v > 0) : [];
+    const avgDurationSeconds = sessionTotals.length > 0 ? sessionTotals.reduce((sum, v) => sum + v, 0) / sessionTotals.length : 0;
 
     const startingKnowledge =
       overview.length > 0
@@ -697,7 +785,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
     const peopleFilter = filters.people || 'All';
     const topicFilter = filters.topic || 'All';
 
-    const { users, attempts, assessments, modules, moduleProgress } = await loadAnalyticsBaseData();
+    const { users, attempts, assessments, modules, moduleProgress, simulationSessions } = await loadAnalyticsBaseData();
 
     const userById = users.reduce((accumulator, row) => {
       accumulator[row.admin_id] = row;
@@ -781,7 +869,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
 
       if (!learningByModuleAccumulator[moduleData.id]) {
         learningByModuleAccumulator[moduleData.id] = {
-          name: moduleData.title,
+          moduleNo: moduleData.module_no,
           preTotal: 0,
           preCount: 0,
           postTotal: 0,
@@ -811,12 +899,12 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       row.attempts += 1;
     });
 
-    const sortedModules = Object.values(learningByModuleAccumulator).sort((a, b) =>
-      a.name.localeCompare(b.name),
+    const sortedModules = Object.values(learningByModuleAccumulator).sort(
+      (a, b) => toNumber(a.moduleNo, Number.MAX_SAFE_INTEGER) - toNumber(b.moduleNo, Number.MAX_SAFE_INTEGER),
     );
 
     const learningByModule = {
-      labels: sortedModules.map((row) => row.name),
+      labels: sortedModules.map((row) => formatModuleLabel(row.moduleNo)),
       preTest: sortedModules.map((row) => (row.preCount > 0 ? round(row.preTotal / row.preCount, 2) : 0)),
       postTest: sortedModules.map((row) => (row.postCount > 0 ? round(row.postTotal / row.postCount, 2) : 0)),
     };
@@ -860,7 +948,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
     });
 
     const completionByModule = {
-      labels: modulesForCompletion.map((row) => row.title),
+      labels: modulesForCompletion.map((row) => formatModuleLabel(row.module_no)),
       completionRate: modulesForCompletion.map((row) => {
         const bucket = completionAccumulator[row.id];
         if (!bucket || bucket.count === 0) return 0;
@@ -895,7 +983,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
     });
 
     const attemptsByModule = {
-      labels: modulesForAttempts.map((row) => row.title),
+      labels: modulesForAttempts.map((row) => formatModuleLabel(row.module_no)),
       attempts: modulesForAttempts.map((row) => attemptsAccumulator[row.id] || 0),
     };
 
@@ -905,6 +993,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       modulesById,
       userById,
       filters,
+      simulationSessions,
     });
 
     const trendAccumulator = overviewRows.reduce((accumulator, row) => {

@@ -149,6 +149,11 @@ def classify_knowledge_risk(normalized_gain: float, completion_rate: float, simu
     return "low"
 
 
+def format_module_label(module_no: Any) -> str:
+    value = str(module_no or "").strip()
+    return f"Module {value}" if value else "Module -"
+
+
 class Filters(BaseModel):
     timeframe: str = "All-time"
     people: str = "All"
@@ -207,6 +212,34 @@ def fetch_all_rows(table: str, columns: str, page_size: int = 1000) -> List[Dict
     return all_rows
 
 
+def fetch_all_rows_from_any_table(table_candidates: List[str], columns: str) -> List[Dict[str, Any]]:
+    last_error: Optional[Exception] = None
+
+    for table in table_candidates:
+        try:
+            return fetch_all_rows(table, columns)
+        except Exception as error:
+            last_error = error
+
+    if last_error:
+        raise last_error
+
+    return []
+
+
+def normalize_simulation_session_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "admin_id": row.get("admin_id") or row.get("user_id") or row.get("profile_id"),
+        "module_id": row.get("module_id"),
+        "completion_rate": row.get("completion_rate"),
+        "simulation_score": row.get("simulation_score") or row.get("score"),
+        "duration_seconds": row.get("duration_seconds") or row.get("duration") or row.get("seconds"),
+        "error_count": row.get("error_count") or row.get("errors") or 0,
+        "hint_count": row.get("hint_count") or row.get("hints") or 0,
+        "completed_at": row.get("completed_at") or row.get("submitted_at") or row.get("created_at"),
+    }
+
+
 def load_analytics_base_data() -> Dict[str, Any]:
     profiles = fetch_all_rows("profiles", "id")
     profile_ids = [row.get("id") for row in profiles if row.get("id")]
@@ -245,6 +278,10 @@ def load_analytics_base_data() -> Dict[str, Any]:
         "module_progress",
         "user_id,module_id,pre_test_completed_at,simulation_completed_at,post_test_completed_at",
     )
+    simulation_sessions = fetch_all_rows_from_any_table(
+        ["simulation_attempts", "training_simulation_sessions"],
+        "*",
+    )
 
     return {
         "users": users,
@@ -253,6 +290,7 @@ def load_analytics_base_data() -> Dict[str, Any]:
         "assessments": assessments,
         "modules": modules,
         "module_progress": module_progress,
+        "simulation_sessions": [normalize_simulation_session_row(row) for row in simulation_sessions],
     }
 
 
@@ -320,12 +358,74 @@ def build_overview_rows(data: Dict[str, Any], filters: Filters) -> List[Dict[str
         if attempt_time_ts > previous_latest_ts:
             item["latestActivityAt"] = attempt_timestamp
 
+    # incorporate simulation sessions (latest per admin/module) into grouping
+    simulations = data.get("simulation_sessions") or []
+    latest_sim_by_key: Dict[str, Dict[str, Any]] = {}
+    for sim in simulations:
+        admin_id = sim.get("admin_id")
+        module_id = sim.get("module_id")
+        if not admin_id or not module_id:
+            continue
+
+        module_data = modules_by_id.get(module_id)
+        user_status = (user_by_id.get(admin_id) or {}).get("status")
+        completed_at = sim.get("completed_at") or sim.get("created_at")
+
+        if not includes_by_people(user_status, filters.people):
+            continue
+        if not includes_by_topic(module_data, filters.topic):
+            continue
+        if not includes_by_timeframe(completed_at, start_date):
+            continue
+
+        key = f"{admin_id}-{module_id}"
+        prev = latest_sim_by_key.get(key)
+        prev_ts = parse_iso_date(prev.get("completed_at")).timestamp() if prev and prev.get("completed_at") else 0
+        this_ts = parse_iso_date(completed_at).timestamp() if completed_at else 0
+        if key not in latest_sim_by_key or this_ts > prev_ts:
+            latest_sim_by_key[key] = sim
+
     rows = []
     for row in grouped.values():
         pre_test_score = to_number((row["preAttempt"] or {}).get("score"), 0)
         post_test_score = to_number((row["postAttempt"] or {}).get("score"), 0)
-        durations = row["durationSecondsList"]
-        duration_seconds = (sum(durations) / len(durations)) if durations else 0
+
+        # compute latest pre/post attempt durations (if available)
+        pre_duration = 0
+        post_duration = 0
+        if row.get("preAttempt"):
+            started = parse_iso_date(row["preAttempt"].get("started_at"))
+            submitted = parse_iso_date(row["preAttempt"].get("submitted_at"))
+            if started and submitted:
+                diff = int((submitted - started).total_seconds())
+                if 0 < diff <= MAX_SESSION_DURATION_SECONDS:
+                    pre_duration = diff
+
+        if row.get("postAttempt"):
+            started = parse_iso_date(row["postAttempt"].get("started_at"))
+            submitted = parse_iso_date(row["postAttempt"].get("submitted_at"))
+            if started and submitted:
+                diff = int((submitted - started).total_seconds())
+                if 0 < diff <= MAX_SESSION_DURATION_SECONDS:
+                    post_duration = diff
+
+        # simulation duration (from simulation_sessions latest record)
+        sim = latest_sim_by_key.get(f"{row['adminId']}-{row['moduleId']}")
+        sim_duration = 0
+        simulation_score = 0
+        completion_rate = 0
+        if sim:
+            try:
+                sim_d = to_number(sim.get("duration_seconds"), 0)
+                if 0 < sim_d <= MAX_SESSION_DURATION_SECONDS:
+                    sim_duration = int(sim_d)
+            except Exception:
+                sim_duration = 0
+
+            simulation_score = to_number(sim.get("simulation_score"), 0)
+            completion_rate = to_number(sim.get("completion_rate"), 0)
+
+        total_session_seconds = pre_duration + sim_duration + post_duration
 
         normalized_gain = calculate_normalized_gain(pre_test_score, post_test_score) if row["preAttempt"] and row["postAttempt"] else 0
         rows.append(
@@ -335,12 +435,15 @@ def build_overview_rows(data: Dict[str, Any], filters: Filters) -> List[Dict[str
                 "moduleName": row["moduleName"],
                 "preTestScore": pre_test_score,
                 "postTestScore": post_test_score,
-                "completionRate": 0,
-                "simulationScore": 0,
-                "durationSeconds": duration_seconds,
+                "completionRate": completion_rate,
+                "simulationScore": simulation_score,
+                "durationSeconds": total_session_seconds,
+                "preDurationSeconds": pre_duration,
+                "postDurationSeconds": post_duration,
+                "simulationDurationSeconds": sim_duration,
                 "normalizedGain": normalized_gain,
                 "rawGain": round_value(post_test_score - pre_test_score, 2),
-                "riskLevel": classify_knowledge_risk(normalized_gain, 100, 100),
+                "riskLevel": classify_knowledge_risk(normalized_gain, completion_rate, simulation_score),
                 "latestActivityAt": row["latestActivityAt"],
             }
         )
@@ -533,12 +636,9 @@ def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, A
 
     overview_rows = build_overview_rows(data, filters)
 
-    valid_session_durations = extract_valid_session_durations(filtered_attempts)
-    avg_duration_seconds = (
-        sum(valid_session_durations) / len(valid_session_durations)
-        if valid_session_durations
-        else 0
-    )
+    # compute average from per-user/module total session seconds (pre + simulation + post)
+    session_totals = [to_number(row.get("durationSeconds"), 0) for row in overview_rows if to_number(row.get("durationSeconds"), 0) > 0]
+    avg_duration_seconds = (sum(session_totals) / len(session_totals)) if session_totals else 0
 
     starting_knowledge = (
         round_value(sum(row["preTestScore"] for row in overview_rows) / len(overview_rows), 2)
@@ -628,7 +728,7 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
         module_id = str(module_data.get("id"))
         if module_id not in learning_accumulator:
             learning_accumulator[module_id] = {
-                "name": module_data.get("title") or "Unknown",
+                "moduleNo": module_data.get("module_no") or "-",
                 "preTotal": 0.0,
                 "preCount": 0,
                 "postTotal": 0.0,
@@ -649,9 +749,12 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
 
         row["attempts"] += 1
 
-    sorted_learning = sorted(learning_accumulator.values(), key=lambda x: x["name"])
+    sorted_learning = sorted(
+        learning_accumulator.values(),
+        key=lambda x: to_number(x["moduleNo"], float("inf")),
+    )
     learning_by_module = {
-        "labels": [row["name"] for row in sorted_learning],
+        "labels": [format_module_label(row["moduleNo"]) for row in sorted_learning],
         "preTest": [round_value(row["preTotal"] / row["preCount"], 2) if row["preCount"] else 0 for row in sorted_learning],
         "postTest": [round_value(row["postTotal"] / row["postCount"], 2) if row["postCount"] else 0 for row in sorted_learning],
     }
@@ -683,11 +786,10 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
             ]
         )
         bucket["completionSum"] += round_value((steps_done / 3) * 100, 2)
-        bucket["simulationDone"] += int(bool(row.get("simulation_completed_at")))
         bucket["count"] += 1
 
     completion_by_module = {
-        "labels": [row.get("title") for row in modules_for_completion],
+        "labels": [format_module_label(row.get("module_no")) for row in modules_for_completion],
         "completionRate": [
             round_value(completion_accumulator.get(row.get("id"), {}).get("completionSum", 0) / completion_accumulator.get(row.get("id"), {}).get("count", 1), 2)
             if completion_accumulator.get(row.get("id"), {}).get("count", 0)
@@ -715,7 +817,7 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
             attempts_accumulator[module_id] += 1
 
     attempts_by_module = {
-        "labels": [row.get("title") for row in modules_for_attempts],
+        "labels": [format_module_label(row.get("module_no")) for row in modules_for_attempts],
         "attempts": [attempts_accumulator.get(row.get("id"), 0) for row in modules_for_attempts],
     }
 

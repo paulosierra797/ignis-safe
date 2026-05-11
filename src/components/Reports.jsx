@@ -91,6 +91,7 @@ export default function Reports() {
         <div className="reports-content">
           <div className="create-report-header">
             <h2>Submit Report File</h2>
+            <h4>All reports are for administrative use only</h4>
             <p className="create-report-description">
               Upload a completed report file and submit it directly to admin.
             </p>

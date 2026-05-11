@@ -16,6 +16,7 @@ export default function Sidebar({ variant = 'admin' }) {
     { id: 'reports', icon: '📋', label: 'Reports', path: '/dashboard/reports', permission: 'view_dashboard' },
     { id: 'attendance-admin', icon: '📅', label: 'Attendance', path: '/attendance-admin', permission: 'view_attendance' },
     { id: 'accounts', icon: '👥', label: 'Personnel', path: '/dashboard/accounts', permission: 'view_accounts' },
+      { id: 'announcements', icon: '🔔', label: 'Content Management', path: '/dashboard/announcements', permission: 'manage_users' },
   ];
 
  
@@ -25,7 +26,7 @@ export default function Sidebar({ variant = 'admin' }) {
     { id: 'assessment-questions', icon: '❓', label: 'Questions', path: '/dashboard/assessment-questions', permission: 'manage_users' },
     { id: 'learning-materials', icon: '📚', label: 'Learning Materials', path: '/dashboard/learning-materials', permission: 'manage_users'},
 
-    { id: 'announcements', icon: '🔔', label: 'Content Management', path: '/dashboard/announcements', permission: 'manage_users' },
+  
     { id: 'analytics', icon: '📊', label: 'Analytics', path: '/dashboard/analytics', permission: 'view_analytics' },
     { id: 'progress', icon: '📈', label: 'Progress', path: '/dashboard/progress', permission: 'view_analytics' },
     { id: 'audit-logs', icon: '📋', label: 'Audit Logs', path: '/dashboard/audit-logs', permission: 'view_audit_logs' },

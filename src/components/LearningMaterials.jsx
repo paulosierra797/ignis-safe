@@ -14,6 +14,17 @@ import './LearningMaterials.css';
 
 const formatCount = (value) => new Intl.NumberFormat('en-US').format(Number(value || 0));
 const formatSourceLine = (line) => (Number.isInteger(line) ? `Line ${line}` : '-');
+const formatBlockReference = (block, moduleNo, pageNo) => {
+  const rawKey = String(block?.block_key || '').trim();
+  const match = rawKey.match(/^m(\d+)_p(\d+)_b(\d+)$/i);
+
+  if (match) {
+    return `Block reference: Module ${match[1]} • Page ${match[2]} • Block ${match[3]}`;
+  }
+
+  const blockNo = Number.isInteger(block?.block_no) ? block.block_no : '-';
+  return `Block reference: Module ${moduleNo ?? '-'} • Page ${pageNo ?? '-'} • Block ${blockNo}`;
+};
 
 export default function LearningMaterials() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -397,7 +408,9 @@ export default function LearningMaterials() {
                                 <span>{block.block_type || 'text'}</span>
                                 <span>{formatSourceLine(block.source_line)}</span>
                               </div>
-                              <p className="learning-material-block-key">{block.block_key || 'Unnamed block'}</p>
+                              <p className="learning-material-block-key">
+                                {formatBlockReference(block, moduleEntry.module_no, page.page_no)}
+                              </p>
                              <>
   {editingModule === moduleEntry.module_no ? (
   <textarea

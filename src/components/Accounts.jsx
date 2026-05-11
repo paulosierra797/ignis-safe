@@ -558,6 +558,21 @@ export default function Accounts() {
       return;
     }
 
+    // Check if email already exists
+    try {
+      const { data: existingUsers, error: fetchError } = await getAllUsers();
+      if (!fetchError && (existingUsers || []).some((user) =>
+        String(user.email || '').toLowerCase() === String(formData.email || '').toLowerCase()
+      )) {
+        setMessage({ type: 'error', text: 'This email address is already in use. Please use a different email.' });
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking email uniqueness:', error);
+      setMessage({ type: 'error', text: 'Error verifying email. Please try again.' });
+      return;
+    }
+
     setIsLoading(true);
     setMessage({ type: '', text: '' });
 

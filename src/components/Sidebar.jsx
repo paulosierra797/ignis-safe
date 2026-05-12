@@ -12,7 +12,7 @@ export default function Sidebar({ variant = 'admin' }) {
 
   const menuItems = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard', permission: 'view_dashboard' },
-    { id: 'chart', icon: '📈', label: 'Chart', path: '/dashboard/chart', permission: 'view_charts' },
+    { id: 'chart', icon: '🗂️', label: 'Organization Chart', path: '/dashboard/chart', permission: 'view_charts' },
     { id: 'reports', icon: '📋', label: 'Reports', path: '/dashboard/reports', permission: 'view_dashboard' },
     { id: 'attendance-admin', icon: '📅', label: 'Attendance', path: '/attendance-admin', permission: 'view_attendance' },
     { id: 'accounts', icon: '👥', label: 'Personnel', path: '/dashboard/accounts', permission: 'view_accounts' },
@@ -22,18 +22,18 @@ export default function Sidebar({ variant = 'admin' }) {
  
 
   const appManagementItems = [
-    { id: 'users', icon: '👤', label: 'User', path: '/dashboard/users', permission: 'manage_users' },
+    { id: 'users', icon: '👤', label: 'Users', path: '/dashboard/users', permission: 'manage_users' },
     { id: 'assessment-questions', icon: '❓', label: 'Questions', path: '/dashboard/assessment-questions', permission: 'manage_users' },
     { id: 'learning-materials', icon: '📚', label: 'Learning Materials', path: '/dashboard/learning-materials', permission: 'manage_users'},
 
   
     { id: 'analytics', icon: '📊', label: 'Analytics', path: '/dashboard/analytics', permission: 'view_analytics' },
-    { id: 'progress', icon: '📈', label: 'Progress', path: '/dashboard/progress', permission: 'view_analytics' },
+  
     { id: 'audit-logs', icon: '📋', label: 'Audit Logs', path: '/dashboard/audit-logs', permission: 'view_audit_logs' },
   ];
 
   const personnelMenuItems = [
-    { id: 'operations', icon: '🗂️', label: 'Operations', path: '/personnel/operations' },
+    { id: 'operations', icon: '🗂️', label: 'Shift Schedule', path: '/personnel/operations' },
     { id: 'announcements', icon: '🔔', label: 'Announcements', path: '/personnel/announcements' },
     { id: 'attendance-personnel', icon: '🕐', label: 'Attendance', path: '/attendance-personnel' },
     { id: 'reports', icon: '📋', label: 'Reports', path: '/reports' },

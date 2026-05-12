@@ -21,7 +21,6 @@ import AssessmentQuestions from './components/AssessmentQuestions';
 import LearningMaterials from './components/LearningMaterials';
 import Chart from './components/Chart';
 import Accounts from './components/Accounts';
-import Users from './components/Users';
 import Progress from './components/Progress';
 import AuditLogs from './components/AuditLogs';
 import Announcements from './components/Announcements';
@@ -36,10 +35,12 @@ import { UserProvider } from './context/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { LandingContentProvider } from './context/LandingContentContext';
 import { LayoutProvider } from './context/LayoutContext';
+import AppSessionTracker from './components/AppSessionTracker';
 
 function App() {
   return (
     <UserProvider>
+      <AppSessionTracker />
       <LayoutProvider>
         <LandingContentProvider>
           <div className="app">
@@ -74,7 +75,7 @@ function App() {
               <Route path="/dashboard/chart" element={<ProtectedRoute><Chart /></ProtectedRoute>} />
               <Route path="/dashboard/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
               <Route path="/dashboard/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
-              <Route path="/dashboard/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+              <Route path="/dashboard/users" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
               <Route path="/dashboard/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
               <Route path="/dashboard/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
               <Route path="/dashboard/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />

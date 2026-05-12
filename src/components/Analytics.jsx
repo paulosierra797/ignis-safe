@@ -179,7 +179,7 @@ export default function Analytics() {
             </div>
           </div>
           <div className="analytics-stat-card">
-            <h3>Av. Session Length</h3>
+            <h3>Avg Mobile Session</h3>
             <div className="stat-value">
               <span className="main-value">
                 {isLoadingStats ? '...' : stats.avgSessionLength}

@@ -391,14 +391,14 @@ export default function Chart() {
 
       <div className="chart-main">
         <PageHeader
-          title="Reports"
+          title="Organizational Chart"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />
 
         <div className="chart-header">
           <div>
-            <h2>Organizational Chart</h2>
+           
             <p className="chart-subtitle">Last edit: {lastEditLabel}</p>
           </div>
           <button

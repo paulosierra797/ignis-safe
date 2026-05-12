@@ -1327,7 +1327,7 @@ export default function Accounts() {
 
       <div className="accounts-main">
         <PageHeader
-          title="Accounts"
+          title="Personnel"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />

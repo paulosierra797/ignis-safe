@@ -5,7 +5,7 @@ This guide implements the pipeline:
 1. Pre-test (baseline)
 2. 3D simulation run (performance + behavior)
 3. Post-test (outcome)
-4. Knowledge gain analytics
+4. Mobile app session duration analytics
 
 ## 1) Run the schema
 
@@ -18,6 +18,7 @@ It creates:
 - `training_modules`
 - `training_module_attempts`
 - `training_simulation_sessions`
+- `app_sessions` (mobile/personnel sessions)
 - `v_training_knowledge_gain` (ready-to-query analytics view)
 
 ## 2) Record learner events
@@ -72,7 +73,7 @@ Computed dashboard cards:
 
 - Active users
 - Questions answered (based on completed pre/post rows)
-- Average session length
+- Average mobile session duration
 - Starting knowledge
 - Current knowledge
 - Knowledge gain

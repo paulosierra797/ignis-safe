@@ -93,7 +93,7 @@ const AttendancePersonnel = () => {
       <Sidebar variant="personnel" />
       <div className="attendance-personnel-content">
         <PageHeader
-          title="Attendance Management"
+          title="Attendance"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           variant="personnel"

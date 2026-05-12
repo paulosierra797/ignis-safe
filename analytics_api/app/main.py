@@ -36,6 +36,7 @@ def format_duration(seconds: float) -> str:
 
 
 MAX_SESSION_DURATION_SECONDS = int(os.getenv("MAX_SESSION_DURATION_SECONDS", "7200"))
+MAX_APP_SESSION_DURATION_SECONDS = int(os.getenv("MAX_APP_SESSION_DURATION_SECONDS", "86400"))
 
 
 def extract_valid_session_durations(attempts: List[Dict[str, Any]]) -> List[int]:
@@ -231,6 +232,11 @@ def fetch_all_rows_from_any_table(table_candidates: List[str], columns: str) -> 
     return []
 
 
+def is_missing_table_error(error: Exception) -> bool:
+    message = str(error).lower()
+    return "pgrst205" in message or "42p01" in message or "does not exist" in message
+
+
 def normalize_simulation_session_row(row: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "admin_id": row.get("admin_id") or row.get("user_id") or row.get("profile_id"),
@@ -241,6 +247,18 @@ def normalize_simulation_session_row(row: Dict[str, Any]) -> Dict[str, Any]:
         "error_count": row.get("error_count") or row.get("errors") or 0,
         "hint_count": row.get("hint_count") or row.get("hints") or 0,
         "completed_at": row.get("completed_at") or row.get("submitted_at") or row.get("created_at"),
+    }
+
+
+def normalize_app_session_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "session_id": row.get("session_id") or row.get("id"),
+        "admin_id": row.get("admin_id") or row.get("user_id"),
+        "started_at": row.get("started_at") or row.get("created_at"),
+        "ended_at": row.get("ended_at") or row.get("closed_at"),
+        "duration_seconds": row.get("duration_seconds"),
+        "closure_reason": row.get("closure_reason") or row.get("reason"),
+        "metadata": row.get("metadata") or {},
     }
 
 
@@ -286,6 +304,15 @@ def load_analytics_base_data() -> Dict[str, Any]:
         ["simulation_attempts", "training_simulation_sessions"],
         "*",
     )
+    try:
+        app_sessions = fetch_all_rows_from_any_table(
+            ["app_sessions"],
+            "*",
+        )
+    except Exception as error:
+        if not is_missing_table_error(error):
+            raise
+        app_sessions = []
 
     return {
         "users": users,
@@ -295,7 +322,31 @@ def load_analytics_base_data() -> Dict[str, Any]:
         "modules": modules,
         "module_progress": module_progress,
         "simulation_sessions": [normalize_simulation_session_row(row) for row in simulation_sessions],
+        "app_sessions": [normalize_app_session_row(row) for row in app_sessions],
     }
+
+
+def extract_valid_app_session_durations(app_sessions: List[Dict[str, Any]]) -> List[int]:
+    durations: List[int] = []
+
+    for session in app_sessions:
+        stored_duration = int(to_number(session.get("duration_seconds"), 0))
+        if 0 < stored_duration <= MAX_APP_SESSION_DURATION_SECONDS:
+            durations.append(stored_duration)
+            continue
+
+        started_at = parse_iso_date(session.get("started_at"))
+        ended_at = parse_iso_date(session.get("ended_at"))
+        if not started_at or not ended_at:
+            continue
+
+        diff_seconds = int((ended_at - started_at).total_seconds())
+        if diff_seconds <= 0 or diff_seconds > MAX_APP_SESSION_DURATION_SECONDS:
+            continue
+
+        durations.append(diff_seconds)
+
+    return durations
 
 
 def build_overview_rows(data: Dict[str, Any], filters: Filters) -> List[Dict[str, Any]]:
@@ -594,6 +645,7 @@ def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, A
     answers = data["answers"]
     assessments = data["assessments"]
     modules = data["modules"]
+    app_sessions = data.get("app_sessions") or []
 
     user_by_id = {row.get("admin_id"): row for row in users}
     assessments_by_id = {row.get("id"): row for row in assessments}
@@ -640,9 +692,21 @@ def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, A
 
     overview_rows = build_overview_rows(data, filters)
 
-    # compute average from per-user/module total session seconds (pre + simulation + post)
-    session_totals = [to_number(row.get("durationSeconds"), 0) for row in overview_rows if to_number(row.get("durationSeconds"), 0) > 0]
-    avg_duration_seconds = (sum(session_totals) / len(session_totals)) if session_totals else 0
+    filtered_app_sessions = []
+    for session in app_sessions:
+        user_status = (user_by_id.get(session.get("admin_id")) or {}).get("status", "Unknown")
+        session_timestamp = session.get("ended_at") or session.get("started_at")
+
+        if not includes_by_people(user_status, people_filter):
+            continue
+        if not includes_by_timeframe(session_timestamp, start_date):
+            continue
+
+        filtered_app_sessions.append(session)
+
+    app_session_totals = extract_valid_app_session_durations(filtered_app_sessions)
+    legacy_session_totals = app_session_totals if app_session_totals else [to_number(row.get("durationSeconds"), 0) for row in overview_rows if to_number(row.get("durationSeconds"), 0) > 0]
+    avg_duration_seconds = (sum(legacy_session_totals) / len(legacy_session_totals)) if legacy_session_totals else 0
 
     starting_knowledge = (
         round_value(sum(row["preTestScore"] for row in overview_rows) / len(overview_rows), 2)

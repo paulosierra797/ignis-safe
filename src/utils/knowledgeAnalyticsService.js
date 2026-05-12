@@ -4,6 +4,9 @@ import { getUsersFromProfiles } from './usersService';
 const ANALYTICS_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 const ANALYTICS_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
 const MAX_SESSION_DURATION_SECONDS = Number(import.meta.env.VITE_MAX_SESSION_DURATION_SECONDS || 7200);
+const MAX_APP_SESSION_DURATION_SECONDS = Number(
+  import.meta.env.VITE_MAX_APP_SESSION_DURATION_SECONDS || 86400,
+);
 
 const DEFAULT_STATS = {
   activeUsers: 0,
@@ -181,6 +184,16 @@ const normalizeSimulationSessionRow = (row = {}) => ({
   completed_at: row.completed_at || row.submitted_at || row.created_at || null,
 });
 
+const normalizeAppSessionRow = (row = {}) => ({
+  session_id: row.session_id || row.id || null,
+  admin_id: row.admin_id || row.user_id || null,
+  started_at: row.started_at || row.created_at || null,
+  ended_at: row.ended_at || row.closed_at || null,
+  duration_seconds: row.duration_seconds ?? null,
+  closure_reason: row.closure_reason || row.reason || null,
+  metadata: row.metadata || {},
+});
+
 const fetchSimulationSessions = async () => {
   const tableNames = ['simulation_attempts', 'training_simulation_sessions'];
 
@@ -202,6 +215,41 @@ const fetchSimulationSessions = async () => {
   }
 
   return [];
+};
+
+const fetchAppSessions = async () => {
+  const { data, error } = await supabase.from('app_sessions').select('*');
+
+  if (!error) {
+    return (data || []).map(normalizeAppSessionRow);
+  }
+
+  if (error?.code === 'PGRST205' || error?.code === '42P01') {
+    return [];
+  }
+
+  throw error;
+};
+
+const extractValidAppSessionDurations = (sessions) => {
+  return (sessions || []).reduce((accumulator, session) => {
+    const storedDuration = toNumber(session.duration_seconds, 0);
+    if (storedDuration > 0 && storedDuration <= MAX_APP_SESSION_DURATION_SECONDS) {
+      accumulator.push(Math.floor(storedDuration));
+      return accumulator;
+    }
+
+    const startedAt = new Date(session.started_at).getTime();
+    const endedAt = new Date(session.ended_at || session.completed_at || session.updated_at).getTime();
+    if (!Number.isFinite(startedAt) || !Number.isFinite(endedAt)) return accumulator;
+
+    const diffSeconds = Math.floor((endedAt - startedAt) / 1000);
+    if (diffSeconds <= 0) return accumulator;
+    if (diffSeconds > MAX_APP_SESSION_DURATION_SECONDS) return accumulator;
+
+    accumulator.push(diffSeconds);
+    return accumulator;
+  }, []);
 };
 
 const buildActivityTrends = (filteredAttempts, view = 'Month') => {
@@ -330,6 +378,7 @@ const loadAnalyticsBaseData = async () => {
     { data: assessments, error: assessmentsError },
     { data: modules, error: modulesError },
     { data: moduleProgress, error: moduleProgressError },
+    appSessions,
   ] = await Promise.all([
     supabase
       .from('assessment_attempts')
@@ -342,6 +391,7 @@ const loadAnalyticsBaseData = async () => {
     supabase
       .from('module_progress')
       .select('user_id, module_id, pre_test_completed_at, simulation_completed_at, post_test_completed_at'),
+    fetchAppSessions(),
   ]);
 
   if (attemptsError) throw attemptsError;
@@ -360,6 +410,7 @@ const loadAnalyticsBaseData = async () => {
     modules: modules || [],
     moduleProgress: moduleProgress || [],
     simulationSessions: simulationSessions || [],
+    appSessions: appSessions || [],
   };
 };
 
@@ -433,7 +484,7 @@ const buildOverviewRows = ({ attempts, assessmentsById, modulesById, userById, f
   });
 
   // pick latest simulation session per admin/module, respecting filters and timeframe
-    const latestSimByKey = (simulationSessions || []).reduce((acc, sim) => {
+  const latestSimByKey = (simulationSessions || []).reduce((acc, sim) => {
     const adminId = sim.admin_id;
     const moduleId = sim.module_id;
     if (!adminId || !moduleId) return acc;
@@ -590,7 +641,7 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
     const peopleFilter = filters.people || 'All';
     const topicFilter = filters.topic || 'All';
 
-    const { users, attempts, answers, assessments, modules, simulationSessions } = await loadAnalyticsBaseData();
+    const { users, attempts, answers, assessments, modules, simulationSessions, appSessions } = await loadAnalyticsBaseData();
 
     const userById = users.reduce((accumulator, row) => {
       accumulator[row.admin_id] = row;
@@ -654,9 +705,22 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
       simulationSessions,
     });
 
-    // compute average from per-user/module total session seconds (pre + simulation + post)
-    const sessionTotals = overview.length > 0 ? overview.map((r) => toNumber(r.durationSeconds, 0)).filter((v) => v > 0) : [];
-    const avgDurationSeconds = sessionTotals.length > 0 ? sessionTotals.reduce((sum, v) => sum + v, 0) / sessionTotals.length : 0;
+    const filteredAppSessions = (appSessions || []).filter((session) => {
+      const userStatus = userById[session.admin_id]?.status || 'Unknown';
+      const sessionTimestamp = session.ended_at || session.started_at || null;
+
+      if (!includesByPeople(userStatus, peopleFilter)) return false;
+      if (!includesByTimeframe(sessionTimestamp, startDate)) return false;
+
+      return true;
+    });
+
+    const appSessionTotals = extractValidAppSessionDurations(filteredAppSessions);
+    const legacySessionTotals = appSessionTotals.length > 0 ? [] : extractValidSessionDurations(filteredAttempts);
+    const sessionTotals = appSessionTotals.length > 0 ? appSessionTotals : legacySessionTotals;
+    const avgDurationSeconds = sessionTotals.length > 0
+      ? sessionTotals.reduce((sum, value) => sum + value, 0) / sessionTotals.length
+      : 0;
 
     const startingKnowledge =
       overview.length > 0

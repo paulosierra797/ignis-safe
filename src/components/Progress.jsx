@@ -120,7 +120,7 @@ export default function Progress() {
 
       <div className="progress-main">
         <PageHeader
-          title="Progress"
+          title="Users"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
         />

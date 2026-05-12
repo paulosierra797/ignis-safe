@@ -266,7 +266,7 @@ export default function PersonnelOperations() {
 
       <div className="personnel-ops-content">
         <PageHeader
-          title="Personnel Workspace"
+          title="Shift Schedule"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           variant="personnel"

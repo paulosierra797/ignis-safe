@@ -13,6 +13,21 @@
   overflow-y: auto;
 }
 
+@media (max-width: 900px) {
+  .personnel-profile-content {
+    padding: 1rem;
+    height: auto;
+  }
+
+  .profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-summary-card {
+    position: static;
+  }
+}
+
 .profile-content {
   background: transparent;
   border-radius: 0;

@@ -13,6 +13,24 @@
   gap: 1.2rem;
 }
 
+@media (max-width: 900px) {
+  .content-management-main {
+    padding: 1rem;
+  }
+
+  .content-tabs {
+    width: 100%;
+  }
+
+  .content-tab {
+    flex: 1;
+  }
+
+  .form-row.two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
 .announcement-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;

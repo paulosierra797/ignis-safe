@@ -13,6 +13,32 @@
   overflow-x: hidden;
 }
 
+@media (max-width: 900px) {
+  .assessment-questions-main {
+    padding: 1rem;
+  }
+
+  .assessment-questions-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .assessment-filter,
+  .assessment-options-grid {
+    min-width: 0;
+  }
+
+  .assessment-filter,
+  .assessment-options-grid,
+  .assessment-option-fields {
+    width: 100%;
+  }
+
+  .assessment-option-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
 .assessment-questions-main .page-header {
   margin: -2rem -2rem 2rem -2rem;
 }

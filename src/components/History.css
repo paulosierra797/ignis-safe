@@ -13,6 +13,22 @@
   overflow-y: auto;
 }
 
+@media (max-width: 900px) {
+  .history-content {
+    padding: 1rem;
+    height: auto;
+  }
+
+  .history-main {
+    padding: 1rem;
+  }
+
+  .history-filters,
+  .history-stats {
+    grid-template-columns: 1fr;
+  }
+}
+
 .history-main {
   background: white;
   border-radius: 16px;

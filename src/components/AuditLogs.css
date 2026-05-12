@@ -11,6 +11,20 @@
   padding: 2rem;
 }
 
+@media (max-width: 900px) {
+  .audit-logs-main {
+    padding: 1rem;
+  }
+
+  .audit-logs-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-logs-clear {
+    width: 100%;
+  }
+}
+
 .audit-logs-filters {
   margin-bottom: 1.5rem;
 }

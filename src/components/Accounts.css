@@ -11,6 +11,36 @@
   padding: 2rem;
 }
 
+@media (max-width: 900px) {
+  .accounts-header,
+  .accounts-header-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .accounts-header-actions {
+    width: 100%;
+  }
+
+  .accounts-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .shift-summary-calendar-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .shift-summary-calendar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .leave-approval-table {
+    min-width: 640px;
+  }
+}
+
 .accounts-header {
   display: flex;
   justify-content: space-between;

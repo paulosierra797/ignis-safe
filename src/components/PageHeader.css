@@ -236,10 +236,13 @@
   .page-header-right {
     width: 100%;
     justify-content: space-between;
+    flex-wrap: wrap;
   }
 
   .page-search {
     flex: 1;
+    min-width: 0;
+    width: 100%;
   }
 }
 
@@ -264,8 +267,13 @@
     align-items: stretch;
   }
 
+  .page-search {
+    min-width: 0;
+  }
+
   .page-user {
     justify-content: space-between;
+    width: 100%;
   }
 }
 

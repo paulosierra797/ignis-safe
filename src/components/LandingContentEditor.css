@@ -14,6 +14,26 @@
   overflow-x: hidden;
 }
 
+@media (max-width: 900px) {
+  .landing-editor-main {
+    padding: 1rem;
+  }
+
+  .landing-editor-toolbar,
+  .landing-editor-compact-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .landing-editor-actions {
+    width: 100%;
+  }
+
+  .landing-editor-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .landing-editor-embedded {
   width: 100%;
   min-width: 0;

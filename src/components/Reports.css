@@ -12,6 +12,24 @@
   padding: 2rem 3rem;
 }
 
+@media (max-width: 900px) {
+  .reports-main {
+    padding: 1rem;
+  }
+
+  .reports-content {
+    padding: 1.25rem;
+  }
+
+  .report-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-upload-actions {
+    flex-direction: column;
+  }
+}
+
 
 .reports-content {
   background: white;

@@ -29,6 +29,23 @@
   color: var(--ash);
 }
 
+@media (max-width: 900px) {
+  .attendance-personnel-content {
+    padding: 1rem;
+  }
+
+  .qr-hero,
+  .qr-mode,
+  .attendance-panel-grid {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .qr-hero {
+    padding: 1rem;
+  }
+}
+
 .attendance-personnel-qr {
   display: flex;
   flex-direction: column;

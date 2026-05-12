@@ -93,17 +93,7 @@ const PageHeader = ({
         <h1 className="page-title">{title}</h1>
       </div>
       <div className="page-header-right">
-        {showSearch && (
-          <div className="page-search">
-            <FaSearch className="page-search-icon" />
-            <input
-              type="text"
-              placeholder="Search for anything..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-            />
-          </div>
-        )}
+        
         <div className="page-user-container" ref={dropdownRef}>
           <div 
             className={`page-user ${showAvatar ? '' : 'page-user--no-avatar'}`.trim()} 

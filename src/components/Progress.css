@@ -11,6 +11,25 @@
   padding: 2rem;
 }
 
+@media (max-width: 900px) {
+  .progress-main {
+    padding: 1rem;
+  }
+
+  .progress-controls,
+  .progress-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-table-card {
+    overflow-x: auto;
+  }
+
+  .progress-table {
+    min-width: 760px;
+  }
+}
+
 .progress-controls {
   display: grid;
   grid-template-columns: 220px 1fr;

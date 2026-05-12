@@ -11,6 +11,25 @@
   padding: 2rem;
 }
 
+@media (max-width: 900px) {
+  .admin-reports-main {
+    padding: 1rem;
+  }
+
+  .admin-reports-toolbar,
+  .admin-reports-toolbar-right,
+  .admin-reports-filterbar {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-reports-toolbar-right button,
+  .admin-reports-clear {
+    width: 100%;
+  }
+}
+
 .admin-reports-card {
   background: #ffffff;
   border: 1px solid #e5e7eb;

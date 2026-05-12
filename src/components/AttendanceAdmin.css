@@ -10,6 +10,26 @@
   margin-left: 250px;
 }
 
+@media (max-width: 900px) {
+  .attendance-admin-content {
+    padding: 1rem;
+  }
+
+  .attendance-admin-actions,
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .attendance-admin-actions {
+    justify-content: stretch;
+  }
+
+  .filter-item {
+    width: 100%;
+  }
+}
+
 .attendance-admin-actions {
   display: flex;
   justify-content: flex-end;

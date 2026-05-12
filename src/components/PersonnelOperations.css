@@ -12,6 +12,23 @@
   padding: 2rem 3rem;
 }
 
+@media (max-width: 900px) {
+  .personnel-ops-content {
+    padding: 1rem;
+  }
+
+  .personnel-ops-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-card-header,
+  .leave-card-header,
+  .schedule-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 .personnel-ops-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));

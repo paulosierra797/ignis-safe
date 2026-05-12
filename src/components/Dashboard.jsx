@@ -192,7 +192,7 @@ export default function Dashboard() {
       value: toNumber(chartsData.completionByModule.completionRate[index], 0),
     }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 3);
+    ;
 
   const registrationTrend = toPercentDelta(
     mobileStats.newRegistrationsCurrent,

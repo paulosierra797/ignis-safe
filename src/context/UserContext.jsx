@@ -17,15 +17,25 @@ export const UserProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const syncCurrentUser = (user) => {
+    if (user) {
+      setCurrentUser(user);
+      localStorage.setItem('user', JSON.stringify(user));
+      return user;
+    }
+
+    setCurrentUser(null);
+    localStorage.removeItem('user');
+    return null;
+  };
+
   const refreshCurrentUser = async () => {
     try {
       const { data } = await getCurrentUser();
-      if (data) {
-        setCurrentUser(data);
-        localStorage.setItem('user', JSON.stringify(data));
-      }
+      return syncCurrentUser(data);
     } catch (error) {
       console.error('Error refreshing current user:', error);
+      return syncCurrentUser(null);
     }
   };
 
@@ -62,8 +72,7 @@ export const UserProvider = ({ children }) => {
             console.error('Error on sign in:', error);
           }
         } else if (event === 'SIGNED_OUT') {
-          setCurrentUser(null);
-          localStorage.removeItem('user');
+          syncCurrentUser(null);
         }
       });
 

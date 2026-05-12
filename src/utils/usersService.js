@@ -3,6 +3,35 @@ import { supabase } from './supabaseClient';
 const ADMIN_ACTIVITY_TABLE = 'admin_activity_logs';
 const SHIFT_SCHEDULE_TABLE = 'shift_schedule';
 const SHIFT_SCHEDULE_KEY = 'main';
+const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
+const ADMIN_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
+
+const callAdminApi = async (endpoint, payload = null) => {
+  if (!ADMIN_API_URL) return null;
+
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (ADMIN_API_KEY) {
+    headers['x-analytics-api-key'] = ADMIN_API_KEY;
+  }
+
+  const response = await fetch(`${ADMIN_API_URL}${endpoint}`, {
+    method: payload ? 'POST' : 'GET',
+    headers,
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+
+  const responseBody = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const detail = responseBody?.detail || responseBody?.error || `Request failed (${response.status})`;
+    throw new Error(detail);
+  }
+
+  return responseBody;
+};
 
 export const getShiftScheduleConfig = async () => {
   try {
@@ -193,12 +222,26 @@ export const updateUser = async (adminId, updates) => {
 // Delete admin
 export const deleteUser = async (adminId) => {
   try {
+    const normalizedAdminId = String(adminId || '').trim();
+    if (!normalizedAdminId) {
+      return { data: null, deletedCount: 0, error: 'Missing admin ID.' };
+    }
+
+    if (ADMIN_API_URL) {
+      const response = await callAdminApi('/api/admin/users/delete', { admin_id: normalizedAdminId });
+      return {
+        data: response?.data || null,
+        deletedCount: response?.data?.deletedCount || 0,
+        error: response?.error || null
+      };
+    }
+
     const { data, error } = await supabase
       .from('admin')
       .delete()
-      .eq('admin_id', adminId)
+      .eq('admin_id', normalizedAdminId)
       .select('admin_id');
-    
+
     if (error) throw error;
 
     const deletedCount = Array.isArray(data) ? data.length : 0;

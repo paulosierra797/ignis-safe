@@ -1,44 +1,4 @@
 .login-page {
-  display: flex;
-  height: 100vh;
-  font-family: 'Poppins', sans-serif;
-  overflow: hidden;
-
-  /* put background here instead */
-  background-image: url('../assets/BG.png');
-  background-size: contain;
-  background-position: bottom left;
-  background-repeat: no-repeat;
-}
-
-.login-left {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  pointer-events: none; /* allows clicking through */
-}
-
-.logo-section {
-  position: absolute;
-  top: 1.5rem;
-  left: 2rem;
-  pointer-events: auto;
-  z-index: 10;
-}
-
-
-
-.login-logo {
-  width: 150px;
-  height: auto;
-}
-
-
-.login-right {
-  flex: 1;
-  display: flex;
-  align-items: center;
   justify-content: center;
   padding: 2rem;
   min-height: 100vh;
@@ -231,46 +191,6 @@
   text-align: center;
   color: black;
   font-size: 0.8rem;
-}
-
-.social-login {
-  margin-top: 1.5rem;
-}
-
-.divider-text {
-  text-align: center;
-  color: #a0aec0;
-  font-size: 0.8rem;
-  margin-bottom: 1rem;
-}
-
-.google-login {
-  width: 100%;
-  background-color: #fff;
-  border: 1.5px solid #e2e8f0;
-  padding: 0.875rem;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.2s ease;
-}
-
-.google-login:hover {
-  background-color: #f7fafc;
-  border-color: #cbd5e0;
-}
-.google-login:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.google-login svg {
-  width: 20px;
-  height: 20px;
 }
 
 .form-group select {

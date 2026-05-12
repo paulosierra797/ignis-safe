@@ -60,6 +60,7 @@ export default function Accounts() {
   const [pendingDeleteUserId, setPendingDeleteUserId] = useState('');
   const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState(false);
   const [isDeleteUserProcessing, setIsDeleteUserProcessing] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState({ type: '', text: '' });
   const [pendingConfirmAction, setPendingConfirmAction] = useState(null);
   const [isConfirmActionModalOpen, setIsConfirmActionModalOpen] = useState(false);
   const [isConfirmActionProcessing, setIsConfirmActionProcessing] = useState(false);
@@ -457,10 +458,11 @@ export default function Accounts() {
 
   const handleDeleteUser = async (adminId) => {
     if (!adminId) {
-      alert('Cannot delete this account because its ID is missing.');
+      setDeleteMessage({ type: 'error', text: 'Cannot delete this account because its ID is missing.' });
       return;
     }
 
+    setDeleteMessage({ type: '', text: '' });
     setPendingDeleteUserId(adminId);
     setIsDeleteUserModalOpen(true);
   };
@@ -472,6 +474,7 @@ export default function Accounts() {
 
     setIsDeleteUserModalOpen(false);
     setPendingDeleteUserId('');
+    setDeleteMessage({ type: '', text: '' });
   };
 
   const confirmDeleteUser = async () => {
@@ -481,38 +484,44 @@ export default function Accounts() {
     }
 
     setIsDeleteUserProcessing(true);
+    setDeleteMessage({ type: '', text: '' });
 
     try {
       const target = accounts.find((account) => account.admin_id === adminId);
       const { error, deletedCount } = await deleteUser(adminId);
       if (error) {
-        alert('Error deleting user: ' + error);
-      } else {
-        if (!deletedCount) {
-          alert('Delete request completed but no account was removed. Please check permissions/policies.');
-          return;
+        setDeleteMessage({ type: 'error', text: `Error deleting user: ${error}` });
+        return;
+      }
+
+      if (!deletedCount) {
+        setDeleteMessage({ type: 'error', text: 'Delete request completed but no account was removed. Please check permissions/policies.' });
+        return;
+      }
+
+      await logAdminActivity({
+        actorId: currentUser?.admin_id || null,
+        actorName: currentUser?.name || currentUser?.email || 'Admin User',
+        action: 'Account Deleted',
+        actionType: 'archive',
+        details: `Deleted account ${target?.email || adminId}${target?.role ? ` (${target.role})` : ''}.`,
+        metadata: {
+          deleted_admin_id: adminId,
+          deleted_email: target?.email || null,
+          deleted_role: target?.role || null
         }
+      });
 
-        await logAdminActivity({
-          actorId: currentUser?.admin_id || null,
-          actorName: currentUser?.name || currentUser?.email || 'Admin User',
-          action: 'Account Deleted',
-          actionType: 'archive',
-          details: `Deleted account ${target?.email || adminId}${target?.role ? ` (${target.role})` : ''}.`,
-          metadata: {
-            deleted_admin_id: adminId,
-            deleted_email: target?.email || null,
-            deleted_role: target?.role || null
-          }
-        });
+      setDeleteMessage({ type: 'success', text: 'User deleted successfully.' });
+      fetchAccounts();
 
-        alert('User deleted successfully');
-        fetchAccounts(); // Refresh the list
+      setTimeout(() => {
         setIsDeleteUserModalOpen(false);
         setPendingDeleteUserId('');
-      }
+        setDeleteMessage({ type: '', text: '' });
+      }, 900);
     } catch (err) {
-      alert('Error deleting user: ' + err.message);
+      setDeleteMessage({ type: 'error', text: err.message || 'Error deleting user.' });
     } finally {
       setIsDeleteUserProcessing(false);
     }
@@ -521,10 +530,13 @@ export default function Accounts() {
   const handleInputChange = (e) => {
     const { id, value } = e.target;
     const fieldName = id.replace('personnel-', '').replace(/-/g, '_');
+    const nextValue = fieldName === 'contact_number'
+      ? String(value || '').replace(/\D/g, '').slice(0, 11)
+      : value;
 
     setFormData(prev => ({
       ...prev,
-      [fieldName]: value
+      [fieldName]: nextValue
     }));
   };
 
@@ -1725,9 +1737,12 @@ export default function Accounts() {
                     <input
                       id="personnel-contact-number"
                       type="text"
+                      inputMode="numeric"
+                      autoComplete="tel"
                       placeholder="09XXXXXXXXX"
                       value={formData.contact_number}
                       onChange={handleInputChange}
+                      maxLength={11}
                       pattern="^09[0-9]{9}$"
                       title="Must start with 09 and be exactly 11 digits"
                     />
@@ -2206,6 +2221,11 @@ export default function Accounts() {
 
               <div className="accounts-modal-body">
                 <p>Are you sure you want to delete this user?</p>
+                {deleteMessage.text && (
+                  <div className={`accounts-modal-message accounts-modal-message-${deleteMessage.type}`}>
+                    {deleteMessage.text}
+                  </div>
+                )}
               </div>
 
               <div className="accounts-modal-footer">

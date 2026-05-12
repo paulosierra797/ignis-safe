@@ -161,6 +161,10 @@ class Filters(BaseModel):
     activityTrendsView: str = "Month"
 
 
+class DeleteUserRequest(BaseModel):
+    admin_id: str
+
+
 app = FastAPI(title="Ignis Safe Analytics API", version="1.0.0")
 
 frontend_origins = [
@@ -1118,6 +1122,40 @@ def build_module_recommendations(data: Dict[str, Any]) -> List[Dict[str, Any]]:
 @app.get("/health")
 def health_check() -> Dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/api/admin/users/delete", dependencies=[Depends(require_api_key)])
+def delete_user(request: DeleteUserRequest) -> Dict[str, Any]:
+    admin_id = str(request.admin_id or "").strip()
+    if not admin_id:
+        raise HTTPException(status_code=400, detail="admin_id is required")
+
+    auth_deleted = False
+    auth_error_message: Optional[str] = None
+
+    try:
+      supabase.auth.admin.delete_user(admin_id)
+      auth_deleted = True
+    except Exception as error:
+      auth_error_message = str(error)
+      lowered_message = auth_error_message.lower()
+      if "not found" not in lowered_message and "does not exist" not in lowered_message:
+          raise HTTPException(status_code=400, detail=f"Failed to delete auth user: {auth_error_message}")
+
+    admin_response = supabase.table("admin").delete().eq("admin_id", admin_id).execute()
+    deleted_count = len(admin_response.data or [])
+    if deleted_count == 0:
+        raise HTTPException(status_code=404, detail="No admin row was deleted.")
+
+    return {
+        "data": {
+            "admin_id": admin_id,
+            "deletedCount": deleted_count,
+            "authDeleted": auth_deleted,
+            "authError": auth_error_message,
+        },
+        "error": None,
+    }
 
 
 @app.get("/api/knowledge-analytics/filter-options", dependencies=[Depends(require_api_key)])

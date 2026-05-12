@@ -70,6 +70,8 @@ export default function Announcements() {
   const [acknowledgingId, setAcknowledgingId] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attachmentFiles, setAttachmentFiles] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 3;
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -134,6 +136,14 @@ export default function Announcements() {
       return haystack.includes(normalizedQuery);
     });
   }, [announcements, searchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAnnouncements.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedAnnouncements = filteredAnnouncements.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const handleSubmitAnnouncement = async (event) => {
     event.preventDefault();
@@ -432,8 +442,9 @@ export default function Announcements() {
           ) : filteredAnnouncements.length === 0 ? (
             <div className="announcement-empty">No announcements found.</div>
           ) : (
+            <>
             <div className="announcement-list">
-              {filteredAnnouncements.map((announcement) => (
+              {paginatedAnnouncements.map((announcement) => (
                 <article key={announcement.announcement_id} className="announcement-item">
                   <div className="announcement-item-header">
                     <h3>{announcement.title}</h3>
@@ -497,6 +508,28 @@ export default function Announcements() {
                 </article>
               ))}
             </div>
+            {totalPages > 1 && (
+              <div className="announcement-pagination">
+                <button
+                  className="pagination-button pagination-prev"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  aria-label="Previous page"
+                >
+                  ◀
+                </button>
+                <span className="pagination-info">Page {currentPage} of {totalPages}</span>
+                <button
+                  className="pagination-button pagination-next"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  aria-label="Next page"
+                >
+                  ▶
+                </button>
+              </div>
+            )}
+            </>
           )}
           </div>
         )}

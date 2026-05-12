@@ -126,6 +126,35 @@
   color: #6b7280;
 }
 
+.landing-announcement-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.pagination-button {
+  width: 36px;
+  height: 36px;
+  border: 2px solid #b91c1c;
+  background: #fff;
+  color: #b91c1c;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.pagination-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-weight: 700;
+  color: #374151;
+}
+
 .landing-announcements-empty {
   margin-top: 1rem;
   padding: 1rem 1.1rem;

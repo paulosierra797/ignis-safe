@@ -1,5 +1,18 @@
 import { supabase } from './supabaseClient';
 
+const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
+
+const emitDataChanged = (scope, detail = {}) => {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new CustomEvent(DATA_CHANGED_EVENT, {
+    detail: {
+      scope,
+      ...detail
+    }
+  }));
+};
+
 /**
  * Upload a profile image to Supabase Storage
  * @param {string} userId - The admin_id of the user
@@ -58,6 +71,8 @@ export const uploadProfileImage = async (userId, file) => {
       console.error('Error updating profile:', updateError);
       return { data: null, error: updateError.message };
     }
+
+    emitDataChanged('profile', { action: 'avatar-update', admin_id: userId });
 
     return { data: publicUrl, error: null };
   } catch (error) {

@@ -5,6 +5,18 @@ const SHIFT_SCHEDULE_TABLE = 'shift_schedule';
 const SHIFT_SCHEDULE_KEY = 'main';
 const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 const ADMIN_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
+const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
+
+const emitDataChanged = (scope, detail = {}) => {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new CustomEvent(DATA_CHANGED_EVENT, {
+    detail: {
+      scope,
+      ...detail
+    }
+  }));
+};
 
 const callAdminApi = async (endpoint, payload = null) => {
   if (!ADMIN_API_URL) return null;
@@ -187,6 +199,7 @@ export const createUser = async (userData) => {
       .single();
     
     if (error) throw error;
+    emitDataChanged('users', { action: 'create', admin_id: data?.admin_id || null });
     return { data, error: null };
   } catch (error) {
     console.error('Error creating admin:', error);
@@ -212,6 +225,7 @@ export const updateUser = async (adminId, updates) => {
       };
     }
 
+    emitDataChanged('users', { action: 'update', admin_id: adminId });
     return { data: data[0], error: null };
   } catch (error) {
     console.error('Error updating admin:', error);
@@ -249,6 +263,7 @@ export const deleteUser = async (adminId) => {
       throw new Error('No account was deleted. Check admin table DELETE policy (RLS) and target user ID.');
     }
 
+    emitDataChanged('users', { action: 'delete', admin_id: normalizedAdminId });
     return { data, deletedCount, error: null };
   } catch (error) {
     console.error('Error deleting admin:', error);

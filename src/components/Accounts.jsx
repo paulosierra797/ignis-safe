@@ -329,6 +329,24 @@ export default function Accounts() {
     setPendingRequestsLoading(false);
   };
 
+  useEffect(() => {
+    const handleDataChanged = (event) => {
+      const scope = event?.detail?.scope || '';
+      if (!scope || scope === 'users' || scope === 'profile' || scope === 'shift-schedule') {
+        fetchAccounts();
+        loadShiftSchedule();
+        loadPendingLeaveRequests();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('ignis-safe:data-changed', handleDataChanged);
+      return () => window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
+    }
+
+    return undefined;
+  }, []);
+
   const handleApproveLeaveRequest = async (request) => {
     if (!request?.request_id || !request?.personnel_id) {
       return;

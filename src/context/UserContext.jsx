@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getCurrentUser, onAuthStateChange, signOut } from '../utils/authService';
 
+const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
+
 const UserContext = createContext();
 
 export const useUser = () => {
@@ -14,6 +16,18 @@ export const useUser = () => {
 export const UserProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const refreshCurrentUser = async () => {
+    try {
+      const { data } = await getCurrentUser();
+      if (data) {
+        setCurrentUser(data);
+        localStorage.setItem('user', JSON.stringify(data));
+      }
+    } catch (error) {
+      console.error('Error refreshing current user:', error);
+    }
+  };
 
   useEffect(() => {
     let unsubscribe;
@@ -32,11 +46,7 @@ export const UserProvider = ({ children }) => {
         }
 
         // Get current user from Supabase
-        const { data } = await getCurrentUser();
-        if (data) {
-          setCurrentUser(data);
-          localStorage.setItem('user', JSON.stringify(data));
-        }
+        await refreshCurrentUser();
       } catch (error) {
         console.error('Error initializing auth:', error);
       } finally {
@@ -47,11 +57,7 @@ export const UserProvider = ({ children }) => {
       const { data: authListener } = onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
           try {
-            const { data } = await getCurrentUser();
-            if (data) {
-              setCurrentUser(data);
-              localStorage.setItem('user', JSON.stringify(data));
-            }
+            await refreshCurrentUser();
           } catch (error) {
             console.error('Error on sign in:', error);
           }
@@ -72,6 +78,21 @@ export const UserProvider = ({ children }) => {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const handleDataChanged = () => {
+      if (currentUser?.admin_id) {
+        void refreshCurrentUser();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+      return () => window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    }
+
+    return undefined;
+  }, [currentUser?.admin_id]);
 
   useEffect(() => {
     if (currentUser) {
@@ -114,6 +135,7 @@ export const UserProvider = ({ children }) => {
   const value = {
     currentUser,
     setCurrentUser,
+    refreshCurrentUser,
     switchRole,
     hasPermission,
     logout,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -74,8 +74,7 @@ export default function Dashboard() {
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
       try {
         setLoadError('');
 
@@ -161,10 +160,27 @@ export default function Dashboard() {
       } finally {
         setLoading(false);
       }
-    };
+  }, []);
 
+  useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  useEffect(() => {
+    const handleDataChanged = (event) => {
+      const scope = event?.detail?.scope || '';
+      if (!scope || scope === 'users' || scope === 'profile' || scope === 'dashboard') {
+        void fetchDashboardData();
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('ignis-safe:data-changed', handleDataChanged);
+      return () => window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
+    }
+
+    return undefined;
+  }, [fetchDashboardData]);
 
   const recentActivityLabels = chartsData.activityTrends.labels.slice(-7);
   const recentActivityValues = chartsData.activityTrends.submitted.slice(-7);

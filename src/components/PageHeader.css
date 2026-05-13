@@ -10,7 +10,7 @@
   margin: -2rem -3rem 2rem -3rem;
   border-radius: 0;
   position: relative;
-  z-index: 101;
+  z-index: 99;
 }
 
 .page-header-left {

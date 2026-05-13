@@ -61,45 +61,24 @@ export const updateLearningMaterialBlock = async (blockId, updates) => {
 
 export const updateLearningMaterialModule = async (moduleNo, updates) => {
   try {
-    const primaryPayload = {
-      title_en: updates.title_en,
+    const payload = {
+      title: updates.title_en,
       title_tl: updates.title_tl,
-      subtitle_en: updates.subtitle_en,
-      subtitle_tl: updates.subtitle_tl
+      subtitle: updates.subtitle_en,
+      subtitle_tl: updates.subtitle_tl,
     };
 
     const { data, error } = await supabase
-      .from('learning_material_modules')
-      .update(primaryPayload)
+      .from('learning_materials')
+      .update(payload)
       .eq('module_no', moduleNo)
       .select()
       .single();
 
-    if (!error) {
-      return {
-        data,
-        error: null
-      };
-    }
-
-    const fallbackPayload = {
-      module_title_en: updates.title_en,
-      module_title_tl: updates.title_tl,
-      module_subtitle_en: updates.subtitle_en,
-      module_subtitle_tl: updates.subtitle_tl
-    };
-
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('learning_material_modules')
-      .update(fallbackPayload)
-      .eq('module_no', moduleNo)
-      .select()
-      .single();
-
-    if (fallbackError) throw fallbackError;
+    if (error) throw error;
 
     return {
-      data: fallbackData,
+      data,
       error: null
     };
   } catch (error) {

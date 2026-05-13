@@ -46,9 +46,22 @@ export default function PersonnelProfile() {
   const displayPhone = currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || currentUser?.mobile || 'Not available';
   const [isSaving, setIsSaving] = useState(false);
   const [isPasswordSaving, setIsPasswordSaving] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const hasNameChanges = (firstName !== (currentUser?.first_name || ''))
     || (lastName !== (currentUser?.last_name || ''))
     || (resolvedRank !== (currentUser?.rank || ''));
+
+  useEffect(() => {
+    if (passwordMessage.text) {
+      setIsPasswordModalOpen(true);
+      const timer = setTimeout(() => {
+        setIsPasswordModalOpen(false);
+        setTimeout(() => setPasswordMessage({ type: '', text: '' }), 300);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [passwordMessage]);
 
   useEffect(() => {
     if (currentUser) {
@@ -189,35 +202,35 @@ export default function PersonnelProfile() {
 
     try {
       if (!currentPassword || !newPassword || !confirmPassword) {
-        alert('Please complete all password fields.');
+        setPasswordMessage({ type: 'error', text: 'Please complete all password fields.' });
         return;
       }
 
       const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
       if (!strongPasswordRegex.test(newPassword)) {
-        alert('Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.');
+        setPasswordMessage({ type: 'error', text: 'Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.' });
         return;
       }
 
       const { valid, error: verifyError } = await verifyCurrentPassword(currentPassword);
       if (verifyError) {
-        alert('Could not verify current password: ' + verifyError);
+        setPasswordMessage({ type: 'error', text: 'Could not verify current password: ' + verifyError });
         return;
       }
 
       if (!valid) {
-        alert('Current password is incorrect.');
+        setPasswordMessage({ type: 'error', text: 'Current password is incorrect.' });
         return;
       }
 
       if (newPassword !== confirmPassword) {
-        alert('New password and confirm password do not match.');
+        setPasswordMessage({ type: 'error', text: 'New password and confirm password do not match.' });
         return;
       }
 
       const { error: passwordError } = await updatePassword(newPassword);
       if (passwordError) {
-        alert('Error updating password: ' + passwordError);
+        setPasswordMessage({ type: 'error', text: 'Error updating password: ' + passwordError });
         return;
       }
 
@@ -229,7 +242,7 @@ export default function PersonnelProfile() {
       setShowCurrentPassword(false);
       setShowNewPassword(false);
       setShowConfirmPassword(false);
-      alert('Password updated successfully!');
+      setPasswordMessage({ type: 'success', text: 'Password updated successfully!' });
     } catch (err) {
       console.error('Error saving password:', err);
       alert('Error saving password');
@@ -477,6 +490,28 @@ export default function PersonnelProfile() {
             </div>
           </div>
         </div>
+
+        {isPasswordModalOpen && (
+          <div className="password-modal-overlay" role="dialog" aria-modal="true">
+            <div className={`password-modal password-modal-${passwordMessage.type}`}>
+              <div className="password-modal-icon">
+                {passwordMessage.type === 'success' ? '✓' : '!'}
+              </div>
+              <div className="password-modal-content">
+                <p>{passwordMessage.text}</p>
+              </div>
+              <button
+                className="password-modal-close"
+                onClick={() => {
+                  setIsPasswordModalOpen(false);
+                  setTimeout(() => setPasswordMessage({ type: '', text: '' }), 300);
+                }}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

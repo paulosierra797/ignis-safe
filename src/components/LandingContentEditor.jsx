@@ -132,15 +132,24 @@ export default function LandingContentEditor({ embedded = false }) {
     }
 
     const mobileNumber = String(draft?.contact?.mobile || '').trim();
-    if (mobileNumber && !mobileNumberRegex.test(mobileNumber)) {
+    const normalizedMobileNumber = mobileNumber.replace(/\D/g, '');
+    if (mobileNumber && !mobileNumberRegex.test(normalizedMobileNumber)) {
       setSaveMessage('Mobile number must start with 09 and be exactly 11 digits.');
       window.setTimeout(() => setSaveMessage(''), 3000);
       return;
     }
 
+    const nextDraft = {
+      ...draft,
+      contact: {
+        ...draft.contact,
+        mobile: normalizedMobileNumber || mobileNumber,
+      },
+    };
+
     setSaving(true);
     try {
-      const { error } = await setContent(draft);
+      const { error } = await setContent(nextDraft);
       if (error) {
         setSaveMessage(`Saved locally, but failed to sync to database: ${error}`);
       } else {

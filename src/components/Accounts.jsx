@@ -22,7 +22,7 @@ import {
 } from '../utils/personnelOperationsService';
 import { useUser } from '../context/UserContext';
 
-const validPersonnelNamePattern = /^[A-Za-z\s]+$/;
+const validPersonnelNamePattern = /^[A-Za-z]+$/;
 const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const contactNumberRegex = /^09\d{9}$/;
 const ADD_PERSONNEL_TIMEOUT_MS = 25000;
@@ -550,6 +550,8 @@ export default function Accounts() {
     const fieldName = id.replace('personnel-', '').replace(/-/g, '_');
     const nextValue = fieldName === 'contact_number'
       ? String(value || '').replace(/\D/g, '').slice(0, 11)
+      : fieldName === 'first_name' || fieldName === 'last_name'
+        ? String(value || '').replace(/[^A-Za-z ]/g, '')
       : value;
 
     setFormData(prev => ({
@@ -1670,8 +1672,8 @@ export default function Accounts() {
                       placeholder="Michael"
                       value={formData.first_name}
                       onChange={handleInputChange}
-                      pattern="[A-Za-z\\s]+"
-                      title="Use letters and spaces only"
+                      pattern="[A-Za-z]+"
+                      title="Use letters only"
                     />
                   </div>
 
@@ -1683,8 +1685,8 @@ export default function Accounts() {
                       placeholder="Escano"
                       value={formData.last_name}
                       onChange={handleInputChange}
-                      pattern="[A-Za-z\\s]+"
-                      title="Use letters and spaces only"
+                      pattern="[A-Za-z]+"
+                      title="Use letters only"
                     />
                   </div>
 

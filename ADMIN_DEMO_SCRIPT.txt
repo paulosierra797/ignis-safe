@@ -1,0 +1,522 @@
+================================================================================
+                    IGNIS SAFE - ADMIN DEMO SCRIPT
+                         Complete Admin Walkthrough
+================================================================================
+
+INTRODUCTION
+============
+"Welcome to the IGNIS SAFE Admin Dashboard demonstration. Today we'll walk through
+all the key features that admins use to manage personnel, attendance, content, and
+generate reports. Let's begin with the landing page and then dive into the
+admin-specific features."
+
+
+PART 1: LANDING PAGE OVERVIEW (Non-Authenticated)
+==================================================
+
+1. LANDING PAGE SECTIONS
+   - Open URL: https://ignis-safe.com (or local instance)
+   - Show: Header with logo and navigation
+   - Show: Hero section with call-to-action
+   - "This is where new users first arrive. The landing page showcases the platform's
+     purpose and encourages sign-up or login."
+
+2. LANDING PAGE CONTENT SECTIONS
+   - Scroll down to show:
+     * Announcements section (Latest updates and news)
+     * About section (Platform information)
+     * Process section (How the system works)
+     * Contact section (Contact information)
+     * FAQ section (Frequently asked questions)
+     * Footer (Links and copyright)
+   - "All of this content is managed by admins through the Content Management panel."
+
+3. LANDING PAGE FEATURES
+   - Point out the dynamic announcements carousel
+   - Explain: "Announcements published here appear to all personnel immediately
+     after login."
+
+
+PART 2: ADMIN LOGIN & INITIAL ACCESS
+=====================================
+
+1. LOGIN PAGE
+   - Click "Login" button or navigate to /login
+   - Show login form:
+     * Email field
+     * Password field
+   - "Admin accounts have elevated permissions to manage the entire system."
+   - Enter admin credentials (example: admin@ignis-safe.com)
+   - Click "Sign In"
+   - Wait for dashboard to load
+
+2. FIRST-TIME LOGIN
+   - Explain: "Upon first login, the system may show confirmation dialogs or
+     setup wizards for new admins."
+   - Point to profile picture, name, and role in top right
+   - Show: "Admin is now authenticated and can access all management features."
+
+
+PART 3: DASHBOARD - PERSONNEL & ANALYTICS OVERVIEW
+===================================================
+
+1. NAVIGATE TO DASHBOARD
+   - Already on dashboard after login OR
+   - Click "Dashboard" in the left sidebar
+   - Show the main dashboard layout
+   - Explain: "The dashboard provides a real-time overview of all key metrics."
+
+2. PERSONNEL OVERVIEW SECTION (Top Cards)
+   - Point out metric cards:
+     * Total Personnel: Shows total staff count and capacity (e.g., 45/100)
+     * On-Duty Status: Shows how many are on duty vs off duty
+     * Attendance Today: Shows today's attendance percentage
+   - Explain: "These cards are clickable. Admins can click them to drill down into
+     detailed views."
+   - Demo: Click "Total Personnel" card → Opens Personnel (Accounts) page
+   - Go back to Dashboard
+
+3. ANALYTICS METRICS SECTION (Middle Cards)
+   - Show analytics overview:
+     * Active Users: Number of active users in the system
+     * Total Users: Total registered users
+     * Questions Answered: Knowledge assessment statistics
+     * Average Session Length: How long users spend on training
+     * Starting Knowledge: Pre-test average knowledge level
+     * Current Knowledge: Post-test average knowledge level
+     * Knowledge Gain: Percentage improvement (e.g., +25%)
+   - Explain: "These metrics come from the analytics system which tracks all user
+     training activity."
+
+4. CHARTS & VISUALIZATIONS
+   - Show graphical representations:
+     * User Activity Trends: Line/bar chart showing activity over time
+     * Training Completion Rate: Shows completion percentage by module
+     * Module Performance: Shows which modules have highest engagement
+   - Explain: "These charts help identify which content resonates with users and
+     which areas need improvement."
+   - Point out: All charts are clickable and link to detailed Analytics page
+   - Demo: Click on a chart → Navigate to Analytics page
+   - Go back to Dashboard
+
+
+PART 4: SIDEBAR NAVIGATION - MAIN FEATURES
+===========================================
+
+Sidebar shows main admin menu:
+
+1. DASHBOARD - Already explored (Overview of metrics)
+
+2. ORGANIZATION CHART
+   - Click "Organization Chart" in sidebar
+   - Show: Visual hierarchy of personnel with roles and relationships
+   - Explain: "This provides an organizational view. Admins can toggle Edit mode
+     to modify titles and reporting structures."
+   - Demo: Click "Edit" button
+   - Show nodes become editable
+   - Click "Save" button
+   - Return to Dashboard
+
+3. REPORTS
+   - Click "Reports" in sidebar
+   - Show: Reports Management page
+   - Explain: "Personnel submit investigation/incident reports. Admins review and
+     approve them here."
+   - Show table with columns:
+     * Title (Report name)
+     * Submitted By (Personnel name)
+     * Submitted At (Date/time)
+     * Status (Submitted, Under Review, Approved, Rejected)
+     * File (PDF link)
+     * Actions (Review, Approve, Reject buttons)
+   - Point out status filter dropdown
+   - Show search functionality
+   - Point out summary chips: "All [n], Submitted [n], Under Review [n], Approved [n], Rejected [n]"
+   - Demo workflow:
+     * Type a keyword to search reports
+     * Filter by status
+     * Click "Review" action on a report
+     * Report status changes to "Under Review"
+     * Click "Approve" to approve
+     * Alternatively, click "Reject" to open rejection reason modal
+   - Explain: "This workflow ensures all reports go through proper channels before
+     being approved."
+   - Return to Dashboard
+
+4. ATTENDANCE
+   - Click "Attendance" in sidebar
+   - Show: Attendance Management page
+   - Explain: "View all clock-in and clock-out records for personnel."
+   - Show table with columns:
+     * No. (Row number)
+     * Name (Personnel name)
+     * Rank (Military rank)
+     * Date (Attendance date)
+     * Time In (Clock-in time)
+     * Time Out (Clock-out time)
+   - Point out filters:
+     * Search Personnel field
+     * Date Filter (calendar picker)
+     * "Clear Filters" button
+   - Demo searching: Type a name → Table filters in real-time
+   - Demo date filter: Select a date → Only shows records for that date
+   - Show export buttons:
+     * "Export CSV" - Downloads spreadsheet
+     * "Export PDF" - Downloads formatted report
+   - Explain: "Admins regularly export these for payroll, compliance, or reports."
+   - Return to Dashboard
+
+5. PERSONNEL (ACCOUNTS)
+   - Click "Personnel" in sidebar
+   - Show: Accounts page
+   - Explain: "This is where admins manage all personnel profiles, assignments, and
+     leave requests."
+
+   SECTION A: PERSONNEL LIST
+   - Show table of all personnel with columns:
+     * Name
+     * Rank
+     * Contact
+     * Email
+     * Status
+     * Role
+   - Show filters:
+     * Search personnel by name
+     * Filter by rank
+     * Filter by status
+     * "Clear Filters" button
+   - Point out "ADD NEW PERSONNEL" button
+   - Demo: Click "ADD NEW PERSONNEL"
+   - Show modal with form fields:
+     * First Name
+     * Last Name
+     * Email
+     * Role (Personnel / Admin)
+     * Rank (Dropdown: FDIR, DFDIR, SSUPT, etc.)
+     * Contact Number (09xxxxxxxxx format)
+     * Password (Strong password requirement: uppercase, lowercase, number, symbol)
+   - Explain: "All fields are required and validated. Password must be strong."
+   - Demo: Fill form fields
+   - Click "SAVE"
+   - New personnel appears in table
+   - Show success message
+   - Explain: "New personnel account is created and can now log in."
+
+   SECTION B: SHIFT SCHEDULE MANAGEMENT
+   - Scroll down to "Shift Schedule" section
+   - Show: Calendar grid for current month
+   - Explain: "Admins define which dates are Shift A and Shift B."
+   - Point out legend:
+     * Yellow/Gold = Shift A dates
+     * Blue = Shift B dates
+     * Purple/Mixed = Both shifts
+   - Show "Shift Schedule Configuration" button
+   - Demo: Click button
+   - Show modal with calendar picker
+   - Explain: "Select dates for each shift. Dates appear highlighted."
+   - Show shift selection toggles (Shift A / Shift B tabs)
+   - Demo: Click on dates to select/deselect
+   - Click "Save" button
+   - Return to Accounts page
+   - Show updated calendar
+
+   SECTION C: SHIFT ASSIGNMENT TO PERSONNEL
+   - Show "Assign Personnel to Shift" button
+   - Demo: Click button
+   - Show modal with:
+     * Personnel list with checkboxes (select one or multiple)
+     * Shift selection dropdown (Shift A or Shift B)
+   - Explain: "Admins assign personnel to specific shifts."
+   - Demo: Check some personnel
+   - Select a shift
+   - Click "ASSIGN"
+   - Show success message
+   - Show assignment appears in "Shift Assignments" table
+
+   SECTION D: LEAVE REQUEST APPROVAL
+   - Scroll to "Leave Requests" section
+   - Show table of pending leave requests:
+     * Name
+     * Rank
+     * Start Date
+     * End Date
+     * Status
+     * Actions (Approve / Reject)
+   - Explain: "Personnel request time off. Admins approve or reject."
+   - Demo: Click "Approve" on a request
+   - Show status changes to "Approved"
+   - Show success message
+   - Alternatively, click "Reject"
+   - Show rejection reason modal
+   - Type reason (optional)
+   - Click "Reject"
+   - Status changes to "Rejected"
+
+   SECTION E: DELETE PERSONNEL
+   - Point to delete icon (trash) in personnel table
+   - Demo: Click delete icon on a personnel row
+   - Show confirmation dialog
+   - Explain: "Admin must confirm before deleting to prevent accidents."
+   - Click "Confirm" to delete
+   - Personnel is removed from table
+   - Show success message
+
+   Return to Dashboard
+
+
+PART 5: APP MANAGEMENT SECTION (Sidebar Bottom)
+================================================
+
+APP MANAGEMENT FEATURES (Expanded section in sidebar):
+
+1. USERS PAGE
+   - Click "Users" in sidebar App Management section
+   - Show: List of all registered users with search/filter
+   - Explain: "View all personnel who have signed up and their account status."
+   - Show user information:
+     * ID
+     * Name
+     * Email
+     * Role
+     * Status (Active / Inactive)
+     * Registration Date
+   - Point out search and filter capabilities
+   - Show sorting by columns
+   - Return to Dashboard
+
+2. QUESTIONS (ASSESSMENT)
+   - Click "Questions" in sidebar App Management section
+   - Show: Assessment Questions management page
+   - Explain: "Admins create and manage knowledge assessment questions."
+   - Show list of questions with columns:
+     * Question text
+     * Module
+     * Difficulty level
+     * Correct answer count
+   - Point out "Add New Question" button
+   - Demo workflow:
+     * Click "Add New Question"
+     * Fill form:
+       - Question text
+       - Module selection
+       - Multiple choice options
+       - Correct answer(s)
+       - Difficulty level
+     * Click "Save"
+     * Question appears in list
+   - Show edit/delete functionality
+   - Explain: "These questions appear in the training modules and assessments."
+   - Return to Dashboard
+
+3. LEARNING MATERIALS
+   - Click "Learning Materials" in sidebar App Management section
+   - Show: Content library page
+   - Explain: "Admins upload and organize training materials: PDFs, videos, etc."
+   - Show materials list:
+     * Module name
+     * Material title
+     * Type (PDF, Video, etc.)
+     * Uploaded date
+   - Point out "Add New Material" button
+   - Demo:
+     * Click "Add New Material"
+     * Fill form:
+       - Title
+       - Module
+       - Material type
+       - File upload
+     * Click "Upload"
+     * Material appears in library
+   - Show edit/delete options
+   - Explain: "Personnel access these materials during training."
+   - Return to Dashboard
+
+4. ANALYTICS PAGE
+   - Click "Analytics" in sidebar App Management section
+   - Show: Comprehensive analytics dashboard
+   - Explain: "Deep dive into user learning and training analytics."
+
+   ANALYTICS FEATURES:
+   - Show filter options at top:
+     * Timeframe dropdown (Last 7 days, Last 30 days, All-time, etc.)
+     * People filter (All, specific personnel, groups)
+     * Topic filter (All modules, specific module)
+   - Demo: Change filters
+   - Show updated charts and metrics:
+     * User Overview chart (Daily active users)
+     * Activity Trends chart (Questions answered over time)
+     * Learning by Module chart (Pre-test vs Post-test)
+     * Completion by Module chart (% completed per module)
+     * Attempts by Module chart (Average attempts per module)
+   - Explain: "These analytics help identify:
+     - Which modules need improvement
+     - Which users need more support
+     - Overall training effectiveness"
+   - Return to Dashboard
+
+5. AUDIT LOGS
+   - Click "Audit Logs" in sidebar App Management section
+   - Show: System activity log
+   - Explain: "All admin actions and system events are logged here for compliance."
+   - Show log table with columns:
+     * Timestamp
+     * Admin name
+     * Action (Create, Update, Delete, Export, etc.)
+     * Entity (User, Report, etc.)
+     * Status (Success / Failed)
+     * Details
+   - Point out search and filter capabilities
+   - Show various log entries
+   - Explain: "This provides accountability and security tracking."
+   - Return to Dashboard
+
+
+PART 6: CONTENT MANAGEMENT - ANNOUNCEMENTS
+===========================================
+
+1. NAVIGATE TO CONTENT MANAGEMENT
+   - From sidebar, click "Content Management"
+   - Explanation: "This is where admins communicate with all personnel."
+
+2. ANNOUNCEMENTS PAGE
+   - Show: List of all announcements
+   - Explain: "Admins can create, publish, and track announcements."
+
+3. CREATE NEW ANNOUNCEMENT
+   - Click "Create New Announcement" button
+   - Show form with fields:
+     * Title
+     * Message/Content (Rich text editor)
+     * Target Audience radio buttons:
+       - All Personnel
+       - Specific Personnel (with personnel selector)
+     * Attachment options (optional)
+   - Demo workflow:
+     * Enter title: "Safety Reminder"
+     * Enter message: "Please remember to follow safety protocols..."
+     * Select "All Personnel" as target
+     * Click "Publish"
+     * Show success message
+     * Announcement appears in list with:
+       - Title
+       - Date published
+       - Audience count
+       - Acknowledgment status (e.g., "5 / 50 acknowledged")
+
+4. ANNOUNCEMENT ACKNOWLEDGMENT TRACKING
+   - Point to acknowledgment metrics on each announcement
+   - Explain: "Admins can see which personnel have acknowledged announcements."
+   - Click on acknowledgment count
+   - Show list of personnel with ACK status
+   - Show personnel who still need to acknowledge
+   - Explain: "Personnel must acknowledge announcements before accessing other
+     features."
+
+5. EDIT/DELETE ANNOUNCEMENTS
+   - Show edit button on announcement row
+   - Demo: Click edit
+   - Show form pre-filled with announcement data
+   - Make changes
+   - Click "Save"
+   - Show update success message
+   - Show delete button with confirmation
+   - Explain: "Only unpublished announcements can be deleted."
+
+   Return to Dashboard
+
+
+PART 7: ADMIN PROFILE & SETTINGS
+================================
+
+1. PROFILE MENU
+   - Click on admin name/avatar in top-right corner
+   - Show dropdown menu with options:
+     * Profile
+     * Settings
+     * Logout
+
+2. ADMIN PROFILE PAGE
+   - Click "Profile"
+   - Show profile information:
+     * Profile picture
+     * Name (First / Last)
+     * Rank
+     * Email
+     * Contact number
+     * Role (Admin)
+   - Point out edit button
+   - Demo:
+     * Click "Edit" or click on fields
+     * Fields become editable
+     * Change first name or rank
+     * Click "Save Changes"
+     * Show success message
+
+3. PASSWORD CHANGE
+   - Show "Security" section on profile page
+   - Point to "Change Password" button
+   - Click button to expand password change panel
+   - Show form fields:
+     * Current Password
+     * New Password (with strength indicator)
+     * Confirm New Password
+   - Explain: "Password must have: uppercase, lowercase, number, special character"
+   - Demo:
+     * Enter current password
+     * Enter strong new password
+     * Confirm new password
+     * Click "Save Password"
+     * Show success message (password updated)
+
+
+PART 8: LOGOUT
+==============
+
+1. LOGOUT PROCESS
+   - Click admin name in top-right
+   - Click "Logout" from dropdown
+   - Show: Returns to login page
+   - Explain: "Session is ended. Admin would need to log in again to access system."
+
+
+CONCLUSION & SUMMARY
+====================
+
+"Let's recap the key admin features we've demonstrated:
+
+✓ DASHBOARD - Real-time metrics and analytics overview
+✓ ORGANIZATION CHART - Visual hierarchy management
+✓ REPORTS - Submit/approve workflow management
+✓ ATTENDANCE - Clock-in/out tracking and export
+✓ PERSONNEL - Account creation, shift assignment, leave approval
+✓ USERS - View all registered personnel
+✓ ASSESSMENT QUESTIONS - Create training content
+✓ LEARNING MATERIALS - Upload training resources
+✓ ANALYTICS - Deep analytics on training effectiveness
+✓ AUDIT LOGS - System activity tracking
+✓ ANNOUNCEMENTS - Broadcast communications to personnel
+✓ PROFILE - Personal settings and password management
+
+ADMIN BEST PRACTICES:
+1. Review dashboard metrics weekly to track personnel and training progress
+2. Approve/reject reports promptly to maintain workflow efficiency
+3. Monitor attendance for compliance and payroll
+4. Regularly update shift schedules in advance
+5. Create relevant learning materials to support training modules
+6. Use announcements to communicate important information
+7. Check audit logs for accountability
+8. Maintain strong passwords and regularly update profile information
+
+KEY PERMISSIONS:
+- View Dashboard: All admins
+- Manage Personnel: All admins
+- Approve Reports: All admins
+- Manage Content: All admins
+- View Analytics: All admins
+- Manage Audit Logs: All admins
+
+This completes the IGNIS SAFE Admin Demo. Thank you for your attention!"
+
+================================================================================
+END OF SCRIPT
+================================================================================

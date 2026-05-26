@@ -13,7 +13,11 @@ import {
   getAssessmentOptionsByQuestionIds,
   syncAssessmentQuestionOptions,
   buildDefaultAssessmentOptions,
+  generateAssessmentQuestions,
 } from '../utils/assessmentQuestionsService';
+import { getLearningMaterialsAdminView } from '../utils/learningMaterialsService';
+
+const AI_OPTION_KEYS = ['A', 'B', 'C', 'D'];
 
 const DEFAULT_NEW_QUESTION = {
   question_type: 'multiple_choice',
@@ -70,6 +74,8 @@ export default function AssessmentQuestions() {
   const [isLoadingAssessments, setIsLoadingAssessments] = useState(true);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateCount, setGenerateCount] = useState(5);
   const [savingRowIds, setSavingRowIds] = useState({});
   const [pendingDeleteQuestion, setPendingDeleteQuestion] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -199,6 +205,189 @@ export default function AssessmentQuestions() {
 
   const setRowSaving = (id, isSaving) => {
     setSavingRowIds((prev) => ({ ...prev, [id]: isSaving }));
+  };
+
+  const buildModuleContext = (rows = [], moduleNo = null) => {
+    const filteredRows = (rows || []).filter((row) => Number(row.module_no) === Number(moduleNo) && row.is_active !== false);
+
+    if (filteredRows.length === 0) {
+      return '';
+    }
+
+    const moduleRow = filteredRows[0];
+    const pageMap = new Map();
+
+    filteredRows.forEach((row) => {
+      const pageNo = Number(row.page_no || 0);
+
+      if (!pageMap.has(pageNo)) {
+        pageMap.set(pageNo, {
+          pageNo,
+          title: row.page_title_en || row.page_title_tl || '',
+          blocks: [],
+        });
+      }
+
+      const pageEntry = pageMap.get(pageNo);
+      if (row.text_en || row.text_tl) {
+        pageEntry.blocks.push({
+          blockNo: row.block_no,
+          text: row.text_en || row.text_tl || '',
+        });
+      }
+    });
+
+    const pageText = Array.from(pageMap.values())
+      .sort((left, right) => left.pageNo - right.pageNo)
+      .map((page) => {
+        const blockText = page.blocks
+          .map((block) => `Block ${block.blockNo ?? '-'}: ${block.text}`)
+          .join('\n');
+
+        return [`Page ${page.pageNo}${page.title ? ` - ${page.title}` : ''}`, blockText]
+          .filter(Boolean)
+          .join('\n');
+      })
+      .join('\n\n');
+
+    return [
+      `Module ${moduleNo}`,
+      moduleRow.module_title_en ? `Title: ${moduleRow.module_title_en}` : '',
+      moduleRow.module_subtitle_en ? `Subtitle: ${moduleRow.module_subtitle_en}` : '',
+      pageText,
+    ]
+      .filter(Boolean)
+      .join('\n\n')
+      .slice(0, 12000);
+  };
+
+  const handleGenerateQuestions = async () => {
+    if (!selectedAssessmentId || isGenerating) return;
+
+    const selectedAssessment = assessments.find((row) => row.id === selectedAssessmentId);
+    const moduleNo = Number(selectedAssessment?.module_no || 0);
+
+    if (!moduleNo) {
+      setMessage({ type: 'error', text: 'The selected assessment is not linked to a module.' });
+      return;
+    }
+
+    const safeCount = Math.min(Math.max(Number(generateCount) || 0, 1), 10);
+
+    setIsGenerating(true);
+    setMessage({ type: '', text: '' });
+
+    const { data: materialRows, error: materialError } = await getLearningMaterialsAdminView();
+
+    if (materialError) {
+      setMessage({ type: 'error', text: `Unable to load learning materials: ${materialError}` });
+      setIsGenerating(false);
+      return;
+    }
+
+    const learningContext = buildModuleContext(materialRows || [], moduleNo);
+
+    if (!learningContext) {
+      setMessage({ type: 'error', text: `No active learning material content found for Module ${moduleNo}.` });
+      setIsGenerating(false);
+      return;
+    }
+
+    const { data: generatedPayload, error: generateError } = await generateAssessmentQuestions({
+      assessmentId: selectedAssessmentId,
+      assessmentTitle: selectedAssessment?.title || selectedAssessmentLabel || `Module ${moduleNo}`,
+      assessmentType: selectedAssessment?.type_label || selectedAssessment?.type || '',
+      moduleNo,
+      questionCount: safeCount,
+      context: learningContext,
+    });
+
+    if (generateError || !generatedPayload?.questions?.length) {
+      setMessage({
+        type: 'error',
+        text: generateError || 'The AI service returned no questions.',
+      });
+      setIsGenerating(false);
+      return;
+    }
+
+    const currentQuestions = [...questions];
+    const nextQuestionNoStart = currentQuestions.length === 0
+      ? 1
+      : Math.max(...currentQuestions.map((item) => Number(item.question_no || 0))) + 1;
+
+    const createdQuestions = [];
+
+    for (let index = 0; index < generatedPayload.questions.length; index += 1) {
+      const generatedQuestion = generatedPayload.questions[index];
+      const questionNo = nextQuestionNoStart + index;
+
+      const { data: createdQuestion, error: createError } = await createAssessmentQuestion({
+        assessment_id: selectedAssessmentId,
+        question_no: questionNo,
+        question_type: 'multiple_choice',
+        prompt: String(generatedQuestion?.prompt || '').trim(),
+        prompt_tl: String(generatedQuestion?.prompt_tl || '').trim() || null,
+        explanation: String(generatedQuestion?.explanation || '').trim() || null,
+        explanation_tl: String(generatedQuestion?.explanation_tl || '').trim() || null,
+        is_active: true,
+      });
+
+      if (createError || !createdQuestion?.id) {
+        continue;
+      }
+
+      const aiOptions = Array.isArray(generatedQuestion?.options)
+        ? generatedQuestion.options.map((option, optionIndex) => ({
+          option_key: String(option?.option_key || AI_OPTION_KEYS[optionIndex] || '').trim().toUpperCase(),
+          option_text: String(option?.option_text || '').trim(),
+          option_text_tl: String(option?.option_text_tl || '').trim(),
+          is_correct: Boolean(option?.is_correct),
+          display_order: Number.isFinite(Number(option?.display_order))
+            ? Number(option.display_order)
+            : optionIndex + 1,
+        })).filter((option) => option.option_key && option.option_text)
+        : [];
+
+      if (aiOptions.length >= 2) {
+        const { error: optionsError } = await syncAssessmentQuestionOptions(createdQuestion.id, aiOptions);
+        if (optionsError) {
+          console.warn('Failed to sync AI-generated options:', optionsError);
+        }
+      }
+
+      createdQuestions.push({
+        ...createdQuestion,
+        options: aiOptions.length >= 2 ? aiOptions : buildDefaultAssessmentOptions(),
+      });
+    }
+
+    if (createdQuestions.length === 0) {
+      setMessage({ type: 'error', text: 'The AI did not return any usable questions.' });
+      setIsGenerating(false);
+      return;
+    }
+
+    setQuestions((prev) => [...prev, ...createdQuestions].sort((a, b) => a.question_no - b.question_no));
+    setMessage({
+      type: 'success',
+      text: `Generated ${createdQuestions.length} question${createdQuestions.length === 1 ? '' : 's'} from Module ${moduleNo}. Review and save the generated rows.`,
+    });
+
+    await logAdminActivity({
+      actorId: currentUser?.admin_id || null,
+      actorName: currentUser?.name || currentUser?.email || 'Admin User',
+      action: 'Assessment Questions Generated',
+      actionType: 'create',
+      details: `Generated ${createdQuestions.length} questions for ${selectedAssessmentLabel || selectedAssessmentId} from Module ${moduleNo}.`,
+      metadata: {
+        assessment_id: selectedAssessmentId,
+        module_no: moduleNo,
+        generated_count: createdQuestions.length,
+      },
+    });
+
+    setIsGenerating(false);
   };
 
   const handleAddQuestion = async () => {
@@ -433,6 +622,32 @@ export default function AssessmentQuestions() {
                 ))
               )}
             </select>
+          </div>
+
+          <div className="assessment-generator">
+            <label htmlFor="assessment-generate-count">AI question count</label>
+            <div className="assessment-generator-controls">
+              <input
+                id="assessment-generate-count"
+                type="number"
+                min="1"
+                max="10"
+                value={generateCount}
+                onChange={(event) => setGenerateCount(event.target.value)}
+                disabled={isGenerating || isLoadingQuestions}
+              />
+              <button
+                className="assessment-generate-button"
+                type="button"
+                onClick={handleGenerateQuestions}
+                disabled={!selectedAssessmentId || isLoadingQuestions || isGenerating}
+              >
+                {isGenerating ? 'Generating...' : 'Generate Questions'}
+              </button>
+            </div>
+            <p className="assessment-generator-hint">
+              Uses the selected module’s learning materials and saves the generated questions for review.
+            </p>
           </div>
 
           <button

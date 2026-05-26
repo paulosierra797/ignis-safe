@@ -62,6 +62,35 @@
   min-width: 360px;
 }
 
+.assessment-generator {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-width: 280px;
+}
+
+.assessment-generator label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.assessment-generator-controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.assessment-generator-controls input[type='number'] {
+  width: 5.5rem;
+}
+
+.assessment-generator-hint {
+  margin: 0;
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
 .assessment-filter label {
   font-size: 0.8rem;
   font-weight: 700;
@@ -87,6 +116,22 @@
 }
 
 .assessment-add-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.assessment-generate-button {
+  border: none;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 0.75rem 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.assessment-generate-button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }

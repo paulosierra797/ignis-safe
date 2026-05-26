@@ -4,6 +4,31 @@ const QUESTIONS_TABLE = 'assessment_questions';
 const OPTIONS_TABLE = 'assessment_options';
 const DEFAULT_OPTION_KEYS = ['A', 'B', 'C', 'D'];
 
+const parseRetryAfterSeconds = (obj) => {
+  if (!obj) return null;
+  if (typeof obj === 'number') return obj;
+  if (typeof obj === 'string' && /\d+/.test(obj)) return Number(obj.match(/(\d+)/)[1]);
+  if (typeof obj === 'object') {
+    if (Number.isFinite(Number(obj.retryAfterSeconds))) return Number(obj.retryAfterSeconds);
+    if (Number.isFinite(Number(obj.retry_after_seconds))) return Number(obj.retry_after_seconds);
+  }
+  return null;
+};
+
+const formatQuotaMessage = (retrySeconds) => {
+  if (retrySeconds) return `The AI service is rate-limited. Please wait about ${retrySeconds} seconds and try again.`;
+  return 'The AI service is rate-limited or out of quota right now. Please try again later.';
+};
+
+const getStatusCode = (error) => (
+  error?.status
+  || error?.statusCode
+  || error?.context?.status
+  || error?.context?.response?.status
+  || error?.response?.status
+  || null
+);
+
 const mapQuestion = (row = {}) => ({
   id: row.id,
   assessment_id: row.assessment_id,
@@ -288,3 +313,65 @@ export const deleteAssessmentQuestion = async (id) => {
     return { error: error.message };
   }
 };
+
+export const generateAssessmentQuestions = async (payload) => {
+  try {
+    // Try Supabase edge function first
+    const { data, error } = await supabase.functions.invoke('generate-assessment-questions', {
+      body: payload,
+    });
+
+    if (error) throw error;
+
+    return {
+      data: data?.data ?? data ?? null,
+      error: data?.error ?? null,
+    };
+  } catch (edgeFunctionError) {
+    console.warn('Edge function failed, trying local API fallback:', edgeFunctionError.message);
+    const edgeStatus = getStatusCode(edgeFunctionError);
+    if (edgeStatus === 429 || /rate limit|quota|too many requests/i.test(edgeFunctionError?.message || '')) {
+      const retry = parseRetryAfterSeconds(edgeFunctionError?.retryAfterSeconds || edgeFunctionError?.context?.retryAfterSeconds || edgeFunctionError?.context?.response?.retryAfterSeconds);
+      return { data: null, error: formatQuotaMessage(retry) };
+    }
+    
+    try {
+      // Fallback to local API
+      const response = await fetch('http://localhost:3001/api/generate-assessment-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        let responseBody = null;
+        try {
+          responseBody = await response.json();
+        } catch (e) {
+          responseBody = null;
+        }
+
+        if (response.status === 429 || /rate limit|quota|too many requests/i.test(responseBody?.error || '')) {
+          const retry = parseRetryAfterSeconds(responseBody?.retryAfterSeconds || responseBody?.retry_after_seconds || responseBody);
+          throw new Error(formatQuotaMessage(retry));
+        }
+
+        throw new Error(responseBody?.error || `Local API responded with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      return {
+        data: data?.data ?? data ?? null,
+        error: data?.error ?? null,
+      };
+    } catch (localApiError) {
+      console.error('Both edge function and local API failed:', localApiError);
+      return { 
+        data: null, 
+        error: `Generation failed (edge: ${edgeFunctionError.message}, local: ${localApiError.message})` 
+      };
+    }
+  }
+};
+

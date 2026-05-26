@@ -1,0 +1,16 @@
+{
+  "name": "ignis-safe-local-api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "ignis-safe": "file:.."
+  }
+}

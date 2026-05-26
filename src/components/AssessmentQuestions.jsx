@@ -19,15 +19,6 @@ import { getLearningMaterialsAdminView } from '../utils/learningMaterialsService
 
 const AI_OPTION_KEYS = ['A', 'B', 'C', 'D'];
 
-const DEFAULT_NEW_QUESTION = {
-  question_type: 'multiple_choice',
-  prompt: '',
-  prompt_tl: '',
-  explanation: '',
-  explanation_tl: '',
-  is_active: true,
-};
-
 const mergeQuestionsWithOptions = (questionRows = [], optionRows = []) => {
   const optionsByQuestionId = optionRows.reduce((accumulator, option) => {
     if (!accumulator[option.question_id]) {
@@ -40,9 +31,8 @@ const mergeQuestionsWithOptions = (questionRows = [], optionRows = []) => {
 
   return questionRows.map((question) => ({
     ...question,
-    options: question.question_type === 'multiple_choice'
-      ? (optionsByQuestionId[question.id] || buildDefaultAssessmentOptions())
-      : []
+    question_type: 'multiple_choice',
+    options: optionsByQuestionId[question.id] || buildDefaultAssessmentOptions(),
   }));
 };
 
@@ -73,7 +63,6 @@ export default function AssessmentQuestions() {
   const [questions, setQuestions] = useState([]);
   const [isLoadingAssessments, setIsLoadingAssessments] = useState(true);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateCount, setGenerateCount] = useState(5);
   const [savingRowIds, setSavingRowIds] = useState({});
@@ -160,11 +149,6 @@ export default function AssessmentQuestions() {
       );
     });
   }, [questions, searchQuery]);
-
-  const nextQuestionNo = useMemo(() => {
-    if (questions.length === 0) return 1;
-    return Math.max(...questions.map((item) => Number(item.question_no || 0))) + 1;
-  }, [questions]);
 
   const setRowValue = (id, field, value) => {
     setQuestions((prev) => prev.map((item) => (
@@ -390,55 +374,6 @@ export default function AssessmentQuestions() {
     setIsGenerating(false);
   };
 
-  const handleAddQuestion = async () => {
-    if (!selectedAssessmentId || isAdding) return;
-
-    setIsAdding(true);
-    setMessage({ type: '', text: '' });
-
-    const payload = {
-      assessment_id: selectedAssessmentId,
-      question_no: nextQuestionNo,
-      ...DEFAULT_NEW_QUESTION,
-    };
-
-    const { data, error } = await createAssessmentQuestion(payload);
-
-    if (!data) {
-      setMessage({ type: 'error', text: `Unable to add question: ${error}` });
-    } else {
-      const questionToAdd = {
-        ...data,
-        options: data.options?.length ? data.options : (data.question_type === 'multiple_choice' ? buildDefaultAssessmentOptions() : [])
-      };
-
-      setQuestions((prev) => [...prev, {
-        ...questionToAdd
-      }].sort((a, b) => a.question_no - b.question_no));
-      setMessage({
-        type: 'success',
-        text: error
-          ? `Question ${data.question_no} added, but default choices need attention: ${error}`
-          : `Question ${data.question_no} added.`
-      });
-
-      await logAdminActivity({
-        actorId: currentUser?.admin_id || null,
-        actorName: currentUser?.name || currentUser?.email || 'Admin User',
-        action: 'Assessment Question Created',
-        actionType: 'create',
-        details: `Added question ${data.question_no} in ${selectedAssessmentLabel || selectedAssessmentId}.`,
-        metadata: {
-          assessment_id: selectedAssessmentId,
-          question_id: data.id,
-          question_no: data.question_no,
-        },
-      });
-    }
-
-    setIsAdding(false);
-  };
-
   const handleSaveQuestion = async (question) => {
     if (!question?.id) return;
     if (!question.prompt.trim()) {
@@ -446,31 +381,27 @@ export default function AssessmentQuestions() {
       return;
     }
 
-    const normalizedOptions = question.question_type === 'multiple_choice'
-      ? (question.options || [])
-        .map((option, index) => ({
-          ...option,
-          option_key: String(option.option_key || '').trim().toUpperCase(),
-          option_text: String(option.option_text || '').trim(),
-          option_text_tl: String(option.option_text_tl || '').trim(),
-          display_order: Number.isFinite(Number(option.display_order)) ? Number(option.display_order) : index + 1,
-        }))
-        .filter((option) => option.option_key)
-      : [];
+    const normalizedOptions = (question.options || [])
+      .map((option, index) => ({
+        ...option,
+        option_key: String(option.option_key || '').trim().toUpperCase(),
+        option_text: String(option.option_text || '').trim(),
+        option_text_tl: String(option.option_text_tl || '').trim(),
+        display_order: Number.isFinite(Number(option.display_order)) ? Number(option.display_order) : index + 1,
+      }))
+      .filter((option) => option.option_key);
 
-    if (question.question_type === 'multiple_choice') {
-      const filledOptions = normalizedOptions.filter((option) => option.option_text.length > 0);
-      const correctOptions = filledOptions.filter((option) => option.is_correct);
+    const filledOptions = normalizedOptions.filter((option) => option.option_text.length > 0);
+    const correctOptions = filledOptions.filter((option) => option.is_correct);
 
-      if (filledOptions.length < 2) {
-        setMessage({ type: 'error', text: `Question ${question.question_no}: add at least two choices.` });
-        return;
-      }
+    if (filledOptions.length < 2) {
+      setMessage({ type: 'error', text: `Question ${question.question_no}: add at least two choices.` });
+      return;
+    }
 
-      if (correctOptions.length !== 1) {
-        setMessage({ type: 'error', text: `Question ${question.question_no}: select exactly one correct answer.` });
-        return;
-      }
+    if (correctOptions.length !== 1) {
+      setMessage({ type: 'error', text: `Question ${question.question_no}: select exactly one correct answer.` });
+      return;
     }
 
     setRowSaving(question.id, true);
@@ -482,7 +413,7 @@ export default function AssessmentQuestions() {
       prompt_tl: question.prompt_tl.trim() || null,
       explanation: question.explanation.trim() || null,
       explanation_tl: question.explanation_tl.trim() || null,
-      question_type: question.question_type,
+      question_type: 'multiple_choice',
       is_active: Boolean(question.is_active),
     };
 
@@ -491,37 +422,20 @@ export default function AssessmentQuestions() {
     if (error) {
       setMessage({ type: 'error', text: `Unable to save question ${question.question_no}: ${error}` });
     } else {
-      if (question.question_type === 'multiple_choice') {
-        const { error: optionsError, data: savedOptions } = await syncAssessmentQuestionOptions(data.id, normalizedOptions);
+      const { error: optionsError, data: savedOptions } = await syncAssessmentQuestionOptions(data.id, normalizedOptions);
 
-        if (optionsError) {
-          setMessage({ type: 'error', text: `Question ${data.question_no} saved, but choices failed: ${optionsError}` });
-          setQuestions((prev) => prev
-            .map((item) => (item.id === data.id ? { ...data, options: normalizedOptions } : item))
-            .sort((a, b) => a.question_no - b.question_no));
-          setRowSaving(question.id, false);
-          return;
-        }
-
+      if (optionsError) {
+        setMessage({ type: 'error', text: `Question ${data.question_no} saved, but choices failed: ${optionsError}` });
         setQuestions((prev) => prev
-          .map((item) => (item.id === data.id ? { ...data, options: savedOptions || normalizedOptions } : item))
+          .map((item) => (item.id === data.id ? { ...data, question_type: 'multiple_choice', options: normalizedOptions } : item))
           .sort((a, b) => a.question_no - b.question_no));
-      } else {
-        const { error: optionsError } = await syncAssessmentQuestionOptions(data.id, []);
-
-        if (optionsError) {
-          setMessage({ type: 'error', text: `Question ${data.question_no} saved, but choices cleanup failed: ${optionsError}` });
-          setQuestions((prev) => prev
-            .map((item) => (item.id === data.id ? { ...data, options: [] } : item))
-            .sort((a, b) => a.question_no - b.question_no));
-          setRowSaving(question.id, false);
-          return;
-        }
-
-        setQuestions((prev) => prev
-          .map((item) => (item.id === data.id ? { ...data, options: [] } : item))
-          .sort((a, b) => a.question_no - b.question_no));
+        setRowSaving(question.id, false);
+        return;
       }
+
+      setQuestions((prev) => prev
+        .map((item) => (item.id === data.id ? { ...data, question_type: 'multiple_choice', options: savedOptions || normalizedOptions } : item))
+        .sort((a, b) => a.question_no - b.question_no));
       setMessage({ type: 'success', text: `Question ${data.question_no} saved.` });
 
       await logAdminActivity({
@@ -649,15 +563,6 @@ export default function AssessmentQuestions() {
               Uses the selected module’s learning materials and saves the generated questions for review.
             </p>
           </div>
-
-          <button
-            className="assessment-add-button"
-            type="button"
-            onClick={handleAddQuestion}
-            disabled={!selectedAssessmentId || isLoadingQuestions || isAdding}
-          >
-            {isAdding ? 'Adding...' : 'Add Question'}
-          </button>
         </div>
 
         {message.text && (
@@ -671,7 +576,7 @@ export default function AssessmentQuestions() {
             <thead>
               <tr>
                 <th>No.</th>
-                <th>Type</th>
+                <th>Question Type</th>
                 <th>Choices / Correct Answer</th>
                 <th>Prompt (EN)</th>
                 <th>Prompt (TL)</th>
@@ -692,9 +597,7 @@ export default function AssessmentQuestions() {
                 </tr>
               ) : filteredQuestions.map((question) => {
                 const isSaving = Boolean(savingRowIds[question.id]);
-                const questionOptions = question.question_type === 'multiple_choice'
-                  ? (question.options?.length ? question.options : buildDefaultAssessmentOptions())
-                  : [];
+                const questionOptions = question.options?.length ? question.options : buildDefaultAssessmentOptions();
 
                 return (
                   <tr key={question.id}>
@@ -707,49 +610,39 @@ export default function AssessmentQuestions() {
                       />
                     </td>
                     <td>
-                      <select
-                        value={question.question_type}
-                        onChange={(event) => setRowValue(question.id, 'question_type', event.target.value)}
-                      >
-                        <option value="multiple_choice">Multiple Choice</option>
-                        <option value="essay">Essay</option>
-                      </select>
+                      <span className="assessment-question-type-label">Multiple Choice</span>
                     </td>
                     <td>
-                      {question.question_type === 'multiple_choice' ? (
-                        <div className="assessment-options-grid">
-                          {questionOptions.map((option) => (
-                            <div key={option.option_key} className="assessment-option-row">
-                              <label className="assessment-option-correct">
-                                <input
-                                  type="radio"
-                                  name={`correct-${question.id}`}
-                                  checked={Boolean(option.is_correct)}
-                                  onChange={() => setCorrectOption(question.id, option.option_key)}
-                                />
-                                Correct
-                              </label>
-                              <div className="assessment-option-fields">
-                                <div className="assessment-option-key">{option.option_key}</div>
-                                <input
-                                  type="text"
-                                  value={option.option_text}
-                                  onChange={(event) => setOptionValue(question.id, option.option_key, 'option_text', event.target.value)}
-                                  placeholder={`Option ${option.option_key}`}
-                                />
-                                <input
-                                  type="text"
-                                  value={option.option_text_tl}
-                                  onChange={(event) => setOptionValue(question.id, option.option_key, 'option_text_tl', event.target.value)}
-                                  placeholder={`Option ${option.option_key} (TL)`}
-                                />
-                              </div>
+                      <div className="assessment-options-grid">
+                        {questionOptions.map((option) => (
+                          <div key={option.option_key} className="assessment-option-row">
+                            <label className="assessment-option-correct">
+                              <input
+                                type="radio"
+                                name={`correct-${question.id}`}
+                                checked={Boolean(option.is_correct)}
+                                onChange={() => setCorrectOption(question.id, option.option_key)}
+                              />
+                              Correct
+                            </label>
+                            <div className="assessment-option-fields">
+                              <div className="assessment-option-key">{option.option_key}</div>
+                              <input
+                                type="text"
+                                value={option.option_text}
+                                onChange={(event) => setOptionValue(question.id, option.option_key, 'option_text', event.target.value)}
+                                placeholder={`Option ${option.option_key}`}
+                              />
+                              <input
+                                type="text"
+                                value={option.option_text_tl}
+                                onChange={(event) => setOptionValue(question.id, option.option_key, 'option_text_tl', event.target.value)}
+                                placeholder={`Option ${option.option_key} (TL)`}
+                              />
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="assessment-options-empty">Essay questions do not use choices.</span>
-                      )}
+                          </div>
+                        ))}
+                      </div>
                     </td>
                     <td>
                       <textarea

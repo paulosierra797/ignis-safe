@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "node --watch server.mjs",
-    "build": "npm install --prefix local-api"
+    "build": "npm install"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.0",

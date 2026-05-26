@@ -52,6 +52,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type'],
 }));
 
+// Simple health endpoint for platforms and load-balancers
+app.get('/health', (req, res) => {
+  return res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
 app.post('/api/generate-assessment-questions', async (req, res) => {
   if (!API_KEY) {
     return res.status(500).json({ 

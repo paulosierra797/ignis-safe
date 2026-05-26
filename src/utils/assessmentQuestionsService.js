@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 const QUESTIONS_TABLE = 'assessment_questions';
 const OPTIONS_TABLE = 'assessment_options';
 const DEFAULT_OPTION_KEYS = ['A', 'B', 'C', 'D'];
+const AI_API_URL = String(import.meta.env.VITE_AI_API_URL || 'http://localhost:3001/api/generate-assessment-questions').replace(/\/+$/, '');
 
 const parseRetryAfterSeconds = (obj) => {
   if (!obj) return null;
@@ -337,7 +338,7 @@ export const generateAssessmentQuestions = async (payload) => {
     
     try {
       // Fallback to local API
-      const response = await fetch('http://localhost:3001/api/generate-assessment-questions', {
+      const response = await fetch(AI_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -347,7 +348,7 @@ export const generateAssessmentQuestions = async (payload) => {
         let responseBody = null;
         try {
           responseBody = await response.json();
-        } catch (e) {
+        } catch {
           responseBody = null;
         }
 

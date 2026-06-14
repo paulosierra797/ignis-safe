@@ -1,5 +1,15 @@
 import { supabase } from './supabaseClient';
 
+
+export const getFaceByAdminId = async (adminId) => {
+  const { data, error } = await supabase
+    .from('admin_face')
+    .select('*')
+    .eq('admin_id', adminId)
+    .maybeSingle();
+
+  return { data, error };
+};
 // Personnel registry used for attendance metadata mapping
 const personnelDatabase = [
   { id: 1, name: 'Maria Reyes', rank: 'Fire Officer II', email: 'maria.reyes@ignis-safe.app' },
@@ -60,17 +70,44 @@ const toNumericPersonnelId = (value, fallbackSeed = '') => {
 };
 
 // QR Session Management
-export const generateQRSession = () => {
+export const generateQRSession = async (stationId = 'DEFAULT') => {
+  const sessionId = crypto.randomUUID();
   const now = new Date();
-  const sessionId = `${Math.random().toString(36).slice(2, 6)}-${Math.random().toString(36).slice(2, 4)}`.toUpperCase();
-  
-  return {
-    sessionId,
-    createdAt: now.getTime(),
-    expiresAt: now.getTime() + 24 * 60 * 60 * 1000, // 24 hours
-    scanned: false,
-    usedBy: null
+
+  const session = {
+    session_id: sessionId,
+    station_id: stationId,
+    created_at: now.toISOString(),
+    expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+    used: false
   };
+
+  await supabase.from('qr_sessions').insert(session);
+
+  return session;
+};
+export const validateQRSession = async (sessionId) => {
+  const { data, error } = await supabase
+    .from('qr_sessions')
+    .select('*')
+    .eq('session_id', sessionId)
+    .maybeSingle();
+
+  if (error || !data) {
+    return { valid: false, reason: 'Invalid QR session' };
+  }
+
+  const now = new Date();
+
+  if (new Date(data.expires_at) < now) {
+    return { valid: false, reason: 'QR expired' };
+  }
+
+  if (data.used) {
+    return { valid: false, reason: 'QR already used' };
+  }
+
+  return { valid: true, session: data };
 };
 
 export const isSessionValid = (session) => {
@@ -127,23 +164,32 @@ export const authenticatePersonnel = async (email, password) => {
     .maybeSingle();
   adminProfile = adminData || null;
 
-  const derivedOfficer = {
-    id: toNumericPersonnelId(
-      Number.isInteger(adminProfile?.id) ? adminProfile.id : fallbackOfficer?.id,
-      accountEmail
-    ),
-    name:
-      adminProfile?.name ||
-      authUser.user_metadata?.name ||
-      fallbackOfficer?.name ||
-      accountEmail.split('@')[0],
-    rank:
-      adminProfile?.rank ||
-      authUser.user_metadata?.rank ||
-      fallbackOfficer?.rank ||
-      'Personnel',
-    email: accountEmail
-  };
+ const derivedOfficer = {
+  admin_id: authUser.id,   // ADD THIS
+  id: toNumericPersonnelId(
+    Number.isInteger(adminProfile?.id) ? adminProfile.id : fallbackOfficer?.id,
+    accountEmail
+  ),
+
+  name:
+    adminProfile?.name ||
+    authUser.user_metadata?.name ||
+    fallbackOfficer?.name ||
+    accountEmail.split('@')[0],
+
+  rank:
+    adminProfile?.rank ||
+    authUser.user_metadata?.rank ||
+    fallbackOfficer?.rank ||
+    'Personnel',
+
+  email: accountEmail,
+
+  avatarUrl:
+    adminProfile?.avatar_url ||
+    authUser.user_metadata?.avatar_url ||
+    null
+};
 
   return normalizeOfficerProfile(derivedOfficer);
 };
@@ -151,10 +197,15 @@ export const authenticatePersonnel = async (email, password) => {
 export const saveAuthToken = (officer) => {
   const syncedOfficer = normalizeOfficerProfile(officer);
   const token = {
+    admin_id: syncedOfficer.admin_id,
     id: syncedOfficer.id,
     name: syncedOfficer.name,
     rank: syncedOfficer.rank,
     email: syncedOfficer.email,
+    avatarUrl: syncedOfficer.avatarUrl || null,
+    faceVerified: Boolean(syncedOfficer.faceVerified),
+    faceMatchScore: Number.isFinite(syncedOfficer.faceMatchScore) ? syncedOfficer.faceMatchScore : null,
+    faceVerifiedAt: syncedOfficer.faceVerifiedAt || null,
     timestamp: new Date().getTime(),
     sessionId: Math.random().toString(36).slice(2)
   };
@@ -178,6 +229,7 @@ export const isAuthValid = () => {
   // Auth token valid for 24 hours
   return (now - token.timestamp) < 24 * 60 * 60 * 1000;
 };
+
 
 // Attendance Records
 const mapAttendanceRow = (row) => {
@@ -219,7 +271,7 @@ export const getAttendanceRecords = async () => {
   return (data || []).map(mapAttendanceRow);
 };
 
-export const recordAttendance = async ({ officer, mode, location }) => {
+export const recordAttendance = async ({ officer, mode, location, stationId }) => {
   const now = new Date();
   const dateIso = now.toISOString().slice(0, 10);
   const signature = `${officer.name} (QR Verified)`;
@@ -235,13 +287,16 @@ export const recordAttendance = async ({ officer, mode, location }) => {
       .limit(1);
 
     if (openRowsError) {
-      throw new Error(openRowsError.message || 'Failed to validate open attendance record');
+      throw new Error(openRowsError.message);
     }
 
     if (openRows && openRows.length > 0) {
-      throw new Error('Time In is already recorded and not yet timed out. Please complete Time Out first.');
+      throw new Error(
+        'Time In is already recorded and not yet timed out.'
+      );
     }
   }
+
 
   if (mode === 'out') {
     const { data: openRows, error: openRowsError } = await supabase
@@ -253,17 +308,21 @@ export const recordAttendance = async ({ officer, mode, location }) => {
       .order('created_at', { ascending: false })
       .limit(1);
 
+
     if (openRowsError) {
-      throw new Error(openRowsError.message || 'Failed to find open attendance record');
+      throw new Error(openRowsError.message);
     }
 
+
     if (openRows && openRows.length > 0) {
+
       const { data: updatedRow, error: updateError } = await supabase
         .from('attendance_records')
         .update({
           time_out: now.toISOString(),
           signature,
           updated_at: now.toISOString(),
+
           latitude: location?.latitude ?? null,
           longitude: location?.longitude ?? null,
           accuracy: location?.accuracy ?? null
@@ -272,40 +331,86 @@ export const recordAttendance = async ({ officer, mode, location }) => {
         .select()
         .single();
 
+
       if (updateError) {
-        throw new Error(updateError.message || 'Failed to update attendance timeout');
+        throw new Error(updateError.message);
       }
 
-      return { record: mapAttendanceRow(updatedRow), action: 'updated' };
+
+      // ✅ Disable QR after successful timeout
+      if (stationId) {
+        await supabase
+          .from('qr_sessions')
+          .update({ used: true })
+          .eq('session_id', stationId);
+      }
+
+
+      return {
+        record: mapAttendanceRow(updatedRow),
+        action: 'updated'
+      };
     }
   }
+
+
+
+  // CREATE NEW ATTENDANCE
 
   const payload = {
     personnel_id: officer.id,
     name: officer.name,
     rank: officer.rank,
+
     attendance_date: dateIso,
-    time_in: mode === 'in' ? now.toISOString() : null,
-    time_out: mode === 'out' ? now.toISOString() : null,
+
+    time_in: mode === 'in'
+      ? now.toISOString()
+      : null,
+
+    time_out: mode === 'out'
+      ? now.toISOString()
+      : null,
+
     signature,
+
     latitude: location?.latitude ?? null,
     longitude: location?.longitude ?? null,
     accuracy: location?.accuracy ?? null,
+
     created_at: now.toISOString(),
     updated_at: now.toISOString()
   };
 
-  const { data: insertedRow, error: insertError } = await supabase
-    .from('attendance_records')
-    .insert([payload])
-    .select()
-    .single();
+
+  const { data: insertedRow, error: insertError } =
+    await supabase
+      .from('attendance_records')
+      .insert([payload])
+      .select()
+      .single();
+
 
   if (insertError) {
-    throw new Error(insertError.message || 'Failed to create attendance record');
+    throw new Error(insertError.message);
   }
 
-  return { record: mapAttendanceRow(insertedRow), action: 'created' };
+
+
+  // ✅ Disable QR after successful attendance creation
+  if (stationId) {
+    await supabase
+      .from('qr_sessions')
+      .update({ used: true })
+      .eq('session_id', stationId);
+  }
+
+
+
+  return {
+    record: mapAttendanceRow(insertedRow),
+    action: 'created'
+  };
 };
 
 // GPS Validation

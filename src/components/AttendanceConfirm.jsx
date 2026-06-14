@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { loadFaceModels } from '../utils/loadFaceModels';
+import { getFaceByAdminId } from '../utils/attendanceService';
+import * as faceapi from 'face-api.js';
+import { validateQRSession } from '../utils/attendanceService';
 import './AttendanceConfirm.css';
 import { 
   requestGeoLocation, 
@@ -7,7 +11,8 @@ import {
   getAuthToken,
   isAuthValid,
   getStationGeo,
-  recordAttendance
+  recordAttendance,
+  saveAuthToken
 } from '../utils/attendanceService';
 
 const AttendanceConfirm = () => {
@@ -18,18 +23,45 @@ const AttendanceConfirm = () => {
   const [authenticatedOfficer, setAuthenticatedOfficer] = useState(null);
   const [geoLocation, setGeoLocation] = useState(null);
   const [geoStatus, setGeoStatus] = useState('Request location access');
+  const [faceStatus, setFaceStatus] = useState('Face verification has not started yet.');
+  const [faceScore, setFaceScore] = useState(null);
+  const [faceError, setFaceError] = useState('');
+  const [isVerifyingFace, setIsVerifyingFace] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmStatus, setConfirmStatus] = useState(null);
   const [authError, setAuthError] = useState('');
+  const [faceDebug, setFaceDebug] = useState([]);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const verificationTimerRef = useRef(null);
+  const requestIdRef = useRef(0);
+ 
   const authSessionId = searchParams.get('auth');
   const stationId = searchParams.get('station');
   const stationGeo = useMemo(() => getStationGeo(stationId), [stationId]);
   const stationLabel = stationGeo.stationId && stationGeo.stationId !== 'DEFAULT'
     ? `${stationGeo.name} (${stationGeo.stationId})`
     : stationGeo.name;
+const [modelsReady, setModelsReady] = useState(false);
+
+useEffect(() => {
+  const init = async () => {
+    await loadFaceModels();
+    setModelsReady(true);
+  };
+
+  init();
+}, []);
 
   // Verify authentication on mount
   useEffect(() => {
+    try {
+      window.localStorage.setItem('faceLogs', window.localStorage.getItem('faceLogs') || new Date().toISOString() + ' - confirm page loaded');
+    } catch (error) {
+      // ignore storage errors
+    }
+
     const token = getAuthToken();
 
     if (!token || !isAuthValid()) {
@@ -49,6 +81,33 @@ const AttendanceConfirm = () => {
     setAuthenticatedOfficer(token);
   }, [authSessionId, navigate]);
 
+  const recordFaceDebug = (message) => {
+    const entry = `${new Date().toISOString()} - ${message}`;
+    setFaceDebug((current) => [...current.slice(-9), entry]);
+
+    try {
+      const existing = window.localStorage.getItem('faceLogs');
+      const next = existing ? `${existing}\n${entry}` : entry;
+      window.localStorage.setItem('faceLogs', next);
+    } catch (error) {
+      // ignore storage errors
+    }
+  };
+useEffect(() => {
+  const checkSession = async () => {
+    if (!stationId) return;
+
+    const result = await validateQRSession(stationId);
+
+    if (!result.valid) {
+      setAuthError(result.reason);
+      setTimeout(() => navigate('/attendance-login'), 1500);
+    }
+  };
+
+  checkSession();
+}, [stationId]);
+  
   const handleRequestLocation = async () => {
     setIsProcessing(true);
     setGeoStatus('Requesting location...');
@@ -68,6 +127,136 @@ const AttendanceConfirm = () => {
       setIsProcessing(false);
     }
   };
+
+  const stopFaceCamera = () => {
+  if (streamRef.current) {
+    streamRef.current.getTracks().forEach(track => track.stop());
+    streamRef.current = null;
+  }
+
+  if (videoRef.current) {
+    videoRef.current.srcObject = null;
+  }
+};
+
+const handleVerifyFace = async () => {
+  if (!authenticatedOfficer) {
+    setFaceError('Authentication error. Please login again.');
+    return;
+  }
+
+  if (!authenticatedOfficer.admin_id) {
+    setFaceError('Missing user ID.');
+    return;
+  }
+
+  setFaceError('');
+  setFaceScore(null);
+  setIsVerifyingFace(true);
+  setFaceStatus('Loading face data...');
+
+  try {
+    // 1. Get stored face from Supabase
+    const { data, error } = await getFaceByAdminId(authenticatedOfficer.admin_id);
+
+    if (error || !data) {
+      setFaceError('No registered face found.');
+      setIsVerifyingFace(false);
+      return;
+    }
+
+    const storedDescriptor = new Float32Array(
+  typeof data.face_descriptor === 'string'
+    ? JSON.parse(data.face_descriptor)
+    : data.face_descriptor
+);
+
+    // 2. Open camera
+    setFaceStatus('Requesting camera...');
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'user',
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      },
+      audio: false
+    });
+
+    streamRef.current = stream;
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+    }
+
+    setFaceStatus('Look at the camera... detecting face');
+
+    // 3. Wait a bit for stable frame
+    await new Promise(r => setTimeout(r, 800));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(videoRef.current, 0, 0);
+
+    // 4. Detect face
+   const detection = await faceapi
+  .detectSingleFace(
+    canvas,
+    new faceapi.TinyFaceDetectorOptions()
+  )
+  .withFaceLandmarks()
+  .withFaceDescriptor();
+
+    if (!detection) {
+      setFaceError('No face detected.');
+      stopFaceCamera();
+      setIsVerifyingFace(false);
+      return;
+    }
+
+    // 5. Compare faces
+    const distance = faceapi.euclideanDistance(
+      detection.descriptor,
+      storedDescriptor
+    );
+
+    const threshold = 0.5;
+    const isMatch = distance < threshold;
+
+    setFaceScore(1 - distance);
+
+    if (isMatch) {
+      setFaceStatus('Face verified ✓');
+
+      const updated = {
+        ...authenticatedOfficer,
+        faceVerified: true,
+        faceMatchScore: 1 - distance,
+        faceVerifiedAt: new Date().toISOString()
+      };
+
+      saveAuthToken(updated);
+      setAuthenticatedOfficer(updated);
+    } else {
+      setFaceError('Face does not match.');
+      setFaceStatus('Verification failed ✗');
+    }
+
+    stopFaceCamera();
+    setIsVerifyingFace(false);
+
+  } catch (err) {
+    console.error(err);
+    setFaceError('Face verification failed.');
+    setFaceStatus('Error occurred during verification.');
+    stopFaceCamera();
+    setIsVerifyingFace(false);
+  }
+};
 
   const handleConfirm = async () => {
     if (!mode) {
@@ -96,12 +285,12 @@ const AttendanceConfirm = () => {
     setConfirmStatus(null);
 
     try {
-      const { record, action } = await recordAttendance({
-        officer: authenticatedOfficer,
-        mode,
-        location: geoLocation
-      });
-
+     const { record, action } = await recordAttendance({
+  officer: authenticatedOfficer,
+  mode,
+  location: geoLocation,
+  stationId
+});
       setConfirmStatus({
         type: 'success',
         message: `✓ Attendance confirmed for ${authenticatedOfficer.name} (${authenticatedOfficer.rank}) at ${stationLabel}.`
@@ -165,6 +354,36 @@ const AttendanceConfirm = () => {
               </div>
             </div>
 
+            <div className="confirm-section">
+              <label className="section-label">Face Verification</label>
+              <button
+                type="button"
+                className={`location-btn ${authenticatedOfficer.faceVerified ? 'verified' : ''}`}
+                onClick={handleVerifyFace}
+                disabled={isVerifyingFace}
+              >
+                {isVerifyingFace ? 'Checking...' : authenticatedOfficer.faceVerified ? '✓ Face Verified' : 'Verify Face'}
+              </button>
+              <div className={`location-status ${faceError ? 'error' : authenticatedOfficer.faceVerified && !faceStatus.includes('✗') ? 'success' : ''}`}>
+                {faceError || faceStatus}
+              </div>
+              {faceScore != null && !faceError && (
+                <div className="face-score">Current match score: {Math.round(faceScore * 100)}%</div>
+              )}
+              <video ref={videoRef} className="confirm-camera-preview" autoPlay muted playsInline />
+              <canvas ref={canvasRef} className="confirm-camera-canvas" aria-hidden="true" />
+              <div className="face-debug-panel">
+                <div className="face-debug-title">Face Debug</div>
+                {faceDebug.length > 0 ? (
+                  faceDebug.map((line) => (
+                    <div key={line} className="face-debug-line">{line}</div>
+                  ))
+                ) : (
+                  <div className="face-debug-empty">No face debug events yet.</div>
+                )}
+              </div>
+            </div>
+
             {/* GPS Validation */}
             <div className="confirm-section">
               <label className="section-label">Location Verification</label>
@@ -203,7 +422,7 @@ const AttendanceConfirm = () => {
               type="button" 
               className="confirm-submit" 
               onClick={handleConfirm}
-              disabled={!authenticatedOfficer || !geoLocation || isProcessing}
+              disabled={!authenticatedOfficer || !geoLocation || !authenticatedOfficer.faceVerified || isProcessing}
             >
               {isProcessing ? 'Saving...' : 'Confirm Attendance'}
             </button>
@@ -217,7 +436,7 @@ const AttendanceConfirm = () => {
             <div className="confirm-status">{status}</div>
 
             <div className="confirm-footer">
-              Your location and attendance details are verified and logged instantly. Only you can mark attendance with this session.
+              Your face, location, and attendance details are verified and logged instantly. Only you can mark attendance with this session.
             </div>
           </>
         )}

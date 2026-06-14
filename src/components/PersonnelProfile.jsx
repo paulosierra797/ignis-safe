@@ -5,7 +5,11 @@ import PageHeader from './PageHeader';
 import { uploadProfileImage } from '../utils/imageService';
 import { updateUser } from '../utils/usersService';
 import { updatePassword, verifyCurrentPassword } from '../utils/authService';
+import * as faceapi from 'face-api.js';
+import { loadFaceModels } from '../utils/loadFaceModels';
+import Webcam from 'react-webcam';
 import './PersonnelProfile.css';
+import { getFaceByAdminId, registerFace } from '../utils/faceApiService';
 
 const RANK_OPTIONS = [
   'FDIR',
@@ -48,9 +52,27 @@ export default function PersonnelProfile() {
   const [isPasswordSaving, setIsPasswordSaving] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
+const [faceDescriptor, setFaceDescriptor] = useState(null);
+const [faceLoading, setFaceLoading] = useState(false);
+const webcamRef = React.useRef(null);
+const [faceBox, setFaceBox] = useState(null);
+const [modal, setModal] = useState({
+  open: false,
+  type: "info", // "success" | "error" | "confirm"
+  message: "",
+  onConfirm: null,
+});
   const hasNameChanges = (firstName !== (currentUser?.first_name || ''))
     || (lastName !== (currentUser?.last_name || ''))
     || (resolvedRank !== (currentUser?.rank || ''));
+  useEffect(() => {
+  const initModels = async () => {
+    await loadFaceModels();
+  };
+
+  initModels();
+}, []);
 
   useEffect(() => {
     if (passwordMessage.text) {
@@ -62,6 +84,37 @@ export default function PersonnelProfile() {
       return () => clearTimeout(timer);
     }
   }, [passwordMessage]);
+  useEffect(() => {
+  if (!isFaceModalOpen) return;
+
+  let interval;
+
+  const startDetection = async () => {
+    interval = setInterval(async () => {
+      if (!webcamRef.current) return;
+
+      const screenshot = webcamRef.current.getScreenshot();
+      if (!screenshot) return;
+
+      const img = await faceapi.fetchImage(screenshot);
+
+      const detection = await faceapi
+        .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+        .withFaceLandmarks();
+
+      if (detection) {
+        setFaceBox(detection.detection.box);
+      } else {
+        setFaceBox(null);
+      }
+    }, 200); // adjust speed (200ms = smooth)
+
+  };
+
+  startDetection();
+
+  return () => clearInterval(interval);
+}, [isFaceModalOpen]);
 
   useEffect(() => {
     if (currentUser) {
@@ -87,6 +140,27 @@ export default function PersonnelProfile() {
     }
   }, [currentUser]);
 
+  const handleFaceRegisterClick = async () => {
+  const { data, error } = await getFaceByAdminId(currentUser.admin_id);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  if (data) {
+    showModal({
+      type: "confirm",
+      message: "Face already registered. Replace it?",
+      onConfirm: () => {
+        setIsFaceModalOpen(true);
+      },
+    });
+    return;
+  }
+
+  setIsFaceModalOpen(true);
+};
   const handleImageUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -250,7 +324,61 @@ export default function PersonnelProfile() {
       setIsPasswordSaving(false);
     }
   };
+const captureFace = async () => {
+  if (!webcamRef.current) return;
 
+  setFaceLoading(true);
+
+  try {
+    const screenshot = webcamRef.current.getScreenshot();
+
+    const img = await faceapi.fetchImage(screenshot);
+
+    const detection = await faceapi
+      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+
+    if (!detection) {
+      alert("No face detected. Please try again.");
+      setFaceLoading(false);
+    
+      return;
+    }
+
+    const descriptor = Array.from(detection.descriptor);
+
+    // ✅ SAVE USING SERVICE
+   const { error } = await registerFace(currentUser.admin_id, descriptor);
+
+if (error) {
+  console.error("Supabase error:", error);
+  alert("Failed to save face data");
+  return;
+}
+
+    alert("Face registered successfully!");
+    setIsFaceModalOpen(false);
+
+  } catch (err) {
+    console.error("Face registration error:", err);
+    alert("Face registration failed");
+
+  } finally {
+    setFaceLoading(false);
+  }
+};
+const showModal = ({ type = "info", message, onConfirm }) => {
+  setModal({
+    open: true,
+    type,
+    message,
+    onConfirm: onConfirm || null,
+  });
+};
+
+    // send to backend
+   
   return (
     <div className="personnel-profile-container">
       <Sidebar variant="personnel" />
@@ -409,7 +537,13 @@ export default function PersonnelProfile() {
                     {enablePasswordChange ? 'Cancel Password Change' : 'Change Password'}
                   </button>
                 </div>
-
+                <div><button
+                         type="button"
+                          className="change-password-btn"
+                          onClick={handleFaceRegisterClick}
+                      >
+                       Register Face ID
+                    </button></div>
                 {enablePasswordChange && (
                   <div className="password-change-panel">
                     <div className="form-field-full">
@@ -430,6 +564,7 @@ export default function PersonnelProfile() {
                           {showCurrentPassword ? 'Hide' : 'Show'}
                         </button>
                       </div>
+                       
                     </div>
 
                     <div className="form-field-full">
@@ -510,8 +645,103 @@ export default function PersonnelProfile() {
                 OK
               </button>
             </div>
+   
           </div>
+          
+          
         )}
+               {modal.open && (
+  <div className="modal-overlay">
+    <div className={`modal modal-${modal.type}`}>
+
+      <p>{modal.message}</p>
+
+      <div className="modal-actions">
+        {modal.type === "confirm" ? (
+          <>
+            <button
+              className="cancel-btn"
+              onClick={() => setModal({ ...modal, open: false })}
+            >
+              Cancel
+            </button>
+
+            <button
+              className="save-btn"
+              onClick={() => {
+                modal.onConfirm?.();
+                setModal({ ...modal, open: false });
+              }}
+            >
+              Replace
+            </button>
+          </>
+        ) : (
+          <button
+            className="save-btn"
+            onClick={() => setModal({ ...modal, open: false })}
+          >
+            OK
+          </button>
+        )}
+      </div>
+
+    </div>
+  </div>
+)} 
+         {isFaceModalOpen && (
+  <div className="face-modal-overlay">
+    <div className="face-modal">
+
+      <h2>Face Registration</h2>
+      <p>Align your face inside the camera frame</p>
+
+     <div className="face-camera-box">
+  <div className="face-wrapper">
+
+    <Webcam
+      ref={webcamRef}
+      screenshotFormat="image/jpeg"
+      videoConstraints={{ facingMode: "user" }}
+      className="face-webcam"
+    />
+
+    {/* GREEN FACE BOX OVERLAY */}
+    {faceBox && (
+      <div
+        className="face-box"
+        style={{
+          top: faceBox.y,
+          left: faceBox.x,
+          width: faceBox.width,
+          height: faceBox.height,
+        }}
+      />
+    )}
+
+  </div>
+</div>
+
+      <div className="face-modal-actions">
+        <button
+          className="save-btn"
+          onClick={captureFace}
+          disabled={faceLoading}
+        >
+          {faceLoading ? "Processing..." : "Capture Face"}
+        </button>
+
+        <button
+          className="cancel-btn"
+          onClick={() => setIsFaceModalOpen(false)}
+        >
+          Cancel
+        </button>
+      </div>
+
+    </div>
+  </div>
+)}
       </div>
     </div>
   );

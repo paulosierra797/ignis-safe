@@ -214,6 +214,10 @@
   right: 12px;
   text-align: center;
 }
+.qr-expiry-text {
+  color: #d5dcd8; /* green */
+  font-weight: 600;
+}
 
 .expiry-text {
   font-size: 11px;

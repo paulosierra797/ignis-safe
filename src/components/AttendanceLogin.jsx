@@ -10,6 +10,7 @@ const AttendanceLogin = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const redirectTarget = searchParams.get('redirect');
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -34,7 +35,6 @@ const AttendanceLogin = () => {
       saveAuthToken(officer);
       setEmail('');
       setPassword('');
-      const redirectTarget = searchParams.get('redirect');
       navigate(redirectTarget || '/attendance-scan');
     } else {
       setError('Invalid account email or password. Please try again.');

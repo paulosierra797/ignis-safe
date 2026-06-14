@@ -3,7 +3,12 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import './AttendancePersonnel.css';
 import { QRCodeSVG } from 'qrcode.react';
+import { useSearchParams } from 'react-router-dom';
 import { generateQRSession, getExpiryTime } from '../utils/attendanceService';
+import { supabase } from '../utils/supabaseClient';
+
+
+
 
 const AttendancePersonnel = () => {
   const [timeStatus, setTimeStatus] = useState('');
@@ -13,32 +18,76 @@ const AttendancePersonnel = () => {
   const [currentSession, setCurrentSession] = useState(null);
   const [expiryInfo, setExpiryInfo] = useState(null);
   const [copyMessage, setCopyMessage] = useState('');
+  const [searchParams] = useSearchParams();
+ 
+  
+const stationId = searchParams.get('station') || 'DEFAULT';
   const rawBaseUrl = import.meta.env.VITE_PUBLIC_BASE_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://ignis-safe.app');
   const baseUrl = rawBaseUrl.replace(/\/+$/, '');
-  const stationLink = currentSession ? `${baseUrl}/attendance-login?station=${currentSession.sessionId}` : '';
+ const stationLink = currentSession
+  ? `${baseUrl}/attendance-login?station=${currentSession.session_id}`
+  : '';
+ 
+const safeExpiry = currentSession?.expires_at
+  ? new Date(currentSession.expires_at).getTime()
+  : null;
 
+const info = safeExpiry
+  ? getExpiryTime(safeExpiry)
+  : null;
   // Initialize QR session on component mount
-  useEffect(() => {
-    const session = generateQRSession();
-    setCurrentSession(session);
-  }, []);
+useEffect(() => {
+
+  const initQR = async () => {
+
+    const { data } = await supabase
+      .from('qr_sessions')
+      .select('*')
+      .eq('station_id', stationId)
+      .eq('used', false)
+      .order('created_at', { ascending:false })
+      .limit(1)
+      .maybeSingle();
+
+
+    if(data){
+      setCurrentSession(data);
+      return;
+    }
+
+
+    const newSession = await generateQRSession(
+      stationId
+    );
+
+    setCurrentSession(newSession);
+
+  };
+
+
+  initQR();
+
+}, [stationId]);
 
   // Update expiry timer every second
-  useEffect(() => {
-    if (!currentSession) return;
-    
-    const interval = setInterval(() => {
-      const info = getExpiryTime(currentSession.expiresAt);
-      setExpiryInfo(info);
-      
-      // Auto-expire if time runs out
-      if (info.remaining <= 0) {
-        handleRefreshQR();
-      }
-    }, 1000);
+ useEffect(() => {
+  if (!currentSession) return;
 
-    return () => clearInterval(interval);
-  }, [currentSession]);
+  const interval = setInterval(() => {
+    const expires = new Date(currentSession.expires_at).getTime();
+
+    if (isNaN(expires)) return;
+
+    const info = getExpiryTime(expires);
+    setExpiryInfo(info);
+
+    if (info.remaining <= 0) {
+      handleRefreshQR();
+    }
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, [currentSession]);
 
   const handleTimeIn = () => {
     setTimeStatus('in');
@@ -50,12 +99,13 @@ const AttendancePersonnel = () => {
     setScanMessage('Time-out mode enabled');
   };
 
-  const handleRefreshQR = () => {
-    const session = generateQRSession();
-    setCurrentSession(session);
-    setExpiryInfo(getExpiryTime(session.expiresAt));
-    setCopyMessage('New session generated');
-  };
+  const handleRefreshQR = async () => {
+  const session = await generateQRSession(stationId);
+  setCurrentSession(session);
+
+  const expires = new Date(session.expires_at).getTime();
+  setExpiryInfo(getExpiryTime(expires));
+};
 
   const handleCopyLink = async () => {
     try {
@@ -137,11 +187,13 @@ const AttendancePersonnel = () => {
               </div>
               <div className="qr-code">
                 <div className="qr-expiry">
-                  {expiryInfo && (
-                    <span className={`expiry-text ${expiryInfo.remaining < 3600000 ? 'warning' : ''}`}>
-                      Expires in {expiryInfo.hours}h {expiryInfo.minutes}m
-                    </span>
-                  )}
+                 {expiryInfo && expiryInfo.remaining > 0 ? (
+  <span className="qr-expiry-text">
+    Expires in {expiryInfo.hours}h {expiryInfo.minutes}m
+  </span>
+) : (
+  <span>QR expired</span>
+)}
                 </div>
                 <div className="qr-grid" role="img" aria-label="QR code">
                   {stationLink ? (

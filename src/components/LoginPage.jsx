@@ -1,7 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signIn, sendPasswordResetEmail, verifyRecoveryCode, updatePassword, signOut } from '../utils/authService';
+import { resendSignupCode } from '../utils/authService';
+import { 
+preAuth,
+sendPasswordResetEmail,
+verifyRecoveryCode,
+sendLoginOtp,
+updatePassword,
+signOut,
+
+verifyLoginOtp
+} from '../utils/authService';
 import { useUser } from '../context/UserContext';
+
 import './LoginPage.css';
 import ignissafe from '../assets/Logo1.png'
 
@@ -25,6 +36,8 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const isResetFlowActiveRef = useRef(false);
+  const [authStep, setAuthStep] = useState("login");
+  
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -60,12 +73,14 @@ export default function LoginPage() {
     }
   }, []);
 
-  useEffect(() => {
-    if (currentUser?.role && !forgotPasswordStep) {
-      navigateByRole(currentUser.role);
-    }
-  }, [currentUser, forgotPasswordStep, navigateByRole]);
+const isAuthenticated = !!currentUser?.role;
 
+useEffect(() => {
+  if (!currentUser?.role) return;
+  if (authStep === "otp") return;
+
+  navigateByRole(currentUser.role);
+}, [currentUser, authStep]);
   useEffect(() => {
     const recoveryInHash = window.location.hash.includes('type=recovery');
     const recoveryInQuery = new URLSearchParams(window.location.search).get('type') === 'recovery';
@@ -88,48 +103,24 @@ export default function LoginPage() {
     };
   }, []);
 
-  const handleLogin = async (event) => {
-    event.preventDefault();
-    setError("");
-    setLoading(true);
+const handleLogin = async (e) => {
+  e.preventDefault();
 
-    if (!email || !password) {
-      setError("Please enter both email and password.");
-      setLoading(false);
-      return;
-    }
+  setLoading(true);
+  setError("");
 
-    try {
-      const { data, error: signInError } = await signIn(email, password);
-      
-      if (signInError) {
-        setError(signInError);
-        setLoading(false);
-        return;
-      }
+  const { error } = await sendLoginOtp(email);
 
-      if (data && data.user) {
-        if (rememberMe) {
-          localStorage.setItem(REMEMBER_ME_KEY, 'true');
-          localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim());
-        } else {
-          localStorage.removeItem(REMEMBER_ME_KEY);
-          localStorage.removeItem(REMEMBERED_EMAIL_KEY);
-        }
+  if (error) {
+    setError(error.message);
+    setLoading(false);
+    return;
+  }
 
-        // Sync auth state in context immediately so protected pages can load data without reload.
-        setCurrentUser(data.user);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        navigateByRole(data.user.role);
-      }
-    } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
-      console.error("Login error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  setAuthStep("otp");
+  setResetEmail(email);
+  setLoading(false);
+};
   const handleForgotPasswordClick = (e) => {
     e.preventDefault();
     setForgotPasswordStep('request');
@@ -176,13 +167,7 @@ export default function LoginPage() {
     };
   }, []);
 
-  useEffect(() => {
-    // If the user is already authenticated, do not let /login stay visible.
-    if (currentUser?.role && !forgotPasswordStep) {
-      navigateByRole(currentUser.role);
-    }
-  }, [currentUser, forgotPasswordStep, navigateByRole]);
-
+ 
   const handleSetPassword = async (e) => {
     e.preventDefault();
     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
@@ -268,10 +253,64 @@ export default function LoginPage() {
     setShowConfirmPassword(false);
     window.history.replaceState({}, document.title, '/login');
   };
+const handleVerify = async (e) => {
+  e.preventDefault();
+
+  setLoading(true);
+  setError("");
+
+  const { data, error } = await verifyLoginOtp(resetEmail, resetCode);
+
+  if (error) {
+    setError(error.message);
+    setLoading(false);
+    return;
+  }
+
+  setCurrentUser(data.user);
+  navigateByRole(data.user.role);
+
+  setLoading(false);
+};
 
   return (
     <div className="login-page">
-      {forgotPasswordStep === 'request' ? (
+      {authStep === "otp"? (
+  <>
+    <div className="login-left">
+      <div className="logo-section">
+        <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
+      </div>
+    </div>
+
+    <div className="login-right">
+      <div className="login-form-container">
+        <h1>Verify Login</h1>
+        <p className="login-description">
+          Enter the OTP sent to {resetEmail}
+        </p>
+
+        <input
+          type="text"
+          placeholder="Enter OTP"
+          value={resetCode}
+          onChange={(e) => setResetCode(e.target.value)}
+        />
+
+        {error && <p className="error-message">{error}</p>}
+
+        <button onClick={handleVerify} className="login-button">
+          Verify & Login
+        </button>
+
+        <button onClick={handleBackToLogin} className="back-button">
+          Back
+        </button>
+      </div>
+    </div>
+  </>
+) : 
+      forgotPasswordStep === 'request' ? (
         <>
           <div className="login-left">
             <div className="logo-section">

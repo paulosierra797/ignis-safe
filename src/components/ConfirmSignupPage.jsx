@@ -23,7 +23,7 @@ export default function ConfirmSignupPage() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
-
+  
   const handleVerifyOtp = async (event) => {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
@@ -93,6 +93,7 @@ export default function ConfirmSignupPage() {
       setIsResending(false);
     }
   };
+  
 
   return (
     <div className="confirm-signup-page">

@@ -29,64 +29,83 @@ export const UserProvider = ({ children }) => {
     return null;
   };
 
+  
   const refreshCurrentUser = async () => {
-    try {
-      const { data } = await getCurrentUser();
+  try {
+    const { data } = await getCurrentUser();
+
+    if (data) {
       return syncCurrentUser(data);
-    } catch (error) {
-      console.error('Error refreshing current user:', error);
-      return syncCurrentUser(null);
     }
+
+    const storedUser = localStorage.getItem("user");
+
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setCurrentUser(user);
+      return user;
+    }
+
+    return syncCurrentUser(null);
+
+  } catch (error) {
+    console.error("refreshCurrentUser error:", error);
+
+    const storedUser = localStorage.getItem("user");
+
+    if (storedUser) {
+      const user = JSON.parse(storedUser);
+      setCurrentUser(user);
+      return user;
+    }
+
+    return syncCurrentUser(null);
+  }
+};
+
+ useEffect(() => {
+  let unsubscribe;
+
+  const initializeAuth = async () => {
+    try {
+      const storedUser = localStorage.getItem('user');
+
+      if (storedUser) {
+        setCurrentUser(JSON.parse(storedUser));
+      }
+
+      await refreshCurrentUser();
+
+    } catch (error) {
+      console.error('Error initializing auth:', error);
+    } finally {
+      setLoading(false);
+    }
+
+    // ONLY listen to Supabase IF session exists (optional safe sync)
+    const { data: authListener } = onAuthStateChange((event, session) => {
+      // ONLY react to real Supabase sessions
+      if (session?.user) {
+        refreshCurrentUser();
+      }
+
+      // IMPORTANT: DO NOT clear OTP users here
+      if (event === 'SIGNED_OUT' && session) {
+        syncCurrentUser(null);
+      }
+    });
+
+    unsubscribe = authListener?.subscription?.unsubscribe;
   };
 
-  useEffect(() => {
-    let unsubscribe;
+  initializeAuth();
 
-    const initializeAuth = async () => {
-      try {
-        // Check if user is logged in on mount
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          try {
-            setCurrentUser(JSON.parse(storedUser));
-          } catch (e) {
-            console.error('Error parsing stored user:', e);
-            localStorage.removeItem('user');
-          }
-        }
-
-        // Get current user from Supabase
-        await refreshCurrentUser();
-      } catch (error) {
-        console.error('Error initializing auth:', error);
-      } finally {
-        setLoading(false);
-      }
-
-      // Listen for auth changes (only set up once)
-      const { data: authListener } = onAuthStateChange(async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          try {
-            await refreshCurrentUser();
-          } catch (error) {
-            console.error('Error on sign in:', error);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          syncCurrentUser(null);
-        }
-      });
-
-      unsubscribe = authListener?.subscription?.unsubscribe;
-    };
-
-    initializeAuth();
-
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-    };
-  }, []);
+  return () => {
+    if (typeof unsubscribe === 'function') {
+      unsubscribe();
+    }
+  };
+}, []);
 
   useEffect(() => {
     const handleDataChanged = () => {
@@ -103,14 +122,7 @@ export const UserProvider = ({ children }) => {
     return undefined;
   }, [currentUser?.admin_id]);
 
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('user', JSON.stringify(currentUser));
-      return;
-    }
-
-    localStorage.removeItem('user');
-  }, [currentUser]);
+  
 
   const switchRole = (role) => {
     if (!currentUser) return;

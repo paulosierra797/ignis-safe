@@ -24,13 +24,27 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(231, 230, 230, 0.6);
+  background: rgba(218, 14, 14, 0.6);
 
   display: flex;
   justify-content: center;
   align-items: center;
 
-  z-index: 99999; /* VERY IMPORTANT */
+  z-index: 999999; /* VERY IMPORTANT */
+  
+}
+.modal {
+  width: 380px;
+  background: white;   /* THIS FIXES TRANSPARENT BOX */
+  border-radius: 18px;
+
+  padding: 20px;
+
+  text-align: center;
+
+  box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+
+  animation: modalPop 0.2s ease;
 }
 .face-wrapper {
   position: relative;

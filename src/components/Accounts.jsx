@@ -28,6 +28,7 @@ const contactNumberRegex = /^09\d{9}$/;
 const ADD_PERSONNEL_TIMEOUT_MS = 25000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+
 export default function Accounts() {
   const { currentUser } = useUser();
   const [accounts, setAccounts] = useState([]);
@@ -559,6 +560,79 @@ export default function Accounts() {
       [fieldName]: nextValue
     }));
   };
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+const [selectedEditAccount, setSelectedEditAccount] = useState(null);
+const [editFormData, setEditFormData] = useState({
+  first_name: '',
+  last_name: '',
+  email: '',
+  role: '',
+  rank: '',
+  contact_number: ''
+});
+const openEditModal = (account) => {
+  setSelectedEditAccount(account);
+  setEditFormData({
+    first_name: account.first_name || '',
+    last_name: account.last_name || '',
+    email: account.email || '',
+    role: account.role || '',
+    rank: account.rank || '',
+    contact_number: account.contact_number || ''
+  });
+  setIsEditModalOpen(true);
+};
+const handleUpdatePersonnel = async () => {
+  if (!selectedEditAccount?.admin_id) return;
+
+  const updates = {
+    first_name: editFormData.first_name.trim(),
+    last_name: editFormData.last_name.trim(),
+    email: editFormData.email.trim(),
+    role: editFormData.role,
+    rank: editFormData.rank,
+    contact_number: editFormData.contact_number
+  };
+
+  // validation (reuse your existing rules if you want)
+  if (!updates.first_name || !updates.last_name || !updates.email) {
+    setMessage({ type: 'error', text: 'Required fields missing.' });
+    return;
+  }
+
+  const { error } = await updateUser(selectedEditAccount.admin_id, updates);
+
+  if (error) {
+    setMessage({ type: 'error', text: `Update failed: ${error}` });
+    return;
+  }
+
+  // update UI state instantly
+  setAccounts((prev) =>
+    prev.map((acc) =>
+      acc.admin_id === selectedEditAccount.admin_id
+        ? { ...acc, ...updates }
+        : acc
+    )
+  );
+
+  setMessage({ type: 'success', text: 'Personnel updated successfully.' });
+
+  logAdminActivity({
+    actorId: currentUser?.admin_id,
+    actorName: currentUser?.name || currentUser?.email,
+    action: 'Personnel Updated',
+    actionType: 'edit',
+    details: `Updated profile of ${updates.first_name} ${updates.last_name} (${updates.email})`
+  }).catch(console.warn);
+
+  setTimeout(() => {
+  setIsEditModalOpen(false);
+  setSelectedEditAccount(null);
+  setMessage({ type: '', text: '' });
+}, 1500);
+};
 
   const handleAddPersonnel = async () => {
     // Validation
@@ -1637,6 +1711,12 @@ export default function Accounts() {
                         >
                           Delete
                         </button>
+                        <button
+  className="edit-btn"
+  onClick={() => openEditModal(account)}
+>
+  Edit
+</button>
                       </div>
                     </td>
                   </tr>
@@ -1645,6 +1725,153 @@ export default function Accounts() {
             </table>
           )}
         </div>
+        {isEditModalOpen && (
+  <div className="accounts-modal-overlay" role="dialog">
+    <div className="accounts-modal">
+      <div className="accounts-modal-header">
+        <h3>Edit Personnel</h3>
+        <button onClick={() => setIsEditModalOpen(false)}>x</button>
+      </div>
+
+     <div className="accounts-modal-body">
+  <div className="accounts-modal-grid">
+
+    <div className="accounts-modal-field">
+      <label>First Name</label>
+      <input
+        type="text"
+        value={editFormData.first_name}
+        onChange={(e) =>
+          setEditFormData({
+            ...editFormData,
+            first_name: e.target.value.replace(/[^A-Za-z\s]/g, '')
+          })
+        }
+        placeholder="Enter first name"
+      />
+    </div>
+
+
+    <div className="accounts-modal-field">
+      <label>Last Name</label>
+      <input
+        type="text"
+        value={editFormData.last_name}
+        onChange={(e) =>
+          setEditFormData({
+            ...editFormData,
+            last_name: e.target.value.replace(/[^A-Za-z\s]/g, '')
+          })
+        }
+        placeholder="Enter last name"
+      />
+    </div>
+
+
+    <div className="accounts-modal-field">
+      <label>Email Address</label>
+      <input
+        type="email"
+        value={editFormData.email}
+        onChange={(e) =>
+          setEditFormData({
+            ...editFormData,
+            email: e.target.value
+          })
+        }
+        placeholder="Enter email"
+      />
+    </div>
+
+
+    <div className="accounts-modal-field">
+      <label>Contact Number</label>
+     <input
+ 
+  type="text"
+  inputMode="numeric"
+  autoComplete="tel"
+  placeholder="09XXXXXXXXX"
+  value={editFormData.contact_number}
+  onChange={(e) =>
+    setEditFormData({
+      ...editFormData,
+      contact_number: e.target.value
+        .replace(/\D/g, '') // only digits
+        .slice(0, 11)      // limit to 11 digits
+    })
+  }
+  maxLength={11}
+  pattern="^09[0-9]{9}$"
+  title="Must start with 09 and be exactly 11 digits"
+/>
+    </div>
+
+
+    <div className="accounts-modal-field">
+      <label>Role</label>
+      <select
+        value={editFormData.role}
+        onChange={(e) =>
+          setEditFormData({
+            ...editFormData,
+            role: e.target.value
+          })
+        }
+      >
+        <option value="personnel">Personnel</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+
+
+    <div className="accounts-modal-field">
+      <label>Rank Designation</label>
+      <select
+        value={editFormData.rank}
+        onChange={(e) =>
+          setEditFormData({
+            ...editFormData,
+            rank: e.target.value
+          })
+        }
+      >
+        <option value="FDIR">FDIR - Fire Director</option>
+        <option value="DFDIR">DFDIR - Deputy Fire Director</option>
+        <option value="SSUPT">SSUPT - Senior Fire Superintendent</option>
+        <option value="SUPT">SUPT - Fire Superintendent</option>
+        <option value="CINSP">CINSP - Fire Chief Inspector</option>
+        <option value="SINSP">SINSP - Fire Senior Inspector</option>
+        <option value="INSP">INSP - Fire Inspector</option>
+        <option value="SFO4">SFO4 - Senior Fire Officer IV</option>
+        <option value="SFO3">SFO3 - Senior Fire Officer III</option>
+        <option value="SFO2">SFO2 - Senior Fire Officer II</option>
+        <option value="SFO1">SFO1 - Senior Fire Officer I</option>
+        <option value="FO3">FO3 - Fire Officer III</option>
+        <option value="FO2">FO2 - Fire Officer II</option>
+        <option value="FO1">FO1 - Fire Officer I</option>
+      </select>
+    </div>
+
+  </div>
+    {message.text && (
+    <div className={`accounts-modal-message accounts-modal-message-${message.type}`}>
+      {message.text}
+    </div>
+  )}
+</div>
+
+      <div className="accounts-modal-footer">
+        <button onClick={() => setIsEditModalOpen(false)}>
+          Cancel
+        </button>
+        <button onClick={handleUpdatePersonnel}>
+          Save Changes
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
         {isAddModalOpen && (
           <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
@@ -1669,7 +1896,7 @@ export default function Accounts() {
                     <input
                       id="personnel-first-name"
                       type="text"
-                      placeholder="Michael"
+                      placeholder="First name"
                       value={formData.first_name}
                       onChange={handleInputChange}
                       pattern="[A-Za-z]+"
@@ -1682,7 +1909,7 @@ export default function Accounts() {
                     <input
                       id="personnel-last-name"
                       type="text"
-                      placeholder="Escano"
+                      placeholder="Last name"
                       value={formData.last_name}
                       onChange={handleInputChange}
                       pattern="[A-Za-z]+"

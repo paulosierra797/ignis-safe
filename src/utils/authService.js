@@ -75,6 +75,43 @@ const syncAdminStatusIfVerified = async (authUser, adminData) => {
 
   return updatedAdmin || adminData;
 };
+export const preAuth = async (email, password) => {
+  try {
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+
+    if (error) {
+      throw error;
+    }
+
+
+    // immediately remove session
+    await supabase.auth.signOut();
+
+
+    return {
+      data,
+      error: null
+    };
+
+
+  } catch(error){
+
+    return {
+      data:null,
+      error:error.message
+    };
+
+  }
+};
+
+
+
+
 
 // Sign up new admin
 export const signUp = async (email, password, userData = {}) => {
@@ -125,6 +162,9 @@ export const signUp = async (email, password, userData = {}) => {
     return { data: null, error: error.message };
   }
 };
+
+
+
 
 // Sign in user
 export const signIn = async (email, password) => {
@@ -230,6 +270,29 @@ export const signIn = async (email, password) => {
   }
 };
 
+export const sendLoginOtp = async (email) => {
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false
+    }
+  });
+
+  return { data, error };
+};
+
+
+// Verify OTP (Supabase handles session automatically)
+export const verifyLoginOtp = async (email, token) => {
+  const { data, error } = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: 'email'
+  });
+
+  return { data, error };
+};
+
 // Sign out user
 export const signOut = async () => {
   try {
@@ -258,7 +321,19 @@ export const getSession = async () => {
 export const getCurrentUser = async () => {
   try {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) throw authError;
+
+if (authError) {
+
+  if (authError.message === "Auth session missing!") {
+    return {
+      data:null,
+      error:null
+    };
+  }
+
+  throw authError;
+
+}
 
     if (user) {
       let adminData = null;
@@ -389,15 +464,21 @@ export const verifySignupCode = async (email, token) => {
 // Signup confirmation - resend OTP code
 export const resendSignupCode = async (email) => {
   try {
-    const { data, error } = await supabase.auth.resend({
+    console.log('Resending OTP for:', email);
+
+    const response = await supabase.auth.resend({
       type: 'signup',
       email
     });
 
-    if (error) throw error;
-    return { data, error: null };
+    console.log('Supabase resend response:', response);
+
+    if (response.error) throw response.error;
+
+    return { data: response.data, error: null };
+
   } catch (error) {
-    console.error('Error resending signup code:', error);
+    console.error('Resend failed:', error);
     return { data: null, error: error.message };
   }
 };

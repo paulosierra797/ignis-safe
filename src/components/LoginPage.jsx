@@ -50,18 +50,23 @@ export default function LoginPage() {
   const toggleConfirmPasswordVisibility = () => {
     setShowConfirmPassword(!showConfirmPassword);
   };
+const normalizeRole = (role) =>
+  String(role || '').trim().toLowerCase();
 
-  const navigateByRole = useCallback((userRole) => {
-    if (userRole === 'admin') {
-      navigate('/dashboard', { replace: true });
-    } else if (userRole === 'personnel') {
-      navigate('/personnel/operations', { replace: true });
-    } else if (userRole === 'intel-unit' || userRole === 'intel unit') {
-      navigate('/dashboard/reports', { replace: true });
-    } else {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [navigate]);
+const navigateByRole = useCallback((userRole) => {
+  const role = normalizeRole(userRole);
+
+  if (role === 'admin') {
+    navigate('/dashboard', { replace: true });
+  } else if (role === 'personnel') {
+    navigate('/personnel/operations', { replace: true });
+  } else if (role === 'intel-unit') {
+    navigate('/dashboard/reports', { replace: true });
+  } else {
+    console.warn('Unknown role:', userRole);
+    navigate('/personnel/operations', { replace: true }); // safer fallback
+  }
+}, [navigate]);
 
   useEffect(() => {
     const savedRememberMe = localStorage.getItem(REMEMBER_ME_KEY) === 'true';

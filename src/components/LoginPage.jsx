@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { resendSignupCode } from '../utils/authService';
+import { supabase } from '../utils/supabaseClient';
 import { 
 preAuth,
 sendPasswordResetEmail,
@@ -51,23 +52,14 @@ export default function LoginPage() {
     setShowConfirmPassword(!showConfirmPassword);
   };
 const normalizeRole = (role) =>
-  String(role || '').trim().toLowerCase();
+  
+  String(role || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-");
 
-const navigateByRole = useCallback((userRole) => {
-  const role = normalizeRole(userRole);
 
-  if (role === 'admin') {
-    navigate('/dashboard', { replace: true });
-  } else if (role === 'personnel') {
-    navigate('/personnel/operations', { replace: true });
-  } else if (role === 'intel-unit') {
-    navigate('/dashboard/reports', { replace: true });
-  } else {
-    console.warn('Unknown role:', userRole);
-    navigate('/personnel/operations', { replace: true }); // safer fallback
-  }
-}, [navigate]);
-
+  
   useEffect(() => {
     const savedRememberMe = localStorage.getItem(REMEMBER_ME_KEY) === 'true';
     const savedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY) || '';
@@ -78,14 +70,9 @@ const navigateByRole = useCallback((userRole) => {
     }
   }, []);
 
-const isAuthenticated = !!currentUser?.role;
 
-useEffect(() => {
-  if (!currentUser?.role) return;
-  if (authStep === "otp") return;
 
-  navigateByRole(currentUser.role);
-}, [currentUser, authStep]);
+
   useEffect(() => {
     const recoveryInHash = window.location.hash.includes('type=recovery');
     const recoveryInQuery = new URLSearchParams(window.location.search).get('type') === 'recovery';
@@ -114,16 +101,25 @@ const handleLogin = async (e) => {
   setLoading(true);
   setError("");
 
-  const { error } = await sendLoginOtp(email);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
 
   if (error) {
-    setError(error.message);
+    setError("Invalid email or password");
     setLoading(false);
     return;
   }
 
-  setAuthStep("otp");
+
+  // password is correct now
+  await sendLoginOtp(email);
+
   setResetEmail(email);
+  setAuthStep("otp");
+
   setLoading(false);
 };
   const handleForgotPasswordClick = (e) => {
@@ -173,6 +169,7 @@ const handleLogin = async (e) => {
   }, []);
 
  
+
   const handleSetPassword = async (e) => {
     e.preventDefault();
     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
@@ -264,7 +261,10 @@ const handleVerify = async (e) => {
   setLoading(true);
   setError("");
 
-  const { data, error } = await verifyLoginOtp(resetEmail, resetCode);
+  const { data, error } = await verifyLoginOtp(
+    resetEmail.trim(),
+    resetCode.trim()
+  );
 
   if (error) {
     setError(error.message);
@@ -272,11 +272,41 @@ const handleVerify = async (e) => {
     return;
   }
 
-  setCurrentUser(data.user);
-  navigateByRole(data.user.role);
+  console.log("LOGIN USER:", data.user);
+  console.log("ROLE:", data.user?.role);
 
+
+  const user = {
+  ...data.user,
+  role: normalizeRole(data.user.role),
+};
+
+console.log("FINAL ROLE:", user.role);
+
+setCurrentUser(user);
+
+  setAuthStep("authenticated");
   setLoading(false);
 };
+useEffect(() => {
+  if (authStep !== "authenticated") return;
+
+  const role = normalizeRole(currentUser?.role);
+  if (!role) return;
+
+  const routes = {
+    admin: "/dashboard",
+    personnel: "/personnel/operations",
+  };
+
+  console.log("ROLE:", role);
+
+  if (routes[role]) {
+  navigate(routes[role], { replace: true });
+} else {
+  console.error("Unknown role:", role);
+}
+}, [currentUser, authStep, navigate]);
 
   return (
     <div className="login-page">

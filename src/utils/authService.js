@@ -283,14 +283,18 @@ export const sendLoginOtp = async (email) => {
 
 
 // Verify OTP (Supabase handles session automatically)
+
 export const verifyLoginOtp = async (email, token) => {
   const { data, error } = await supabase.auth.verifyOtp({
     email,
     token,
-    type: 'email'
+    type: "email",
   });
 
-  return { data, error };
+  return {
+    data,
+    error
+  };
 };
 
 // Sign out user

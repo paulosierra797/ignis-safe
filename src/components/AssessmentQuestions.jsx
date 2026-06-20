@@ -9,7 +9,8 @@ import {
   getQuestionsByAssessment,
   createAssessmentQuestion,
   updateAssessmentQuestion,
-  deleteAssessmentQuestion,
+ resetAssessmentQuestions,
+ deactivateAssessmentQuestions,
   getAssessmentOptionsByQuestionIds,
   syncAssessmentQuestionOptions,
   buildDefaultAssessmentOptions,
@@ -32,7 +33,7 @@ const mergeQuestionsWithOptions = (questionRows = [], optionRows = []) => {
   return questionRows.map((question) => ({
     ...question,
     question_type: 'multiple_choice',
-    options: optionsByQuestionId[question.id] || buildDefaultAssessmentOptions(),
+    options: optionsByQuestionId[question.id] || []
   }));
 };
 
@@ -64,7 +65,6 @@ export default function AssessmentQuestions() {
   const [isLoadingAssessments, setIsLoadingAssessments] = useState(true);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generateCount, setGenerateCount] = useState(5);
   const [savingRowIds, setSavingRowIds] = useState({});
   const [pendingDeleteQuestion, setPendingDeleteQuestion] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
@@ -246,7 +246,11 @@ export default function AssessmentQuestions() {
   };
 
   const handleGenerateQuestions = async () => {
-    if (!selectedAssessmentId || isGenerating) return;
+     if (isGenerating) return; // hard stop immediately
+
+  if (!selectedAssessmentId) return;
+
+  setIsGenerating(true);
 
     const selectedAssessment = assessments.find((row) => row.id === selectedAssessmentId);
     const moduleNo = Number(selectedAssessment?.module_no || 0);
@@ -256,7 +260,7 @@ export default function AssessmentQuestions() {
       return;
     }
 
-    const safeCount = Math.min(Math.max(Number(generateCount) || 0, 1), 10);
+    const safeCount = 10;
 
     setIsGenerating(true);
     setMessage({ type: '', text: '' });
@@ -294,11 +298,19 @@ export default function AssessmentQuestions() {
       setIsGenerating(false);
       return;
     }
+   const { error: deactivateError } = await deactivateAssessmentQuestions(selectedAssessmentId);
 
-    const currentQuestions = [...questions];
-    const nextQuestionNoStart = currentQuestions.length === 0
-      ? 1
-      : Math.max(...currentQuestions.map((item) => Number(item.question_no || 0))) + 1;
+if (deactivateError) {
+  setMessage({
+    type: 'error',
+    text: `Failed to deactivate old questions: ${deactivateError}`,
+  });
+  setIsGenerating(false);
+  return;
+}
+setQuestions([]);
+
+    const nextQuestionNoStart = 1;
 
     const createdQuestions = [];
 
@@ -352,7 +364,11 @@ export default function AssessmentQuestions() {
       return;
     }
 
-    setQuestions((prev) => [...prev, ...createdQuestions].sort((a, b) => a.question_no - b.question_no));
+    setQuestions(
+  createdQuestions.sort(
+    (a, b) => a.question_no - b.question_no
+  )
+);
     setMessage({
       type: 'success',
       text: `Generated ${createdQuestions.length} question${createdQuestions.length === 1 ? '' : 's'} from Module ${moduleNo}. Review and save the generated rows.`,
@@ -477,7 +493,9 @@ export default function AssessmentQuestions() {
     setRowSaving(question.id, true);
     setMessage({ type: '', text: '' });
 
-    const { error } = await deleteAssessmentQuestion(question.id);
+   await updateAssessmentQuestion(question.id, {
+  is_active: false
+});
 
     if (error) {
       setMessage({ type: 'error', text: `Unable to delete question ${question.question_no}: ${error}` });
@@ -541,15 +559,7 @@ export default function AssessmentQuestions() {
           <div className="assessment-generator">
             <label htmlFor="assessment-generate-count">AI question count</label>
             <div className="assessment-generator-controls">
-              <input
-                id="assessment-generate-count"
-                type="number"
-                min="1"
-                max="10"
-                value={generateCount}
-                onChange={(event) => setGenerateCount(event.target.value)}
-                disabled={isGenerating || isLoadingQuestions}
-              />
+            
               <button
                 className="assessment-generate-button"
                 type="button"
@@ -597,7 +607,7 @@ export default function AssessmentQuestions() {
                 </tr>
               ) : filteredQuestions.map((question) => {
                 const isSaving = Boolean(savingRowIds[question.id]);
-                const questionOptions = question.options?.length ? question.options : buildDefaultAssessmentOptions();
+                const questionOptions = question.options || [];
 
                 return (
                   <tr key={question.id}>
@@ -677,7 +687,7 @@ export default function AssessmentQuestions() {
                         type="checkbox"
                         checked={question.is_active}
                         onChange={(event) => setRowValue(question.id, 'is_active', event.target.checked)}
-                      />
+                      disabled/>
                     </td>
                     <td>
                       <div className="assessment-actions">

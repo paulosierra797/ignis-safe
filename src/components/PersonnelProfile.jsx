@@ -349,13 +349,16 @@ const captureFace = async () => {
     const descriptor = Array.from(detection.descriptor);
 
     // ✅ SAVE USING SERVICE
-   const { error } = await registerFace(currentUser.admin_id, descriptor);
+    const { error } = await registerFace(
+      currentUser.admin_id,
+      descriptor
+    );
 
-if (error) {
-  console.error("Supabase error:", error);
-  alert("Failed to save face data");
-  return;
-}
+    if (error) {
+      console.error("Supabase error:", error);
+      alert("Failed to save face data");
+      return;
+    }
 
     alert("Face registered successfully!");
     setIsFaceModalOpen(false);

@@ -64,6 +64,12 @@ export const startAppSession = async (adminId) => {
     return { data: null, error: null };
   }
 
+  // 🔥 ADD THIS GUARD
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData?.user) {
+    console.warn("No Supabase session. Skipping app session creation.");
+    return { data: null, error: null };
+  }
   const activeSession = readActiveSession();
   if (activeSession?.sessionId && activeSession?.adminId === adminId) {
     return { data: activeSession, error: null };

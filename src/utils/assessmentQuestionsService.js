@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient';
 const QUESTIONS_TABLE = 'assessment_questions';
 const OPTIONS_TABLE = 'assessment_options';
 const DEFAULT_OPTION_KEYS = ['A', 'B', 'C', 'D'];
-const AI_API_URL = String(import.meta.env.VITE_AI_API_URL || 'http://localhost:3001/api/generate-assessment-questions').replace(/\/+$/, '');
+
 
 const parseRetryAfterSeconds = (obj) => {
   if (!obj) return null;
@@ -137,6 +137,7 @@ export const getQuestionsByAssessment = async (assessmentId) => {
       .from(QUESTIONS_TABLE)
       .select('id, assessment_id, question_no, prompt, explanation, is_active, created_at, question_type, prompt_tl, explanation_tl')
       .eq('assessment_id', assessmentId)
+      .eq('is_active', true)  
       .order('question_no', { ascending: true });
 
     if (error) throw error;
@@ -160,6 +161,7 @@ export const getAssessmentOptionsByQuestionIds = async (questionIds = []) => {
       .from(OPTIONS_TABLE)
       .select('id, question_id, option_key, option_text, is_correct, created_at, display_order, option_text_tl')
       .in('question_id', normalizedIds)
+      .eq('is_active', true)
       .order('question_id', { ascending: true })
       .order('display_order', { ascending: true })
       .order('option_key', { ascending: true });
@@ -298,81 +300,87 @@ export const updateAssessmentQuestion = async (id, payload) => {
     return { data: null, error: error.message };
   }
 };
-
-export const deleteAssessmentQuestion = async (id) => {
+export const deactivateAssessmentQuestions = async (assessmentId) => {
   try {
-    const { error } = await supabase
+    // 1. get ALL question ids (not just active ones)
+    const { data: questions, error: fetchError } = await supabase
       .from(QUESTIONS_TABLE)
-      .delete()
-      .eq('id', id);
+      .select('id')
+      .eq('assessment_id', assessmentId);
 
-    if (error) throw error;
+    if (fetchError) throw fetchError;
+
+    const questionIds = (questions || []).map(q => q.id);
+
+    if (questionIds.length === 0) {
+      return { error: null };
+    }
+
+    // 2. deactivate questions
+    const { error: qError } = await supabase
+      .from(QUESTIONS_TABLE)
+      .update({ is_active: false })
+      .eq('assessment_id', assessmentId);
+
+    if (qError) throw qError;
+
+    // 3. deactivate options (only if column exists)
+    const { error: optError } = await supabase
+      .from(OPTIONS_TABLE)
+      .update({ is_active: false })
+      .in('question_id', questionIds);
+
+    if (optError) throw optError;
 
     return { error: null };
+
   } catch (error) {
-    console.error('Error deleting assessment question:', error);
     return { error: error.message };
   }
 };
 
 export const generateAssessmentQuestions = async (payload) => {
   try {
-    // Try Supabase edge function first
-    const { data, error } = await supabase.functions.invoke('generate-assessment-questions', {
-      body: payload,
-    });
+    const { data, error } = await supabase.functions.invoke(
+      'generate-assessment-questions',
+      { body: payload }
+    );
 
-    if (error) throw error;
+    if (error) {
+      console.error('Edge function error:', error);
+
+      // IMPORTANT: surface real error message
+      return {
+        data: null,
+        error: error.message || 'Edge function failed',
+      };
+    }
 
     return {
       data: data?.data ?? data ?? null,
       error: data?.error ?? null,
     };
-  } catch (edgeFunctionError) {
-    console.warn('Edge function failed, trying local API fallback:', edgeFunctionError.message);
-    const edgeStatus = getStatusCode(edgeFunctionError);
-    if (edgeStatus === 429 || /rate limit|quota|too many requests/i.test(edgeFunctionError?.message || '')) {
-      const retry = parseRetryAfterSeconds(edgeFunctionError?.retryAfterSeconds || edgeFunctionError?.context?.retryAfterSeconds || edgeFunctionError?.context?.response?.retryAfterSeconds);
-      return { data: null, error: formatQuotaMessage(retry) };
-    }
-    
-    try {
-      // Fallback to local API
-      const response = await fetch(AI_API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
 
-      if (!response.ok) {
-        let responseBody = null;
-        try {
-          responseBody = await response.json();
-        } catch {
-          responseBody = null;
-        }
+  } catch (error) {
+    console.error('Unexpected error:', error);
 
-        if (response.status === 429 || /rate limit|quota|too many requests/i.test(responseBody?.error || '')) {
-          const retry = parseRetryAfterSeconds(responseBody?.retryAfterSeconds || responseBody?.retry_after_seconds || responseBody);
-          throw new Error(formatQuotaMessage(retry));
-        }
-
-        throw new Error(responseBody?.error || `Local API responded with status ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      return {
-        data: data?.data ?? data ?? null,
-        error: data?.error ?? null,
-      };
-    } catch (localApiError) {
-      console.error('Both edge function and local API failed:', localApiError);
-      return { 
-        data: null, 
-        error: `Generation failed (edge: ${edgeFunctionError.message}, local: ${localApiError.message})` 
-      };
-    }
+    return {
+      data: null,
+      error: error.message || 'Unexpected failure',
+    };
   }
 };
+export const resetAssessmentQuestions = async (assessmentId) => {
+  try {
+    const { error } = await supabase
+      .from(QUESTIONS_TABLE)
+      .update({ is_active: false })
+      .eq('assessment_id', assessmentId);
 
+    if (error) throw error;
+
+    return { error: null };
+  } catch (error) {
+    return { error: error.message };
+  }
+};

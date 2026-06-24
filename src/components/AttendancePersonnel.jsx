@@ -37,33 +37,28 @@ const info = safeExpiry
   : null;
   // Initialize QR session on component mount
 useEffect(() => {
+const initQR = async () => {
 
-  const initQR = async () => {
+  const now = new Date(); // ✅ ADD THIS
 
-    const { data } = await supabase
-      .from('qr_sessions')
-      .select('*')
-      .eq('station_id', stationId)
-      .eq('used', false)
-       .gt('expires_at', now.toISOString())
-      .order('created_at', { ascending:false })
-      .limit(1)
-      .maybeSingle();
+  const { data } = await supabase
+    .from('qr_sessions')
+    .select('*')
+    .eq('station_id', stationId)
+    .eq('used', false)
+    .gt('expires_at', now.toISOString()) // now is now defined
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
+  if (data) {
+    setCurrentSession(data);
+    return;
+  }
 
-    if(data){
-      setCurrentSession(data);
-      return;
-    }
-
-
-    const newSession = await generateQRSession(
-      stationId
-    );
-
-    setCurrentSession(newSession);
-
-  };
+  const newSession = await generateQRSession(stationId);
+  setCurrentSession(newSession);
+};
 
 
   initQR();

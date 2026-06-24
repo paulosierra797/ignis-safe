@@ -145,16 +145,17 @@ const [modal, setModal] = useState({
 
   if (error) {
     console.error(error);
+    showModal({
+      type: "error",
+      message: "Failed to check existing Face ID."
+    });
     return;
   }
 
   if (data) {
     showModal({
-      type: "confirm",
-      message: "Face already registered. Replace it?",
-      onConfirm: () => {
-        setIsFaceModalOpen(true);
-      },
+      type: "info",
+      message: "Face ID is already registered. You cannot register another one."
     });
     return;
   }

@@ -45,6 +45,7 @@ useEffect(() => {
       .select('*')
       .eq('station_id', stationId)
       .eq('used', false)
+       .gt('expires_at', now.toISOString())
       .order('created_at', { ascending:false })
       .limit(1)
       .maybeSingle();

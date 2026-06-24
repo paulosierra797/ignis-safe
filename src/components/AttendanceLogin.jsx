@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authenticatePersonnel, saveAuthToken } from '../utils/attendanceService';
+import { useLocation } from 'react-router-dom';
+import { validateQRSession } from '../utils/attendanceService';
+
 import './AttendanceLogin.css';
+
 
 const AttendanceLogin = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+const session = location.state?.session;
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,13 +41,31 @@ const AttendanceLogin = () => {
       saveAuthToken(officer);
       setEmail('');
       setPassword('');
-      navigate(redirectTarget || '/attendance-scan');
+      navigate('/attendance-scan', {
+  state: { session }
+});
     } else {
       setError('Invalid account email or password. Please try again.');
     }
 
     setIsLoading(false);
   };
+  useEffect(() => {
+  const checkQR = async () => {
+    if (!session?.session_id) {
+      setError('No QR session found');
+      return;
+    }
+
+    const result = await validateQRSession(session.session_id);
+
+    if (!result.valid) {
+      setError(result.reason); // "QR expired" or "Invalid"
+    }
+  };
+
+  checkQR();
+}, []);
 
   return (
     <div className="attendance-login-page">

@@ -109,11 +109,13 @@ export const validateQRSession = async (sessionId) => {
 
   return { valid: true, session: data };
 };
-
 export const isSessionValid = (session) => {
   if (!session) return false;
+
   const now = new Date().getTime();
-  return session.expiresAt > now && !session.scanned;
+ if (new Date(session.expires_at) < new Date()) {
+  return "QR expired";
+}
 };
 
 export const getExpiryTime = (expiresAt) => {

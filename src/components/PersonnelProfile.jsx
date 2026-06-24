@@ -441,63 +441,37 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                 <div className="form-row">
                   <div className="form-field">
                     <label htmlFor="firstName">First Name</label>
-                    <input
-                      id="firstName"
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                    />
+                   <input
+  id="firstName"
+  type="text"
+  value={currentUser?.first_name || ''}
+  readOnly
+/>
                   </div>
 
                   <div className="form-field">
                     <label htmlFor="lastName">Last Name</label>
-                    <input
-                      id="lastName"
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                    />
+                   <input
+  id="lastName"
+  type="text"
+  value={currentUser?.last_name || ''}
+  readOnly
+/>
                   </div>
                 </div>
 
                 <div className="form-field-full">
-                  <label htmlFor="rank">Rank</label>
-                  <select
-                    id="rank"
-                    value={rank}
-                    onChange={(e) => setRank(e.target.value)}
-                  >
-                    <option value="">Select rank...</option>
-                    {RANK_OPTIONS.map((rankOption) => (
-                      <option key={rankOption} value={rankOption}>{rankOption}</option>
-                    ))}
-                    <option value="OTHER">Other (Specify)</option>
-                  </select>
-                </div>
+  <label>Rank</label>
 
-                {rank === 'OTHER' && (
-                  <div className="form-field-full">
-                    <label htmlFor="rankCustom">Custom Rank</label>
-                    <input
-                      id="rankCustom"
-                      type="text"
-                      value={rankCustom}
-                      onChange={(e) => setRankCustom(e.target.value)}
-                      placeholder="Enter your rank"
-                    />
-                  </div>
-                )}
+  <input
+    type="text"
+    value={currentUser?.rank || ''}
+    readOnly
+  />
+</div>
 
-                <div className="form-actions">
-                  <button
-                    className="save-btn"
-                    onClick={handleSaveChanges}
-                    disabled={!hasNameChanges || isSaving}
-                    type="button"
-                  >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
-                  </button>
-                </div>
+             
+                
               </section>
 
               <section className="profile-info-card profile-security-card">

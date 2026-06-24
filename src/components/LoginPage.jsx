@@ -272,20 +272,50 @@ const handleVerify = async (e) => {
     return;
   }
 
-  console.log("LOGIN USER:", data.user);
-  console.log("ROLE:", data.user?.role);
+
+  // Restore Supabase session
+  if (data.session) {
+    await supabase.auth.setSession({
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    });
+  }
+
+
+  const authUser = data.user;
+
+
+  const { data: profile, error: profileError } = await supabase
+    .from("admin")
+    .select("role")
+    .eq("email", resetEmail.trim())
+    .single();
+
+
+  if (profileError) {
+    console.error(profileError);
+    setError("Failed to load user role.");
+    setLoading(false);
+    return;
+  }
+
+
+  const role = normalizeRole(profile.role);
 
 
   const user = {
-  ...data.user,
-  role: normalizeRole(data.user.role),
-};
+    ...authUser,
+    role,
+  };
 
-console.log("FINAL ROLE:", user.role);
 
-setCurrentUser(user);
+  console.log("FINAL USER:", user);
+
+
+  setCurrentUser(user);
 
   setAuthStep("authenticated");
+
   setLoading(false);
 };
 useEffect(() => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authenticatePersonnel, saveAuthToken } from '../utils/attendanceService';
 import { useLocation } from 'react-router-dom';
@@ -17,9 +17,15 @@ const session = location.state?.session;
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const redirectTarget = searchParams.get('redirect');
+  const [qrValid, setQrValid] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
+     if (!qrValid) {
+    setError('Invalid or expired QR session');
+    return;
+  }
+
     setError('');
     setIsLoading(true);
 
@@ -52,20 +58,28 @@ const session = location.state?.session;
   };
   useEffect(() => {
   const checkQR = async () => {
+
     if (!session?.session_id) {
-      setError('No QR session found');
+      setError('Invalid QR session');
+      setQrValid(false);
       return;
     }
 
     const result = await validateQRSession(session.session_id);
 
     if (!result.valid) {
-      setError(result.reason); // "QR expired" or "Invalid"
+      setError(result.reason);
+      setQrValid(false);
+      return;
     }
+
+    setQrValid(true);
   };
 
   checkQR();
-}, []);
+
+}, [session]);
+  
 
   return (
     <div className="attendance-login-page">

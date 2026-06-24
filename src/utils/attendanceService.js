@@ -78,7 +78,7 @@ export const generateQRSession = async (stationId = 'DEFAULT') => {
     session_id: sessionId,
     station_id: stationId,
     created_at: now.toISOString(),
-    expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+    expires_at: new Date(now.getTime() + 5 * 60 * 1000).toISOString(),
     used: false
   };
 

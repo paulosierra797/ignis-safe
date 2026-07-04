@@ -9,8 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
-from supabase import Client, create_client
 
+from admin_users import router as admin_router
+
+app = FastAPI()
+
+app.include_router(admin_router)
 load_dotenv()
 
 
@@ -214,7 +218,7 @@ def fetch_all_rows(table: str, columns: str, page_size: int = 1000) -> List[Dict
 
         start += page_size
 
-    return all_rows
+    return all_row
 
 
 def fetch_all_rows_from_any_table(table_candidates: List[str], columns: str) -> List[Dict[str, Any]]:
@@ -1220,6 +1224,12 @@ def delete_user(request: DeleteUserRequest) -> Dict[str, Any]:
         },
         "error": None,
     }
+
+
+from .admin_users import router as admin_users_router
+
+
+app.include_router(admin_users_router)
 
 
 @app.get("/api/knowledge-analytics/filter-options", dependencies=[Depends(require_api_key)])

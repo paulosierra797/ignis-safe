@@ -1,5 +1,35 @@
 import { supabase } from './supabaseClient';
 
+const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
+const ADMIN_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
+
+const callAdminApi = async (endpoint, payload = null) => {
+  if (!ADMIN_API_URL) return null;
+
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+
+  if (ADMIN_API_KEY) {
+    headers['x-analytics-api-key'] = ADMIN_API_KEY;
+  }
+
+  const response = await fetch(`${ADMIN_API_URL}${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+
+  const responseBody = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const detail = responseBody?.detail || responseBody?.error || `Request failed (${response.status})`;
+    throw new Error(detail);
+  }
+
+  return responseBody;
+};
+
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();
 
 const splitFullName = (fullName = '') => {
@@ -90,7 +120,7 @@ export const preAuth = async (email, password) => {
 
 
     // immediately remove session
-    await supabase.auth.signOut();
+   
 
 
     return {
@@ -118,6 +148,24 @@ export const signUp = async (email, password, userData = {}) => {
   try {
     const { first_name, last_name } = resolveNameFields(userData);
 
+    if (ADMIN_API_URL) {
+      const response = await callAdminApi('/api/admin/users/create', {
+        email,
+        password,
+        first_name,
+        last_name,
+        role: userData.role || 'personnel',
+        rank: userData.rank || '',
+        contact_number: userData.contact_number || null,
+        permissions: userData.permissions || []
+      });
+
+      return {
+        data: response?.data || null,
+        error: null
+      };
+    }
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -126,8 +174,7 @@ export const signUp = async (email, password, userData = {}) => {
           ...userData,
           first_name,
           last_name
-        }, // Additional metadata for profile and fallback handling.
-        emailRedirectTo: `${window.location.origin}/login` // Redirect after email confirmation
+        }
       }
     });
 

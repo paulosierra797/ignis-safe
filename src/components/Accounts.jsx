@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import { supabase } from "../utils/supabaseClient";
 import './Accounts.css';
 import { signUp } from '../utils/authService';
 import {
@@ -583,6 +584,7 @@ const openEditModal = (account) => {
   });
   setIsEditModalOpen(true);
 };
+
 const handleUpdatePersonnel = async () => {
   if (!selectedEditAccount?.admin_id) return;
 
@@ -594,21 +596,34 @@ const handleUpdatePersonnel = async () => {
     rank: editFormData.rank,
     contact_number: editFormData.contact_number
   };
+  const { data: authData } = await supabase.auth.getUser();
+console.log("AUTH USER:", authData);
 
-  // validation (reuse your existing rules if you want)
+  console.log("Updating admin_id:", selectedEditAccount.admin_id);
+
   if (!updates.first_name || !updates.last_name || !updates.email) {
     setMessage({ type: 'error', text: 'Required fields missing.' });
     return;
   }
 
-  const { error } = await updateUser(selectedEditAccount.admin_id, updates);
+  const { data: existing, error: existingError } = await supabase
+    .from("admin")
+    .select("admin_id, first_name, email")
+    .eq("admin_id", selectedEditAccount.admin_id);
+
+  console.log("Existing row:", existing);
+  console.log("Select error:", existingError);
+
+  const { error } = await updateUser(
+    selectedEditAccount.admin_id,
+    updates
+  );
 
   if (error) {
     setMessage({ type: 'error', text: `Update failed: ${error}` });
     return;
   }
 
-  // update UI state instantly
   setAccounts((prev) =>
     prev.map((acc) =>
       acc.admin_id === selectedEditAccount.admin_id
@@ -628,12 +643,11 @@ const handleUpdatePersonnel = async () => {
   }).catch(console.warn);
 
   setTimeout(() => {
-  setIsEditModalOpen(false);
-  setSelectedEditAccount(null);
-  setMessage({ type: '', text: '' });
-}, 1500);
+    setIsEditModalOpen(false);
+    setSelectedEditAccount(null);
+    setMessage({ type: '', text: '' });
+  }, 1500);
 };
-
   const handleAddPersonnel = async () => {
     // Validation
     const firstName = formData.first_name.trim();
@@ -692,9 +706,9 @@ const handleUpdatePersonnel = async () => {
     };
 
     try {
-      console.log('Attempting to add personnel with email verification...');
+      console.log('Attempting to add personnel...');
 
-      // Use signUp to create auth user and send verification email
+      // Create the auth user and admin profile without requiring a signup confirmation link.
       const signupAttempt = signUp(formData.email, password, {
         first_name: firstName,
         last_name: lastName,
@@ -781,7 +795,7 @@ const handleUpdatePersonnel = async () => {
 
       setMessage({ 
         type: 'success', 
-        text: 'Personnel added successfully! OTP email sent to ' + formData.email + '. Ask the user to confirm at /confirm-signup.'
+        text: 'Personnel added successfully! The user can now log in with their credentials and OTP verification.'
       });
 
       logAdminActivity({
@@ -1862,10 +1876,10 @@ const handleUpdatePersonnel = async () => {
 </div>
 
       <div className="accounts-modal-footer">
-        <button onClick={() => setIsEditModalOpen(false)}>
+        <button className ="cancel-btn"onClick={() => setIsEditModalOpen(false)}>
           Cancel
         </button>
-        <button onClick={handleUpdatePersonnel}>
+        <button className="save-btn" onClick={handleUpdatePersonnel}>
           Save Changes
         </button>
       </div>

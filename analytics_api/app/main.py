@@ -290,7 +290,7 @@ def load_analytics_base_data() -> Dict[str, Any]:
     print("Loading admin...", flush=True)
     profile_ids = [row.get("id") for row in profiles if row.get("id")]
 
-    admin_rows = []
+    admin_rows: List[Dict[str, Any]] = []
     if profile_ids:
         admin_rows = (
             supabase.table("admin")
@@ -300,6 +300,15 @@ def load_analytics_base_data() -> Dict[str, Any]:
             .data
             or []
         )
+
+    admin_map = {row.get("admin_id"): row for row in admin_rows}
+    users = [
+        {
+            "admin_id": profile_id,
+            "status": (admin_map.get(profile_id) or {}).get("status") or "Active",
+        }
+        for profile_id in profile_ids
+    ]
 
     print("Loading attempts...", flush=True)
     attempts = fetch_all_rows(
@@ -314,10 +323,16 @@ def load_analytics_base_data() -> Dict[str, Any]:
     )
 
     print("Loading assessments...", flush=True)
-    assessments = fetch_all_rows("assessments", "id,module_id,type,title")
+    assessments = fetch_all_rows(
+        "assessments",
+        "id,module_id,type,title",
+    )
 
     print("Loading modules...", flush=True)
-    modules = fetch_all_rows("modules", "id,module_no,title")
+    modules = fetch_all_rows(
+        "modules",
+        "id,module_no,title",
+    )
 
     print("Loading module_progress...", flush=True)
     module_progress = fetch_all_rows(
@@ -333,7 +348,10 @@ def load_analytics_base_data() -> Dict[str, Any]:
 
     print("Loading app_sessions...", flush=True)
     try:
-        app_sessions = fetch_all_rows_from_any_table(["app_sessions"], "*")
+        app_sessions = fetch_all_rows_from_any_table(
+            ["app_sessions"],
+            "*",
+        )
     except Exception as error:
         if not is_missing_table_error(error):
             raise
@@ -341,7 +359,22 @@ def load_analytics_base_data() -> Dict[str, Any]:
 
     print("Finished loading.", flush=True)
 
-    ...
+    return {
+        "users": users,
+        "attempts": attempts,
+        "answers": answers,
+        "assessments": assessments,
+        "modules": modules,
+        "module_progress": module_progress,
+        "simulation_sessions": [
+            normalize_simulation_session_row(row)
+            for row in simulation_sessions
+        ],
+        "app_sessions": [
+            normalize_app_session_row(row)
+            for row in app_sessions
+        ],
+    }
 
 
 def extract_valid_app_session_durations(app_sessions: List[Dict[str, Any]]) -> List[int]:

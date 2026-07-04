@@ -103,10 +103,20 @@ export default function Analytics() {
 
     const loadStats = async () => {
       setIsLoadingStats(true);
-      const [{ data: statsData }, { data: chartsData }] = await Promise.all([
-        getAnalyticsDashboardStats({ timeframe, people, topic }),
-        getAnalyticsChartsData({ timeframe, people, topic, activityTrendsView }),
-      ]);
+      const { data: statsData } =
+  await getAnalyticsDashboardStats({
+    timeframe,
+    people,
+    topic,
+  });
+
+const { data: chartsData } =
+  await getAnalyticsChartsData({
+    timeframe,
+    people,
+    topic,
+    activityTrendsView,
+  });
 
       if (isMounted) {
         setStats(statsData || DEFAULT_STATS);

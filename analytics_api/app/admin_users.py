@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from dependencies import require_api_key, supabase
+from .dependencies import require_api_key, supabase
 
 
 router = APIRouter()

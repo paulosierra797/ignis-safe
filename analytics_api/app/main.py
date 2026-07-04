@@ -213,7 +213,7 @@ def fetch_all_rows(table: str, columns: str, page_size: int = 1000):
 
     while True:
         try:
-            print(f"Querying {table} rows {start}-{start + page_size - 1}", flush=True)
+            print(f"START {table} {start}", flush=True)
 
             response = (
                 supabase.table(table)
@@ -222,19 +222,24 @@ def fetch_all_rows(table: str, columns: str, page_size: int = 1000):
                 .execute()
             )
 
-            print(f"Received response from {table}", flush=True)
+            print(f"SUCCESS {table} {start}", flush=True)
 
         except Exception as e:
-            print(f"ERROR while querying {table}: {repr(e)}", flush=True)
+            print(f"FAILED {table}: {repr(e)}", flush=True)
             raise
 
         rows = response.data or []
+
+        print(f"{table}: received {len(rows)} rows", flush=True)
+
         all_rows.extend(rows)
 
         if len(rows) < page_size:
             break
 
         start += page_size
+
+    print(f"Finished {table}", flush=True)
 
     return all_rows
 

@@ -1284,14 +1284,11 @@ from .admin_users import router as admin_users_router
 app.include_router(admin_users_router)
 
 
-@app.get("/api/knowledge-analytics/filter-options", dependencies=[Depends(require_api_key)])
+@app.get("/api/knowledge-analytics/filter-options")
 def get_filter_options():
-    modules = (
-        supabase.table("modules")
-        .select("id,module_no,title")
-        .order("module_no")
-        .execute()
-        .data
+    modules = fetch_all_rows(
+        "modules",
+        "id,module_no,title",
     )
 
     return {
@@ -1328,10 +1325,22 @@ def get_dashboard_bundle(filters: Filters) -> Dict[str, Any]:
 
 @app.get("/api/knowledge-analytics/module-recommendations", dependencies=[Depends(require_api_key)])
 def get_module_recommendations() -> Dict[str, Any]:
-    """Get AI-generated recommendations for each module based on performance metrics."""
-    data = load_analytics_base_data()
-    recommendations = build_module_recommendations(data)
+    data = {
+        "attempts": fetch_all_rows(
+            "assessment_attempts",
+            "id,user_id,assessment_id,started_at,submitted_at,created_at,status,score",
+        ),
+        "assessments": fetch_all_rows(
+            "assessments",
+            "id,module_id,type,title",
+        ),
+        "modules": fetch_all_rows(
+            "modules",
+            "id,module_no,title",
+        ),
+    }
+
     return {
-        "data": recommendations,
+        "data": build_module_recommendations(data),
         "error": None,
     }

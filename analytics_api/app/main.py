@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
 
-from admin_users import router as admin_router
+from .admin_users import router as admin_router
 
 app = FastAPI()
 

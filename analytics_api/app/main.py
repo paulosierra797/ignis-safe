@@ -195,7 +195,7 @@ analytics_api_key = os.getenv("ANALYTICS_API_KEY", "").strip()
 if not supabase_url or not supabase_service_role_key:
     raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
 
-supabase: Client = create_client(supabase_url, supabase_service_role_key)
+supabase = create_client(supabase_url, supabase_service_role_key)
 
 
 def require_api_key(x_analytics_api_key: Optional[str] = Header(default=None)) -> None:

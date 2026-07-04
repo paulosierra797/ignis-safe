@@ -206,18 +206,27 @@ def require_api_key(x_analytics_api_key: Optional[str] = Header(default=None)) -
 
 
 def fetch_all_rows(table: str, columns: str, page_size: int = 1000):
-    print(f"Fetching table: {table}")
+    print(f"Fetching table: {table}", flush=True)
 
     all_rows = []
     start = 0
 
     while True:
-        response = (
-            supabase.table(table)
-            .select(columns)
-            .range(start, start + page_size - 1)
-            .execute()
-        )
+        try:
+            print(f"Querying {table} rows {start}-{start + page_size - 1}", flush=True)
+
+            response = (
+                supabase.table(table)
+                .select(columns)
+                .range(start, start + page_size - 1)
+                .execute()
+            )
+
+            print(f"Received response from {table}", flush=True)
+
+        except Exception as e:
+            print(f"ERROR while querying {table}: {repr(e)}", flush=True)
+            raise
 
         rows = response.data or []
         all_rows.extend(rows)
@@ -228,7 +237,6 @@ def fetch_all_rows(table: str, columns: str, page_size: int = 1000):
         start += page_size
 
     return all_rows
-
 
 def fetch_all_rows_from_any_table(table_candidates: List[str], columns: str) -> List[Dict[str, Any]]:
     last_error: Optional[Exception] = None
@@ -276,10 +284,13 @@ def normalize_app_session_row(row: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def load_analytics_base_data() -> Dict[str, Any]:
+    print("Loading profiles...", flush=True)
     profiles = fetch_all_rows("profiles", "id")
+
+    print("Loading admin...", flush=True)
     profile_ids = [row.get("id") for row in profiles if row.get("id")]
 
-    admin_rows: List[Dict[str, Any]] = []
+    admin_rows = []
     if profile_ids:
         admin_rows = (
             supabase.table("admin")
@@ -290,53 +301,47 @@ def load_analytics_base_data() -> Dict[str, Any]:
             or []
         )
 
-    admin_map = {row.get("admin_id"): row for row in admin_rows}
-    users = [
-        {
-            "admin_id": profile_id,
-            "status": (admin_map.get(profile_id) or {}).get("status") or "Active",
-        }
-        for profile_id in profile_ids
-    ]
-
+    print("Loading attempts...", flush=True)
     attempts = fetch_all_rows(
         "assessment_attempts",
         "id,user_id,assessment_id,started_at,submitted_at,created_at,status,score",
     )
+
+    print("Loading answers...", flush=True)
     answers = fetch_all_rows(
         "assessment_attempt_answers",
         "attempt_id,created_at,selected_option_id,answer_text",
     )
+
+    print("Loading assessments...", flush=True)
     assessments = fetch_all_rows("assessments", "id,module_id,type,title")
+
+    print("Loading modules...", flush=True)
     modules = fetch_all_rows("modules", "id,module_no,title")
+
+    print("Loading module_progress...", flush=True)
     module_progress = fetch_all_rows(
         "module_progress",
         "user_id,module_id,pre_test_completed_at,simulation_completed_at,post_test_completed_at",
     )
+
+    print("Loading simulation_sessions...", flush=True)
     simulation_sessions = fetch_all_rows_from_any_table(
         ["simulation_attempts", "training_simulation_sessions"],
         "*",
     )
+
+    print("Loading app_sessions...", flush=True)
     try:
-        app_sessions = fetch_all_rows_from_any_table(
-            ["app_sessions"],
-            "*",
-        )
+        app_sessions = fetch_all_rows_from_any_table(["app_sessions"], "*")
     except Exception as error:
         if not is_missing_table_error(error):
             raise
         app_sessions = []
 
-    return {
-        "users": users,
-        "attempts": attempts,
-        "answers": answers,
-        "assessments": assessments,
-        "modules": modules,
-        "module_progress": module_progress,
-        "simulation_sessions": [normalize_simulation_session_row(row) for row in simulation_sessions],
-        "app_sessions": [normalize_app_session_row(row) for row in app_sessions],
-    }
+    print("Finished loading.", flush=True)
+
+    ...
 
 
 def extract_valid_app_session_durations(app_sessions: List[Dict[str, Any]]) -> List[int]:

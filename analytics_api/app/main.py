@@ -219,7 +219,7 @@ def fetch_all_rows(table: str, columns: str, page_size: int = 1000) -> List[Dict
 
         start += page_size
 
-    return all_row
+    return all_rows
 
 
 def fetch_all_rows_from_any_table(table_candidates: List[str], columns: str) -> List[Dict[str, Any]]:

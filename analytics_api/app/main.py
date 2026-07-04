@@ -178,6 +178,7 @@ frontend_origins = [
     for origin in os.getenv("FRONTEND_ORIGINS", "http://localhost:5173").split(",")
     if origin.strip()
 ]
+print("FRONTEND_ORIGINS =", frontend_origins)
 
 app.add_middleware(
     CORSMiddleware,
@@ -204,13 +205,20 @@ def require_api_key(x_analytics_api_key: Optional[str] = Header(default=None)) -
         raise HTTPException(status_code=401, detail="Invalid analytics API key")
 
 
-def fetch_all_rows(table: str, columns: str, page_size: int = 1000) -> List[Dict[str, Any]]:
-    all_rows: List[Dict[str, Any]] = []
+def fetch_all_rows(table: str, columns: str, page_size: int = 1000):
+    print(f"Fetching table: {table}")
+
+    all_rows = []
     start = 0
 
     while True:
-        end = start + page_size - 1
-        response = supabase.table(table).select(columns).range(start, end).execute()
+        response = (
+            supabase.table(table)
+            .select(columns)
+            .range(start, start + page_size - 1)
+            .execute()
+        )
+
         rows = response.data or []
         all_rows.extend(rows)
 

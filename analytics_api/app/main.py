@@ -1285,9 +1285,19 @@ app.include_router(admin_users_router)
 
 
 @app.get("/api/knowledge-analytics/filter-options", dependencies=[Depends(require_api_key)])
-def get_filter_options() -> Dict[str, Any]:
-    data = load_analytics_base_data()
-    return {"data": build_filter_options(data["modules"]), "error": None}
+def get_filter_options():
+    modules = (
+        supabase.table("modules")
+        .select("id,module_no,title")
+        .order("module_no")
+        .execute()
+        .data
+    )
+
+    return {
+        "data": build_filter_options(modules),
+        "error": None,
+    }
 
 
 @app.post("/api/knowledge-analytics/dashboard-stats", dependencies=[Depends(require_api_key)])

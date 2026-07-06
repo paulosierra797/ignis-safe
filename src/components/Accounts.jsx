@@ -704,18 +704,42 @@ console.log("AUTH USER:", authData);
       rank: finalRank,
       contact_number: contactNumber
     };
+    const getDefaultPermissions = (role) => {
+  switch (role) {
+    case "admin":
+      return [
+        "view_dashboard",
+        "view_reports",
+        "create_reports",
+        "view_attendance",
+        "manage_users",
+        "view_analytics",
+        "view_charts",
+        "view_accounts",
+        "view_audit_logs"
+      ];
+
+    
+    case "personnel":
+    default:
+      return [];
+  }
+};
+
+const permissions = getDefaultPermissions(formData.role);
 
     try {
       console.log('Attempting to add personnel...');
 
       // Create the auth user and admin profile without requiring a signup confirmation link.
       const signupAttempt = signUp(formData.email, password, {
-        first_name: firstName,
-        last_name: lastName,
-        role: formData.role,
-        rank: finalRank,
-        contact_number: contactNumber || null
-      });
+  first_name: firstName,
+  last_name: lastName,
+  role: formData.role,
+  rank: finalRank,
+  contact_number: contactNumber || null,
+  permissions
+});
 
       const timeoutAttempt = new Promise((resolve) => {
         setTimeout(() => resolve({ timedOut: true }), ADD_PERSONNEL_TIMEOUT_MS);

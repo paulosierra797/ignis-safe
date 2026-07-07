@@ -731,3 +731,18 @@ body.sidebar-collapsed .nav-section {
   color: rgba(255, 255, 255, 0.6);
   margin: 0 0 0.5rem 0;
 }
+.knowledge-percent.gain {
+  color: #22c55e;
+}
+
+.knowledge-percent.loss {
+  color: #ef4444;
+}
+
+.knowledge-trend-line.up {
+  color: #22c55e;
+}
+
+.knowledge-trend-line.down {
+  color: #ef4444;
+}

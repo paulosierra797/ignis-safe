@@ -50,6 +50,10 @@ const getBarHeights = (values) => {
     return Math.max(12, Math.round((value / maxValue) * 100));
   });
 };
+const knowledgeGain = analyticsStats.knowledgeGainPercent;
+const isNegative = knowledgeGain < 0;
+const gainColor = isNegative ? "#ef4444" : "#22c55e"; // red : green
+const gradientId = isNegative ? "lossGradient" : "gainGradient";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -492,23 +496,50 @@ export default function Dashboard() {
               <div className="metric-content">
                 <p className="metric-label">Knowledge Gain</p>
                 <div className="knowledge-display">
-                  <span className="knowledge-percent gain">
-                    {loading
-                      ? '...'
-                      : `${knowledgeGainPrefix}${analyticsStats.knowledgeGainPercent}%`}
-                  </span>
-                  <div className="knowledge-trend-line up">
+                   <span className={`knowledge-percent ${isNegative ? "loss" : "gain"}`}>
+      {loading
+        ? "..."
+        : `${knowledgeGainPrefix}${knowledgeGain}%`}
+    </span>
+                  <div className={`knowledge-trend-line ${isNegative ? "down" : "up"}`}>
                     <svg width="120" height="40" viewBox="0 0 120 40">
-                      <defs>
-                        <linearGradient id="gainGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-                          <stop offset="0%" stopColor="#22c55e" stopOpacity="0.1" />
-                          <stop offset="100%" stopColor="#22c55e" stopOpacity="0.3" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M 0 38 L 30 32 L 60 28 L 90 18 L 120 8 L 120 40 L 0 40 Z" fill="url(#gainGradient)" />
-                      <path d="M 0 38 L 30 32 L 60 28 L 90 18 L 120 8" stroke="#22c55e" strokeWidth="2" fill="none" />
-                      <circle cx="120" cy="8" r="3" fill="#22c55e" />
-                    </svg>
+        <defs>
+          <linearGradient id={gradientId} x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stopColor={gainColor} stopOpacity="0.1" />
+            <stop offset="100%" stopColor={gainColor} stopOpacity="0.3" />
+          </linearGradient>
+        </defs>
+
+        {isNegative ? (
+          <>
+            <path
+              d="M 0 8 L 30 14 L 60 20 L 90 30 L 120 38 L 120 40 L 0 40 Z"
+              fill={`url(#${gradientId})`}
+            />
+            <path
+              d="M 0 8 L 30 14 L 60 20 L 90 30 L 120 38"
+              stroke={gainColor}
+              strokeWidth="2"
+              fill="none"
+            />
+            <circle cx="120" cy="38" r="3" fill={gainColor} />
+          </>
+        ) : (
+          <>
+            <path
+              d="M 0 38 L 30 32 L 60 28 L 90 18 L 120 8 L 120 40 L 0 40 Z"
+              fill={`url(#${gradientId})`}
+            />
+            <path
+              d="M 0 38 L 30 32 L 60 28 L 90 18 L 120 8"
+              stroke={gainColor}
+              strokeWidth="2"
+              fill="none"
+            />
+            <circle cx="120" cy="8" r="3" fill={gainColor} />
+          </>
+        )}
+      </svg>
                   </div>
                 </div>
               </div>

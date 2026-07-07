@@ -190,6 +190,7 @@ export const buildLearningMaterialModules = (rows = []) => {
       block_type: row.block_type || '',
       text_en: row.text_en || '',
       text_tl: row.text_tl || '',
+       metadata: row.metadata || {},
       source_file: row.source_file || '',
       source_line: row.source_line || null,
       is_active: Boolean(row.is_active)

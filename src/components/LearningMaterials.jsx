@@ -404,6 +404,7 @@ export default function LearningMaterials() {
                           {page.blocks.map((block) => (
                             <div key={block.id || `${moduleEntry.module_no}-${page.page_no}-${block.block_no}`} className="learning-material-block">
                               <div className="learning-material-block-meta">
+                                
                                 <span>Block {block.block_no ?? '-'}</span>
                                 <span>{block.block_type || 'text'}</span>
                                 <span>{formatSourceLine(block.source_line)}</span>
@@ -480,6 +481,57 @@ export default function LearningMaterials() {
     </p>
   )
 )}
+{editingModule === moduleEntry.module_no ? (
+  <div className="learning-material-metadata-editor">
+    <label>Metadata (JSON)</label>
+
+    <textarea
+      className="learning-material-textarea"
+      rows={15}
+      value={JSON.stringify(
+        editedModule.pages
+          .find((p) => p.page_no === page.page_no)
+          ?.blocks.find((b) => b.id === block.id)
+          ?.metadata || {},
+        null,
+        2
+      )}
+      onChange={(e) => {
+        try {
+          const parsed = JSON.parse(e.target.value);
+
+          const updatedPages = editedModule.pages.map((p) => {
+            if (p.page_no !== page.page_no) return p;
+
+            return {
+              ...p,
+              blocks: p.blocks.map((b) =>
+                b.id === block.id
+                  ? {
+                      ...b,
+                      metadata: parsed
+                    }
+                  : b
+              )
+            };
+          });
+
+          setEditedModule({
+            ...editedModule,
+            pages: updatedPages
+          });
+        } catch {
+          // Ignore invalid JSON while typing
+        }
+      }}
+    />
+  </div>
+) : (
+  <pre className="learning-material-metadata-preview">
+    {JSON.stringify(block.metadata, null, 2)}
+  </pre>
+)}
+
 
   
 </>

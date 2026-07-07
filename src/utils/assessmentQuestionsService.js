@@ -30,6 +30,17 @@ const getStatusCode = (error) => (
   || null
 );
 
+const normalizeFunctionError = (error, data = null) => {
+  const status = getStatusCode(error) || data?.status || null;
+  const message = data?.error || error?.message || 'Edge function failed';
+
+  return {
+    message,
+    status,
+    retryAfterSeconds: parseRetryAfterSeconds(data?.retryAfterSeconds ?? error?.retryAfterSeconds),
+  };
+};
+
 const mapQuestion = (row = {}) => ({
   id: row.id,
   assessment_id: row.assessment_id,
@@ -349,16 +360,15 @@ export const generateAssessmentQuestions = async (payload) => {
     if (error) {
       console.error('Edge function error:', error);
 
-      // IMPORTANT: surface real error message
       return {
         data: null,
-        error: error.message || 'Edge function failed',
+        error: normalizeFunctionError(error),
       };
     }
 
     return {
       data: data?.data ?? data ?? null,
-      error: data?.error ?? null,
+      error: data?.error ? normalizeFunctionError(null, data) : null,
     };
 
   } catch (error) {
@@ -366,7 +376,7 @@ export const generateAssessmentQuestions = async (payload) => {
 
     return {
       data: null,
-      error: error.message || 'Unexpected failure',
+      error: normalizeFunctionError(error),
     };
   }
 };

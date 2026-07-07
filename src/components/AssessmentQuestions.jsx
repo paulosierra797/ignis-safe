@@ -56,6 +56,32 @@ const isPreferredAssessment = (assessment = {}) => {
   return moduleNo >= 1 && moduleNo <= 5 && (typeLabel === 'pre-test' || typeLabel === 'post-test');
 };
 
+const formatGenerateQuestionsError = (error) => {
+  if (!error) {
+    return 'The AI service returned no questions.';
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  const parts = [];
+
+  if (error.status) {
+    parts.push(`Status ${error.status}`);
+  }
+
+  if (error.message) {
+    parts.push(error.message.replace(/^Gemini request failed:\s*/i, ''));
+  }
+
+  if (error.retryAfterSeconds) {
+    parts.push(`Try again in about ${error.retryAfterSeconds} seconds.`);
+  }
+
+  return parts.join(' - ') || 'The AI service failed.';
+};
+
 export default function AssessmentQuestions() {
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
@@ -246,148 +272,139 @@ export default function AssessmentQuestions() {
   };
 
   const handleGenerateQuestions = async () => {
-     if (isGenerating) return; // hard stop immediately
-
-  if (!selectedAssessmentId) return;
-
-  setIsGenerating(true);
-
-    const selectedAssessment = assessments.find((row) => row.id === selectedAssessmentId);
-    const moduleNo = Number(selectedAssessment?.module_no || 0);
-
-    if (!moduleNo) {
-      setMessage({ type: 'error', text: 'The selected assessment is not linked to a module.' });
-      return;
-    }
-
-    const safeCount = 10;
+    if (isGenerating) return;
+    if (!selectedAssessmentId) return;
 
     setIsGenerating(true);
     setMessage({ type: '', text: '' });
 
-    const { data: materialRows, error: materialError } = await getLearningMaterialsAdminView();
+    try {
+      const selectedAssessment = assessments.find((row) => row.id === selectedAssessmentId);
+      const moduleNo = Number(selectedAssessment?.module_no || 0);
 
-    if (materialError) {
-      setMessage({ type: 'error', text: `Unable to load learning materials: ${materialError}` });
-      setIsGenerating(false);
-      return;
-    }
-
-    const learningContext = buildModuleContext(materialRows || [], moduleNo);
-
-    if (!learningContext) {
-      setMessage({ type: 'error', text: `No active learning material content found for Module ${moduleNo}.` });
-      setIsGenerating(false);
-      return;
-    }
-
-    const { data: generatedPayload, error: generateError } = await generateAssessmentQuestions({
-      assessmentId: selectedAssessmentId,
-      assessmentTitle: selectedAssessment?.title || selectedAssessmentLabel || `Module ${moduleNo}`,
-      assessmentType: selectedAssessment?.type_label || selectedAssessment?.type || '',
-      moduleNo,
-      questionCount: safeCount,
-      context: learningContext,
-    });
-
-    if (generateError || !generatedPayload?.questions?.length) {
-      setMessage({
-        type: 'error',
-        text: generateError || 'The AI service returned no questions.',
-      });
-      setIsGenerating(false);
-      return;
-    }
-   const { error: deactivateError } = await deactivateAssessmentQuestions(selectedAssessmentId);
-
-if (deactivateError) {
-  setMessage({
-    type: 'error',
-    text: `Failed to deactivate old questions: ${deactivateError}`,
-  });
-  setIsGenerating(false);
-  return;
-}
-setQuestions([]);
-
-    const nextQuestionNoStart = 1;
-
-    const createdQuestions = [];
-
-    for (let index = 0; index < generatedPayload.questions.length; index += 1) {
-      const generatedQuestion = generatedPayload.questions[index];
-      const questionNo = nextQuestionNoStart + index;
-
-      const { data: createdQuestion, error: createError } = await createAssessmentQuestion({
-        assessment_id: selectedAssessmentId,
-        question_no: questionNo,
-        question_type: 'multiple_choice',
-        prompt: String(generatedQuestion?.prompt || '').trim(),
-        prompt_tl: String(generatedQuestion?.prompt_tl || '').trim() || null,
-        explanation: String(generatedQuestion?.explanation || '').trim() || null,
-        explanation_tl: String(generatedQuestion?.explanation_tl || '').trim() || null,
-        is_active: true,
-      });
-
-      if (createError || !createdQuestion?.id) {
-        continue;
+      if (!moduleNo) {
+        setMessage({ type: 'error', text: 'The selected assessment is not linked to a module.' });
+        return;
       }
 
-      const aiOptions = Array.isArray(generatedQuestion?.options)
-        ? generatedQuestion.options.map((option, optionIndex) => ({
-          option_key: String(option?.option_key || AI_OPTION_KEYS[optionIndex] || '').trim().toUpperCase(),
-          option_text: String(option?.option_text || '').trim(),
-          option_text_tl: String(option?.option_text_tl || '').trim(),
-          is_correct: Boolean(option?.is_correct),
-          display_order: Number.isFinite(Number(option?.display_order))
-            ? Number(option.display_order)
-            : optionIndex + 1,
-        })).filter((option) => option.option_key && option.option_text)
-        : [];
+      const safeCount = 10;
 
-      if (aiOptions.length >= 2) {
-        const { error: optionsError } = await syncAssessmentQuestionOptions(createdQuestion.id, aiOptions);
-        if (optionsError) {
-          console.warn('Failed to sync AI-generated options:', optionsError);
+      const { data: materialRows, error: materialError } = await getLearningMaterialsAdminView();
+
+      if (materialError) {
+        setMessage({ type: 'error', text: `Unable to load learning materials: ${materialError}` });
+        return;
+      }
+
+      const learningContext = buildModuleContext(materialRows || [], moduleNo);
+
+      if (!learningContext) {
+        setMessage({ type: 'error', text: `No active learning material content found for Module ${moduleNo}.` });
+        return;
+      }
+
+      const { data: generatedPayload, error: generateError } = await generateAssessmentQuestions({
+        assessmentId: selectedAssessmentId,
+        assessmentTitle: selectedAssessment?.title || selectedAssessmentLabel || `Module ${moduleNo}`,
+        assessmentType: selectedAssessment?.type_label || selectedAssessment?.type || '',
+        moduleNo,
+        questionCount: safeCount,
+        context: learningContext,
+      });
+
+      if (generateError || !generatedPayload?.questions?.length) {
+        setMessage({
+          type: 'error',
+          text: formatGenerateQuestionsError(generateError),
+        });
+        return;
+      }
+
+      const { error: deactivateError } = await deactivateAssessmentQuestions(selectedAssessmentId);
+
+      if (deactivateError) {
+        setMessage({
+          type: 'error',
+          text: `Failed to deactivate old questions: ${deactivateError}`,
+        });
+        return;
+      }
+
+      setQuestions([]);
+
+      const nextQuestionNoStart = 1;
+      const createdQuestions = [];
+
+      for (let index = 0; index < generatedPayload.questions.length; index += 1) {
+        const generatedQuestion = generatedPayload.questions[index];
+        const questionNo = nextQuestionNoStart + index;
+
+        const { data: createdQuestion, error: createError } = await createAssessmentQuestion({
+          assessment_id: selectedAssessmentId,
+          question_no: questionNo,
+          question_type: 'multiple_choice',
+          prompt: String(generatedQuestion?.prompt || '').trim(),
+          prompt_tl: String(generatedQuestion?.prompt_tl || '').trim() || null,
+          explanation: String(generatedQuestion?.explanation || '').trim() || null,
+          explanation_tl: String(generatedQuestion?.explanation_tl || '').trim() || null,
+          is_active: true,
+        });
+
+        if (createError || !createdQuestion?.id) {
+          continue;
         }
+
+        const aiOptions = Array.isArray(generatedQuestion?.options)
+          ? generatedQuestion.options.map((option, optionIndex) => ({
+            option_key: String(option?.option_key || AI_OPTION_KEYS[optionIndex] || '').trim().toUpperCase(),
+            option_text: String(option?.option_text || '').trim(),
+            option_text_tl: String(option?.option_text_tl || '').trim(),
+            is_correct: Boolean(option?.is_correct),
+            display_order: Number.isFinite(Number(option?.display_order))
+              ? Number(option.display_order)
+              : optionIndex + 1,
+          })).filter((option) => option.option_key && option.option_text)
+          : [];
+
+        if (aiOptions.length >= 2) {
+          const { error: optionsError } = await syncAssessmentQuestionOptions(createdQuestion.id, aiOptions);
+          if (optionsError) {
+            console.warn('Failed to sync AI-generated options:', optionsError);
+          }
+        }
+
+        createdQuestions.push({
+          ...createdQuestion,
+          options: aiOptions.length >= 2 ? aiOptions : buildDefaultAssessmentOptions(),
+        });
       }
 
-      createdQuestions.push({
-        ...createdQuestion,
-        options: aiOptions.length >= 2 ? aiOptions : buildDefaultAssessmentOptions(),
+      if (createdQuestions.length === 0) {
+        setMessage({ type: 'error', text: 'The AI did not return any usable questions.' });
+        return;
+      }
+
+      setQuestions(createdQuestions.sort((a, b) => a.question_no - b.question_no));
+      setMessage({
+        type: 'success',
+        text: `Generated ${createdQuestions.length} question${createdQuestions.length === 1 ? '' : 's'} from Module ${moduleNo}. Review and save the generated rows.`,
       });
-    }
 
-    if (createdQuestions.length === 0) {
-      setMessage({ type: 'error', text: 'The AI did not return any usable questions.' });
+      await logAdminActivity({
+        actorId: currentUser?.admin_id || null,
+        actorName: currentUser?.name || currentUser?.email || 'Admin User',
+        action: 'Assessment Questions Generated',
+        actionType: 'create',
+        details: `Generated ${createdQuestions.length} questions for ${selectedAssessmentLabel || selectedAssessmentId} from Module ${moduleNo}.`,
+        metadata: {
+          assessment_id: selectedAssessmentId,
+          module_no: moduleNo,
+          generated_count: createdQuestions.length,
+        },
+      });
+    } finally {
       setIsGenerating(false);
-      return;
     }
-
-    setQuestions(
-  createdQuestions.sort(
-    (a, b) => a.question_no - b.question_no
-  )
-);
-    setMessage({
-      type: 'success',
-      text: `Generated ${createdQuestions.length} question${createdQuestions.length === 1 ? '' : 's'} from Module ${moduleNo}. Review and save the generated rows.`,
-    });
-
-    await logAdminActivity({
-      actorId: currentUser?.admin_id || null,
-      actorName: currentUser?.name || currentUser?.email || 'Admin User',
-      action: 'Assessment Questions Generated',
-      actionType: 'create',
-      details: `Generated ${createdQuestions.length} questions for ${selectedAssessmentLabel || selectedAssessmentId} from Module ${moduleNo}.`,
-      metadata: {
-        assessment_id: selectedAssessmentId,
-        module_no: moduleNo,
-        generated_count: createdQuestions.length,
-      },
-    });
-
-    setIsGenerating(false);
   };
 
   const handleSaveQuestion = async (question) => {
@@ -557,7 +574,7 @@ setQuestions([]);
           </div>
 
           <div className="assessment-generator">
-            <label htmlFor="assessment-generate-count">AI question count</label>
+            <label htmlFor="assessment-generate-count">AI questions generator</label>
             <div className="assessment-generator-controls">
             
               <button

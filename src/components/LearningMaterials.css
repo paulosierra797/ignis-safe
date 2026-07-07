@@ -11,15 +11,17 @@
 .learning-materials-main {
   flex: 1;
   min-width: 0;
+  margin-left: 270px;
   padding: 1.5rem 1.75rem 2rem;
-
-  /* ADD THIS */
-  margin-left: 270px; /* adjust to your sidebar width */
+  overflow-x: auto;
 }
+
+.learning-material-card,
 .learning-materials-hero,
-.learning-materials-grid,
-.learning-materials-fire-guides {
+.learning-material-page {
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
 }
 
 .learning-materials-hero {

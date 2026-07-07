@@ -16,6 +16,7 @@ const DEFAULT_ANALYTICS_STATS = {
   knowledgeGainPercent: 0,
 };
 
+
 const DEFAULT_CHARTS = {
   userOverview: { labels: [], values: [] },
   activityTrends: { labels: [], started: [], submitted: [] },
@@ -50,10 +51,7 @@ const getBarHeights = (values) => {
     return Math.max(12, Math.round((value / maxValue) * 100));
   });
 };
-const knowledgeGain = analyticsStats.knowledgeGainPercent;
-const isNegative = knowledgeGain < 0;
-const gainColor = isNegative ? "#ef4444" : "#22c55e"; // red : green
-const gradientId = isNegative ? "lossGradient" : "gainGradient";
+
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -65,6 +63,7 @@ export default function Dashboard() {
     offDuty: 0,
     attendancePercentage: 0
   });
+ 
   const [analyticsStats, setAnalyticsStats] = useState(DEFAULT_ANALYTICS_STATS);
   const [chartsData, setChartsData] = useState(DEFAULT_CHARTS);
   const [mobileStats, setMobileStats] = useState({
@@ -75,6 +74,27 @@ export default function Dashboard() {
     newRegistrationsPrevious: 0,
     trainingCompletionPercent: 0,
   });
+  const knowledgeGain = analyticsStats.knowledgeGainPercent;
+const isNegative = knowledgeGain < 0;
+const gainColor = isNegative ? "#ef4444" : "#22c55e"; // red : green
+const gradientId = isNegative ? "lossGradient" : "gainGradient";
+  const startingKnowledge = analyticsStats.startingKnowledge;
+
+let startingColor = "#22c55e"; // Green
+if (startingKnowledge < 40) {
+  startingColor = "#ef4444"; // Red
+} else if (startingKnowledge < 70) {
+  startingColor = "#f59e0b"; // Yellow
+}
+const currentKnowledge = analyticsStats.currentKnowledge;
+
+let currentColor = "#22c55e"; // Green (High)
+
+if (currentKnowledge < 40) {
+  currentColor = "#ef4444"; // Red (Low)
+} else if (currentKnowledge < 70) {
+  currentColor = "#f59e0b"; // Yellow (Moderate)
+}
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -446,15 +466,25 @@ export default function Dashboard() {
               <div className="metric-content">
                 <p className="metric-label">Starting Knowledge</p>
                 <div className="knowledge-display">
-                  <span className="knowledge-percent">
-                    {loading ? '...' : `${analyticsStats.startingKnowledge}%`}
-                  </span>
+                  <span
+  className="knowledge-percent"
+  style={{ color: startingColor }}
+>
+  {loading ? "..." : `${startingKnowledge}%`}
+</span>
                   <div className="knowledge-trend-line">
-                    <svg width="120" height="40" viewBox="0 0 120 40">
-                      <path d="M 0 30 Q 20 25, 40 28 T 80 22 T 120 20" stroke="#94a3b8" strokeWidth="2" fill="none" />
-                      <circle cx="0" cy="30" r="3" fill="#94a3b8" />
-                      <circle cx="120" cy="20" r="3" fill="#94a3b8" />
-                    </svg>
+                    <div className="knowledge-trend-line">
+  <svg width="120" height="40" viewBox="0 0 120 40">
+    <path
+      d="M 0 30 Q 20 25, 40 28 T 80 22 T 120 20"
+      stroke={startingColor}
+      strokeWidth="2"
+      fill="none"
+    />
+    <circle cx="0" cy="30" r="3" fill={startingColor} />
+    <circle cx="120" cy="20" r="3" fill={startingColor} />
+  </svg>
+</div>
                   </div>
                 </div>
               </div>
@@ -471,14 +501,22 @@ export default function Dashboard() {
               <div className="metric-content">
                 <p className="metric-label">Current Knowledge</p>
                 <div className="knowledge-display">
-                  <span className="knowledge-percent current">
-                    {loading ? '...' : `${analyticsStats.currentKnowledge}%`}
-                  </span>
+                 <span
+  className="knowledge-percent current"
+  style={{ color: currentColor }}
+>
+  {loading ? '...' : `${currentKnowledge}%`}
+</span>
                   <div className="knowledge-trend-line">
                     <svg width="120" height="40" viewBox="0 0 120 40">
-                      <path d="M 0 35 Q 20 28, 40 30 T 80 18 T 120 12" stroke="#3b82f6" strokeWidth="2" fill="none" />
-                      <circle cx="0" cy="35" r="3" fill="#3b82f6" />
-                      <circle cx="120" cy="12" r="3" fill="#3b82f6" />
+                      <path
+  d="M 0 35 Q 20 28, 40 30 T 80 18 T 120 12"
+  stroke={currentColor}
+  strokeWidth="2"
+  fill="none"
+/>
+<circle cx="0" cy="35" r="3" fill={currentColor} />
+<circle cx="120" cy="12" r="3" fill={currentColor} />
                     </svg>
                   </div>
                 </div>

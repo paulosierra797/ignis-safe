@@ -75,7 +75,25 @@ export default function Analytics() {
       rotateDeg,
     };
   });
+// Starting Knowledge
+let startingColor = "#22c55e";
+if (stats.startingKnowledge < 30) {
+  startingColor = "#ef4444";
+} else if (stats.startingKnowledge < 70) {
+  startingColor = "#f59e0b";
+}
 
+// Current Knowledge
+let currentColor = "#22c55e";
+if (stats.currentKnowledge < 40) {
+  currentColor = "#ef4444";
+} else if (stats.currentKnowledge < 70) {
+  currentColor = "#f59e0b";
+}
+
+// Knowledge Gain
+const gainColor =
+  stats.knowledgeGainPercent < 0 ? "#ef4444" : "#22c55e";
   useEffect(() => {
     let isMounted = true;
 
@@ -202,31 +220,55 @@ const { data: chartsData } =
           <div className="analytics-stat-card">
             <h3>Starting Knowledge</h3>
             <div className="stat-value">
-              <span className="main-value">
-                {isLoadingStats ? '...' : `${stats.startingKnowledge}%`}
-              </span>
+             <span
+  className="main-value"
+  style={{ color: startingColor }}
+>
+  {isLoadingStats ? '...' : `${stats.startingKnowledge}%`}
+</span>
             </div>
-            <div className="sparkline red"></div>
+            <div
+  className="sparkline"
+  style={{
+    background: `linear-gradient(to right, ${startingColor}33, ${startingColor}66)`
+  }}
+></div>
           </div>
           <div className="analytics-stat-card">
             <h3>Current Knowledge</h3>
             <div className="stat-value">
-              <span className="main-value">
-                {isLoadingStats ? '...' : `${stats.currentKnowledge}%`}
-              </span>
+             <span
+  className="main-value"
+  style={{ color: currentColor }}
+>
+  {isLoadingStats ? '...' : `${stats.currentKnowledge}%`}
+</span>
             </div>
-            <div className="sparkline red"></div>
+            <div
+  className="sparkline"
+  style={{
+    background: `linear-gradient(to right, ${currentColor}33, ${currentColor}66)`
+  }}
+></div>
           </div>
           <div className="analytics-stat-card">
             <h3>Knowledge Gain</h3>
             <div className="stat-value">
-              <span className="main-value">
-                {isLoadingStats
-                  ? '...'
-                  : `${stats.knowledgeGainPercent >= 0 ? '+' : ''}${stats.knowledgeGainPercent}%`}
-              </span>
+             <span
+  className="main-value"
+  style={{ color: gainColor }}
+>
+  {isLoadingStats
+    ? '...'
+    : `${stats.knowledgeGainPercent >= 0 ? '+' : ''}${stats.knowledgeGainPercent}%`}
+</span>
             </div>
-            <div className="sparkline orange"></div>
+            <div
+  className="sparkline"
+  style={{
+    background: `linear-gradient(to right, ${gainColor}33, ${gainColor}66)`
+  }}
+></div>
           </div>
         </div>
 

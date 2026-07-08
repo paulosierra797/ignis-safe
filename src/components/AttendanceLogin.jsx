@@ -12,7 +12,7 @@ const AttendanceLogin = () => {
   const location = useLocation();
 const [searchParams] = useSearchParams();
 const sessionId = searchParams.get("station");
-  const [searchParams] = useSearchParams();
+ 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

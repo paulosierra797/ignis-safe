@@ -10,7 +10,8 @@ import './AttendanceLogin.css';
 const AttendanceLogin = () => {
   const navigate = useNavigate();
   const location = useLocation();
-const session = location.state?.session;
+const [searchParams] = useSearchParams();
+const sessionId = searchParams.get("station");
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,8 +48,10 @@ const session = location.state?.session;
       saveAuthToken(officer);
       setEmail('');
       setPassword('');
-      navigate('/attendance-scan', {
-  state: { session }
+     navigate("/attendance-scan", {
+  state: {
+    session: { session_id: sessionId }
+  }
 });
     } else {
       setError('Invalid account email or password. Please try again.');
@@ -56,16 +59,15 @@ const session = location.state?.session;
 
     setIsLoading(false);
   };
-  useEffect(() => {
+ useEffect(() => {
   const checkQR = async () => {
-
-    if (!session?.session_id) {
-      setError('Invalid QR session');
+    if (!sessionId) {
+      setError("Invalid QR session");
       setQrValid(false);
       return;
     }
 
-    const result = await validateQRSession(session.session_id);
+    const result = await validateQRSession(sessionId);
 
     if (!result.valid) {
       setError(result.reason);
@@ -77,8 +79,7 @@ const session = location.state?.session;
   };
 
   checkQR();
-
-}, [session]);
+}, [sessionId]);
   
 
   return (

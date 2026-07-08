@@ -27,7 +27,7 @@ const session = location.state?.session;
   }
 
     setError('');
-    setIsLoading(true);
+    setIsLoading(false);
 
     if (!email.trim()) {
       setError('Please enter your account email');

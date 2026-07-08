@@ -38,6 +38,8 @@ export default function LearningMaterials() {
   const [editedModule, setEditedModule] = useState(null);
   const [currentPages, setCurrentPages] = useState({});
 
+ 
+
   const handlePageChange = (moduleNo, nextIndex, totalPages) => {
     const safeMax = Math.max(totalPages - 1, 0);
     const safeIndex = Math.min(Math.max(nextIndex, 0), safeMax);
@@ -61,6 +63,7 @@ export default function LearningMaterials() {
       title_tl: editedModule.title_tl,
       subtitle_en: editedModule.subtitle,
       subtitle_tl: editedModule.subtitle_tl
+      
     });
 
     if (moduleResult.error) {
@@ -90,7 +93,8 @@ export default function LearningMaterials() {
       for (const block of page.blocks) {
         const blockResult = await updateLearningMaterialBlock(block.id, {
           text_en: block.text_en,
-          text_tl: block.text_tl
+          text_tl: block.text_tl,
+          metadata: block.metadata
         });
 
         if (blockResult.error) {
@@ -481,58 +485,75 @@ export default function LearningMaterials() {
     </p>
   )
 )}
-{editingModule === moduleEntry.module_no ? (
-  <div className="learning-material-metadata-editor">
-    <label>Metadata (JSON)</label>
+{editingModule === moduleEntry.module_no ? (() => {
+  const currentBlock = editedModule.pages
+    .find((p) => p.page_no === page.page_no)
+    ?.blocks.find((b) => b.id === block.id);
 
-    <textarea
-      className="learning-material-textarea"
-      rows={15}
-      value={JSON.stringify(
-        editedModule.pages
-          .find((p) => p.page_no === page.page_no)
-          ?.blocks.find((b) => b.id === block.id)
-          ?.metadata || {},
-        null,
-        2
-      )}
-      onChange={(e) => {
-        try {
-          const parsed = JSON.parse(e.target.value);
+  const metadata = currentBlock?.metadata || {};
 
-          const updatedPages = editedModule.pages.map((p) => {
-            if (p.page_no !== page.page_no) return p;
+  const updateMetadata = (key, value) => {
+    const updatedPages = editedModule.pages.map((p) => {
+      if (p.page_no !== page.page_no) return p;
 
-            return {
-              ...p,
-              blocks: p.blocks.map((b) =>
-                b.id === block.id
-                  ? {
-                      ...b,
-                      metadata: parsed
-                    }
-                  : b
-              )
-            };
-          });
+      return {
+        ...p,
+        blocks: p.blocks.map((b) =>
+          b.id === block.id
+            ? {
+                ...b,
+                metadata: {
+                  ...b.metadata,
+                  [key]: value
+                }
+              }
+            : b
+        )
+      };
+    });
 
-          setEditedModule({
-            ...editedModule,
-            pages: updatedPages
-          });
-        } catch {
-          // Ignore invalid JSON while typing
-        }
-      }}
-    />
-  </div>
-) : (
+    setEditedModule({
+      ...editedModule,
+      pages: updatedPages
+    });
+  };
+
+  return (
+    <div className="learning-material-metadata-editor">
+
+      <label>Page Tag (English)</label>
+      <input
+        type="text"
+        value={metadata.page_tag_en || ""}
+        onChange={(e) => updateMetadata("page_tag_en", e.target.value)}
+      />
+
+      <label>Page Tag (Tagalog)</label>
+      <input
+        type="text"
+        value={metadata.page_tag_tl || ""}
+        onChange={(e) => updateMetadata("page_tag_tl", e.target.value)}
+      />
+
+      <label>Subtitle (English)</label>
+      <textarea
+        value={metadata.subtitle_en || ""}
+        onChange={(e) => updateMetadata("subtitle_en", e.target.value)}
+      />
+
+      <label>Subtitle (Tagalog)</label>
+      <textarea
+        value={metadata.subtitle_tl || ""}
+        onChange={(e) => updateMetadata("subtitle_tl", e.target.value)}
+      />
+
+    </div>
+  );
+})() : (
   <pre className="learning-material-metadata-preview">
     {JSON.stringify(block.metadata, null, 2)}
   </pre>
 )}
-
-
   
 </>
 

@@ -533,3 +533,37 @@
 .learning-material-editor-actions button:last-child {
   background: #e2e8f0;
 }
+.back-button-container {
+  
+   display: flex;
+  justify-content: flex-start;
+  margin: 1.5rem 0;
+}
+
+.back-button {
+    display: inline-flex;
+    width: fit-content;
+    padding: 12px 22px;
+
+    background: #dc2626;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.back-button:hover {
+  background: #b91c1c;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.25);
+}
+
+.back-button:active {
+  transform: translateY(0);
+}
+
+.back-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+}

@@ -34,6 +34,116 @@ export const getLearningMaterialFireClassGuides = async () => {
     return { data: null, error: error.message };
   }
 };
+export const getLearningMaterialFireClassDetails = async () => {
+  try {
+    const { data, error } = await supabase
+      .from("learning_material_fire_class_details")
+      .select("*")
+      .eq("is_active", true)
+      .order("module_no", { ascending: true })
+      .order("class_key", { ascending: true });
+
+    if (error) throw error;
+
+    return {
+      data: data || [],
+      error: null,
+    };
+  } catch (error) {
+    console.error(
+      "Error fetching learning material fire class details:",
+      error
+    );
+
+    return {
+      data: null,
+      error: error.message,
+    };
+  }
+};
+export const getLearningMaterialMediaAssets = async () => {
+  const { data, error } = await supabase
+    .from("learning_material_media_assets")
+    .select("*")
+    .order("module_no")
+    .order("display_order");
+
+  if (error) {
+    return { data: null, error };
+  }
+
+  const assets = data.map((asset) => {
+    const { data: urlData } = supabase.storage
+      .from("Learning Materials") // <-- verify this bucket ID
+      .getPublicUrl(asset.asset_path);
+
+    return {
+      ...asset,
+      public_url: urlData.publicUrl,
+    };
+  });
+
+  return {
+    data: assets,
+    error: null,
+  };
+};
+
+export const updateLearningMaterialMediaAsset = async (id, updates) => {
+  return await supabase
+    .from("learning_material_media_assets")
+    .update(updates)
+    .eq("id", id);
+};
+export const updateLearningMaterialFireClassDetail = async (
+  id,
+  updates
+) => {
+  try {
+    const { data, error } = await supabase
+      .from("learning_material_fire_class_details")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      data,
+      error: null,
+    };
+  } catch (error) {
+    console.error(
+      "Error updating fire class detail:",
+      error
+    );
+
+    return {
+      data: null,
+      error: error.message,
+    };
+  }
+};
+export const updateLearningMaterialFireClassGuides = async (
+  id,
+  updates
+) => {
+  try {
+    const { data, error } = await supabase
+      .from("learning_material_fire_class_guides")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error: error.message };
+  }
+};
 export const updateLearningMaterialBlock = async (blockId, updates) => {
   try {
     const { data, error } = await supabase
@@ -140,6 +250,29 @@ export const updateLearningMaterialPage = async (moduleNo, pageNo, updates) => {
       error: error.message
     };
   }
+};
+export const getLearningMaterialTexts = async () => {
+  const { data, error } = await supabase
+    .from("learning_material_texts")
+    .select("*")
+    .order("module_no")
+    .order("text_order");
+
+  return { data, error };
+};
+
+export const updateLearningMaterialTexts = async (
+  id,
+  updates
+) => {
+  const { data, error } = await supabase
+    .from("learning_material_texts")
+    .update(updates)
+    .eq("id", id)
+    .select()
+    .single();
+
+  return { data, error };
 };
 
 export const buildLearningMaterialModules = (rows = []) => {

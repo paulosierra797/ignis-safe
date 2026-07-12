@@ -22,6 +22,8 @@ import FireClassDetailsEditor from "./MetadataEditors/FireClassDetailsEditor";
 import LearningMaterialsTextEditor from "./MetadataEditors/LearningMaterialsTextEditor";
 import MediaAssetEditor from "./MetadataEditors/MediaAssetEditor";
 
+import  './ModuleEditor.css';
+
 
 export default function ModuleEditor({
     moduleEntry,
@@ -569,44 +571,53 @@ return(
               </div>
               
             </section>
-         <div className="learning-material-actions">
-      <button
-  type="button"
-  className="save-button"
-  onClick={() => setShowConfirm(true)}
-  disabled={saving}
->
-  {saving ? "Saving..." : "Save Changes"}
-</button>
-    </div>
-    {showConfirm && (
+       <div className="learning-material-actions">
+  <button
+    type="button"
+    className="save-button"
+    onClick={() => setShowConfirm(true)}
+    disabled={saving}
+  >
+    {saving ? "Saving..." : "Save Changes"}
+  </button>
+</div>
+
+{showConfirm && (
   <div className="confirm-overlay">
     <div className="confirm-modal">
-      <h3>Save Changes</h3>
+      <div className="confirm-icon">
+        💾
+      </div>
+
+      <h3>Save Changes?</h3>
 
       <p>
-        Are you sure you want to save all changes to this learning module?
+        This will update the learning module and make your latest edits
+        available to users.
       </p>
 
       <div className="confirm-buttons">
         <button
+          className="cancel-btn"
           onClick={() => setShowConfirm(false)}
         >
           Cancel
         </button>
 
         <button
+          className="confirm-btn"
           onClick={() => {
             setShowConfirm(false);
             handleSaveModule();
           }}
         >
-          Save
+          Save Changes
         </button>
       </div>
     </div>
   </div>
 )}
+
   </>   
   );
 }

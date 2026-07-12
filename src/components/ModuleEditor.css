@@ -1,0 +1,129 @@
+.learning-material-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 30px;
+}
+
+.save-button {
+  background: linear-gradient(135deg, #2f80ed, #1d4ed8);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .25s ease;
+  box-shadow: 0 10px 25px rgba(29, 78, 216, .18);
+}
+
+.save-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(29, 78, 216, .28);
+}
+
+.save-button:active {
+  transform: scale(.98);
+}
+
+.save-button:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+}
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .55);
+  backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  animation: fadeIn .25s ease;
+}
+.confirm-modal {
+  width: 420px;
+  max-width: 90%;
+  background: #fff;
+  border-radius: 20px;
+  padding: 32px;
+  text-align: center;
+  box-shadow: 0 25px 70px rgba(0,0,0,.18);
+  animation: popUp .25s ease;
+}
+.confirm-icon {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: #e8f1ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+}
+.confirm-modal h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 24px;
+}
+
+.confirm-modal p {
+  margin-top: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+  font-size: 15px;
+}
+.confirm-buttons {
+  margin-top: 28px;
+  display: flex;
+  gap: 14px;
+}
+
+.confirm-buttons button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: .25s;
+}
+.cancel-btn {
+  background: white;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.cancel-btn:hover {
+  background: #f3f4f6;
+}
+.confirm-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+}
+
+.confirm-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popUp {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

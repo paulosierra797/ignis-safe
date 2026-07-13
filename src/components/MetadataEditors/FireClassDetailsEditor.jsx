@@ -1,5 +1,5 @@
 import React from "react";
-import "./Fireclass.css";
+import "./fireclass.css";
 
 export default function FireClassDetailsEditor({
   detail,

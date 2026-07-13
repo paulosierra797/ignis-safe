@@ -1,4 +1,5 @@
 import React from "react";
+import "./ActionPillsEditor.css";
 
 export default function ActionPillsEditor({
   block,
@@ -114,8 +115,8 @@ export default function ActionPillsEditor({
         >
           <h5>Pill {index + 1}</h5>
 
-          <label>Label (English)</label>
-          <input
+          <div><label>Label (English)</label></div>
+          <input className="label"
             type="text"
             value={pill.label_en || ""}
             onChange={(e) =>
@@ -123,7 +124,7 @@ export default function ActionPillsEditor({
             }
           />
 
-          <label>Label (Tagalog)</label>
+          <div><label>Label (Tagalog)</label></div>
           <input
             type="text"
             value={pill.label_tl || ""}
@@ -132,25 +133,9 @@ export default function ActionPillsEditor({
             }
           />
 
-          <label>Icon Role</label>
-          <input
-            type="text"
-            value={pill.icon_role || ""}
-            onChange={(e) =>
-              updatePill(index, "icon_role", e.target.value)
-            }
-          />
+         
 
-          <label>Accent Role</label>
-          <input
-            type="text"
-            value={pill.accent_role || ""}
-            onChange={(e) =>
-              updatePill(index, "accent_role", e.target.value)
-            }
-          />
-
-          <label>Popup Title (English)</label>
+          <div><label>Popup Title (English)</label></div>
           <input
             type="text"
             value={pill.popup_title_en || ""}
@@ -159,7 +144,7 @@ export default function ActionPillsEditor({
             }
           />
 
-          <label>Popup Title (Tagalog)</label>
+          <div><label>Popup Title (Tagalog)</label></div>
           <input
             type="text"
             value={pill.popup_title_tl || ""}
@@ -168,16 +153,16 @@ export default function ActionPillsEditor({
             }
           />
 
-          <label>Popup Body (English)</label>
-          <textarea
+          <div><label>Popup Body (English)</label></div>
+          <textarea classname="popup-body"
             value={pill.popup_body_en || ""}
             onChange={(e) =>
               updatePill(index, "popup_body_en", e.target.value)
             }
           />
 
-          <label>Popup Body (Tagalog)</label>
-          <textarea
+          <div><label>Popup Body (Tagalog)</label></div>
+          <textarea classname="popup-body"
             value={pill.popup_body_tl || ""}
             onChange={(e) =>
               updatePill(index, "popup_body_tl", e.target.value)
@@ -191,7 +176,7 @@ export default function ActionPillsEditor({
       <h4>Wide Card</h4>
 
       <label>Title (English)</label>
-      <input
+      <input className="widecard-title"
         type="text"
         value={metadata.wide_card?.title_en || ""}
         onChange={(e) =>
@@ -224,14 +209,7 @@ export default function ActionPillsEditor({
         }
       />
 
-      <label>Icon Role</label>
-      <input
-        type="text"
-        value={metadata.wide_card?.icon_role || ""}
-        onChange={(e) =>
-          updateWideCard("icon_role", e.target.value)
-        }
-      />
+      
     </div>
   );
 }

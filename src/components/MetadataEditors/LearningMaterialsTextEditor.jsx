@@ -4,7 +4,7 @@ export default function LearningMaterialTextsEditor({
 }) {
   return (
     <div className="learning-material-text-card">
-      <h4>{text.text_key}</h4>
+     
 
       <label>English</label>
       <textarea

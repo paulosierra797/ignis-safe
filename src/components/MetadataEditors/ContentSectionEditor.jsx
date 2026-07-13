@@ -1,4 +1,5 @@
 import React from "react";
+import "./ContentSection.css";
 
 export default function ContentSectionEditor({
   block,
@@ -165,7 +166,7 @@ export default function ContentSectionEditor({
             {part.type === "mini_headline" && (
   <>
     <label>Headline (English)</label>
-    <input
+    <input className="headline"
       value={part.text_en || ""}
       onChange={(e) =>
         updatePart(index, "text_en", e.target.value)
@@ -173,7 +174,7 @@ export default function ContentSectionEditor({
     />
 
     <label>Headline (Tagalog)</label>
-    <input
+     <input className="headline"
       value={part.text_tl || ""}
       onChange={(e) =>
         updatePart(index, "text_tl", e.target.value)
@@ -184,7 +185,7 @@ export default function ContentSectionEditor({
 {part.type === "chip_line" && (
   <>
     <label>Text (English)</label>
-    <textarea
+    <textarea className="text"
       value={part.text_en || ""}
       onChange={(e) =>
         updatePart(index, "text_en", e.target.value)
@@ -192,28 +193,14 @@ export default function ContentSectionEditor({
     />
 
     <label>Text (Tagalog)</label>
-    <textarea
+    <textarea className="text"
       value={part.text_tl || ""}
       onChange={(e) =>
         updatePart(index, "text_tl", e.target.value)
       }
     />
 
-    <label>Icon Role</label>
-    <input
-      value={part.icon_role || ""}
-      onChange={(e) =>
-        updatePart(index, "icon_role", e.target.value)
-      }
-    />
-
-    <label>Accent Role</label>
-    <input
-      value={part.accent_role || ""}
-      onChange={(e) =>
-        updatePart(index, "accent_role", e.target.value)
-      }
-    />
+   
   </>
 )}
 {part.type === "action_pills" && (
@@ -263,39 +250,26 @@ export default function ContentSectionEditor({
           }
         />
 
-        <label>Popup Body (English)</label>
-        <textarea
+       <div> <label>Popup Body (English)</label>
+        <textarea className="popup-body"
           rows={5}
           value={pill.popup_body_en || ""}
           onChange={(e) =>
             updatePill(index, pillIndex, "popup_body_en", e.target.value)
           }
         />
+        
 
         <label>Popup Body (Tagalog)</label>
-        <textarea
+        <textarea className="popup-body"
           rows={5}
           value={pill.popup_body_tl || ""}
           onChange={(e) =>
             updatePill(index, pillIndex, "popup_body_tl", e.target.value)
           }
         />
-
-        <label>Icon Role</label>
-        <input
-          value={pill.icon_role || ""}
-          onChange={(e) =>
-            updatePill(index, pillIndex, "icon_role", e.target.value)
-          }
-        />
-
-        <label>Accent Role</label>
-        <input
-          value={pill.accent_role || ""}
-          onChange={(e) =>
-            updatePill(index, pillIndex, "accent_role", e.target.value)
-          }
-        />
+</div>
+       
       </div>
     ))}
   </>
@@ -304,8 +278,8 @@ export default function ContentSectionEditor({
 
           {part.title_en !== undefined && (
             <>
-              <label>Title (English)</label>
-              <input
+            <div>  <label>Title (English)</label>
+              <input className="title"
                 value={part.title_en}
                 onChange={(e) =>
                   updatePart(index, "title_en", e.target.value)
@@ -313,19 +287,20 @@ export default function ContentSectionEditor({
               />
 
               <label>Title (Tagalog)</label>
-              <input
+              <input className="title"
                 value={part.title_tl}
                 onChange={(e) =>
                   updatePart(index, "title_tl", e.target.value)
                 }
               />
+              </div>
             </>
           )}
 
           {part.text_en !== undefined && (
             <>
               <label>Text (English)</label>
-              <textarea
+              <textarea className="text"
                 value={part.text_en}
                 onChange={(e) =>
                   updatePart(index, "text_en", e.target.value)
@@ -333,7 +308,7 @@ export default function ContentSectionEditor({
               />
 
               <label>Text (Tagalog)</label>
-              <textarea
+              <textarea className="text"
                 value={part.text_tl}
                 onChange={(e) =>
                   updatePart(index, "text_tl", e.target.value)
@@ -344,50 +319,30 @@ export default function ContentSectionEditor({
 
           {part.asset_key !== undefined && (
             <>
-              <label>Asset Key</label>
-              <input
-                value={part.asset_key}
-                onChange={(e) =>
-                  updatePart(index, "asset_key", e.target.value)
-                }
-              />
+              
             </>
           )}
 
           {part.url !== undefined && (
             <>
-              <label>URL</label>
-              <input
+             <div> <label>URL</label>
+              <input className="url"
                 value={part.url}
                 onChange={(e) => updatePart(index, "url", e.target.value)}
               />
-
+</div>
               <label>Organization</label>
-              <input
+              <input className="org"
                 value={part.organization}
                 onChange={(e) =>
                   updatePart(index, "organization", e.target.value)
                 }
               />
 
-              <label>Label (English)</label>
-              <input
-                value={part.label_en}
-                onChange={(e) =>
-                  updatePart(index, "label_en", e.target.value)
-                }
-              />
-
-              <label>Label (Tagalog)</label>
-              <input
-                value={part.label_tl}
-                onChange={(e) =>
-                  updatePart(index, "label_tl", e.target.value)
-                }
-              />
+             
 
               <label>Title</label>
-              <input
+              <input className="title"
                 value={part.title}
                 onChange={(e) =>
                   updatePart(index, "title", e.target.value)
@@ -400,7 +355,7 @@ export default function ContentSectionEditor({
             <>
               <h6>Lines (English)</h6>
               {part.lines_en.map((line, i) => (
-                <input
+                <input className="line"
                   key={i}
                   value={line}
                   onChange={(e) =>
@@ -411,7 +366,7 @@ export default function ContentSectionEditor({
 
               <h6>Lines (Tagalog)</h6>
               {part.lines_tl.map((line, i) => (
-                <input
+                <input className="line"
                   key={i}
                   value={line}
                   onChange={(e) =>

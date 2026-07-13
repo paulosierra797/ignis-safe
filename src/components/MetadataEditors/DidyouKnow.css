@@ -1,0 +1,7 @@
+.teaser {
+  width: 300px;
+  height: 150px;
+  padding: 10px;
+  font-size: 16px;
+  resize: vertical;
+}

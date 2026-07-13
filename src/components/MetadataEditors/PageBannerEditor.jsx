@@ -1,5 +1,7 @@
 import React from "react";
 
+import "./PageBanner.css";
+
 export default function PageBannerEditor({
   block,
   page,
@@ -37,10 +39,11 @@ export default function PageBannerEditor({
   return (
     <div className="metadata-editor">
       <h4>Page Banner</h4>
-
+ <div className="row">
       <label>Page Tag (English)</label>
       <input
         type="text"
+        className="page-banner"
         value={metadata.page_tag_en || ""}
         onChange={(e) =>
           updateMetadata("page_tag_en", e.target.value)
@@ -50,6 +53,7 @@ export default function PageBannerEditor({
       <label>Page Tag (Tagalog)</label>
       <input
         type="text"
+        className="page-banner"
         value={metadata.page_tag_tl || ""}
         onChange={(e) =>
           updateMetadata("page_tag_tl", e.target.value)
@@ -71,6 +75,7 @@ export default function PageBannerEditor({
           updateMetadata("subtitle_tl", e.target.value)
         }
       />
+      </div>
     </div>
   );
 }

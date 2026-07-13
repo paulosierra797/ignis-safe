@@ -1,3 +1,6 @@
+
+import "./PassStep.css";
+
 export default function PassStepEditor({
   block,
   page,
@@ -35,13 +38,13 @@ export default function PassStepEditor({
   return (
     <>
       <label>Letter</label>
-      <input
+      <input className="letter"
         value={metadata.letter || ""}
         onChange={(e) =>
           updateMetadata("letter", e.target.value)
         }
       />
-
+<div>
       <label>Description (English)</label>
       <textarea
         value={metadata.desc_en || ""}
@@ -57,7 +60,7 @@ export default function PassStepEditor({
           updateMetadata("desc_tl", e.target.value)
         }
       />
-
+</div>
       <label>Video Title (English)</label>
       <input
         value={metadata.video_title_en || ""}

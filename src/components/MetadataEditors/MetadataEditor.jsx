@@ -7,6 +7,7 @@ import ActionPillsEditor from "./ActionPillsEditor";
 import PassStepEditor from "./PassStepEditor";
 import CalloutEditor from "./CalloutEditor";
 import LessonSectionEditor from "./LessonSectionEditor";
+
 export default function MetadataEditor({
   moduleNo,
   block,

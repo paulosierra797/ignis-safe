@@ -1,0 +1,14 @@
+textarea {
+  width: 200px;
+  height: 80px;
+  padding: 10px;
+  font-size: 16px;
+  resize: vertical;
+}
+.letter{
+    width: 50px;
+  height: 20px;
+  padding: 10px;
+  font-size: 16px;
+  resize: vertical;
+}

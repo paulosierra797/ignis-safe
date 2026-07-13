@@ -19,6 +19,14 @@ export default function LandingAnnouncements() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 3;
 
+  const getItemsPerPage = () => {
+  if (window.innerWidth < 768) return 1;
+  if (window.innerWidth < 1100) return 2;
+  return 3;
+};
+
+const [itemsPerPage, setItemsPerPage] = useState(getItemsPerPage());
+
   useEffect(() => {
     const loadAnnouncements = async () => {
       setLoading(true);
@@ -29,6 +37,15 @@ export default function LandingAnnouncements() {
 
     loadAnnouncements();
   }, []);
+  useEffect(() => {
+  const handleResize = () => {
+    setItemsPerPage(getItemsPerPage());
+  };
+
+  window.addEventListener("resize", handleResize);
+
+  return () => window.removeEventListener("resize", handleResize);
+}, []);
 
   return (
     <section className="landing-announcements" id="announcements">
@@ -50,7 +67,10 @@ export default function LandingAnnouncements() {
         ) : (
           <>
           <div className="landing-announcements-grid">
-            {announcements.slice((currentPage-1)*ITEMS_PER_PAGE, (currentPage-1)*ITEMS_PER_PAGE + ITEMS_PER_PAGE).map((announcement) => (
+            {announcements.slice(
+  (currentPage - 1) * itemsPerPage,
+  (currentPage - 1) * itemsPerPage + itemsPerPage
+).map((announcement) => (
               <article key={announcement.announcement_id} className="landing-announcement-card">
                 <span className="landing-announcement-tag">Public</span>
                 <h3>{announcement.title}</h3>
@@ -89,7 +109,7 @@ export default function LandingAnnouncements() {
               </article>
             ))}
           </div>
-          {Math.ceil(announcements.length / ITEMS_PER_PAGE) > 1 && (
+          {Math.ceil(announcements.length / itemsPerPage) > 1 && (
             <div className="landing-announcement-pagination">
               <button
                 className="pagination-button"
@@ -99,11 +119,11 @@ export default function LandingAnnouncements() {
               >
                 ◀
               </button>
-              <span className="pagination-info">Page {currentPage} of {Math.ceil(announcements.length / ITEMS_PER_PAGE)}</span>
+              <span className="pagination-info">Page {currentPage} of {Math.ceil(announcements.length /itemsPerPage)}</span>
               <button
                 className="pagination-button"
-                onClick={() => setCurrentPage((p) => Math.min(Math.ceil(announcements.length / ITEMS_PER_PAGE), p + 1))}
-                disabled={currentPage === Math.ceil(announcements.length / ITEMS_PER_PAGE)}
+                onClick={() => setCurrentPage((p) => Math.min(Math.ceil(announcements.length / itemsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(announcements.length / itemsPerPage)}
                 aria-label="Next page"
               >
                 ▶

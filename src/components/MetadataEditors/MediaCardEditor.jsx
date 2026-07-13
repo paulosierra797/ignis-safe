@@ -1,4 +1,5 @@
 import React from "react";
+import "./MediaCard.css";
 
 export default function MediaCardEditor({
   block,
@@ -73,35 +74,35 @@ export default function MediaCardEditor({
       
 
       <label>Model Badge (English)</label>
-      <input
+      <input className="title"
         type="text"
         value={metadata.model_badge_en || ""}
         onChange={(e) => updateMetadata("model_badge_en", e.target.value)}
       />
 
       <label>Model Badge (Tagalog)</label>
-      <input
+        <input className="title"
         type="text"
         value={metadata.model_badge_tl || ""}
         onChange={(e) => updateMetadata("model_badge_tl", e.target.value)}
       />
 
       <label>Viewer Title (English)</label>
-      <input
+         <input className="title"
         type="text"
         value={metadata.viewer_title_en || ""}
         onChange={(e) => updateMetadata("viewer_title_en", e.target.value)}
       />
 
       <label>Viewer Title (Tagalog)</label>
-      <input
+        <input className="title"
         type="text"
         value={metadata.viewer_title_tl || ""}
         onChange={(e) => updateMetadata("viewer_title_tl", e.target.value)}
       />
 
-      <label>Viewer Subtitle (English)</label>
-      <textarea
+     <div className="row"> <label>Viewer Subtitle (English)</label>
+      <textarea className="desc1"
         value={metadata.viewer_subtitle_en || ""}
         onChange={(e) =>
           updateMetadata("viewer_subtitle_en", e.target.value)
@@ -109,7 +110,7 @@ export default function MediaCardEditor({
       />
 
       <label>Viewer Subtitle (Tagalog)</label>
-      <textarea
+       <textarea className="desc1"
         value={metadata.viewer_subtitle_tl || ""}
         onChange={(e) =>
           updateMetadata("viewer_subtitle_tl", e.target.value)
@@ -117,19 +118,19 @@ export default function MediaCardEditor({
       />
 
       <label>Subtitle (English)</label>
-      <textarea
+       <textarea className="desc1"
         value={metadata.subtitle_en || ""}
         onChange={(e) => updateMetadata("subtitle_en", e.target.value)}
       />
 
       <label>Subtitle (Tagalog)</label>
-      <textarea
+      <textarea className="desc1"
         value={metadata.subtitle_tl || ""}
         onChange={(e) => updateMetadata("subtitle_tl", e.target.value)}
       />
-
-      <label>Interaction Hint (English)</label>
-      <input
+</div>
+     <div> <label>Interaction Hint (English)</label>
+      <input className="title"
         type="text"
         value={metadata.interaction_hint_en || ""}
         onChange={(e) =>
@@ -138,7 +139,7 @@ export default function MediaCardEditor({
       />
 
       <label>Interaction Hint (Tagalog)</label>
-      <input
+      <input className="title"
         type="text"
         value={metadata.interaction_hint_tl || ""}
         onChange={(e) =>
@@ -147,28 +148,28 @@ export default function MediaCardEditor({
       />
 
       <label>Model Alt (English)</label>
-      <input
+      <input className="title"
         type="text"
         value={metadata.model_alt_en || ""}
         onChange={(e) => updateMetadata("model_alt_en", e.target.value)}
       />
 
       <label>Model Alt (Tagalog)</label>
-      <input
+      <input className="title"
         type="text"
         value={metadata.model_alt_tl || ""}
         onChange={(e) => updateMetadata("model_alt_tl", e.target.value)}
       />
-
+</div>
       <label>PASS Heading (English)</label>
-      <input
+      <input className="title"
         type="text"
         value={metadata.pass_heading_en || ""}
         onChange={(e) => updateMetadata("pass_heading_en", e.target.value)}
       />
 
       <label>PASS Heading (Tagalog)</label>
-      <input
+      <input className="title"
         type="text"
         value={metadata.pass_heading_tl || ""}
         onChange={(e) => updateMetadata("pass_heading_tl", e.target.value)}
@@ -193,7 +194,7 @@ export default function MediaCardEditor({
           <h5>Step {index + 1}</h5>
 
           <label>Letter</label>
-          <input
+          <input className="letters"
             type="text"
             value={step.letter || ""}
             onChange={(e) =>
@@ -202,7 +203,7 @@ export default function MediaCardEditor({
           />
 
           <label>Title (English)</label>
-          <input
+          <input className="title"
             type="text"
             value={step.title_en || ""}
             onChange={(e) =>
@@ -211,16 +212,16 @@ export default function MediaCardEditor({
           />
 
           <label>Title (Tagalog)</label>
-          <input
+          <input className="title"
             type="text"
             value={step.title_tl || ""}
             onChange={(e) =>
               updatePassStep(index, "title_tl", e.target.value)
             }
           />
-
+<div>
           <label>Description (English)</label>
-          <textarea
+          <textarea className="desc"
             value={step.desc_en || ""}
             onChange={(e) =>
               updatePassStep(index, "desc_en", e.target.value)
@@ -228,12 +229,13 @@ export default function MediaCardEditor({
           />
 
           <label>Description (Tagalog)</label>
-          <textarea
+          <textarea className="desc"
             value={step.desc_tl || ""}
             onChange={(e) =>
               updatePassStep(index, "desc_tl", e.target.value)
             }
           />
+          </div>
         </div>
       ))}
     </div>

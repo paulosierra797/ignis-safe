@@ -1,0 +1,22 @@
+.popup-body {
+  width: 400px;
+  height: 150px;
+  padding: 10px;
+  font-size: 16px;
+  resize: vertical;
+}
+.label {
+  width: 400px;
+  height: 150px;
+  padding: 10px;
+  font-size: 16px;
+  resize: vertical;
+}
+.widecard-title {
+  width: 400px;
+  height: 40px;
+  padding: 10px;
+  font-size: 16px;
+  resize: vertical;
+}
+

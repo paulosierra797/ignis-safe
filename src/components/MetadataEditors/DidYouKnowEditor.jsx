@@ -1,4 +1,5 @@
 import React from "react";
+import "./DidyouKnow.css";
 
 export default function DidYouKnowEditor({
   block,
@@ -39,40 +40,40 @@ export default function DidYouKnowEditor({
       <h4>Did You Know</h4>
 
       <label>Teaser (English)</label>
-      <textarea
+      <textarea className ="teaser"
         value={metadata.teaser_en || ""}
         onChange={(e) => updateMetadata("teaser_en", e.target.value)}
       />
 
       <label>Teaser (Tagalog)</label>
-      <textarea
+      <textarea className ="teaser"
         value={metadata.teaser_tl || ""}
         onChange={(e) => updateMetadata("teaser_tl", e.target.value)}
       />
 
-      <label>Popup Title (English)</label>
-      <input
+      <div><label>Popup Title (English)</label>
+      <input className="title"
         type="text"
         value={metadata.popup_title_en || ""}
         onChange={(e) => updateMetadata("popup_title_en", e.target.value)}
       />
 
       <label>Popup Title (Tagalog)</label>
-      <input
+      <input className="title"
         type="text"
         value={metadata.popup_title_tl || ""}
         onChange={(e) => updateMetadata("popup_title_tl", e.target.value)}
       />
-
+</div>
       <label>Source Label (English)</label>
-      <input
+      <input className="title"
         type="text"
         value={metadata.source_label_en || ""}
         onChange={(e) => updateMetadata("source_label_en", e.target.value)}
       />
 
       <label>Source Label (Tagalog)</label>
-      <input
+      <input className="title"
         type="text"
         value={metadata.source_label_tl || ""}
         onChange={(e) => updateMetadata("source_label_tl", e.target.value)}

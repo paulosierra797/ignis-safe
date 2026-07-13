@@ -1,3 +1,4 @@
+import "./CalloutEditor.css";
 export default function CalloutEditor({
   block,
   page,
@@ -51,7 +52,7 @@ export default function CalloutEditor({
       <h4>Tagalog Lines</h4>
 
       {(metadata.lines_tl || []).map((line, index) => (
-        <textarea
+        <textarea classname="callout"
           key={index}
           value={line}
           onChange={(e) => {
@@ -62,21 +63,7 @@ export default function CalloutEditor({
         />
       ))}
 
-      <label>Icon Role</label>
-      <input
-        value={metadata.icon_role || ""}
-        onChange={(e) =>
-          updateMetadata("icon_role", e.target.value)
-        }
-      />
-
-      <label>Accent Role</label>
-      <input
-        value={metadata.accent_role || ""}
-        onChange={(e) =>
-          updateMetadata("accent_role", e.target.value)
-        }
-      />
+     
     </>
   );
 }

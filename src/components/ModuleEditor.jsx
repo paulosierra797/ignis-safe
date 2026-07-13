@@ -306,12 +306,7 @@ return(
                   </div>
                 </header>
 
-                {moduleEntry.hero_asset && (
-                  <div className="learning-material-hero-asset">
-                    <span>Hero asset</span>
-                    <code>{moduleEntry.hero_asset}</code>
-                  </div>
-                )}
+             
 
                 {totalPages > 0 && (
                   <div className="learning-material-page-nav">
@@ -379,7 +374,7 @@ return(
                            
                           
                         </div>
-                        <span className="learning-material-page-key">{page.page_key || '-'}</span>
+                       
                       </div>
 
                      {visibleBlocks.length > 0 ? (
@@ -389,15 +384,8 @@ return(
         key={block.id || `${moduleEntry.module_no}-${page.page_no}-${block.block_no}`}
         className="learning-material-block"
       >
-        <div className="learning-material-block-meta">
-          <span>Block {block.block_no ?? "-"}</span>
-          <span>{block.block_type || "text"}</span>
-          <span>{formatSourceLine(block.source_line)}</span>
-        </div>
+        
 
-        <p className="learning-material-block-key">
-          {formatBlockReference(block, moduleEntry.module_no, page.page_no)}
-        </p>
 
         {/* English */}
         <textarea

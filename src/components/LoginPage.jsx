@@ -510,7 +510,7 @@ useEffect(() => {
                 </div>
 
                 {error && <p className="error-message">{error}</p>}
-                <button type="submit" className="login-button" disabled={loading}>
+                <button type="submit" className="verify-button" disabled={loading}>
                   {loading ? 'Verifying...' : 'Verify Code'}
                 </button>
                 <button type="button" onClick={handleBackToLogin} className="back-button">Back to Login</button>

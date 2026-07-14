@@ -23,10 +23,10 @@ import {
 } from '../utils/personnelOperationsService';
 import { useUser } from '../context/UserContext';
 
-const validPersonnelNamePattern = /^[A-Za-z]+$/;
+const validPersonnelNamePattern = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
 const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const contactNumberRegex = /^09\d{9}$/;
-const ADD_PERSONNEL_TIMEOUT_MS = 25000;
+const ADD_PERSONNEL_TIMEOUT_MS = 60000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 

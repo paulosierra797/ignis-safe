@@ -164,58 +164,40 @@ export default function ContentSectionEditor({
           }}
         >
             {part.type === "mini_headline" && (
-  <>
-    <label>Headline (English)</label>
-    <input className="headline"
-      value={part.text_en || ""}
-      onChange={(e) =>
-        updatePart(index, "text_en", e.target.value)
-      }
-    />
+  <div className="headline-section">
+  <label>Headline (English)</label>
+  <input
+    className="headline"
+    value={part.text_en || ""}
+    onChange={(e) =>
+      updatePart(index, "text_en", e.target.value)
+    }
+  />
 
-    <label>Headline (Tagalog)</label>
-     <input className="headline"
-      value={part.text_tl || ""}
-      onChange={(e) =>
-        updatePart(index, "text_tl", e.target.value)
-      }
-    />
-  </>
+  <label>Headline (Tagalog)</label>
+  <input
+    className="headline"
+    value={part.text_tl || ""}
+    onChange={(e) =>
+      updatePart(index, "text_tl", e.target.value)
+    }
+  />
+</div>
 )}
 {part.type === "chip_line" && (
   <>
-    <label>Text (English)</label>
-    <textarea className="text"
-      value={part.text_en || ""}
-      onChange={(e) =>
-        updatePart(index, "text_en", e.target.value)
-      }
-    />
-
-    <label>Text (Tagalog)</label>
-    <textarea className="text"
-      value={part.text_tl || ""}
-      onChange={(e) =>
-        updatePart(index, "text_tl", e.target.value)
-      }
-    />
+    
 
    
   </>
 )}
 {part.type === "action_pills" && (
   <>
+  <div className="action-pills">
     <h5>Action Pills</h5>
 
     {(part.pills || []).map((pill, pillIndex) => (
-      <div
-        key={pillIndex}
-        style={{
-          border: "1px solid #ccc",
-          padding: 12,
-          marginBottom: 15,
-        }}
-      >
+      <div key={pillIndex} className="pill-card">
         <h6>Pill {pillIndex + 1}</h6>
 
         <label>Label (English)</label>
@@ -250,71 +232,74 @@ export default function ContentSectionEditor({
           }
         />
 
-       <div> <label>Popup Body (English)</label>
-        <textarea className="popup-body"
+        <label>Popup Body (English)</label>
+        <textarea
+          className="popup-body"
           rows={5}
           value={pill.popup_body_en || ""}
           onChange={(e) =>
             updatePill(index, pillIndex, "popup_body_en", e.target.value)
           }
         />
-        
 
         <label>Popup Body (Tagalog)</label>
-        <textarea className="popup-body"
+        <textarea
+          className="popup-body"
           rows={5}
           value={pill.popup_body_tl || ""}
           onChange={(e) =>
             updatePill(index, pillIndex, "popup_body_tl", e.target.value)
           }
         />
-</div>
-       
       </div>
     ))}
-  </>
+  </div>
+</>
 )}
           <h5>{part.type}</h5>
 
           {part.title_en !== undefined && (
-            <>
-            <div>  <label>Title (English)</label>
-              <input className="title"
-                value={part.title_en}
-                onChange={(e) =>
-                  updatePart(index, "title_en", e.target.value)
-                }
-              />
+          <div className="title-section">
+  <label>Title (English)</label>
+  <input
+    className="title"
+    value={part.title_en || ""}
+    onChange={(e) =>
+      updatePart(index, "title_en", e.target.value)
+    }
+  />
 
-              <label>Title (Tagalog)</label>
-              <input className="title"
-                value={part.title_tl}
-                onChange={(e) =>
-                  updatePart(index, "title_tl", e.target.value)
-                }
-              />
-              </div>
-            </>
+  <label>Title (Tagalog)</label>
+  <input
+    className="title"
+    value={part.title_tl || ""}
+    onChange={(e) =>
+      updatePart(index, "title_tl", e.target.value)
+    }
+  />
+</div>
           )}
 
           {part.text_en !== undefined && (
-            <>
-              <label>Text (English)</label>
-              <textarea className="text"
-                value={part.text_en}
-                onChange={(e) =>
-                  updatePart(index, "text_en", e.target.value)
-                }
-              />
+           <div className="part-text">
+  <label>Text (English)</label>
+  <textarea
+    className="text"
+    value={part.text_en}
+    onChange={(e) =>
+      updatePart(index, "text_en", e.target.value)
+    }
+  />
 
-              <label>Text (Tagalog)</label>
-              <textarea className="text"
-                value={part.text_tl}
-                onChange={(e) =>
-                  updatePart(index, "text_tl", e.target.value)
-                }
-              />
-            </>
+  <label>Text (Tagalog)</label>
+  <textarea
+    className="text"
+    value={part.text_tl}
+    onChange={(e) =>
+      updatePart(index, "text_tl", e.target.value)
+    }
+  />
+</div>
           )}
 
           {part.asset_key !== undefined && (
@@ -324,57 +309,62 @@ export default function ContentSectionEditor({
           )}
 
           {part.url !== undefined && (
-            <>
-             <div> <label>URL</label>
-              <input className="url"
-                value={part.url}
-                onChange={(e) => updatePart(index, "url", e.target.value)}
-              />
+<div className="metadata-section">
+  <label>URL</label>
+  <input
+    className="url"
+    value={part.url || ""}
+    onChange={(e) =>
+      updatePart(index, "url", e.target.value)
+    }
+  />
+
+  <label>Organization</label>
+  <input
+    className="org"
+    value={part.organization || ""}
+    onChange={(e) =>
+      updatePart(index, "organization", e.target.value)
+    }
+  />
+
+  <label>Title</label>
+  <input
+    className="title"
+    value={part.title || ""}
+    onChange={(e) =>
+      updatePart(index, "title", e.target.value)
+    }
+  />
 </div>
-              <label>Organization</label>
-              <input className="org"
-                value={part.organization}
-                onChange={(e) =>
-                  updatePart(index, "organization", e.target.value)
-                }
-              />
-
-             
-
-              <label>Title</label>
-              <input className="title"
-                value={part.title}
-                onChange={(e) =>
-                  updatePart(index, "title", e.target.value)
-                }
-              />
-            </>
           )}
 
           {part.lines_en && (
-            <>
-              <h6>Lines (English)</h6>
-              {part.lines_en.map((line, i) => (
-                <input className="line"
-                  key={i}
-                  value={line}
-                  onChange={(e) =>
-                    updatePartLine(index, i, "lines_en", e.target.value)
-                  }
-                />
-              ))}
+          <div className="part-lines">
+  <h6>Lines (English)</h6>
+  {part.lines_en.map((line, i) => (
+    <input
+      className="line"
+      key={i}
+      value={line}
+      onChange={(e) =>
+        updatePartLine(index, i, "lines_en", e.target.value)
+      }
+    />
+  ))}
 
-              <h6>Lines (Tagalog)</h6>
-              {part.lines_tl.map((line, i) => (
-                <input className="line"
-                  key={i}
-                  value={line}
-                  onChange={(e) =>
-                    updatePartLine(index, i, "lines_tl", e.target.value)
-                  }
-                />
-              ))}
-            </>
+  <h6>Lines (Tagalog)</h6>
+  {part.lines_tl.map((line, i) => (
+    <input
+      className="line"
+      key={i}
+      value={line}
+      onChange={(e) =>
+        updatePartLine(index, i, "lines_tl", e.target.value)
+      }
+    />
+  ))}
+</div>
           )}
         </div>
       ))}

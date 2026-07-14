@@ -36,46 +36,55 @@ export default function PassStepEditor({
   };
 
   return (
-    <>
-      <label>Letter</label>
-      <input className="letter"
-        value={metadata.letter || ""}
-        onChange={(e) =>
-          updateMetadata("letter", e.target.value)
-        }
-      />
-<div>
-      <label>Description (English)</label>
-      <textarea
-        value={metadata.desc_en || ""}
-        onChange={(e) =>
-          updateMetadata("desc_en", e.target.value)
-        }
-      />
+   <div className="letter-section">
+  <h4>Letter Details</h4>
 
-      <label>Description (Tagalog)</label>
-      <textarea
-        value={metadata.desc_tl || ""}
-        onChange={(e) =>
-          updateMetadata("desc_tl", e.target.value)
-        }
-      />
+  <label>Letter</label>
+  <input
+    className="letter"
+    value={metadata.letter || ""}
+    onChange={(e) =>
+      updateMetadata("letter", e.target.value)
+    }
+  />
+
+
+  <label>Description (English)</label>
+  <textarea
+    className="description"
+    value={metadata.desc_en || ""}
+    onChange={(e) =>
+      updateMetadata("desc_en", e.target.value)
+    }
+  />
+
+  <label>Description (Tagalog)</label>
+  <textarea
+    className="description"
+    value={metadata.desc_tl || ""}
+    onChange={(e) =>
+      updateMetadata("desc_tl", e.target.value)
+    }
+  />
+
+
+  <label>Video Title (English)</label>
+  <input
+    className="video-title"
+    value={metadata.video_title_en || ""}
+    onChange={(e) =>
+      updateMetadata("video_title_en", e.target.value)
+    }
+  />
+
+  <label>Video Title (Tagalog)</label>
+  <input
+    className="video-title"
+    value={metadata.video_title_tl || ""}
+    onChange={(e) =>
+      updateMetadata("video_title_tl", e.target.value)
+    }
+  />
 </div>
-      <label>Video Title (English)</label>
-      <input
-        value={metadata.video_title_en || ""}
-        onChange={(e) =>
-          updateMetadata("video_title_en", e.target.value)
-        }
-      />
-
-      <label>Video Title (Tagalog)</label>
-      <input
-        value={metadata.video_title_tl || ""}
-        onChange={(e) =>
-          updateMetadata("video_title_tl", e.target.value)
-        }
-      />
-    </>
   );
 }

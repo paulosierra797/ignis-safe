@@ -1,4 +1,4 @@
-.letter-section {
+.learning-material-text-card {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 10px;
@@ -6,7 +6,7 @@
   margin-bottom: 20px;
 }
 
-.letter-section h4 {
+.learning-material-text-card h4 {
   margin: 0 0 18px;
   font-size: 18px;
   color: #333;
@@ -14,7 +14,7 @@
   padding-bottom: 10px;
 }
 
-.letter-section label {
+.learning-material-text-card label {
   display: block;
   margin: 12px 0 6px;
   font-size: 14px;
@@ -22,34 +22,22 @@
   color: #444;
 }
 
-.letter-section input,
-.letter-section textarea {
+.learning-material-text-card textarea {
   width: 100%;
-  padding: 10px 12px;
+  min-height: 150px;
+  padding: 12px;
   font-size: 14px;
   font-family: inherit;
+  line-height: 1.5;
   border: 1px solid #ccc;
   border-radius: 6px;
+  resize: vertical;
   box-sizing: border-box;
   outline: none;
   transition: 0.2s;
 }
 
-.letter-section textarea {
-  min-height: 120px;
-  resize: vertical;
-}
-
-.letter-section input:focus,
-.letter-section textarea:focus {
+.learning-material-text-card textarea:focus {
   border-color: #4a90e2;
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
-}
-
-/* Optional: make the letter field smaller */
-.letter-section .letter {
-  max-width: 120px;
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
+  box-shadow: 0 0 0 3px rgba(74,144,226,0.15);
 }

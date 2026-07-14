@@ -1,4 +1,4 @@
-.letter-section {
+.lesson-editor {
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 10px;
@@ -6,15 +6,22 @@
   margin-bottom: 20px;
 }
 
-.letter-section h4 {
-  margin: 0 0 18px;
-  font-size: 18px;
+
+.lesson-editor h4 {
+  margin: 18px 0 12px;
+  font-size: 17px;
   color: #333;
   border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
+  padding-bottom: 8px;
 }
 
-.letter-section label {
+
+.lesson-editor h4:first-child {
+  margin-top: 0;
+}
+
+
+.lesson-editor label {
   display: block;
   margin: 12px 0 6px;
   font-size: 14px;
@@ -22,8 +29,9 @@
   color: #444;
 }
 
-.letter-section input,
-.letter-section textarea {
+
+.lesson-textarea,
+.lesson-input {
   width: 100%;
   padding: 10px 12px;
   font-size: 14px;
@@ -35,21 +43,21 @@
   transition: 0.2s;
 }
 
-.letter-section textarea {
+
+.lesson-textarea {
   min-height: 120px;
   resize: vertical;
+  margin-bottom: 10px;
 }
 
-.letter-section input:focus,
-.letter-section textarea:focus {
+
+.lesson-input {
+  height: 42px;
+}
+
+
+.lesson-textarea:focus,
+.lesson-input:focus {
   border-color: #4a90e2;
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
-}
-
-/* Optional: make the letter field smaller */
-.letter-section .letter {
-  max-width: 120px;
-  font-size: 18px;
-  font-weight: bold;
-  text-align: center;
+  box-shadow: 0 0 0 3px rgba(74,144,226,.15);
 }

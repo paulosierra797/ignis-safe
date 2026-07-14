@@ -1,16 +1,68 @@
-.desc{
-    width: 300px;
-  height: 150px;
-  padding: 10px;
-  font-size: 16px;
-  resize: vertical;
-    
+.fire-details-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 20px;
 }
-.examples{
-    width: 300px;
-  height: 40px;
-  padding: 10px;
-  font-size: 16px;
+
+
+.fire-details-section h4 {
+  margin: 0 0 20px;
+  color: #333;
+  font-size: 18px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+
+.detail-group {
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+
+.detail-group:last-child {
+  border-bottom: none;
+}
+
+
+.detail-group label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #444;
+}
+
+
+.detail-group input,
+.detail-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+}
+
+
+.detail-group textarea {
+  min-height: 120px;
   resize: vertical;
-    
+}
+
+
+.detail-group input:focus,
+.detail-group textarea:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74,144,226,.15);
+}
+
+
+.detail-group .examples {
+  margin-bottom: 8px;
 }

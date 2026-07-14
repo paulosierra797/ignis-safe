@@ -37,45 +37,66 @@ export default function PageBannerEditor({
   };
 
   return (
-    <div className="metadata-editor">
-      <h4>Page Banner</h4>
- <div className="row">
-      <label>Page Tag (English)</label>
-      <input
-        type="text"
-        className="page-banner"
-        value={metadata.page_tag_en || ""}
-        onChange={(e) =>
-          updateMetadata("page_tag_en", e.target.value)
-        }
-      />
+   <div className="metadata-editor">
+  <h4>Page Banner</h4>
 
-      <label>Page Tag (Tagalog)</label>
-      <input
-        type="text"
-        className="page-banner"
-        value={metadata.page_tag_tl || ""}
-        onChange={(e) =>
-          updateMetadata("page_tag_tl", e.target.value)
-        }
-      />
+  <div className="language-grid">
+    {/* English */}
+    <div className="language-card">
+      <h4>English</h4>
 
-      <label>Subtitle (English)</label>
-      <textarea
-        value={metadata.subtitle_en || ""}
-        onChange={(e) =>
-          updateMetadata("subtitle_en", e.target.value)
-        }
-      />
+      <div className="field">
+        <label>Page Tag (English)</label>
+        <input
+          type="text"
+          className="page-banner"
+          value={metadata.page_tag_en || ""}
+          onChange={(e) =>
+            updateMetadata("page_tag_en", e.target.value)
+          }
+        />
+      </div>
 
-      <label>Subtitle (Tagalog)</label>
-      <textarea
-        value={metadata.subtitle_tl || ""}
-        onChange={(e) =>
-          updateMetadata("subtitle_tl", e.target.value)
-        }
-      />
+      <div className="field">
+        <label>Subtitle (English)</label>
+        <textarea
+          className="banner-desc"
+          value={metadata.subtitle_en || ""}
+          onChange={(e) =>
+            updateMetadata("subtitle_en", e.target.value)
+          }
+        />
       </div>
     </div>
-  );
+
+    {/* Tagalog */}
+    <div className="language-card">
+      <h4>Tagalog</h4>
+
+      <div className="field">
+        <label>Page Tag (Tagalog)</label>
+        <input
+          type="text"
+          className="page-banner"
+          value={metadata.page_tag_tl || ""}
+          onChange={(e) =>
+            updateMetadata("page_tag_tl", e.target.value)
+          }
+        />
+      </div>
+
+      <div className="field">
+        <label>Subtitle (Tagalog)</label>
+        <textarea
+          className="banner-desc"
+          value={metadata.subtitle_tl || ""}
+          onChange={(e) =>
+            updateMetadata("subtitle_tl", e.target.value)
+          }
+        />
+      </div>
+    </div>
+  </div>
+</div>
+  )
 }

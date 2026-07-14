@@ -1,7 +1,48 @@
+.metadata-editor {
+    max-width: 1200px;
+    margin: auto;
+    padding: 24px;
+}
+
+.language-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+    gap: 24px;
+}
+
+.language-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+}
+
+.field label {
+    margin-bottom: 6px;
+    font-weight: 600;
+}
+
+.title,
 .teaser {
-  width: 300px;
-  height: 150px;
-  padding: 10px;
-  font-size: 16px;
-  resize: vertical;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.title {
+    height: 42px;
+}
+
+.teaser {
+    min-height: 120px;
+    resize: vertical;
 }

@@ -29,3 +29,61 @@
   font-size: 16px;
   resize: vertical;
 }
+.metadata-editor{
+    max-width:1200px;
+    margin:auto;
+    padding:24px;
+}
+
+.language-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(420px,1fr));
+    gap:24px;
+    margin-bottom:32px;
+}
+
+.language-card{
+    background:#fff;
+    border:1px solid #ddd;
+    border-radius:10px;
+    padding:20px;
+}
+
+.field{
+    display:flex;
+    flex-direction:column;
+    margin-bottom:16px;
+}
+
+.field label{
+    margin-bottom:6px;
+    font-weight:600;
+}
+
+.field input,
+.field textarea{
+    width:100%;
+    box-sizing:border-box;
+}
+
+.field textarea{
+    min-height:90px;
+    resize:vertical;
+}
+
+.pass-step{
+    border:1px solid #ddd;
+    border-radius:10px;
+    padding:20px;
+    margin-bottom:24px;
+}
+
+.step-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:24px;
+}
+
+.letter-field{
+    max-width:120px;
+}

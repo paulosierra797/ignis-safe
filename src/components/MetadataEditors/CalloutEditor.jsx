@@ -34,36 +34,37 @@ export default function CalloutEditor({
   };
 
   return (
-    <>
-      <h4>English Lines</h4>
+   <div className="lines-section">
+  <h4>English Lines</h4>
 
-      {(metadata.lines_en || []).map((line, index) => (
-        <textarea
-          key={index}
-          value={line}
-          onChange={(e) => {
-            const updated = [...metadata.lines_en];
-            updated[index] = e.target.value;
-            updateMetadata("lines_en", updated);
-          }}
-        />
-      ))}
+  {(metadata.lines_en || []).map((line, index) => (
+    <textarea
+      className="line-textarea"
+      key={index}
+      value={line}
+      onChange={(e) => {
+        const updated = [...metadata.lines_en];
+        updated[index] = e.target.value;
+        updateMetadata("lines_en", updated);
+      }}
+    />
+  ))}
 
-      <h4>Tagalog Lines</h4>
 
-      {(metadata.lines_tl || []).map((line, index) => (
-        <textarea classname="callout"
-          key={index}
-          value={line}
-          onChange={(e) => {
-            const updated = [...metadata.lines_tl];
-            updated[index] = e.target.value;
-            updateMetadata("lines_tl", updated);
-          }}
-        />
-      ))}
+  <h4>Tagalog Lines</h4>
 
-     
-    </>
+  {(metadata.lines_tl || []).map((line, index) => (
+    <textarea
+      className="line-textarea"
+      key={index}
+      value={line}
+      onChange={(e) => {
+        const updated = [...metadata.lines_tl];
+        updated[index] = e.target.value;
+        updateMetadata("lines_tl", updated);
+      }}
+    />
+  ))}
+</div>
   );
 }

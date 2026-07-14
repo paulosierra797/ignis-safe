@@ -1,38 +1,183 @@
-.text {
-  width: 400px;
-  height: 150px;
-  padding: 10px;
-  font-size: 16px;
-  resize: vertical;
+/* Labels */
+.part-text label {
+  display: block;
+  margin: 14px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
 }
-.headline {
-  width: 300px;
-  height: 50px;
-  padding: 10px;
-  font-size: 16px;
+
+/* Textareas */
+.part-text .text {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  border: 1px solid #ccc;
+  border-radius: 6px;
   resize: vertical;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
+
+.part-text .text:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+
+/* First label shouldn't have extra top margin */
+.part-text label:first-of-type {
+  margin-top: 0;
+}
+/* Headline section */
+.headline-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+/* Labels */
+.headline-section label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.headline-section label:first-child {
+  margin-top: 0;
+}
+
+/* Headline input */
+.headline-section .headline {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  outline: none;
+  transition: 0.2s;
+}
+
+.headline-section .headline:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+/* Action Pills container */
+.action-pills {
+  margin-top: 20px;
+}
+
+.action-pills h5 {
+  margin-bottom: 15px;
+  font-size: 18px;
+  color: #333;
+}
+
+/* Individual pill card */
+.pill-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.pill-card h6 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  color: #4a90e2;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+/* Labels */
+.pill-card label {
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #444;
+}
+
+/* Inputs & Textareas */
+.pill-card input,
+.pill-card textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  transition: 0.2s;
+}
+
+.pill-card textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.pill-card input:focus,
+.pill-card textarea:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+
+/* Space between textarea groups */
 .popup-body {
-  width: 400px;
-  height: 150px;
-  padding: 10px;
-  font-size: 16px;
-  resize: vertical;
+  margin-bottom: 12px;
 }
-.line {
-  width: 350px;
-  height: 50px;
-  padding: 10px;
-  font-size: 16px;
-  resize: vertical;
+/* Container */
+.part-lines {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
 }
-.title {
-  width: 300px;
-  height: 40px;
-  padding: 10px;
-  font-size: 16px;
-  resize: vertical;
+
+/* Section titles */
+.part-lines h6 {
+  margin: 16px 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
 }
+
+/* Input fields */
+.part-lines .line {
+  width: 100%;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.part-lines .line:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+
+/* Optional spacing between English and Tagalog sections */
+.part-lines h6:first-of-type {
+  margin-top: 0;
+}
+
 .url {
   width: 700px;
   height: 40px;
@@ -47,10 +192,79 @@
   font-size: 16px;
   resize: vertical;
 }
-.label {
-  width: 200px;
-  height: 40px;
-  padding: 10px;
+
+.title-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.title-section label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.title-section label:first-child {
+  margin-top: 0;
+}
+
+.title-section .title {
+  width: 100%;
+  padding: 12px;
   font-size: 16px;
-  resize: vertical;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  outline: none;
+  transition: 0.2s;
+}
+
+.title-section .title:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+.metadata-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.metadata-section label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.metadata-section label:first-child {
+  margin-top: 0;
+}
+
+.metadata-section input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  outline: none;
+  transition: 0.2s;
+}
+
+.metadata-section input:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+
+/* Optional: make URL look more suitable for links */
+.metadata-section .url {
+  color: #2563eb;
 }

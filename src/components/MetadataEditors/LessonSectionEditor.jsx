@@ -1,4 +1,5 @@
 import React from "react";
+import "./LessonSection.css";
 
 export default function LessonSectionEditor({
   block,
@@ -44,13 +45,14 @@ export default function LessonSectionEditor({
   };
 
   return (
-    <div className="metadata-editor">
+   <div className="lesson-editor">
 
       {/* IMAGE ROW */}
       {metadata.content_kind === "image_row" && (
         <>
           <label>Body (English)</label>
           <textarea
+           className="lesson-textarea"
             value={metadata.body_en || ""}
             onChange={(e) =>
               updateMetadata("body_en", e.target.value)
@@ -59,6 +61,7 @@ export default function LessonSectionEditor({
 
           <label>Body (Tagalog)</label>
           <textarea
+           className="lesson-textarea"
             value={metadata.body_tl || ""}
             onChange={(e) =>
               updateMetadata("body_tl", e.target.value)
@@ -67,6 +70,7 @@ export default function LessonSectionEditor({
 
           <label>Secondary Body (English)</label>
           <textarea
+           className="lesson-textarea"
             value={metadata.body_secondary_en || ""}
             onChange={(e) =>
               updateMetadata("body_secondary_en", e.target.value)
@@ -75,6 +79,7 @@ export default function LessonSectionEditor({
 
           <label>Secondary Body (Tagalog)</label>
           <textarea
+           className="lesson-textarea"
             value={metadata.body_secondary_tl || ""}
             onChange={(e) =>
               updateMetadata("body_secondary_tl", e.target.value)
@@ -90,6 +95,7 @@ export default function LessonSectionEditor({
 
           {(metadata.bullets_en || []).map((bullet, index) => (
             <textarea
+             className="lesson-textarea"
               key={`en-${index}`}
               value={bullet}
               onChange={(e) =>
@@ -102,6 +108,7 @@ export default function LessonSectionEditor({
 
           {(metadata.bullets_tl || []).map((bullet, index) => (
             <textarea
+             className="lesson-textarea"
               key={`tl-${index}`}
               value={bullet}
               onChange={(e) =>
@@ -116,6 +123,7 @@ export default function LessonSectionEditor({
   <>
     <label>Body (English)</label>
     <textarea
+     className="lesson-textarea"
       value={metadata.body_en || ""}
       onChange={(e) =>
         updateMetadata("body_en", e.target.value)
@@ -124,6 +132,7 @@ export default function LessonSectionEditor({
 
     <label>Body (Tagalog)</label>
     <textarea
+     className="lesson-textarea"
       value={metadata.body_tl || ""}
       onChange={(e) =>
         updateMetadata("body_tl", e.target.value)
@@ -135,6 +144,7 @@ export default function LessonSectionEditor({
   <>
     <label>Body (English)</label>
     <textarea
+     className="lesson-textarea"
       value={metadata.body_en || ""}
       onChange={(e) =>
         updateMetadata("body_en", e.target.value)
@@ -143,6 +153,7 @@ export default function LessonSectionEditor({
 
     <label>Body (Tagalog)</label>
     <textarea
+     className="lesson-textarea"
       value={metadata.body_tl || ""}
       onChange={(e) =>
         updateMetadata("body_tl", e.target.value)
@@ -151,6 +162,7 @@ export default function LessonSectionEditor({
 
     <label>Button Label (English)</label>
     <input
+     className="lesson-input"
       value={metadata.action_label_en || ""}
       onChange={(e) =>
         updateMetadata("action_label_en", e.target.value)
@@ -159,6 +171,7 @@ export default function LessonSectionEditor({
 
     <label>Button Label (Tagalog)</label>
     <input
+     className="lesson-input"
       value={metadata.action_label_tl || ""}
       onChange={(e) =>
         updateMetadata("action_label_tl", e.target.value)

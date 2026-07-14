@@ -1,22 +1,124 @@
-.popup-body {
-  width: 400px;
-  height: 150px;
-  padding: 10px;
-  font-size: 16px;
-  resize: vertical;
+.metadata-pills-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 20px;
 }
-.label {
-  width: 400px;
-  height: 150px;
-  padding: 10px;
-  font-size: 16px;
-  resize: vertical;
+
+.metadata-pills-section h4 {
+  margin: 0 0 15px;
+  font-size: 18px;
+  color: #333;
 }
-.widecard-title {
-  width: 400px;
-  height: 40px;
-  padding: 10px;
-  font-size: 16px;
+
+.metadata-pills-section h5 {
+  margin: 10px 0 15px;
+  color: #555;
+}
+
+
+/* Individual pill card */
+.metadata-pill-card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+  background: #fafafa;
+}
+
+.metadata-pill-card h5 {
+  margin-top: 0;
+  color: #4a90e2;
+}
+
+
+/* Labels */
+.metadata-pill-card label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #444;
+}
+
+
+/* Inputs */
+.metadata-pill-card input,
+.metadata-pill-card textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  outline: none;
+  transition: 0.2s;
+}
+
+
+.metadata-pill-card textarea {
+  min-height: 120px;
   resize: vertical;
 }
 
+
+.metadata-pill-card input:focus,
+.metadata-pill-card textarea:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74,144,226,0.15);
+}
+.wide-card-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+
+.wide-card-section h4 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.wide-card-section label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #444;
+}
+
+.wide-card-section input,
+.wide-card-section textarea {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  outline: none;
+  transition: 0.2s;
+}
+
+.wide-card-section textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.wide-card-section input:focus,
+.wide-card-section textarea:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+
+/* Optional: make title stand out more */
+.wide-card-section .widecard-title {
+  font-size: 16px;
+  font-weight: 500;
+}

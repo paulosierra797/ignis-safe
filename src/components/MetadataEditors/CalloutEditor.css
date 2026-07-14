@@ -1,7 +1,39 @@
-.callout {
-  width: 300px;
-  height: 150px;
-  padding: 10px;
-  font-size: 16px;
+.lines-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 20px;
+}
+
+.lines-section h4 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.lines-section h4:not(:first-child) {
+  margin-top: 20px;
+}
+
+.line-textarea {
+  width: 100%;
+  min-height: 80px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
   resize: vertical;
+  font-size: 14px;
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+  transition: 0.2s;
+}
+
+.line-textarea:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74,144,226,0.15);
 }

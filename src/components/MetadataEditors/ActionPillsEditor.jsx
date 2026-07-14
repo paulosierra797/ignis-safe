@@ -99,115 +99,121 @@ export default function ActionPillsEditor({
 
   return (
     <div className="metadata-editor">
-      <h4>Action Pills</h4>
+     <div className="metadata-pills-section">
+  <h4>Action Pills</h4>
 
-      <h5>Pills</h5>
+  <h5>Pills</h5>
 
-      {(metadata.pills || []).map((pill, index) => (
-        <div
-          key={index}
-          style={{
-            border: "1px solid #ddd",
-            padding: "15px",
-            marginBottom: "15px",
-            borderRadius: "8px",
-          }}
-        >
-          <h5>Pill {index + 1}</h5>
+  {(metadata.pills || []).map((pill, index) => (
+    <div key={index} className="metadata-pill-card">
+      <h5>Pill {index + 1}</h5>
 
-          <div><label>Label (English)</label></div>
-          <input className="label"
-            type="text"
-            value={pill.label_en || ""}
-            onChange={(e) =>
-              updatePill(index, "label_en", e.target.value)
-            }
-          />
-
-          <div><label>Label (Tagalog)</label></div>
-          <input
-            type="text"
-            value={pill.label_tl || ""}
-            onChange={(e) =>
-              updatePill(index, "label_tl", e.target.value)
-            }
-          />
-
-         
-
-          <div><label>Popup Title (English)</label></div>
-          <input
-            type="text"
-            value={pill.popup_title_en || ""}
-            onChange={(e) =>
-              updatePill(index, "popup_title_en", e.target.value)
-            }
-          />
-
-          <div><label>Popup Title (Tagalog)</label></div>
-          <input
-            type="text"
-            value={pill.popup_title_tl || ""}
-            onChange={(e) =>
-              updatePill(index, "popup_title_tl", e.target.value)
-            }
-          />
-
-          <div><label>Popup Body (English)</label></div>
-          <textarea classname="popup-body"
-            value={pill.popup_body_en || ""}
-            onChange={(e) =>
-              updatePill(index, "popup_body_en", e.target.value)
-            }
-          />
-
-          <div><label>Popup Body (Tagalog)</label></div>
-          <textarea classname="popup-body"
-            value={pill.popup_body_tl || ""}
-            onChange={(e) =>
-              updatePill(index, "popup_body_tl", e.target.value)
-            }
-          />
-        </div>
-      ))}
-
-      <hr />
-
-      <h4>Wide Card</h4>
-
-      <label>Title (English)</label>
-      <input className="widecard-title"
-        type="text"
-        value={metadata.wide_card?.title_en || ""}
-        onChange={(e) =>
-          updateWideCard("title_en", e.target.value)
-        }
-      />
-
-      <label>Title (Tagalog)</label>
+      <label>Label (English)</label>
       <input
+        className="pill-input"
         type="text"
-        value={metadata.wide_card?.title_tl || ""}
+        value={pill.label_en || ""}
         onChange={(e) =>
-          updateWideCard("title_tl", e.target.value)
+          updatePill(index, "label_en", e.target.value)
         }
       />
 
-      <label>Subtitle (English)</label>
-      <textarea
-        value={metadata.wide_card?.subtitle_en || ""}
+      <label>Label (Tagalog)</label>
+      <input
+        className="pill-input"
+        type="text"
+        value={pill.label_tl || ""}
         onChange={(e) =>
-          updateWideCard("subtitle_en", e.target.value)
+          updatePill(index, "label_tl", e.target.value)
         }
       />
 
-      <label>Subtitle (Tagalog)</label>
-      <textarea
-        value={metadata.wide_card?.subtitle_tl || ""}
+
+      <label>Popup Title (English)</label>
+      <input
+        className="pill-input"
+        type="text"
+        value={pill.popup_title_en || ""}
         onChange={(e) =>
-          updateWideCard("subtitle_tl", e.target.value)
+          updatePill(index, "popup_title_en", e.target.value)
         }
       />
+
+      <label>Popup Title (Tagalog)</label>
+      <input
+        className="pill-input"
+        type="text"
+        value={pill.popup_title_tl || ""}
+        onChange={(e) =>
+          updatePill(index, "popup_title_tl", e.target.value)
+        }
+      />
+
+
+      <label>Popup Body (English)</label>
+      <textarea
+        className="pill-textarea"
+        value={pill.popup_body_en || ""}
+        onChange={(e) =>
+          updatePill(index, "popup_body_en", e.target.value)
+        }
+      />
+
+      <label>Popup Body (Tagalog)</label>
+      <textarea
+        className="pill-textarea"
+        value={pill.popup_body_tl || ""}
+        onChange={(e) =>
+          updatePill(index, "popup_body_tl", e.target.value)
+        }
+      />
+    </div>
+  ))}
+</div>
+
+     
+
+      <div className="wide-card-section">
+  <h4>Wide Card</h4>
+
+  <label>Title (English)</label>
+  <input
+    className="widecard-title"
+    type="text"
+    value={metadata.wide_card?.title_en || ""}
+    onChange={(e) =>
+      updateWideCard("title_en", e.target.value)
+    }
+  />
+
+  <label>Title (Tagalog)</label>
+  <input
+    className="widecard-title"
+    type="text"
+    value={metadata.wide_card?.title_tl || ""}
+    onChange={(e) =>
+      updateWideCard("title_tl", e.target.value)
+    }
+  />
+
+  <label>Subtitle (English)</label>
+  <textarea
+    className="widecard-subtitle"
+    value={metadata.wide_card?.subtitle_en || ""}
+    onChange={(e) =>
+      updateWideCard("subtitle_en", e.target.value)
+    }
+  />
+
+  <label>Subtitle (Tagalog)</label>
+  <textarea
+    className="widecard-subtitle"
+    value={metadata.wide_card?.subtitle_tl || ""}
+    onChange={(e) =>
+      updateWideCard("subtitle_tl", e.target.value)
+    }
+  />
+</div>
 
       
     </div>

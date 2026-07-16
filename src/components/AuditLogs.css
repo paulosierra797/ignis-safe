@@ -235,8 +235,126 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width:768px){
+
   .audit-logs-main {
-    margin-left: 0;
+    margin-left:0;
+    padding:1rem;
+    padding-top:70px;
   }
+
+
+  /* FILTERS */
+  .audit-logs-filters {
+    width:100%;
+  }
+
+  .audit-logs-filter-row {
+    display:flex;
+    flex-direction:column;
+    gap:0.8rem;
+  }
+
+  .audit-logs-search-wrapper,
+  .audit-logs-filter,
+  .audit-logs-datepicker-wrapper,
+  .audit-logs-clear {
+    width:100%;
+  }
+
+  .audit-logs-select,
+  .audit-logs-datepicker,
+  .audit-logs-clear {
+    width:100%;
+  }
+
+
+  /* TABLE TO CARD */
+  .audit-logs-table-card {
+    background:transparent;
+    box-shadow:none;
+    overflow:visible;
+  }
+
+
+  .audit-logs-table,
+  .audit-logs-table tbody {
+    display:block;
+    width:100%;
+  }
+
+
+  .audit-logs-table thead {
+    display:none;
+  }
+
+
+  .audit-logs-table tr {
+    display:block;
+    background:white;
+    border-radius:14px;
+    padding:1rem;
+    margin-bottom:1rem;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+  }
+
+
+  .audit-logs-table td {
+    display:flex;
+    justify-content:space-between;
+    gap:1rem;
+    padding:.7rem 0;
+    border-bottom:1px solid #e5e7eb;
+    font-size:.85rem;
+    color:#374151;
+  }
+
+
+  .audit-logs-table td:last-child {
+    border-bottom:none;
+  }
+
+
+  .audit-logs-table td::before {
+    font-weight:700;
+    color:#64748b;
+    font-size:.75rem;
+    text-transform:uppercase;
+    min-width:80px;
+  }
+
+
+  .audit-logs-table td:nth-child(1)::before {
+    content:"Time";
+  }
+
+  .audit-logs-table td:nth-child(2)::before {
+    content:"User";
+  }
+
+  .audit-logs-table td:nth-child(3)::before {
+    content:"Action";
+  }
+
+  .audit-logs-table td:nth-child(4)::before {
+    content:"Details";
+  }
+
+  .audit-logs-table td:nth-child(5)::before {
+    content:"Status";
+  }
+
+
+  /* Long details text */
+  .audit-logs-table td:nth-child(4) {
+    flex-direction:column;
+    gap:.4rem;
+  }
+
+
+  .audit-logs-action-badge,
+  .audit-logs-status-badge {
+    width:max-content;
+  }
+
 }

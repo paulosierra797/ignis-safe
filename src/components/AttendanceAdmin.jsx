@@ -261,6 +261,52 @@ const AttendanceAdmin = () => {
             </tbody>
           </table>
         </div>
+        <div className="attendance-mobile-list">
+  {isLoading ? (
+    <div className="attendance-card">
+      Loading attendance records...
+    </div>
+  ) : filteredAttendance.length === 0 ? (
+    <div className="attendance-card">
+      No attendance records found.
+    </div>
+  ) : (
+    filteredAttendance.map((item, index) => (
+      <div className="attendance-card" key={item.id}>
+        <div className="attendance-card-header">
+          <h3>{item.name}</h3>
+          <span className="attendance-index">
+            #{index + 1}
+          </span>
+        </div>
+
+        <div className="attendance-card-body">
+          <p>
+            <strong>Rank</strong><br />
+            {item.rank}
+          </p>
+
+          <p>
+            <strong>Date</strong><br />
+            {item.date}
+          </p>
+
+          <div className="attendance-times">
+            <div>
+              <span className="time-label">Time In</span>
+              <strong>{item.timeIn || '--'}</strong>
+            </div>
+
+            <div>
+              <span className="time-label">Time Out</span>
+              <strong>{item.timeOut || '--'}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    ))
+  )}
+</div>
       </div>
     </div>
   );

@@ -235,19 +235,25 @@ export const rejectLeaveRequest = async ({ requestId, rejectedBy, rejectionReaso
   }
 };
 
-export const getPersonnelShiftSchedule = async ({ days = 14 } = {}) => {
+export const getPersonnelShiftSchedule = async ({
+  startDate,
+  endDate
+}) => {
   try {
-    const startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + days - 1);
+    const start = new Date(startDate);
+    start.setHours(0, 0, 0, 0);
 
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    const totalDays =
+      Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
     const [configResult, personnelResult, assignmentResult] = await Promise.all([
       getShiftScheduleConfig(),
       getAllUsers(),
       getShiftAssignmentsForPeriod({
-        startDate: toIsoDate(startDate),
-        endDate: toIsoDate(endDate)
+       startDate: toIsoDate(start),
+endDate: toIsoDate(end)
       })
     ]);
 
@@ -272,14 +278,16 @@ export const getPersonnelShiftSchedule = async ({ days = 14 } = {}) => {
     const shiftB = new Set(config?.shift_b_dates || []);
 
     const rows = [];
-    for (let offset = 0; offset < days; offset += 1) {
-      const targetDate = new Date(startDate);
-      targetDate.setDate(startDate.getDate() + offset);
+   for (let offset = 0; offset < totalDays; offset += 1){
+     const targetDate = new Date(start);
+      targetDate.setDate(start.getDate() + offset);
 
       const isoDate = toIsoDate(targetDate);
       const hasA = shiftA.has(isoDate);
       const hasB = shiftB.has(isoDate);
       const shiftTypes = [hasA ? 'A' : null, hasB ? 'B' : null].filter(Boolean);
+
+     
 
       const onLeavePersonnel = personnelRows
         .filter((personnel) => String(personnel.status || '').toLowerCase() === 'on leave')

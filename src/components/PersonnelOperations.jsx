@@ -104,10 +104,25 @@ export default function PersonnelOperations() {
     setLoading(true);
     setScheduleLoading(true);
 
-    const [leaveRes, scheduleRes] = await Promise.all([
-      getPersonnelLeaveRequest(currentUser.admin_id),
-      getPersonnelShiftSchedule({ days: 21 })
-    ]);
+    const firstDay = new Date(
+  calendarMonth.getFullYear(),
+  calendarMonth.getMonth(),
+  1
+);
+
+const lastDay = new Date(
+  calendarMonth.getFullYear(),
+  calendarMonth.getMonth() + 1,
+  0
+);
+
+const [leaveRes, scheduleRes] = await Promise.all([
+  getPersonnelLeaveRequest(currentUser.admin_id),
+  getPersonnelShiftSchedule({
+    startDate: firstDay,
+    endDate: lastDay
+  })
+]);
 
     if (leaveRes.error) {
       setMessage({ type: 'error', text: `Failed to load leave request: ${leaveRes.error}` });
@@ -137,7 +152,7 @@ export default function PersonnelOperations() {
 
     setLoading(false);
     setScheduleLoading(false);
-  }, [currentUser?.admin_id]);
+  }, [currentUser?.admin_id, calendarMonth]);
 
   useEffect(() => {
     loadPageData();
@@ -350,33 +365,11 @@ export default function PersonnelOperations() {
 
                       {row ? (
                         <div className="shift-calendar-day-body">
-                          <div className="shift-calendar-personnel-block">
-                            <strong>On Duty</strong>
-                            <div className="schedule-personnel-list">
-                              {onDuty > 0 ? (
-                                <span className="schedule-empty-inline">{onDuty} personnel</span>
-                              ) : (
-                                <span className="schedule-empty-inline">No one assigned</span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="shift-calendar-personnel-block">
-                            <strong>On Leave</strong>
-                            <div className="schedule-personnel-list">
-                              {row.onLeavePersonnel?.length ? (
-                                row.onLeavePersonnel.map((personnel) => (
-                                  <span key={personnel.admin_id} className="personnel-badge personnel-badge-leave">
-                                    {personnel.name}
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="schedule-empty-inline">No leave today</span>
-                              )}
-                            </div>
-                            <span className="shift-count-text">{onLeave} personnel</span>
-                          </div>
-                        </div>
+ <div className="calendar-stats">
+    <span>👨 {onDuty}</span>
+    <span>🏖 {onLeave}</span>
+</div>
+</div>
                       ) : (
                         <div className="shift-calendar-no-data">No shift data</div>
                       )}

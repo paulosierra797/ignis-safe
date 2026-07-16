@@ -245,6 +245,7 @@ const handleLogin = async (e) => {
   const handleBackToLogin = async () => {
     await signOut();
     setCurrentUser(null);
+     setAuthStep("login"); 
     setForgotPasswordStep(null);
     setResetEmail("");
     setResetCode("");
@@ -349,14 +350,15 @@ useEffect(() => {
     </div>
 
     <div className="login-right">
-      <div className="login-form-container">
+      <div className="login-form-container-verify">
         <h1>Verify Login</h1>
-        <p className="login-description">
+        <p className="login-description-verify">
           Enter the OTP sent to {resetEmail}
         </p>
 
         <input
           type="text"
+          className="verify-input"
           placeholder="Enter OTP"
           value={resetCode}
           onChange={(e) => setResetCode(e.target.value)}
@@ -364,11 +366,11 @@ useEffect(() => {
 
         {error && <p className="error-message">{error}</p>}
 
-        <button onClick={handleVerify} className="login-button">
+        <button onClick={handleVerify} className="login-button-verify">
           Verify & Login
         </button>
 
-        <button onClick={handleBackToLogin} className="back-button">
+        <button onClick={handleBackToLogin} className="back-button-verify">
           Back
         </button>
       </div>
@@ -624,6 +626,7 @@ useEffect(() => {
               </form>
               <p className="login-footer">Authorized users only</p>
             </div>
+           
           </div>
         </>
       )}

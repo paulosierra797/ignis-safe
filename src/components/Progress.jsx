@@ -175,7 +175,8 @@ export default function Progress() {
               {errorMessage}
             </div>
           )}
-          <table className="progress-table">
+         <div className="progress-desktop-table">
+  <table className="progress-table">
             <thead>
               <tr>
                 <th>No.</th>
@@ -222,6 +223,69 @@ export default function Progress() {
               )}
             </tbody>
           </table>
+          </div>
+          <div className="progress-mobile-cards">
+
+  {isLoading ? (
+    <div className="progress-card-empty">
+      Loading progress...
+    </div>
+  ) : filteredRows.length === 0 ? (
+    <div className="progress-card-empty">
+      No progress records found.
+    </div>
+  ) : (
+    filteredRows.map((item, index) => (
+      <div className="progress-user-card" key={item.id}>
+
+        <div className="progress-card-header">
+          <div>
+            <h3>{item.name}</h3>
+            <p>{item.email}</p>
+          </div>
+
+          <span className="progress-percent">
+            {item.overallPercent}%
+          </span>
+        </div>
+
+
+        <div className="progress-card-row">
+          <span>Last Activity</span>
+          <strong>
+            {formatDate(item.lastActivityAt)}
+          </strong>
+        </div>
+
+
+        <div className="progress-card-row">
+          <span>Last Module</span>
+          <strong>
+            {item.lastAccessedModule}
+          </strong>
+        </div>
+
+
+        <div className="progress-card-row">
+          <span>Modules</span>
+          <strong>
+            {item.moduleProgress}
+          </strong>
+        </div>
+
+
+        <button
+          className="progress-view-btn"
+          onClick={() => handleViewUser(item)}
+        >
+          VIEW DETAILS
+        </button>
+
+      </div>
+    ))
+  )}
+
+</div>
         </div>
 
         {showModal && selectedUser && (

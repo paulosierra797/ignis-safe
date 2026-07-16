@@ -322,16 +322,51 @@
   }
 }
 
-@media (max-width: 768px) {
-  .history-title {
-    font-size: 1.5rem;
-  }
+.history-mobile-list{
+    display:none;
+}
+.history-card{
+    background:#fff;
+    border-radius:14px;
+    padding:16px;
+    border:1px solid #e5e7eb;
+    box-shadow:0 6px 20px rgba(0,0,0,.06);
+}
 
-  .history-main {
-    padding: 1rem;
-  }
+.history-card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:12px;
+}
 
-  .stat-value {
-    font-size: 1.5rem;
-  }
+.history-card h3{
+    margin:0 0 10px;
+    font-size:1rem;
+    color:#111827;
+}
+
+.history-card p{
+    margin:6px 0;
+    font-size:.88rem;
+    color:#475569;
+}
+
+.history-card button{
+    margin-top:14px;
+    width:100%;
+}
+
+@media (max-width:768px){
+
+    .history-table-container{
+        display:none;
+    }
+
+    .history-mobile-list{
+        display:flex;
+        flex-direction:column;
+        gap:16px;
+    }
+
 }

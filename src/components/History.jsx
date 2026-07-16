@@ -226,6 +226,42 @@ export default function History() {
               </tbody>
             </table>
           </div>
+          <div className="history-mobile-list">
+  {filteredReports.map((report, index) => (
+    <div className="history-card" key={report.report_id}>
+      <div className="history-card-header">
+        <span className="report-number">#{index + 1}</span>
+
+        <span className={`status-badge ${getStatusClass(report.status)}`}>
+          {String(report.status || "").replace("_", " ")}
+        </span>
+      </div>
+
+      <h3>{report.title}</h3>
+
+      <p><strong>Report No:</strong> {report.report_no || "-"}</p>
+      <p><strong>Category:</strong> {report.category}</p>
+      <p><strong>Date:</strong> {new Date(report.submitted_at || report.updated_at || report.created_at).toLocaleDateString()}</p>
+      <p><strong>Created By:</strong> {report.created_by_name || "Personnel"}</p>
+
+      {report.status === "draft" ? (
+        <button
+          className="continue-btn"
+          onClick={() => handleContinueDraft(report)}
+        >
+          Continue Draft
+        </button>
+      ) : (
+        <button
+          className="view-btn"
+          onClick={() => handleView(report)}
+        >
+          View
+        </button>
+      )}
+    </div>
+  ))}
+</div>
         </div>
       </div>
     </div>

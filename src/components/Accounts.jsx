@@ -1621,7 +1621,70 @@ const permissions = getDefaultPermissions(formData.role);
                 </tbody>
               </table>
             </div>
+            
           )}
+          <div className="leave-approval-mobile-list">
+  {pendingLeaveRequests.map((request) => {
+    const target = accounts.find(
+      (a) => a.admin_id === request.personnel_id
+    );
+
+    const isProcessing =
+      processingRequestId === request.request_id;
+
+    return (
+      <div
+        className="leave-request-card"
+        key={request.request_id}
+      >
+        <h3>
+          {target
+            ? `${target.first_name} ${target.last_name}`
+            : request.personnel_id}
+        </h3>
+
+        <p>
+          <strong>Email</strong><br />
+          {target?.email || "-"}
+        </p>
+
+        <p>
+          <strong>Leave</strong><br />
+          {formatLeaveDate(request.start_date)}
+          {" - "}
+          {formatLeaveDate(request.end_date)}
+        </p>
+
+        <p>
+          <strong>Requested</strong><br />
+          {new Date(request.created_at).toLocaleDateString()}
+        </p>
+
+        <div className="leave-card-actions">
+          <button
+            className="leave-approve-btn"
+            onClick={() =>
+              handleApproveLeaveRequest(request)
+            }
+            disabled={isProcessing}
+          >
+            Approve
+          </button>
+
+          <button
+            className="leave-reject-btn"
+            onClick={() =>
+              handleRejectLeaveRequest(request)
+            }
+            disabled={isProcessing}
+          >
+            Reject
+          </button>
+        </div>
+      </div>
+    );
+  })}
+</div>
         </div>
 
         <div className="accounts-filters">
@@ -1762,7 +1825,95 @@ const permissions = getDefaultPermissions(formData.role);
               </tbody>
             </table>
           )}
+          
         </div>
+        <div className="accounts-mobile-list">
+  {filteredAccounts.map((account, index) => (
+    <div
+      className="account-card"
+      key={account.admin_id || account.id}
+    >
+      <div className="account-card-header">
+        <h3>
+          {account.first_name} {account.last_name}
+        </h3>
+
+        <span
+          className={`status-pill ${account.status
+            .toLowerCase()
+            .replace(/\s+/g, "-")}`}
+        >
+          {account.status}
+        </span>
+      </div>
+
+      <p>
+        <strong>Rank</strong><br />
+        {account.rank}
+      </p>
+
+      <p>
+        <strong>Role</strong><br />
+        {account.role}
+      </p>
+
+      <p>
+        <strong>Email</strong><br />
+        {account.email}
+      </p>
+
+      {isOnLeave(account) && (
+        <p>
+          <strong>Leave</strong><br />
+          {formatLeaveDate(account.leave_start_date)}
+          {" - "}
+          {formatLeaveDate(account.leave_end_date)}
+        </p>
+      )}
+
+      <div className="account-card-actions">
+
+        {isPersonnelAccount(account) && (
+          <button
+            className="leave-btn"
+            onClick={() => openLeaveModal(account)}
+          >
+            Set Leave
+          </button>
+        )}
+
+        {isPersonnelAccount(account) &&
+          isOnLeave(account) && (
+            <button
+              className="leave-clear-btn"
+              onClick={() =>
+                handleClearLeaveDate(account)
+              }
+            >
+              Clear Leave
+            </button>
+          )}
+
+        <button
+          className="edit-btn"
+          onClick={() => openEditModal(account)}
+        >
+          Edit
+        </button>
+
+        <button
+          className="delete-btn"
+          onClick={() =>
+            handleDeleteUser(account.admin_id || account.id)
+          }
+        >
+          Delete
+        </button>
+
+      </div>
+    </div>
+  ))}
+</div>
         {isEditModalOpen && (
   <div className="accounts-modal-overlay" role="dialog">
     <div className="accounts-modal">

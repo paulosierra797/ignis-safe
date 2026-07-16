@@ -222,6 +222,57 @@
   color: #888;
   font-style: italic;
 }
+.attendance-mobile-list{
+    display:none;
+}
+
+.attendance-card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:16px;
+    box-shadow:0 6px 18px rgba(15,23,42,.06);
+}
+
+.attendance-card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+}
+
+.attendance-card-header h3{
+    margin:0;
+    font-size:1rem;
+}
+
+.attendance-index{
+    font-size:.8rem;
+    color:#64748b;
+}
+
+.attendance-card-body{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.attendance-card-body p{
+    margin:0;
+}
+
+.attendance-times{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:8px;
+}
+
+.time-label{
+    display:block;
+    color:#64748b;
+    font-size:.8rem;
+}
 
 @media (max-width: 1200px) {
   .filter-row {
@@ -253,7 +304,13 @@
     width: 100%;
   }
 
-  .attendance-table-container {
-    overflow-x: auto;
-  }
+    .attendance-table-container{
+        display:none;
+    }
+
+    .attendance-mobile-list{
+        display:flex;
+        flex-direction:column;
+        gap:16px;
+    }
 }

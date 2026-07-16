@@ -48,8 +48,15 @@ const PageHeader = ({
   const { isSidebarCollapsed, toggleSidebar, toggleMobileSidebar } = useLayout();
 
   const resolvedUserName = userName ?? getDisplayName(currentUser);
-  const resolvedUserRole = userRole ?? formatRoleLabel(currentUser?.role);
+  const resolvedUserRole = userRole ?? (variant === 'personnel'
+    ? 'Personnel'
+    : formatRoleLabel(currentUser?.role));
   const resolvedUserAvatar = userAvatar ?? currentUser?.avatar_url ?? '/user-avatar.png';
+  const isAdminAccount = String(currentUser?.role || '').toLowerCase() === 'admin';
+  const workspaceSwitchPath = variant === 'personnel' ? '/dashboard' : '/personnel/operations';
+  const workspaceSwitchLabel = variant === 'personnel'
+    ? 'Switch to Admin Workspace'
+    : 'Switch to Personnel Workspace';
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -72,6 +79,11 @@ const PageHeader = ({
       navigate('/personnel/profile');
       setIsDropdownOpen(false);
     }
+  };
+
+  const handleWorkspaceSwitch = () => {
+    navigate(workspaceSwitchPath);
+    setIsDropdownOpen(false);
   };
 
   const variantClass = variant ? `page-header--${variant}` : '';
@@ -118,6 +130,11 @@ const PageHeader = ({
           </div>
           {isDropdownOpen && (
             <div className="page-user-dropdown">
+              {isAdminAccount && (
+                <button className="dropdown-item" onClick={handleWorkspaceSwitch}>
+                  {workspaceSwitchLabel}
+                </button>
+              )}
               {variant === 'personnel' && (
                 <button className="dropdown-item" onClick={handleOpenProfile}>
                   Profile

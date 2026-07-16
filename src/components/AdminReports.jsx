@@ -258,6 +258,86 @@ const confirmReject = async () => {
             </div>
             
           )}
+          <div className="admin-reports-mobile-list">
+  {filteredReports.map((report) => {
+    const isBusy = processingId === report.report_id;
+
+    return (
+      <div className="admin-report-card" key={report.report_id}>
+        <div className="admin-report-card-header">
+          <h3>{report.title || '-'}</h3>
+
+          <span
+            className={`report-status-pill status-${String(report.status || '')
+              .toLowerCase()
+              .replace(/_/g, '-')}`}
+          >
+            {String(report.status || '-').replace('_', ' ').toUpperCase()}
+          </span>
+        </div>
+
+        <div className="admin-report-card-body">
+          <p>
+            <strong>Submitted By</strong><br />
+            {report.created_by_name || '-'}
+          </p>
+
+          <p>
+            <strong>Submitted At</strong><br />
+            {formatDateTime(report.submitted_at)}
+          </p>
+
+          <p>
+            <strong>PDF</strong><br />
+            {report.pdf_url ? (
+              <a
+                href={report.pdf_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open File
+              </a>
+            ) : (
+              '-'
+            )}
+          </p>
+        </div>
+
+        <div className="admin-report-card-actions">
+          <button
+            className="action-review"
+            onClick={() =>
+              handleStatusChange(report, 'under_review')
+            }
+            disabled={isBusy}
+          >
+            Review
+          </button>
+
+          <button
+            className="action-approve"
+            onClick={() =>
+              handleStatusChange(report, 'approved')
+            }
+            disabled={isBusy}
+          >
+            Approve
+          </button>
+
+          <button
+            className="action-reject"
+            onClick={() =>
+              handleStatusChange(report, 'rejected')
+            }
+            disabled={isBusy}
+          >
+            Reject
+          </button>
+        </div>
+      </div>
+    );
+  })}
+</div>
           {rejectModalOpen && (
   <div className="modal-overlay">
     <div className="modal-box">

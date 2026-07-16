@@ -10,6 +10,26 @@
   margin-left: 250px;
   padding: 2rem;
 }
+.leave-approval-mobile-list,
+.accounts-mobile-list{
+    display:none;
+}
+
+.leave-request-card,
+.account-card{
+    background:#fff;
+    border:1px solid #e5e7eb;
+    border-radius:14px;
+    padding:16px;
+    box-shadow:0 8px 18px rgba(15,23,42,.06);
+}
+
+.leave-card-actions,
+.account-card-actions{
+    display:grid;
+    gap:10px;
+    margin-top:16px;
+}
 
 @media (max-width: 900px) {
   .accounts-header,
@@ -1235,4 +1255,15 @@
     min-height: 48px;
     padding: 0.4rem 0.45rem;
   }
+  .leave-approval-table-wrap,
+.accounts-table-card table{
+    display:none;
+}
+
+.leave-approval-mobile-list,
+.accounts-mobile-list{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
 }

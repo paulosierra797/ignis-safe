@@ -7,8 +7,9 @@ import { useLayout } from '../context/LayoutContext';
 
 export default function Sidebar({ variant = 'admin' }) {
   const location = useLocation();
-  const { hasPermission } = useUser();
+  const { currentUser, hasPermission } = useUser();
   const { isSidebarCollapsed, isMobileSidebarOpen, closeMobileSidebar } = useLayout();
+  const isAdminAccount = String(currentUser?.role || '').toLowerCase() === 'admin';
 
   const menuItems = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard', permission: 'view_dashboard' },

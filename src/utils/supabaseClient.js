@@ -28,4 +28,15 @@ function getSupabaseClient() {
   return supabaseInstance;
 }
 
-export const supabase = getSupabaseClient();
+// Lazily create the real client on first use instead of at import time.
+// createClient() throws synchronously when the env vars are missing/invalid,
+// and this module is imported (transitively) from nearly every page, so an
+// eager throw here used to crash the entire app into a blank screen instead
+// of letting existing try/catch data-fetching code surface a friendly error.
+export const supabase = new Proxy({}, {
+  get(_target, prop) {
+    const client = getSupabaseClient();
+    const value = client[prop];
+    return typeof value === 'function' ? value.bind(client) : value;
+  }
+});

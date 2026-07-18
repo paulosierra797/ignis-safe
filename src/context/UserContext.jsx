@@ -76,26 +76,25 @@ export const UserProvider = ({ children }) => {
 
       await refreshCurrentUser();
 
+      // ONLY listen to Supabase IF session exists (optional safe sync)
+      const { data: authListener } = onAuthStateChange((event, session) => {
+        // ONLY react to real Supabase sessions
+        if (session?.user) {
+          refreshCurrentUser();
+        }
+
+        // IMPORTANT: DO NOT clear OTP users here
+        if (event === 'SIGNED_OUT' && session) {
+          syncCurrentUser(null);
+        }
+      });
+
+      unsubscribe = authListener?.subscription?.unsubscribe;
     } catch (error) {
       console.error('Error initializing auth:', error);
     } finally {
       setLoading(false);
     }
-
-    // ONLY listen to Supabase IF session exists (optional safe sync)
-    const { data: authListener } = onAuthStateChange((event, session) => {
-      // ONLY react to real Supabase sessions
-      if (session?.user) {
-        refreshCurrentUser();
-      }
-
-      // IMPORTANT: DO NOT clear OTP users here
-      if (event === 'SIGNED_OUT' && session) {
-        syncCurrentUser(null);
-      }
-    });
-
-    unsubscribe = authListener?.subscription?.unsubscribe;
   };
 
   initializeAuth();

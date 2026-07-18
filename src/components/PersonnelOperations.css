@@ -336,6 +336,31 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.45rem;
+  align-items: end;
+  height: 100%;
+}
+
+.calendar-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  margin-top: auto;
+}
+
+.calendar-stat {
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
+.calendar-stat-duty {
+  color: #166534;
+  font-weight: 600;
+}
+
+.calendar-stat-leave {
+  color: #6b7280;
+  font-weight: 400;
 }
 
 .shift-calendar-personnel-block {
@@ -536,8 +561,7 @@
 }
 
   .shift-calendar-day-card{
-    aspect-ratio:1;
-    min-height:auto;
+    min-height:64px;
     padding:5px;
     display:flex;
     flex-direction:column;
@@ -564,19 +588,15 @@
 
 .calendar-stats{
     display:flex;
-    justify-content:space-between;
-    font-size:.7rem;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:.05rem;
     margin-top:auto;
 }
 
-.calendar-stats span{
-    display:flex;
-    align-items:center;
-    gap:100px;
-}
-
-.calendar-icon{
-    margin-right:3px;
+.calendar-stat{
+    font-size:.6rem;
+    line-height:1.2;
 }
 .shift-calendar-nav{
     width:34px;

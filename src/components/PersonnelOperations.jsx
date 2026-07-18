@@ -386,11 +386,11 @@ const [leaveRes, scheduleRes] = await Promise.all([
 
                       {row ? (
                         <div className="shift-calendar-day-body">
- <div className="calendar-stats">
-    <span>👨 {onDuty}</span>
-    <span>🏖 {onLeave}</span>
-</div>
-</div>
+                          <div className="calendar-stats">
+                            <span className="calendar-stat calendar-stat-duty">On Duty: {onDuty}</span>
+                            <span className="calendar-stat calendar-stat-leave">On Leave: {onLeave}</span>
+                          </div>
+                        </div>
                       ) : (
                         <div className="shift-calendar-no-data">No shift data</div>
                       )}

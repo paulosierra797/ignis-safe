@@ -3,6 +3,18 @@ import { getAllUsers, getShiftScheduleConfig } from './usersService';
 
 const ADMIN_TABLE = 'admin';
 const LEAVE_REQUESTS_TABLE = 'leave_requests';
+const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
+
+const emitDataChanged = (scope, detail = {}) => {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new CustomEvent(DATA_CHANGED_EVENT, {
+    detail: {
+      scope,
+      ...detail
+    }
+  }));
+};
 
 const toIsoDate = (date) => {
   const year = date.getFullYear();
@@ -120,6 +132,8 @@ export const submitPersonnelLeaveRequest = async (adminId, { startDate, endDate,
       .single();
 
     if (error) throw error;
+
+    emitDataChanged('leave_requests', { action: 'create', personnel_id: adminId });
 
     return { data, error: null };
   } catch (error) {

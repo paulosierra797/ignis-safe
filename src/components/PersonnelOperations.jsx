@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -93,6 +93,7 @@ export default function PersonnelOperations() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const hasSeededLeaveFormRef = useRef(false);
 
   const loadPageData = useCallback(async () => {
     if (!currentUser?.admin_id) {
@@ -128,11 +129,18 @@ const [leaveRes, scheduleRes] = await Promise.all([
       setMessage({ type: 'error', text: `Failed to load leave request: ${leaveRes.error}` });
     } else if (leaveRes.data) {
       setLeaveRequest(leaveRes.data);
-      const request = leaveRes.data.latest_request;
-      setLeaveForm({
-        startDate: request?.start_date || leaveRes.data.leave_start_date || '',
-        endDate: request?.end_date || leaveRes.data.leave_end_date || ''
-      });
+      // Only seed the editable form once. This data also refreshes on window
+      // focus/visibility change (see effect below); re-seeding on every such
+      // refresh would silently wipe out dates the user has already picked
+      // but not yet submitted.
+      if (!hasSeededLeaveFormRef.current) {
+        const request = leaveRes.data.latest_request;
+        setLeaveForm({
+          startDate: request?.start_date || leaveRes.data.leave_start_date || '',
+          endDate: request?.end_date || leaveRes.data.leave_end_date || ''
+        });
+        hasSeededLeaveFormRef.current = true;
+      }
     }
 
     if (scheduleRes.error) {

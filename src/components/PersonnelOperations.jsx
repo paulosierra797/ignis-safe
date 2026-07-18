@@ -8,6 +8,7 @@ import {
   submitPersonnelLeaveRequest,
   getPersonnelShiftSchedule
 } from '../utils/personnelOperationsService';
+import { getManilaToday } from '../utils/dateUtils';
 import './PersonnelOperations.css';
 
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -222,6 +223,8 @@ const [leaveRes, scheduleRes] = await Promise.all([
     };
   }, [shiftRows]);
 
+  const todayIso = getManilaToday();
+
   const handleLeaveInput = (event) => {
     const { name, value } = event.target;
     setLeaveForm((prev) => ({ ...prev, [name]: value }));
@@ -232,6 +235,16 @@ const [leaveRes, scheduleRes] = await Promise.all([
 
     if (!currentUser?.admin_id) {
       setMessage({ type: 'error', text: 'No personnel account found in the current session.' });
+      return;
+    }
+
+    if (leaveForm.startDate < todayIso || leaveForm.endDate < todayIso) {
+      setMessage({ type: 'error', text: 'You cannot submit a leave request for a past date.' });
+      return;
+    }
+
+    if (leaveForm.endDate < leaveForm.startDate) {
+      setMessage({ type: 'error', text: 'Leave end date must be on or after the start date.' });
       return;
     }
 
@@ -419,6 +432,7 @@ const [leaveRes, scheduleRes] = await Promise.all([
                 id="leave-start-date"
                 type="date"
                 name="startDate"
+                min={todayIso}
                 value={leaveForm.startDate}
                 onChange={handleLeaveInput}
               />
@@ -428,7 +442,7 @@ const [leaveRes, scheduleRes] = await Promise.all([
                 id="leave-end-date"
                 type="date"
                 name="endDate"
-                min={leaveForm.startDate || undefined}
+                min={leaveForm.startDate || todayIso}
                 value={leaveForm.endDate}
                 onChange={handleLeaveInput}
               />

@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { getAllUsers, getShiftScheduleConfig } from './usersService';
+import { getManilaToday } from './dateUtils';
 
 const ADMIN_TABLE = 'admin';
 const LEAVE_REQUESTS_TABLE = 'leave_requests';
@@ -97,6 +98,12 @@ export const submitPersonnelLeaveRequest = async (adminId, { startDate, endDate,
 
     if (!startDate || !endDate) {
       return { data: null, error: 'Please provide both leave start and end dates.' };
+    }
+
+    const today = getManilaToday();
+
+    if (startDate < today || endDate < today) {
+      return { data: null, error: 'You cannot submit a leave request for a past date.' };
     }
 
     if (endDate < startDate) {

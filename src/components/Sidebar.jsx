@@ -1,35 +1,123 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import inlogo from '../assets/inLOGO.png';
 import './Dashboard.css';
 import { useUser } from '../context/UserContext';
 import { useLayout } from '../context/LayoutContext';
+import { getPendingProfileChangeRequestsCount } from '../utils/profileChangeRequestsService';
+import { getPendingAcknowledgementCount } from '../utils/announcementsService';
+
+const PERSONNEL_ANNOUNCEMENTS_PATH = '/personnel/announcements';
 
 export default function Sidebar({ variant = 'admin' }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { currentUser, hasPermission } = useUser();
   const { isSidebarCollapsed, isMobileSidebarOpen, closeMobileSidebar } = useLayout();
   const isAdminAccount = String(currentUser?.role || '').toLowerCase() === 'admin';
+  const [pendingProfileChangeRequests, setPendingProfileChangeRequests] = useState(0);
+  const [hasPendingAnnouncementAck, setHasPendingAnnouncementAck] = useState(false);
+  const [showAckRequiredModal, setShowAckRequiredModal] = useState(false);
 
   const menuItems = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard', permission: 'view_dashboard' },
     { id: 'chart', icon: '🗂️', label: 'Organization Chart', path: '/dashboard/chart', permission: 'view_charts' },
     { id: 'reports', icon: '📋', label: 'Reports', path: '/dashboard/reports', permission: 'view_dashboard' },
     { id: 'attendance-admin', icon: '📅', label: 'Attendance', path: '/attendance-admin', permission: 'view_attendance' },
-    { id: 'accounts', icon: '👥', label: 'Personnel', path: '/dashboard/accounts', permission: 'view_accounts' },
+    { id: 'accounts', icon: '👥', label: 'Personnel', path: '/dashboard/accounts', permission: 'view_accounts', badge: pendingProfileChangeRequests },
       { id: 'announcements', icon: '🔔', label: 'Content Management', path: '/dashboard/announcements', permission: 'manage_users' },
   ];
 
- 
+  useEffect(() => {
+    if (variant !== 'admin' || !hasPermission('manage_users')) {
+      setPendingProfileChangeRequests(0);
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    const loadPendingCount = async () => {
+      const { count } = await getPendingProfileChangeRequestsCount();
+      if (isMounted) {
+        setPendingProfileChangeRequests(count || 0);
+      }
+    };
+
+    loadPendingCount();
+
+    const handleDataChanged = (event) => {
+      const scope = event?.detail?.scope || '';
+      if (!scope || scope === 'profile_change_requests') {
+        loadPendingCount();
+      }
+    };
+
+    window.addEventListener('ignis-safe:data-changed', handleDataChanged);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
+    };
+  }, [variant, hasPermission]);
+
+  useEffect(() => {
+    const role = String(currentUser?.role || '').toLowerCase();
+
+    if (variant !== 'personnel' || role !== 'personnel' || !currentUser?.admin_id) {
+      setHasPendingAnnouncementAck(false);
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    const loadPendingAck = async () => {
+      const { data } = await getPendingAcknowledgementCount(currentUser);
+      if (isMounted) {
+        setHasPendingAnnouncementAck((data?.pendingCount || 0) > 0);
+      }
+    };
+
+    loadPendingAck();
+
+    const handleDataChanged = (event) => {
+      const scope = event?.detail?.scope || '';
+      if (!scope || scope === 'announcements') {
+        loadPendingAck();
+      }
+    };
+
+    window.addEventListener('ignis-safe:data-changed', handleDataChanged);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
+    };
+  }, [variant, currentUser?.admin_id, currentUser?.role]);
+
+  const handleNavItemClick = (event, item) => {
+    if (variant !== 'personnel' || !hasPendingAnnouncementAck) return;
+    if (item.path === PERSONNEL_ANNOUNCEMENTS_PATH) return;
+
+    event.preventDefault();
+    setShowAckRequiredModal(true);
+  };
+
+  const handleReturnToAnnouncement = () => {
+    setShowAckRequiredModal(false);
+    closeMobileSidebar();
+    if (location.pathname !== PERSONNEL_ANNOUNCEMENTS_PATH) {
+      navigate(PERSONNEL_ANNOUNCEMENTS_PATH);
+    }
+  };
 
   const appManagementItems = [
     { id: 'users', icon: '👤', label: 'Users', path: '/dashboard/users', permission: 'manage_users' },
     { id: 'assessment-questions', icon: '❓', label: 'Questions', path: '/dashboard/assessment-questions', permission: 'manage_users' },
     { id: 'learning-materials', icon: '📚', label: 'Learning Materials', path: '/dashboard/learning-materials', permission: 'manage_users'},
 
-  
+
     { id: 'analytics', icon: '📊', label: 'Analytics', path: '/dashboard/analytics', permission: 'view_analytics' },
-  
+
     { id: 'audit-logs', icon: '📋', label: 'Audit Logs', path: '/dashboard/audit-logs', permission: 'view_audit_logs' },
   ];
 
@@ -38,7 +126,7 @@ export default function Sidebar({ variant = 'admin' }) {
     { id: 'announcements', icon: '🔔', label: 'Announcements', path: '/personnel/announcements' },
     { id: 'attendance-personnel', icon: '🕐', label: 'Attendance', path: '/attendance-personnel' },
     { id: 'reports', icon: '📋', label: 'Reports', path: '/reports' },
-    { id: 'history', icon: '📊', label: 'History', path: '/personnel/history' }
+    { id: 'history', icon: '📊', label: 'Audit Logs', path: '/personnel/history' }
   ];
 
   // Filter menu items based on user permissions
@@ -79,9 +167,13 @@ export default function Sidebar({ variant = 'admin' }) {
               <Link
                 to={item.path}
                 className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+                onClick={(event) => handleNavItemClick(event, item)}
               >
                 <span className="nav-icon">{item.icon}</span>
                 <span className="nav-label">{item.label}</span>
+                {Boolean(item.badge) && (
+                  <span className="nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>
+                )}
               </Link>
             </li>
           ))}
@@ -107,6 +199,37 @@ export default function Sidebar({ variant = 'admin' }) {
         )}
       </nav>
       </aside>
+
+      {showAckRequiredModal && (
+        <div className="ack-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ackModalTitle">
+          <div className="ack-modal">
+            <div className="ack-modal-icon">!</div>
+            <h3 id="ackModalTitle" className="ack-modal-title">Acknowledgement Required</h3>
+            <p className="ack-modal-message">
+              Please read and acknowledge the specific announcement or memorandum assigned to your account before accessing other sections.
+            </p>
+            <p className="ack-modal-message">
+              Click the Acknowledge button on the announcement after reviewing its content. Once acknowledged, sidebar navigation will be available.
+            </p>
+            <div className="ack-modal-actions">
+              <button
+                type="button"
+                className="ack-modal-btn ack-modal-btn-primary"
+                onClick={handleReturnToAnnouncement}
+              >
+                Return to Announcement
+              </button>
+              <button
+                type="button"
+                className="ack-modal-btn ack-modal-btn-secondary"
+                onClick={() => setShowAckRequiredModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

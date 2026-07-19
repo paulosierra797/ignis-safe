@@ -586,6 +586,28 @@
   font-weight: 500;
 }
 
+.nav-badge {
+  margin-left: auto;
+  background: #fbbf24;
+  color: #1f2937;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.28rem 0.5rem;
+  border-radius: 999px;
+  min-width: 1.4rem;
+  text-align: center;
+}
+
+.nav-item.active .nav-badge {
+  background: #b91c1c;
+  color: white;
+}
+
+.sidebar--collapsed .nav-badge {
+  display: none;
+}
+
 .sidebar--collapsed {
   width: 72px;
 }
@@ -631,18 +653,18 @@ body.sidebar-collapsed .admin-reports-main,
 body.sidebar-collapsed .analytics-main,
 body.sidebar-collapsed .assessment-questions-main,
 body.sidebar-collapsed .attendance-admin-main,
-body.sidebar-collapsed .attendance-personnel-main,
+body.sidebar-collapsed .attendance-personnel-content,
 body.sidebar-collapsed .chart-main,
 body.sidebar-collapsed .content-management-main,
-body.sidebar-collapsed .history-main,
+body.sidebar-collapsed .history-content,
 body.sidebar-collapsed .investigation-main,
 body.sidebar-collapsed .landing-editor-main,
 body.sidebar-collapsed .progress-main,
 body.sidebar-collapsed .reports-main,
 body.sidebar-collapsed .users-main,
 body.sidebar-collapsed .user-announcements-main,
-body.sidebar-collapsed .personnel-operations-main,
-body.sidebar-collapsed .personnel-profile-main,
+body.sidebar-collapsed .personnel-ops-content,
+body.sidebar-collapsed .personnel-profile-content,
 body.sidebar-collapsed .audit-logs-main,
 body.sidebar-collapsed .announcements-main {
   margin-left: 72px !important;
@@ -745,4 +767,105 @@ body.sidebar-collapsed .nav-section {
 
 .knowledge-trend-line.down {
   color: #ef4444;
+}
+
+/* Acknowledgement-required modal (personnel sidebar restriction) */
+.ack-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.25rem;
+  z-index: 999999;
+}
+
+.ack-modal {
+  width: 420px;
+  max-width: 100%;
+  background: white;
+  border-radius: 18px;
+  padding: 1.75rem 1.75rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.2s ease-in-out, slideUp 0.2s ease-in-out;
+}
+
+.ack-modal-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.ack-modal-title {
+  margin: 0;
+  color: #7f1d1d;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.ack-modal-message {
+  margin: 0;
+  color: #374151;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.ack-modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.ack-modal-btn {
+  flex: 1 1 0;
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.ack-modal-btn:hover {
+  opacity: 0.9;
+}
+
+.ack-modal-btn-primary {
+  background: linear-gradient(180deg, #B91C1C 0%, #7f1d1d 100%);
+  color: white;
+}
+
+.ack-modal-btn-secondary {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }

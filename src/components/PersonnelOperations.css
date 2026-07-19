@@ -73,8 +73,7 @@
 }
 
 .leave-status,
-.shift-chip,
-.shift-tag {
+.shift-chip {
   display: inline-flex;
   align-items: center;
   padding: 0.3rem 0.65rem;
@@ -149,20 +148,62 @@
   margin-top: 0.35rem;
 }
 
+.leave-form-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
 .leave-form-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.4rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 0.75rem 1.25rem;
   margin-bottom: 1rem;
 }
 
+.leave-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
 .leave-form-grid label {
+  display: block;
   color: #1f2937;
   font-size: 0.84rem;
   font-weight: 600;
+  line-height: 1.2;
+}
+
+.leave-clear-dates-btn {
+  flex-shrink: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.3rem 0.65rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.leave-clear-dates-btn:not(:disabled):hover {
+  background: #f3f4f6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+.leave-clear-dates-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .leave-form-grid input {
+  box-sizing: border-box;
+  width: 100%;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   padding: 0.6rem 0.7rem;
@@ -172,6 +213,20 @@
 .leave-form-grid input:focus {
   outline: 2px solid rgba(249, 157, 45, 0.35);
   border-color: #f59e0b;
+}
+
+/* Both leave date pickers share this class so their calendar popup trigger
+   stays the same enlarged size and behavior. */
+.leave-form-grid input.leave-date-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 5px;
+  margin-left: 6px;
+  transform: scale(1.35);
+  filter: opacity(0.75);
+}
+
+.leave-form-grid input.leave-date-input::-webkit-calendar-picker-indicator:hover {
+  filter: opacity(1);
 }
 
 .ops-primary-btn,
@@ -251,6 +306,46 @@
    transform:scale(1.05);
 }
 
+.shift-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  padding: 0.75rem 0.1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.shift-calendar-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.shift-calendar-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.shift-calendar-legend-dot.legend-shift-a {
+  background: #ca8a04;
+}
+
+.shift-calendar-legend-dot.legend-shift-b {
+  background: #ea580c;
+}
+
+.shift-calendar-legend-dot.legend-on-leave {
+  background: #dc2626;
+}
+
+.shift-calendar-legend-dot.legend-off-duty {
+  background: #6b7280;
+}
+
 .shift-calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -304,6 +399,33 @@
   background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
 }
 
+.shift-calendar-day-card.today {
+  border: 2px solid #f59e0b;
+  background: #fff8ec;
+}
+
+/* Display-only disabled state for past dates. Purely visual — schedule
+   data for these dates is never modified here. */
+.shift-calendar-day-card.is-past-date {
+  pointer-events: none;
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: grayscale(1);
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+.shift-calendar-day-card.is-past-date .shift-calendar-day-number,
+.shift-calendar-day-card.is-past-date .shift-tag,
+.shift-calendar-day-card.is-past-date .calendar-stat-duty,
+.shift-calendar-day-card.is-past-date .calendar-stat-leave {
+  color: #9ca3af !important;
+}
+
+.shift-calendar-day-card.is-past-date .shift-tag::before {
+  background: #9ca3af !important;
+}
+
 .shift-calendar-day-top{
     display:flex;
     justify-content:space-between;
@@ -315,15 +437,28 @@
     font-weight:700;
 }
 
-.shift-tag{
-    width:20px;
-    height:20px;
-    border-radius:50%;
-    padding:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:.6rem;
+.shift-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: auto;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.shift-tag::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
 }
 
 .shift-calendar-day-number {
@@ -359,8 +494,8 @@
 }
 
 .calendar-stat-leave {
-  color: #6b7280;
-  font-weight: 400;
+  color: #dc2626;
+  font-weight: 600;
 }
 
 .shift-calendar-personnel-block {
@@ -476,23 +611,27 @@
 }
 
 .shift-tag.shift-a {
-  background: #dbeafe;
-  color: #1d4ed8;
+  color: #ca8a04;
 }
 
 .shift-tag.shift-b {
-  background: #dcfce7;
-  color: #166534;
+  color: #ea580c;
 }
 
 .shift-tag.shift-a-b {
-  background: #ede9fe;
-  color: #6d28d9;
+  color: #ca8a04;
+}
+
+.shift-tag.shift-a-b::before {
+  background: linear-gradient(135deg, #ca8a04 50%, #ea580c 50%);
+}
+
+.shift-tag.on-leave {
+  color: #dc2626;
 }
 
 .shift-tag.off-duty {
-  background: #f3f4f6;
-  color: #4b5563;
+  color: #6b7280;
 }
 
 .ops-secondary-btn {
@@ -545,9 +684,15 @@
     width: 100%;
   }
 
+  .leave-form-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
     .shift-calendar-grid{
       grid-template-columns:repeat(7,1fr);
       gap:6px;
+      min-width:520px;
   }
 
   .shift-calendar-weekdays{
@@ -571,16 +716,32 @@
     font-size:1.05rem;
     font-weight:700;
 }
+
+  .shift-calendar-day-top{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:.15rem;
+}
+
 .shift-tag{
-    width:18px;
-    height:18px;
-    border-radius:50%;
+    width:auto;
+    height:auto;
+    border-radius:0;
     padding:0;
-    display:flex;
-    justify-content:center;
+    display:inline-flex;
+    justify-content:flex-start;
     align-items:center;
-    font-size:.6rem;
+    font-size:.56rem;
     font-weight:700;
+    white-space:nowrap;
+}
+
+.shift-calendar-legend{
+    gap:.6rem;
+}
+
+.shift-calendar-legend-item{
+    font-size:.68rem;
 }
 .calendar-summary-row{
     display:none;

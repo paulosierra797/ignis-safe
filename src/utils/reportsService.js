@@ -192,7 +192,7 @@ export const getPersonnelReportHistory = async (createdBy) => {
 
     const { data, error } = await supabase
       .from(REPORTS_TABLE)
-      .select('report_id, report_no, report_type, title, category, status, created_at, updated_at, submitted_at, created_by_name, pdf_url, report_payload')
+      .select('report_id, report_no, report_type, title, category, status, created_at, updated_at, submitted_at, created_by_name, pdf_url, pdf_file_name, internal_notes, report_payload')
       .eq('created_by', createdBy)
       .in('status', ['draft', 'submitted', 'under_review', 'approved', 'rejected'])
       .order('updated_at', { ascending: false });

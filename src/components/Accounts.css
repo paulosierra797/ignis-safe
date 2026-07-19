@@ -11,6 +11,7 @@
   padding: 2rem;
 }
 .leave-approval-mobile-list,
+.profile-request-mobile-list,
 .accounts-mobile-list{
     display:none;
 }
@@ -400,6 +401,164 @@
 .leave-reject-btn:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.profile-request-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.profile-request-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.profile-request-status-select {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.8rem;
+  color: #334155;
+  background: #f9fafb;
+  cursor: pointer;
+}
+
+.profile-request-email {
+  color: #6b7280;
+  font-size: 0.78rem;
+}
+
+.profile-request-status {
+  display: inline-block;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.profile-request-status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.profile-request-status-approved {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.profile-request-status-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.profile-request-reviewed-by {
+  color: #6b7280;
+  font-size: 0.8rem;
+}
+
+/* Profile Change Requests table: dedicated column layout so headers and
+   values line up, long values wrap cleanly, and content stays centered
+   vertically without affecting the shared leave-approval-table elsewhere. */
+.profile-request-card .leave-approval-table-wrap {
+  overflow-x: auto;
+}
+
+.profile-request-card .leave-approval-table {
+  table-layout: fixed;
+  min-width: 900px;
+}
+
+.profile-request-card .leave-approval-table th,
+.profile-request-card .leave-approval-table td {
+  padding: 0.85rem 0.9rem;
+  vertical-align: middle;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.profile-request-card .leave-approval-table th:nth-child(1),
+.profile-request-card .leave-approval-table td:nth-child(1) {
+  width: 20%;
+}
+
+.profile-request-card .leave-approval-table th:nth-child(2),
+.profile-request-card .leave-approval-table td:nth-child(2) {
+  width: 9%;
+}
+
+.profile-request-card .leave-approval-table th:nth-child(3),
+.profile-request-card .leave-approval-table td:nth-child(3) {
+  width: 11%;
+}
+
+.profile-request-card .leave-approval-table th:nth-child(4),
+.profile-request-card .leave-approval-table td:nth-child(4) {
+  width: 16%;
+}
+
+.profile-request-card .leave-approval-table th:nth-child(5),
+.profile-request-card .leave-approval-table td:nth-child(5) {
+  width: 13%;
+}
+
+.profile-request-card .leave-approval-table th:nth-child(6),
+.profile-request-card .leave-approval-table td:nth-child(6) {
+  width: 9%;
+}
+
+.profile-request-card .leave-approval-table th:nth-child(7),
+.profile-request-card .leave-approval-table td:nth-child(7) {
+  width: 9%;
+  text-align: center;
+}
+
+.profile-request-card .leave-approval-table th:nth-child(8),
+.profile-request-card .leave-approval-table td:nth-child(8) {
+  width: 13%;
+}
+
+.profile-request-personnel-cell {
+  line-height: 1.35;
+}
+
+.profile-request-personnel {
+  font-weight: 600;
+  color: #1f2937;
+  overflow-wrap: break-word;
+}
+
+.profile-request-email {
+  overflow-wrap: break-word;
+}
+
+.profile-request-value-cell {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.profile-request-status-cell {
+  text-align: center;
+}
+
+.profile-request-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-request-actions .leave-approve-btn,
+.profile-request-actions .leave-reject-btn {
+  flex: 1 1 0;
+  margin-right: 0;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .accounts-filters {
@@ -1261,9 +1420,15 @@
 }
 
 .leave-approval-mobile-list,
+.profile-request-mobile-list,
 .accounts-mobile-list{
     display:flex;
     flex-direction:column;
     gap:16px;
+}
+
+.profile-request-header-actions {
+    width: 100%;
+    justify-content: space-between;
 }
 }

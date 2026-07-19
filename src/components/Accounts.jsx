@@ -21,6 +21,12 @@ import {
   getShiftAssignmentsForPeriod,
   removeShiftAssignment
 } from '../utils/personnelOperationsService';
+import {
+  getAllProfileChangeRequests,
+  approveProfileChangeRequest,
+  rejectProfileChangeRequest,
+  getProfileFieldLabel
+} from '../utils/profileChangeRequestsService';
 import { useUser } from '../context/UserContext';
 
 const validPersonnelNamePattern = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
@@ -56,6 +62,11 @@ export default function Accounts() {
   const [pendingLeaveRequests, setPendingLeaveRequests] = useState([]);
   const [pendingRequestMessage, setPendingRequestMessage] = useState('');
   const [processingRequestId, setProcessingRequestId] = useState('');
+  const [profileChangeRequests, setProfileChangeRequests] = useState([]);
+  const [profileRequestsLoading, setProfileRequestsLoading] = useState(true);
+  const [profileRequestMessage, setProfileRequestMessage] = useState('');
+  const [profileRequestStatusFilter, setProfileRequestStatusFilter] = useState('pending');
+  const [processingProfileRequestId, setProcessingProfileRequestId] = useState('');
   const [pendingRejectRequest, setPendingRejectRequest] = useState(null);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReasonInput, setRejectReasonInput] = useState('');
@@ -151,6 +162,7 @@ export default function Accounts() {
     fetchAccounts();
     loadShiftSchedule();
     loadPendingLeaveRequests();
+    loadProfileChangeRequests();
   }, []);
 
   const formatShiftDate = (dateValue) => {
@@ -331,6 +343,21 @@ export default function Accounts() {
     setPendingRequestsLoading(false);
   };
 
+  const loadProfileChangeRequests = async () => {
+    setProfileRequestsLoading(true);
+    setProfileRequestMessage('');
+
+    const { data, error } = await getAllProfileChangeRequests();
+    if (error) {
+      setProfileRequestMessage(error);
+      setProfileChangeRequests([]);
+    } else {
+      setProfileChangeRequests(data || []);
+    }
+
+    setProfileRequestsLoading(false);
+  };
+
   useEffect(() => {
     const handleDataChanged = (event) => {
       const scope = event?.detail?.scope || '';
@@ -338,6 +365,9 @@ export default function Accounts() {
         fetchAccounts();
         loadShiftSchedule();
         loadPendingLeaveRequests();
+      }
+      if (!scope || scope === 'profile_change_requests') {
+        loadProfileChangeRequests();
       }
     };
 
@@ -474,6 +504,90 @@ export default function Accounts() {
     setIsRejectModalOpen(false);
     setPendingRejectRequest(null);
     setRejectReasonInput('');
+  };
+
+  const filteredProfileChangeRequests = profileChangeRequests.filter((request) =>
+    profileRequestStatusFilter === 'all' || request.status === profileRequestStatusFilter
+  );
+
+  const pendingProfileChangeRequestCount = profileChangeRequests.filter(
+    (request) => request.status === 'pending'
+  ).length;
+
+  const handleApproveProfileChangeRequest = async (request) => {
+    if (!request?.request_id || processingProfileRequestId) {
+      return;
+    }
+
+    setProcessingProfileRequestId(request.request_id);
+    setProfileRequestMessage('');
+
+    const { error } = await approveProfileChangeRequest({
+      requestId: request.request_id,
+      reviewedBy: currentUser?.admin_id || null
+    });
+
+    if (error) {
+      setProfileRequestMessage(`Failed to approve request: ${error}`);
+      setProcessingProfileRequestId('');
+      return;
+    }
+
+    logAdminActivity({
+      actorId: currentUser?.admin_id || null,
+      actorName: currentUser?.name || currentUser?.email || 'Admin User',
+      action: 'Profile Change Request Approved',
+      actionType: 'edit',
+      details: `Approved ${getProfileFieldLabel(request.field_name)} change for ${request.personnel_name || request.personnel_id} (${request.current_value || '—'} -> ${request.requested_value}).`,
+      metadata: {
+        request_id: request.request_id,
+        personnel_id: request.personnel_id,
+        field_name: request.field_name
+      }
+    }).catch((logError) => {
+      console.warn('Unable to write admin activity log:', logError);
+    });
+
+    await loadProfileChangeRequests();
+    setProcessingProfileRequestId('');
+  };
+
+  const handleRejectProfileChangeRequest = async (request) => {
+    if (!request?.request_id || processingProfileRequestId) {
+      return;
+    }
+
+    setProcessingProfileRequestId(request.request_id);
+    setProfileRequestMessage('');
+
+    const { error } = await rejectProfileChangeRequest({
+      requestId: request.request_id,
+      reviewedBy: currentUser?.admin_id || null
+    });
+
+    if (error) {
+      setProfileRequestMessage(`Failed to reject request: ${error}`);
+      setProcessingProfileRequestId('');
+      return;
+    }
+
+    logAdminActivity({
+      actorId: currentUser?.admin_id || null,
+      actorName: currentUser?.name || currentUser?.email || 'Admin User',
+      action: 'Profile Change Request Rejected',
+      actionType: 'edit',
+      details: `Rejected ${getProfileFieldLabel(request.field_name)} change for ${request.personnel_name || request.personnel_id}.`,
+      metadata: {
+        request_id: request.request_id,
+        personnel_id: request.personnel_id,
+        field_name: request.field_name
+      }
+    }).catch((logError) => {
+      console.warn('Unable to write admin activity log:', logError);
+    });
+
+    await loadProfileChangeRequests();
+    setProcessingProfileRequestId('');
   };
 
   const handleDeleteUser = async (adminId) => {
@@ -1685,6 +1799,162 @@ const permissions = getDefaultPermissions(formData.role);
     );
   })}
 </div>
+        </div>
+
+        <div className="profile-request-card">
+          <div className="leave-approval-header">
+            <h3>Profile Change Requests</h3>
+            <div className="profile-request-header-actions">
+              <select
+                className="profile-request-status-select"
+                value={profileRequestStatusFilter}
+                onChange={(event) => setProfileRequestStatusFilter(event.target.value)}
+              >
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+              <span>{pendingProfileChangeRequestCount} pending</span>
+            </div>
+          </div>
+
+          {profileRequestMessage && (
+            <div className="leave-approval-message">{profileRequestMessage}</div>
+          )}
+
+          {profileRequestsLoading ? (
+            <p className="leave-approval-empty">Loading profile change requests...</p>
+          ) : filteredProfileChangeRequests.length === 0 ? (
+            <p className="leave-approval-empty">No profile change requests found.</p>
+          ) : (
+            <div className="leave-approval-table-wrap">
+              <table className="leave-approval-table">
+                <thead>
+                  <tr>
+                    <th>Personnel</th>
+                    <th>Field</th>
+                    <th>Current Value</th>
+                    <th>Requested Value</th>
+                    <th>Reason</th>
+                    <th>Requested</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProfileChangeRequests.map((request) => {
+                    const isProcessing = processingProfileRequestId === request.request_id;
+
+                    return (
+                      <tr key={request.request_id}>
+                        <td className="profile-request-personnel-cell">
+                          <div className="profile-request-personnel">{request.personnel_name}</div>
+                          <div className="profile-request-email">{request.personnel_email}</div>
+                        </td>
+                        <td>{getProfileFieldLabel(request.field_name)}</td>
+                        <td>{request.current_value || '—'}</td>
+                        <td className="profile-request-value-cell">{request.requested_value}</td>
+                        <td>{request.reason || '—'}</td>
+                        <td>{new Date(request.requested_at).toLocaleDateString('en-US')}</td>
+                        <td className="profile-request-status-cell">
+                          <span className={`profile-request-status profile-request-status-${request.status}`}>
+                            {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                          </span>
+                        </td>
+                        <td>
+                          {request.status === 'pending' ? (
+                            <div className="profile-request-actions">
+                              <button
+                                className="leave-approve-btn"
+                                type="button"
+                                onClick={() => handleApproveProfileChangeRequest(request)}
+                                disabled={isProcessing}
+                              >
+                                {isProcessing ? 'Processing...' : 'Approve'}
+                              </button>
+                              <button
+                                className="leave-reject-btn"
+                                type="button"
+                                onClick={() => handleRejectProfileChangeRequest(request)}
+                                disabled={isProcessing}
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="profile-request-reviewed-by">
+                              {request.reviewed_by_name || '—'}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="profile-request-mobile-list">
+            {filteredProfileChangeRequests.map((request) => {
+              const isProcessing = processingProfileRequestId === request.request_id;
+
+              return (
+                <div className="leave-request-card" key={request.request_id}>
+                  <h3>{request.personnel_name}</h3>
+
+                  <p>
+                    <strong>Field</strong><br />
+                    {getProfileFieldLabel(request.field_name)}
+                  </p>
+
+                  <p>
+                    <strong>Current → Requested</strong><br />
+                    {request.current_value || '—'} → {request.requested_value}
+                  </p>
+
+                  {request.reason && (
+                    <p>
+                      <strong>Reason</strong><br />
+                      {request.reason}
+                    </p>
+                  )}
+
+                  <p>
+                    <strong>Requested</strong><br />
+                    {new Date(request.requested_at).toLocaleDateString('en-US')}
+                  </p>
+
+                  <p>
+                    <strong>Status</strong><br />
+                    <span className={`profile-request-status profile-request-status-${request.status}`}>
+                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                    </span>
+                  </p>
+
+                  {request.status === 'pending' && (
+                    <div className="leave-card-actions">
+                      <button
+                        className="leave-approve-btn"
+                        onClick={() => handleApproveProfileChangeRequest(request)}
+                        disabled={isProcessing}
+                      >
+                        Approve
+                      </button>
+                      <button
+                        className="leave-reject-btn"
+                        onClick={() => handleRejectProfileChangeRequest(request)}
+                        disabled={isProcessing}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="accounts-filters">

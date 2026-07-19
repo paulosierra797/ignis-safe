@@ -140,8 +140,8 @@ const PageHeader = ({
                   Profile
                 </button>
               )}
-              <button className="dropdown-item" onClick={handleLogout}>
-               
+              <button className="dropdown-item dropdown-item--logout" onClick={handleLogout}>
+
                 Logout
               </button>
             </div>

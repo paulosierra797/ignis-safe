@@ -13,20 +13,28 @@
 .attendance-personnel-container {
   display: flex;
   min-height: 100vh;
-  background: radial-gradient(circle at 15% 20%, rgba(214, 69, 61, 0.18), transparent 45%),
-    radial-gradient(circle at 80% 10%, rgba(245, 181, 68, 0.25), transparent 40%),
-    linear-gradient(140deg, #f8f4ef, #f0ece7);
+  background: #f8fafc;
 }
 
 .attendance-personnel-content {
   flex: 1;
-  padding: 32px 48px 48px;
   margin-left: 250px;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
   gap: 28px;
  font-family: 'Poppins', sans-serif;
   color: var(--ash);
+}
+
+/* Match Announcements page header sizing */
+.attendance-personnel-content .page-header {
+  padding: 1.5rem 2rem;
+  margin: -2rem -2rem 2rem -2rem;
+}
+
+.attendance-personnel-content .page-title {
+  font-size: 2rem;
 }
 
 @media (max-width: 900px) {
@@ -35,7 +43,6 @@
   }
 
   .qr-hero,
-  .qr-mode,
   .attendance-panel-grid {
     grid-template-columns: 1fr;
     flex-direction: column;
@@ -82,65 +89,54 @@
 
 .qr-subtitle {
   color: #4d4f54;
-  max-width: 440px;
-  line-height: 1.5;
+  max-width: 480px;
+  line-height: 1.6;
+  font-size: 16px;
 }
 
-.qr-mode {
-  display: flex;
-  gap: 14px;
-  margin: 20px 0 16px;
+.qr-instructions {
+  margin: 24px 0 20px;
 }
 
-.time-btn {
-  flex: 1;
-  padding: 12px 18px;
-  border: none;
-  border-radius: 999px;
-  font-size: 12px;
+.qr-instructions-title {
+  font-size: 16px;
   font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
   text-transform: uppercase;
   letter-spacing: 1px;
+  color: var(--ash);
+  margin: 0 0 14px;
+  font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
 
-.time-in {
-  background-color: var(--ember);
-  color: white;
+.qr-instructions-list {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: #33343a;
+  max-width: 480px;
 }
 
-.time-in:hover {
-  background-color: var(--ember-dark);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 22px rgba(214, 69, 61, 0.25);
+.qr-instructions-list li {
+  padding-left: 4px;
 }
 
-.time-out {
-  background-color: var(--slate);
-  color: white;
+.qr-important {
+  background: rgba(214, 69, 61, 0.08);
+  border-left: 3px solid var(--ember);
+  padding: 16px 18px;
+  border-radius: 10px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #4d4f54;
+  max-width: 480px;
 }
 
-.time-out:hover {
-  background-color: #1e2024;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 22px rgba(32, 33, 36, 0.2);
-}
-
-.time-btn.active {
-  transform: scale(0.98);
-  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.2);
-}
-
-.qr-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.06);
-  font-size: 13px;
-  font-weight: 600;
+.qr-important strong {
+  color: var(--ember);
 }
 
 .qr-actions {
@@ -153,14 +149,6 @@
 .qr-helper {
   font-size: 12px;
   color: #7b7d85;
-}
-
-.status-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--ember);
-  box-shadow: 0 0 12px rgba(214, 69, 61, 0.6);
 }
 
 .qr-hero-card {
@@ -199,7 +187,7 @@
   aspect-ratio: 1 / 1;
   background: var(--ash);
   border-radius: 16px;
-  padding: 16px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -243,12 +231,12 @@
   align-items: center;
   justify-content: center;
   background: #111214;
-  padding: 8px;
+  padding: 4px;
   border-radius: 12px;
 }
 
 .qr-grid svg {
-  width: min(100%, 220px);
+  width: min(100%, 320px);
   height: auto;
   border-radius: 8px;
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.25);
@@ -464,6 +452,10 @@
     padding: 24px;
   }
 
+  .attendance-personnel-content .page-header {
+    margin: -24px -24px 2rem -24px;
+  }
+
   .qr-hero {
     grid-template-columns: 1fr;
   }
@@ -474,10 +466,6 @@
 }
 
 @media (max-width: 640px) {
-  .qr-mode {
-    flex-direction: column;
-  }
-
   .attendance-list-table-container {
     padding: 18px;
   }

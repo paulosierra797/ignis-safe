@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getStoredDeviceId, clearDeviceCredentials } from './deviceTrust';
 
 const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 const ADMIN_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
@@ -105,43 +106,6 @@ const syncAdminStatusIfVerified = async (authUser, adminData) => {
 
   return updatedAdmin || adminData;
 };
-export const preAuth = async (email, password) => {
-  try {
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
-
-    if (error) {
-      throw error;
-    }
-
-
-    // immediately remove session
-   
-
-
-    return {
-      data,
-      error: null
-    };
-
-
-  } catch(error){
-
-    return {
-      data:null,
-      error:error.message
-    };
-
-  }
-};
-
-
-
-
 
 // Sign up new admin
 export const signUp = async (email, password, userData = {}) => {
@@ -347,6 +311,19 @@ export const verifyLoginOtp = async (email, token) => {
 // Sign out user
 export const signOut = async () => {
   try {
+    // Best-effort: revoke this device's trust so the next login on it
+    // requires OTP again. Must run before supabase.auth.signOut() while
+    // the session is still valid (the RPC is scoped to auth.uid()).
+    try {
+      const deviceId = getStoredDeviceId();
+      if (deviceId) {
+        await supabase.rpc('revoke_device', { p_device_id: deviceId });
+      }
+    } catch (revokeError) {
+      console.warn('Could not revoke trusted device on sign out:', revokeError);
+    }
+    clearDeviceCredentials();
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
     return { error: null };
@@ -542,6 +519,15 @@ export const updatePassword = async (newPassword) => {
     });
 
     if (error) throw error;
+
+    // Password changed/reset: revoke every trusted device for this user so
+    // OTP is required again everywhere, not just on this device.
+    try {
+      await supabase.rpc('revoke_all_devices');
+    } catch (revokeError) {
+      console.warn('Could not revoke trusted devices after password update:', revokeError);
+    }
+
     return { data, error: null };
   } catch (error) {
     console.error('Error updating password:', error);

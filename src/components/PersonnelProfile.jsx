@@ -3,13 +3,18 @@ import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { uploadProfileImage } from '../utils/imageService';
-import { updateUser } from '../utils/usersService';
-import { updatePassword, verifyCurrentPassword } from '../utils/authService';
 import * as faceapi from 'face-api.js';
 import { loadFaceModels } from '../utils/loadFaceModels';
 import Webcam from 'react-webcam';
 import './PersonnelProfile.css';
 import { getFaceByAdminId, registerFace } from '../utils/faceApiService';
+import {
+  PROFILE_FIELD_OPTIONS,
+  getProfileFieldLabel,
+  getMyProfileChangeRequests,
+  submitProfileChangeRequest
+} from '../utils/profileChangeRequestsService';
+import { logPersonnelActivity } from '../utils/activityLogService';
 
 const RANK_OPTIONS = [
   'FDIR',
@@ -35,23 +40,14 @@ export default function PersonnelProfile() {
   const [rank, setRank] = useState('');
   const [rankCustom, setRankCustom] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isEditing, setIsEditing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [profileImage, setProfileImage] = useState('/user-avatar.png');
-  const [enablePasswordChange, setEnablePasswordChange] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const resolvedRank = rank === 'OTHER' ? rankCustom.trim() : rank;
   const displayName = `${resolvedRank || currentUser?.rank || ''} ${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'Personnel';
   const displayPhone = currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || currentUser?.mobile || 'Not available';
-  const [isSaving, setIsSaving] = useState(false);
-  const [isPasswordSaving, setIsPasswordSaving] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
-  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const displayRole = currentUser?.role
+    ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)
+    : 'Personnel';
   const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
 const [faceDescriptor, setFaceDescriptor] = useState(null);
 const [faceLoading, setFaceLoading] = useState(false);
@@ -63,9 +59,14 @@ const [modal, setModal] = useState({
   message: "",
   onConfirm: null,
 });
-  const hasNameChanges = (firstName !== (currentUser?.first_name || ''))
-    || (lastName !== (currentUser?.last_name || ''))
-    || (resolvedRank !== (currentUser?.rank || ''));
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [requestField, setRequestField] = useState(PROFILE_FIELD_OPTIONS[0].value);
+  const [requestValue, setRequestValue] = useState('');
+  const [requestReason, setRequestReason] = useState('');
+  const [isRequestSaving, setIsRequestSaving] = useState(false);
+  const [requestMessage, setRequestMessage] = useState({ type: '', text: '' });
+  const [myRequests, setMyRequests] = useState([]);
+  const [loadingMyRequests, setLoadingMyRequests] = useState(false);
   useEffect(() => {
   const initModels = async () => {
     await loadFaceModels();
@@ -74,16 +75,18 @@ const [modal, setModal] = useState({
   initModels();
 }, []);
 
+  const loadMyRequests = async () => {
+    if (!currentUser?.admin_id) return;
+    setLoadingMyRequests(true);
+    const { data } = await getMyProfileChangeRequests(currentUser.admin_id);
+    setMyRequests(data || []);
+    setLoadingMyRequests(false);
+  };
+
   useEffect(() => {
-    if (passwordMessage.text) {
-      setIsPasswordModalOpen(true);
-      const timer = setTimeout(() => {
-        setIsPasswordModalOpen(false);
-        setTimeout(() => setPasswordMessage({ type: '', text: '' }), 300);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [passwordMessage]);
+    loadMyRequests();
+  }, [currentUser?.admin_id]);
+
   useEffect(() => {
   if (!isFaceModalOpen) return;
 
@@ -174,156 +177,129 @@ const [modal, setModal] = useState({
       );
 
       if (error) {
-        alert('Error uploading image: ' + error);
+        showModal({ type: 'error', message: 'Error uploading image: ' + error });
       } else {
         setProfileImage(imageUrl);
         // Update local user context
         if (setCurrentUser) {
           setCurrentUser({ ...currentUser, avatar_url: imageUrl });
         }
-        alert('Profile image updated successfully!');
+        showModal({ type: 'success', message: 'Profile image updated successfully!' });
+
+        void logPersonnelActivity({
+          personnelId: currentUser.admin_id,
+          activityType: 'profile_image_update',
+          action: 'Profile Image Updated',
+          details: 'Updated profile picture.'
+        });
       }
     } catch (err) {
       console.error('Error uploading image:', err);
-      alert('Error uploading image');
+      showModal({ type: 'error', message: 'Error uploading image.' });
     } finally {
       setUploading(false);
     }
   };
 
-  const handleSaveChanges = async () => {
-    if (isSaving) return;
-    const isPasswordChangeRequested = enablePasswordChange;
-    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-
-    if (isPasswordChangeRequested) {
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        alert('Please fill in current password, new password, and confirm password.');
-        return;
-      }
-
-      if (!strongPasswordRegex.test(newPassword)) {
-        alert('Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.');
-        return;
-      }
-
-      const { valid, error: verifyError } = await verifyCurrentPassword(currentPassword);
-      if (verifyError) {
-        alert('Could not verify current password: ' + verifyError);
-        return;
-      }
-
-      if (!valid) {
-        alert('Current password is incorrect.');
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        alert('New password and confirm password do not match.');
-        return;
-      }
-    }
-
-    try {
-      if (!resolvedRank) {
-        alert('Please select your rank.');
-        return;
-      }
-
-      setIsSaving(true);
-      const { error } = await updateUser(currentUser.admin_id, {
-        first_name: firstName,
-        last_name: lastName,
-        rank: resolvedRank
-      });
-
-      if (error) {
-        alert('Error saving changes: ' + error);
-      } else {
-        if (isPasswordChangeRequested) {
-          const { error: passwordError } = await updatePassword(newPassword);
-          if (passwordError) {
-            alert('Profile updated, but password change failed: ' + passwordError);
-            return;
-          }
-        }
-
-        // Update local user context
-        if (setCurrentUser) {
-          setCurrentUser({ ...currentUser, first_name: firstName, last_name: lastName, rank: resolvedRank });
-        }
-        setEnablePasswordChange(false);
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        setShowCurrentPassword(false);
-        setShowNewPassword(false);
-        setShowConfirmPassword(false);
-        alert(isPasswordChangeRequested ? 'Profile and password updated successfully!' : 'Profile updated successfully!');
-        setIsEditing(false);
-      }
-    } catch (err) {
-      console.error('Error saving changes:', err);
-      alert('Error saving changes');
-    } finally {
-      setIsSaving(false);
+  const getCurrentFieldValue = (fieldName) => {
+    switch (fieldName) {
+      case 'first_name':
+        return currentUser?.first_name || '';
+      case 'last_name':
+        return currentUser?.last_name || '';
+      case 'rank':
+        return currentUser?.rank || '';
+      case 'email':
+        return currentUser?.email || '';
+      case 'contact_number':
+        return displayPhone === 'Not available' ? '' : displayPhone;
+      default:
+        return '';
     }
   };
 
-  // Save only the password (allow independent save from profile update)
-  const handleSavePassword = async () => {
-    if (isPasswordSaving) return;
-    setIsPasswordSaving(true);
+  const NAME_FIELDS = ['first_name', 'last_name'];
+  const NAME_PATTERN = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 
-    try {
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        setPasswordMessage({ type: 'error', text: 'Please complete all password fields.' });
-        return;
+  const normalizeSpaces = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+
+  const filterRequestValueForField = (fieldName, rawValue) => {
+    switch (fieldName) {
+      case 'first_name':
+      case 'last_name': {
+        let value = String(rawValue || '').replace(/[^A-Za-z ]/g, '');
+        value = value.replace(/^ +/, '');
+        value = value.replace(/ {2,}/g, ' ');
+        return value;
       }
-
-      const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-      if (!strongPasswordRegex.test(newPassword)) {
-        setPasswordMessage({ type: 'error', text: 'Password must be at least 8 characters and include uppercase, lowercase, number, and symbol.' });
-        return;
-      }
-
-      const { valid, error: verifyError } = await verifyCurrentPassword(currentPassword);
-      if (verifyError) {
-        setPasswordMessage({ type: 'error', text: 'Could not verify current password: ' + verifyError });
-        return;
-      }
-
-      if (!valid) {
-        setPasswordMessage({ type: 'error', text: 'Current password is incorrect.' });
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        setPasswordMessage({ type: 'error', text: 'New password and confirm password do not match.' });
-        return;
-      }
-
-      const { error: passwordError } = await updatePassword(newPassword);
-      if (passwordError) {
-        setPasswordMessage({ type: 'error', text: 'Error updating password: ' + passwordError });
-        return;
-      }
-
-      // Reset password form
-      setEnablePasswordChange(false);
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setShowCurrentPassword(false);
-      setShowNewPassword(false);
-      setShowConfirmPassword(false);
-      setPasswordMessage({ type: 'success', text: 'Password updated successfully!' });
-    } catch (err) {
-      console.error('Error saving password:', err);
-      alert('Error saving password');
-    } finally {
-      setIsPasswordSaving(false);
+      case 'email':
+        return String(rawValue || '').replace(/[^A-Za-z0-9@._%+-]/g, '');
+      case 'contact_number':
+        return String(rawValue || '').replace(/[^0-9]/g, '');
+      case 'rank':
+        return String(rawValue || '').replace(/[^A-Za-z0-9]/g, '');
+      default:
+        return rawValue;
     }
+  };
+
+  const openRequestModal = () => {
+    setRequestField(PROFILE_FIELD_OPTIONS[0].value);
+    setRequestValue('');
+    setRequestReason('');
+    setRequestMessage({ type: '', text: '' });
+    setIsRequestModalOpen(true);
+  };
+
+  const closeRequestModal = () => {
+    if (isRequestSaving) return;
+    setIsRequestModalOpen(false);
+  };
+
+  const handleSubmitChangeRequest = async () => {
+    if (isRequestSaving) return;
+    setRequestMessage({ type: '', text: '' });
+
+    let requestedValue = requestValue;
+    if (NAME_FIELDS.includes(requestField)) {
+      requestedValue = normalizeSpaces(requestValue);
+      if (!requestedValue || !NAME_PATTERN.test(requestedValue)) {
+        setRequestMessage({ type: 'error', text: 'Only letters and spaces are allowed.' });
+        return;
+      }
+    }
+
+    setIsRequestSaving(true);
+
+    const { error } = await submitProfileChangeRequest(currentUser?.admin_id, {
+      fieldName: requestField,
+      currentValue: getCurrentFieldValue(requestField),
+      requestedValue,
+      reason: requestReason
+    });
+
+    if (error) {
+      setRequestMessage({ type: 'error', text: error });
+      setIsRequestSaving(false);
+      return;
+    }
+
+    setIsRequestSaving(false);
+    setIsRequestModalOpen(false);
+    setRequestValue('');
+    setRequestReason('');
+    loadMyRequests();
+    showModal({
+      type: 'success',
+      message: 'Your change request has been submitted for admin review.'
+    });
+
+    void logPersonnelActivity({
+      personnelId: currentUser.admin_id,
+      activityType: 'profile_change_request',
+      action: 'Profile Change Request Submitted',
+      details: `Requested to change ${getProfileFieldLabel(requestField)} to "${requestedValue}".`
+    });
   };
 const captureFace = async () => {
   if (!webcamRef.current) return;
@@ -341,9 +317,9 @@ const captureFace = async () => {
       .withFaceDescriptor();
 
     if (!detection) {
-      alert("No face detected. Please try again.");
+      showModal({ type: 'error', message: 'No face detected. Please try again.' });
       setFaceLoading(false);
-    
+
       return;
     }
 
@@ -357,16 +333,23 @@ const captureFace = async () => {
 
     if (error) {
       console.error("Supabase error:", error);
-      alert("Failed to save face data");
+      showModal({ type: 'error', message: 'Failed to save face data.' });
       return;
     }
 
-    alert("Face registered successfully!");
+    showModal({ type: 'success', message: 'Face registered successfully!' });
     setIsFaceModalOpen(false);
+
+    void logPersonnelActivity({
+      personnelId: currentUser.admin_id,
+      activityType: 'face_id_registration',
+      action: 'Face ID Registered',
+      details: 'Registered Face ID for attendance verification.'
+    });
 
   } catch (err) {
     console.error("Face registration error:", err);
-    alert("Face registration failed");
+    showModal({ type: 'error', message: 'Face registration failed.' });
 
   } finally {
     setFaceLoading(false);
@@ -393,7 +376,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           userName={displayName}
-          userRole={currentUser?.role || 'Personnel'}
+          userRole={displayRole}
           userAvatar={profileImage}
           variant="personnel"
           showSearch={false}
@@ -422,11 +405,11 @@ const showModal = ({ type = "info", message, onConfirm }) => {
               </div>
 
               <div className="profile-summary-name">{displayName}</div>
-              <div className="profile-summary-role">{currentUser?.role || 'Personnel'}</div>
+              <div className="profile-summary-role">{displayRole}</div>
 
               <div className="profile-summary-meta">
-                <span>{currentUser?.email || 'No email set'}</span>
-                <span>{displayPhone}</span>
+                <span><strong>Email:</strong> {currentUser?.email || 'No email set'}</span>
+                <span><strong>Phone Number:</strong> {displayPhone}</span>
               </div>
             </aside>
 
@@ -435,7 +418,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                 <div className="profile-card-header">
                   <div>
                     <h3>General Information</h3>
-                    <p>Manage the profile details shown on your account.</p>
+                    <p>Your account information is displayed below. To request an update to any profile detail, click the &quot;Request to Change Information&quot; button.</p>
                   </div>
                 </div>
 
@@ -495,142 +478,69 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                   </div>
                 </div>
 
-                <div className="change-password-option">
+                <div className="profile-actions-row">
                   <button
                     type="button"
                     className="change-password-btn"
-                    onClick={() => {
-                      const nextState = !enablePasswordChange;
-                      setEnablePasswordChange(nextState);
-                      if (!nextState) {
-                        setCurrentPassword('');
-                        setNewPassword('');
-                        setConfirmPassword('');
-                        setShowCurrentPassword(false);
-                        setShowNewPassword(false);
-                        setShowConfirmPassword(false);
-                      }
-                    }}
+                    onClick={openRequestModal}
                   >
-                    {enablePasswordChange ? 'Cancel Password Change' : 'Change Password'}
+                    Request to Change Information
+                  </button>
+                  <button
+                    type="button"
+                    className="change-password-btn"
+                    onClick={handleFaceRegisterClick}
+                  >
+                    Register Face ID
                   </button>
                 </div>
-                <div><button
-                         type="button"
-                          className="change-password-btn"
-                          onClick={handleFaceRegisterClick}
-                      >
-                       Register Face ID
-                    </button></div>
-                {enablePasswordChange && (
-                  <div className="password-change-panel">
-                    <div className="form-field-full">
-                      <label htmlFor="currentPassword">Current Password</label>
-                      <div className="password-input-wrapper">
-                        <input
-                          id="currentPassword"
-                          type={showCurrentPassword ? 'text' : 'password'}
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                          placeholder="Enter current password"
-                        />
-                        <button
-                          type="button"
-                          className="toggle-password-btn"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        >
-                          {showCurrentPassword ? 'Hide' : 'Show'}
-                        </button>
-                      </div>
-                       
-                    </div>
 
-                    <div className="form-field-full">
-                      <label htmlFor="newPassword">New Password</label>
-                      <div className="password-input-wrapper">
-                        <input
-                          id="newPassword"
-                          type={showNewPassword ? 'text' : 'password'}
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          placeholder="Enter new password"
-                        />
-                        <button
-                          type="button"
-                          className="toggle-password-btn"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                        >
-                          {showNewPassword ? 'Hide' : 'Show'}
-                        </button>
-                      </div>
-                      <small className="password-hint">
-                        Must be at least 8 characters with uppercase, lowercase, number, and symbol.
-                      </small>
+                <div className="my-requests-section">
+                  <h4>Your Change Requests</h4>
+                  {loadingMyRequests ? (
+                    <p className="my-requests-empty">Loading your requests...</p>
+                  ) : myRequests.length === 0 ? (
+                    <p className="my-requests-empty">You have not submitted any change requests yet.</p>
+                  ) : (
+                    <div className="my-requests-list">
+                      {myRequests.map((request) => (
+                        <div className="my-request-item" key={request.request_id}>
+                          <div className="my-request-item-header">
+                            <span className="my-request-field">{getProfileFieldLabel(request.field_name)}</span>
+                            <span className={`my-request-status my-request-status-${request.status}`}>
+                              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                            </span>
+                          </div>
+                          <div className="my-request-values">
+                            <span>Current: {request.current_value || '—'}</span>
+                            <span>Requested: {request.requested_value}</span>
+                          </div>
+                          {request.reason && (
+                            <div className="my-request-reason">Reason: {request.reason}</div>
+                          )}
+                          <div className="my-request-dates">
+                            <span>Requested {new Date(request.requested_at).toLocaleDateString()}</span>
+                            {request.reviewed_at && (
+                              <span>Reviewed {new Date(request.reviewed_at).toLocaleDateString()}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-
-                    <div className="form-field-full">
-                      <label htmlFor="confirmPassword">Confirm New Password</label>
-                      <div className="password-input-wrapper">
-                        <input
-                          id="confirmPassword"
-                          type={showConfirmPassword ? 'text' : 'password'}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="Confirm new password"
-                        />
-                        <button
-                          type="button"
-                          className="toggle-password-btn"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        >
-                          {showConfirmPassword ? 'Hide' : 'Show'}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="form-actions" style={{ marginTop: '0.5rem' }}>
-                      <button
-                        type="button"
-                        className="save-btn"
-                        onClick={handleSavePassword}
-                        disabled={isPasswordSaving}
-                      >
-                        {isPasswordSaving ? 'Saving...' : 'Save Password'}
-                      </button>
-                    </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </section>
             </div>
           </div>
         </div>
 
-        {isPasswordModalOpen && (
-          <div className="password-modal-overlay" role="dialog" aria-modal="true">
-            <div className={`password-modal password-modal-${passwordMessage.type}`}>
-              <div className="password-modal-icon">
-                {passwordMessage.type === 'success' ? '✓' : '!'}
-              </div>
-              <div className="password-modal-content">
-                <p>{passwordMessage.text}</p>
-              </div>
-              <button
-                className="password-modal-close"
-                onClick={() => {
-                  setIsPasswordModalOpen(false);
-                  setTimeout(() => setPasswordMessage({ type: '', text: '' }), 300);
-                }}
-              >
-                OK
-              </button>
-            </div>
-   
-          </div>
-          
-          
-        )}
                {modal.open && (
-  <div className="modal-overlay">
+  <div className="modal-overlay" role="dialog" aria-modal="true">
     <div className={`modal modal-${modal.type}`}>
+
+      <div className={`modal-icon modal-icon-${modal.type}`}>
+        {modal.type === 'success' ? '✓' : modal.type === 'error' ? '!' : modal.type === 'confirm' ? '?' : 'i'}
+      </div>
 
       <p>{modal.message}</p>
 
@@ -666,7 +576,84 @@ const showModal = ({ type = "info", message, onConfirm }) => {
 
     </div>
   </div>
-)} 
+)}
+        {isRequestModalOpen && (
+          <div className="request-modal-overlay" role="dialog" aria-modal="true">
+            <div className="request-modal">
+              <div className="request-modal-header">
+                <h3>Request to Change Information</h3>
+                <button
+                  type="button"
+                  className="request-modal-close"
+                  onClick={closeRequestModal}
+                  aria-label="Close request modal"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="request-modal-body">
+                <div className="form-field-full">
+                  <label htmlFor="requestField">Field</label>
+                  <select
+                    id="requestField"
+                    value={requestField}
+                    onChange={(e) => {
+                      setRequestField(e.target.value);
+                      setRequestValue('');
+                    }}
+                  >
+                    {PROFILE_FIELD_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-field-full">
+                  <label>Current Value</label>
+                  <input type="text" value={getCurrentFieldValue(requestField) || '—'} readOnly disabled />
+                </div>
+
+                <div className="form-field-full">
+                  <label htmlFor="requestValue">Requested New Value</label>
+                  <input
+                    id="requestValue"
+                    type="text"
+                    value={requestValue}
+                    onChange={(e) => setRequestValue(filterRequestValueForField(requestField, e.target.value))}
+                    placeholder={`Enter new ${getProfileFieldLabel(requestField).toLowerCase()}`}
+                  />
+                </div>
+
+                <div className="form-field-full">
+                  <label htmlFor="requestReason">Reason (optional)</label>
+                  <textarea
+                    id="requestReason"
+                    value={requestReason}
+                    onChange={(e) => setRequestReason(e.target.value)}
+                    placeholder="Explain why you are requesting this change"
+                    rows={3}
+                  />
+                </div>
+
+                {requestMessage.text && (
+                  <div className={`request-modal-message request-modal-message-${requestMessage.type}`}>
+                    {requestMessage.text}
+                  </div>
+                )}
+              </div>
+
+              <div className="request-modal-footer">
+                <button type="button" className="cancel-btn" onClick={closeRequestModal} disabled={isRequestSaving}>
+                  Cancel
+                </button>
+                <button type="button" className="save-btn" onClick={handleSubmitChangeRequest} disabled={isRequestSaving}>
+                  {isRequestSaving ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
          {isFaceModalOpen && (
   <div className="face-modal-overlay">
     <div className="face-modal">

@@ -5,15 +5,16 @@ import { getFaceByAdminId } from '../utils/attendanceService';
 import * as faceapi from 'face-api.js';
 import { validateQRSession } from '../utils/attendanceService';
 import './AttendanceConfirm.css';
-import { 
-  requestGeoLocation, 
-  validateProximity, 
+import {
+  requestGeoLocation,
+  validateProximity,
   getAuthToken,
   isAuthValid,
   getStationGeo,
   recordAttendance,
   saveAuthToken
 } from '../utils/attendanceService';
+import { logPersonnelActivity } from '../utils/activityLogService';
 
 const AttendanceConfirm = () => {
   const [searchParams] = useSearchParams();
@@ -301,6 +302,15 @@ const handleVerifyFace = async () => {
           ? `Time Out recorded at ${record.timeOut}.`
           : `Confirmed ${mode === 'in' ? `Time In at ${record.timeIn}` : `Time Out at ${record.timeOut}`}.`
       );
+
+      if (authenticatedOfficer.admin_id) {
+        void logPersonnelActivity({
+          personnelId: authenticatedOfficer.admin_id,
+          activityType: mode === 'in' ? 'attendance_time_in' : 'attendance_time_out',
+          action: mode === 'in' ? 'Attendance Time In' : 'Attendance Time Out',
+          details: `${mode === 'in' ? 'Timed in' : 'Timed out'} at ${stationLabel}.`
+        });
+      }
     } catch (error) {
       setConfirmStatus({
         type: 'error',

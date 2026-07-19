@@ -2,8 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { resendSignupCode } from '../utils/authService';
 import { supabase } from '../utils/supabaseClient';
-import { 
-preAuth,
+import {
 sendPasswordResetEmail,
 verifyRecoveryCode,
 sendLoginOtp,
@@ -13,6 +12,9 @@ signOut,
 verifyLoginOtp
 } from '../utils/authService';
 import { useUser } from '../context/UserContext';
+import { getOrCreateDeviceCredentials } from '../utils/deviceTrust';
+import { setAuthFlowGated } from '../utils/authFlowGate';
+import { logPersonnelActivity } from '../utils/activityLogService';
 
 import './LoginPage.css';
 import ignissafe from '../assets/Logo1.png'
@@ -22,10 +24,11 @@ const REMEMBERED_EMAIL_KEY = 'remembered_email';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { currentUser, setCurrentUser } = useUser();
+  const { currentUser, setCurrentUser, refreshCurrentUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [rememberDevice, setRememberDevice] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -52,11 +55,22 @@ export default function LoginPage() {
     setShowConfirmPassword(!showConfirmPassword);
   };
 const normalizeRole = (role) =>
-  
+
   String(role || "")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, "-");
+
+const logLoginIfPersonnel = (user) => {
+  if (normalizeRole(user?.role) !== 'personnel' || !user?.admin_id) return;
+
+  void logPersonnelActivity({
+    personnelId: user.admin_id,
+    activityType: 'login',
+    action: 'Login',
+    details: 'Logged in successfully.'
+  });
+};
 
 
   
@@ -90,6 +104,7 @@ const normalizeRole = (role) =>
   useEffect(() => {
     return () => {
       if (isResetFlowActiveRef.current) {
+        setAuthFlowGated(false);
         void signOut();
       }
     };
@@ -100,6 +115,8 @@ const handleLogin = async (e) => {
 
   setLoading(true);
   setError("");
+  setRememberDevice(false);
+  setAuthFlowGated(true);
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
@@ -108,13 +125,53 @@ const handleLogin = async (e) => {
 
 
   if (error) {
+    setAuthFlowGated(false);
     setError("Invalid email or password");
     setLoading(false);
     return;
   }
 
 
-  // password is correct now
+  // password is correct now — check whether this device already completed
+  // OTP verification and was remembered, so we can skip OTP this time.
+  const { deviceId, deviceSecret } = getOrCreateDeviceCredentials();
+
+  let trusted = false;
+  try {
+    const { data: isTrusted, error: trustError } = await supabase.rpc(
+      'check_trusted_device',
+      { p_device_id: deviceId, p_device_secret: deviceSecret }
+    );
+    trusted = !trustError && isTrusted === true;
+  } catch (trustCheckError) {
+    console.warn('Trusted device check failed, requiring OTP:', trustCheckError);
+    trusted = false;
+  }
+
+  if (trusted) {
+    // Load the full admin/personnel profile (name, rank, contact number,
+    // avatar, permissions) instead of a bare {authUser, role} object, so
+    // the profile card/header have real data immediately after login.
+    const refreshedUser = await refreshCurrentUser();
+    setAuthFlowGated(false);
+
+    if (!refreshedUser) {
+      setError("Failed to load user profile.");
+      setLoading(false);
+      return;
+    }
+
+    logLoginIfPersonnel(refreshedUser);
+
+    setAuthStep("authenticated");
+    setLoading(false);
+    return;
+  }
+
+  // Not a recognized trusted device — drop this password-only session
+  // locally (scope:'local' so we don't revoke the user's other, already
+  // trusted sessions elsewhere) and fall back to the normal OTP step.
+  await supabase.auth.signOut({ scope: 'local' });
   await sendLoginOtp(email);
 
   setResetEmail(email);
@@ -163,6 +220,7 @@ const handleLogin = async (e) => {
   useEffect(() => {
     return () => {
       if (isResetFlowActiveRef.current) {
+        setAuthFlowGated(false);
         void signOut();
       }
     };
@@ -243,6 +301,7 @@ const handleLogin = async (e) => {
   };
 
   const handleBackToLogin = async () => {
+    setAuthFlowGated(false);
     await signOut();
     setCurrentUser(null);
      setAuthStep("login"); 
@@ -262,62 +321,60 @@ const handleVerify = async (e) => {
   setLoading(true);
   setError("");
 
-  const { data, error } = await verifyLoginOtp(
-    resetEmail.trim(),
-    resetCode.trim()
-  );
+  try {
+    const { data, error } = await verifyLoginOtp(
+      resetEmail.trim(),
+      resetCode.trim()
+    );
 
-  if (error) {
-    setError(error.message);
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+
+    // Restore Supabase session
+    if (data.session) {
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+    }
+
+
+    if (rememberDevice) {
+      try {
+        const { deviceId, deviceSecret } = getOrCreateDeviceCredentials();
+        await supabase.rpc('trust_device', {
+          p_device_id: deviceId,
+          p_device_secret: deviceSecret,
+          p_user_agent: navigator.userAgent,
+        });
+      } catch (trustError) {
+        console.warn('Could not remember this device:', trustError);
+      }
+    }
+
+    // Load the full admin/personnel profile (name, rank, contact number,
+    // avatar, permissions) instead of a bare {authUser, role} object, so
+    // the profile card/header have real data immediately after login.
+    const refreshedUser = await refreshCurrentUser();
+
+    if (!refreshedUser) {
+      setError("Failed to load user profile.");
+      setLoading(false);
+      return;
+    }
+
+    logLoginIfPersonnel(refreshedUser);
+
+    setAuthStep("authenticated");
+
     setLoading(false);
-    return;
+  } finally {
+    setAuthFlowGated(false);
   }
-
-
-  // Restore Supabase session
-  if (data.session) {
-    await supabase.auth.setSession({
-      access_token: data.session.access_token,
-      refresh_token: data.session.refresh_token,
-    });
-  }
-
-
-  const authUser = data.user;
-
-
-  const { data: profile, error: profileError } = await supabase
-    .from("admin")
-    .select("role")
-    .eq("email", resetEmail.trim())
-    .single();
-
-
-  if (profileError) {
-    console.error(profileError);
-    setError("Failed to load user role.");
-    setLoading(false);
-    return;
-  }
-
-
-  const role = normalizeRole(profile.role);
-
-
-  const user = {
-    ...authUser,
-    role,
-  };
-
-
-  console.log("FINAL USER:", user);
-
-
-  setCurrentUser(user);
-
-  setAuthStep("authenticated");
-
-  setLoading(false);
 };
 useEffect(() => {
   if (authStep !== "authenticated") return;
@@ -363,6 +420,15 @@ useEffect(() => {
           value={resetCode}
           onChange={(e) => setResetCode(e.target.value)}
         />
+
+        <label className="remember-me">
+          <input
+            type="checkbox"
+            checked={rememberDevice}
+            onChange={(e) => setRememberDevice(e.target.checked)}
+          />
+          Remember this device
+        </label>
 
         {error && <p className="error-message">{error}</p>}
 

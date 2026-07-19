@@ -13,14 +13,14 @@
   gap: 1.2rem;
 }
 
-/* Reduce header size for Announcements page */
+/* Match Shift Schedule page header sizing */
 .announcements-main .page-header {
-  padding: 0.6rem 1.5rem !important;
-  margin: -2rem -2rem 1.5rem -2rem !important;
+  padding: 1.5rem 2rem;
+  margin: -2rem -2rem 2rem -2rem;
 }
 
 .announcements-main .page-title {
-  font-size: 1.5rem;
+  font-size: 2rem;
 }
 
 .announcement-card {
@@ -242,6 +242,31 @@
   color: #334155;
   line-height: 1.4;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.announcement-content.clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.announcement-toggle-button {
+  display: inline-block;
+  margin: -0.4rem 0 0.7rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #dc2626;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.announcement-toggle-button:hover {
+  text-decoration: underline;
 }
 
 .announcement-attachments {

@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getCurrentUser, onAuthStateChange, signOut } from '../utils/authService';
+import { isAuthFlowGated } from '../utils/authFlowGate';
+import { logPersonnelActivity } from '../utils/activityLogService';
 
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
 
@@ -19,6 +21,14 @@ export const UserProvider = ({ children }) => {
 
   const syncCurrentUser = (user) => {
     if (user) {
+      // Guard against a partial/failed profile fetch (RLS hiccup, network
+      // blip, or a caller accidentally passing a bare auth-user object)
+      // blanking out an already-loaded valid profile — only accept a fetch
+      // that actually resolved a full admin/personnel record.
+      if (!user.admin_id) {
+        console.warn('Ignoring incomplete user profile sync (missing admin_id); keeping existing profile.');
+        return null;
+      }
       setCurrentUser(user);
       localStorage.setItem('user', JSON.stringify(user));
       return user;
@@ -78,13 +88,20 @@ export const UserProvider = ({ children }) => {
 
       // ONLY listen to Supabase IF session exists (optional safe sync)
       const { data: authListener } = onAuthStateChange((event, session) => {
+        // While LoginPage is mid-decision (password verified, still
+        // determining trusted-device vs OTP-required), ignore auth events
+        // so a password-only session can't prematurely mark the app as
+        // logged in before OTP/trust is actually resolved.
+        if (isAuthFlowGated()) {
+          return;
+        }
+
         // ONLY react to real Supabase sessions
         if (session?.user) {
           refreshCurrentUser();
         }
 
-        // IMPORTANT: DO NOT clear OTP users here
-        if (event === 'SIGNED_OUT' && session) {
+        if (event === 'SIGNED_OUT') {
           syncCurrentUser(null);
         }
       });
@@ -148,6 +165,15 @@ export const UserProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    if (String(currentUser?.role || '').toLowerCase() === 'personnel' && currentUser?.admin_id) {
+      await logPersonnelActivity({
+        personnelId: currentUser.admin_id,
+        activityType: 'logout',
+        action: 'Logout',
+        details: 'Logged out successfully.'
+      });
+    }
+
     await signOut();
     setCurrentUser(null);
   };

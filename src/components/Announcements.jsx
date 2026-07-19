@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingContentEditor from './LandingContentEditor';
@@ -71,6 +71,9 @@ export default function Announcements() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
+  const [overflowingIds, setOverflowingIds] = useState(() => new Set());
+  const contentRefs = useRef({});
   const ITEMS_PER_PAGE = 3;
   const [formData, setFormData] = useState({
     title: '',
@@ -266,6 +269,49 @@ export default function Announcements() {
     setAcknowledgingId('');
   };
 
+  const toggleAnnouncementExpanded = (announcementId) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(announcementId)) {
+        next.delete(announcementId);
+      } else {
+        next.add(announcementId);
+      }
+      return next;
+    });
+  };
+
+  const measureAnnouncementOverflow = useCallback(() => {
+    setOverflowingIds((prev) => {
+      let changed = false;
+      const next = new Set(prev);
+
+      Object.entries(contentRefs.current).forEach(([announcementId, element]) => {
+        if (!element || expandedIds.has(announcementId)) return;
+
+        const isOverflowing = element.scrollHeight - element.clientHeight > 1;
+        if (isOverflowing && !next.has(announcementId)) {
+          next.add(announcementId);
+          changed = true;
+        } else if (!isOverflowing && next.has(announcementId)) {
+          next.delete(announcementId);
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [expandedIds]);
+
+  useLayoutEffect(() => {
+    measureAnnouncementOverflow();
+  }, [paginatedAnnouncements, expandedIds, measureAnnouncementOverflow]);
+
+  useEffect(() => {
+    window.addEventListener('resize', measureAnnouncementOverflow);
+    return () => window.removeEventListener('resize', measureAnnouncementOverflow);
+  }, [measureAnnouncementOverflow]);
+
   return (
     <div className="announcements-container">
       <Sidebar variant={sidebarVariant} />
@@ -450,7 +496,23 @@ export default function Announcements() {
                     <h3>{announcement.title}</h3>
                     <span className="announcement-audience">{getAudienceLabel(announcement)}</span>
                   </div>
-                  <p className="announcement-content">{announcement.content}</p>
+                  <p
+                    className={`announcement-content ${expandedIds.has(announcement.announcement_id) ? '' : 'clamped'}`}
+                    ref={(element) => {
+                      contentRefs.current[announcement.announcement_id] = element;
+                    }}
+                  >
+                    {announcement.content}
+                  </p>
+                  {overflowingIds.has(announcement.announcement_id) && (
+                    <button
+                      type="button"
+                      className="announcement-toggle-button"
+                      onClick={() => toggleAnnouncementExpanded(announcement.announcement_id)}
+                    >
+                      {expandedIds.has(announcement.announcement_id) ? 'See less' : 'See more'}
+                    </button>
+                  )}
                   {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
                     <div className="announcement-attachments">
                       {announcement.attachments.map((attachment, index) => (

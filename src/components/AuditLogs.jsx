@@ -81,19 +81,25 @@ export default function AuditLogs() {
 
         <div className="audit-logs-filters">
           <div className="audit-logs-filter-row">
-            <div className="audit-logs-search-wrapper">
-              <FaSearch className="audit-logs-search-icon" />
-              <input
-                type="text"
-                placeholder="Search by user or action"
-                value={filterSearch}
-                onChange={(e) => setFilterSearch(e.target.value)}
-                className="audit-logs-search-input"
-              />
+            <div className="audit-logs-filter-group audit-logs-filter-search">
+              <label className="audit-logs-filter-label" htmlFor="audit-logs-search-input">Search Activity</label>
+              <div className="audit-logs-search-wrapper">
+                <FaSearch className="audit-logs-search-icon" />
+                <input
+                  id="audit-logs-search-input"
+                  type="text"
+                  placeholder="Search by user or action"
+                  value={filterSearch}
+                  onChange={(e) => setFilterSearch(e.target.value)}
+                  className="audit-logs-search-input"
+                />
+              </div>
             </div>
 
-            <div className="audit-logs-filter">
+            <div className="audit-logs-filter-group">
+              <label className="audit-logs-filter-label" htmlFor="audit-logs-action-select">Filter by Action</label>
               <select
+                id="audit-logs-action-select"
                 value={actionFilter}
                 onChange={(e) => setActionFilter(e.target.value)}
                 className="audit-logs-select"
@@ -109,19 +115,25 @@ export default function AuditLogs() {
               </select>
             </div>
 
-            <div className="audit-logs-datepicker-wrapper">
-              <DatePicker
-                selected={selectedDate}
-                onChange={(date) => setSelectedDate(date)}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="dd/mm/yyyy"
-                className="audit-logs-datepicker"
-              />
+            <div className="audit-logs-filter-group">
+              <label className="audit-logs-filter-label" htmlFor="audit-logs-date-input">Filter by Date</label>
+              <div className="audit-logs-datepicker-wrapper">
+                <DatePicker
+                  id="audit-logs-date-input"
+                  selected={selectedDate}
+                  onChange={(date) => setSelectedDate(date)}
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="dd/mm/yyyy"
+                  className="audit-logs-datepicker"
+                />
+              </div>
             </div>
 
-            <button className="audit-logs-clear" onClick={handleClearFilters}>
-              CLEAR
-            </button>
+            <div className="audit-logs-filter-group audit-logs-filter-clear-group">
+              <button type="button" className="audit-logs-clear" onClick={handleClearFilters}>
+                Clear Filters
+              </button>
+            </div>
           </div>
         </div>
 

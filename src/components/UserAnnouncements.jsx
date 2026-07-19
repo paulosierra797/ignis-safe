@@ -71,14 +71,15 @@ export default function UserAnnouncements() {
     });
   }, [announcements, searchQuery]);
 
-  const handleAcknowledgeAnnouncement = async (announcementId) => {
+  const handleAcknowledgeAnnouncement = async (announcementId, announcementTitle) => {
     if (!announcementId) return;
 
     setAcknowledgingId(announcementId);
     setMessage({ type: '', text: '' });
 
-    const { data, error } = await acknowledgeAnnouncement(currentUser, announcementId);
+    const { data, error } = await acknowledgeAnnouncement(currentUser, announcementId, announcementTitle);
     if (error) {
+      console.error('Failed to acknowledge announcement:', error);
       setMessage({ type: 'error', text: `Failed to acknowledge announcement: ${error}` });
       setAcknowledgingId('');
       return;
@@ -178,7 +179,7 @@ export default function UserAnnouncements() {
                     <div className="announcement-ack-action">
                       <button
                         type="button"
-                        onClick={() => handleAcknowledgeAnnouncement(announcement.announcement_id)}
+                        onClick={() => handleAcknowledgeAnnouncement(announcement.announcement_id, announcement.title)}
                         disabled={acknowledgingId === announcement.announcement_id}
                       >
                         {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}

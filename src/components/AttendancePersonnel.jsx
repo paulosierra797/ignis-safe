@@ -11,10 +11,7 @@ import { supabase } from '../utils/supabaseClient';
 
 
 const AttendancePersonnel = () => {
-  const [timeStatus, setTimeStatus] = useState('');
-  const [attendanceList, setAttendanceList] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [scanMessage, setScanMessage] = useState('Waiting for confirmation');
   const [currentSession, setCurrentSession] = useState(null);
   const [expiryInfo, setExpiryInfo] = useState(null);
   const [copyMessage, setCopyMessage] = useState('');
@@ -85,16 +82,6 @@ const initQR = async () => {
   return () => clearInterval(interval);
 }, [currentSession]);
 
-  const handleTimeIn = () => {
-    setTimeStatus('in');
-    setScanMessage('Time-in mode enabled');
-  };
-
-  const handleTimeOut = () => {
-    setTimeStatus('out');
-    setScanMessage('Time-out mode enabled');
-  };
-
   const handleRefreshQR = async () => {
   const session = await generateQRSession(stationId);
   setCurrentSession(session);
@@ -116,24 +103,6 @@ const initQR = async () => {
     }
   };
 
-  const handleMockConfirm = () => {
-    if (!timeStatus) {
-      setScanMessage('Select Time In or Time Out before scanning');
-      return;
-    }
-    const now = new Date();
-    const mockPerson = {
-      fullName: 'QR Personnel',
-      rank: 'Fire Officer II',
-      date: now.toLocaleDateString(),
-      timeIn: timeStatus === 'in' ? now.toLocaleTimeString() : '',
-      timeOut: timeStatus === 'out' ? now.toLocaleTimeString() : '',
-      signature: 'QR Verified'
-    };
-    setAttendanceList([mockPerson, ...attendanceList]);
-    setScanMessage('Confirmation received');
-  };
-
   return (
     <div className="attendance-personnel-container">
       <Sidebar variant="personnel" />
@@ -149,32 +118,27 @@ const initQR = async () => {
           <div className="qr-hero">
             <div className="qr-hero-text">
               <p className="qr-eyebrow">QR ATTENDANCE</p>
-              <h2>Show QR. Confirm on Phone.</h2>
+              <h2>Scan the QR Code to Record Attendance</h2>
               <p className="qr-subtitle">
-                The workstation displays a QR code. Personnel scan it with their phone
-                to open a secure link and confirm Time In or Time Out.
+                Log in using your personnel account, then scan the QR code with your
+                mobile phone to open the secure attendance page.
               </p>
-              <div className="qr-mode">
-                <button
-                  type="button"
-                  className={`time-btn time-in ${timeStatus === 'in' ? 'active' : ''}`}
-                  onClick={handleTimeIn}
-                >
-                  TIME IN
-                </button>
-                <button
-                  type="button"
-                  className={`time-btn time-out ${timeStatus === 'out' ? 'active' : ''}`}
-                  onClick={handleTimeOut}
-                >
-                  TIME OUT
-                </button>
+
+              <div className="qr-instructions">
+                <h3 className="qr-instructions-title">How it works:</h3>
+                <ol className="qr-instructions-list">
+                  <li>Register your face first through Profile &gt; Register Face ID.</li>
+                  <li>Scan the QR code and log in using your personnel account credentials.</li>
+                  <li>Allow camera and location access when prompted.</li>
+                  <li>Complete the facial and location verification.</li>
+                  <li>Select Time In or Time Out, then confirm your attendance.</li>
+                </ol>
               </div>
-              <div className="qr-status">
-                <span className="status-dot" aria-hidden="true" />
-                <span>{scanMessage}</span>
+
+              <div className="qr-important">
+                <strong>Important:</strong> The QR code refreshes every four minutes for
+                security. If scanning fails, use the Copy Link button below the QR code.
               </div>
-              
             </div>
             <div className="qr-hero-card">
               <div className="qr-card-header">
@@ -195,7 +159,7 @@ const initQR = async () => {
                   {stationLink ? (
                     <QRCodeSVG
                       value={stationLink}
-                      size={220}
+                      size={300}
                       marginSize={2}
                       bgColor="#ffffff"
                       fgColor="#111111"

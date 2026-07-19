@@ -1,49 +1,52 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import './History.css';
 import { useUser } from '../context/UserContext';
-import { getPersonnelReportHistory } from '../utils/reportsService';
+import { getPersonnelActivityLogs } from '../utils/activityLogService';
+
+const isSameDay = (isoValue, dateInput) => {
+  if (!isoValue || !dateInput) return false;
+  return new Date(isoValue).toISOString().split('T')[0] === dateInput;
+};
 
 export default function History() {
-  const navigate = useNavigate();
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterDate, setFilterDate] = useState('');
-  const [reports, setReports] = useState([]);
-  const [loadingReports, setLoadingReports] = useState(true);
+  const [activities, setActivities] = useState([]);
+  const [loadingActivities, setLoadingActivities] = useState(true);
   const [tableMessage, setTableMessage] = useState('');
 
-  const loadHistory = useCallback(async () => {
+  const loadActivities = useCallback(async () => {
     if (!currentUser?.admin_id) {
-      setReports([]);
-      setLoadingReports(false);
+      setActivities([]);
+      setLoadingActivities(false);
       return;
     }
 
-    setLoadingReports(true);
+    setLoadingActivities(true);
     setTableMessage('');
 
-    const { data, error } = await getPersonnelReportHistory(currentUser.admin_id);
+    const { data, error } = await getPersonnelActivityLogs(currentUser.admin_id);
     if (error) {
-      setTableMessage(`Failed to load report history: ${error}`);
-      setReports([]);
+      setTableMessage(`Failed to load audit logs: ${error}`);
+      setActivities([]);
     } else {
-      setReports(data || []);
+      setActivities(data || []);
     }
 
-    setLoadingReports(false);
+    setLoadingActivities(false);
   }, [currentUser?.admin_id]);
 
   useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
+    loadActivities();
+  }, [loadActivities]);
 
   useEffect(() => {
     const handleFocusOrVisible = () => {
       if (document.visibilityState === 'visible') {
-        loadHistory();
+        loadActivities();
       }
     };
 
@@ -54,65 +57,54 @@ export default function History() {
       window.removeEventListener('focus', handleFocusOrVisible);
       document.removeEventListener('visibilitychange', handleFocusOrVisible);
     };
-  }, [loadHistory]);
+  }, [loadActivities]);
 
-  // Calculate statistics
-  const totalReports = reports.length;
-  const submittedReports = reports.filter((r) => r.status !== 'draft').length;
+  useEffect(() => {
+    const handleDataChanged = (event) => {
+      const scope = event?.detail?.scope || '';
+      if (!scope || scope === 'announcements') {
+        loadActivities();
+      }
+    };
+
+    window.addEventListener('ignis-safe:data-changed', handleDataChanged);
+    return () => window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
+  }, [loadActivities]);
+
+  const totalActivities = activities.length;
+  const todayIso = useMemo(() => new Date().toISOString().split('T')[0], []);
+  const todaysActivities = useMemo(
+    () => activities.filter((activity) => isSameDay(activity.performed_at, todayIso)).length,
+    [activities, todayIso]
+  );
 
   const handleClearFilters = () => {
     setFilterDate('');
     setSearchQuery('');
   };
 
-  const filteredReports = useMemo(() => {
+  const filteredActivities = useMemo(() => {
     const normalizedSearch = searchQuery.trim().toLowerCase();
 
-    return reports.filter((report) => {
-      const effectiveDate = report.submitted_at || report.updated_at || report.created_at;
-      const dateAsInput = effectiveDate
-        ? new Date(effectiveDate).toISOString().split('T')[0]
+    return activities.filter((activity) => {
+      const dateAsInput = activity.performed_at
+        ? new Date(activity.performed_at).toISOString().split('T')[0]
         : '';
 
       const matchesSearch =
         !normalizedSearch ||
-        String(report.title || '').toLowerCase().includes(normalizedSearch) ||
-        String(report.created_by_name || '').toLowerCase().includes(normalizedSearch) ||
-        String(report.report_no || '').toLowerCase().includes(normalizedSearch);
+        String(activity.action || '').toLowerCase().includes(normalizedSearch) ||
+        String(activity.details || '').toLowerCase().includes(normalizedSearch);
       const matchesDate = !filterDate || dateAsInput === filterDate;
       return matchesSearch && matchesDate;
     });
-  }, [reports, searchQuery, filterDate]);
+  }, [activities, searchQuery, filterDate]);
 
   const getStatusClass = (status) => {
     const normalized = String(status || '').toLowerCase();
-    if (normalized === 'draft') return 'status-draft';
-    if (normalized === 'submitted') return 'status-submitted';
-    if (normalized === 'under_review') return 'status-under-review';
-    if (normalized === 'approved') return 'status-approved';
-    if (normalized === 'rejected') return 'status-rejected';
-    return '';
-  };
-
-  const handleView = (report) => {
-    if (!report?.pdf_url) {
-      setTableMessage('This draft has no generated PDF yet. Submit it first to generate the file.');
-      return;
-    }
-
-    window.open(report.pdf_url, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleContinueDraft = (report) => {
-    navigate('/reports', {
-      state: {
-        continueDraft: {
-          reportId: report.report_id,
-          reportType: report.report_type,
-          formValues: report.report_payload || {}
-        }
-      }
-    });
+    if (normalized === 'success') return 'status-approved';
+    if (normalized === 'failed' || normalized === 'error') return 'status-rejected';
+    return 'status-pending';
   };
 
   return (
@@ -121,7 +113,7 @@ export default function History() {
 
       <div className="history-content">
         <PageHeader
-          title="History"
+          title="Audit Logs"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           variant="personnel"
@@ -129,17 +121,17 @@ export default function History() {
         />
 
         <div className="history-main">
-          <h1 className="history-title">Report Management</h1>
+          <h1 className="history-title">Audit Logs</h1>
 
           <div className="history-filters">
             <div className="search-section">
-              <label>Search Report</label>
+              <label>Search Activity</label>
               <div className="search-input-wrapper">
                 <span className="search-icon">🔍</span>
                 <input
                   type="text"
                   className="search-input"
-                  placeholder="Search by report..."
+                  placeholder="Search by activity or details..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -148,27 +140,28 @@ export default function History() {
 
             <div className="filter-section">
               <label>Filter by Date</label>
-              <input
-                type="date"
-                className="filter-select"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-              />
+              <div className="filter-date-row">
+                <input
+                  type="date"
+                  className="filter-select"
+                  value={filterDate}
+                  onChange={(e) => setFilterDate(e.target.value)}
+                />
+                <button className="clear-filters-btn" onClick={handleClearFilters}>
+                  CLEAR FILTERS
+                </button>
+              </div>
             </div>
-
-            <button className="clear-filters-btn" onClick={handleClearFilters}>
-              CLEAR FILTERS
-            </button>
           </div>
 
           <div className="history-stats">
             <div className="stat-card">
-              <div className="stat-label">Total Reports</div>
-              <div className="stat-value">{totalReports}</div>
+              <div className="stat-label">Today's Activities</div>
+              <div className="stat-value">{todaysActivities}</div>
             </div>
             <div className="stat-card">
-              <div className="stat-label">Submitted Reports</div>
-              <div className="stat-value">{submittedReports}</div>
+              <div className="stat-label">Total Activities</div>
+              <div className="stat-value">{totalActivities}</div>
             </div>
           </div>
 
@@ -179,89 +172,59 @@ export default function History() {
               <thead>
                 <tr>
                   <th>No.</th>
-                  <th>Report No.</th>
-                  <th>Report Title</th>
-                  <th>Category</th>
-                  <th>Date</th>
-                  <th>Created by</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>Activity</th>
+                  <th>Date &amp; Time</th>
+                  <th className="status-column">Status</th>
+                  <th>Details</th>
                 </tr>
               </thead>
               <tbody>
-                {loadingReports && (
+                {loadingActivities && (
                   <tr>
-                    <td colSpan="8" className="no-data">Loading report history...</td>
+                    <td colSpan="5" className="no-data">Loading audit logs...</td>
                   </tr>
                 )}
-                {!loadingReports && filteredReports.map((report, index) => (
-                  <tr key={report.report_id}>
+                {!loadingActivities && filteredActivities.map((activity, index) => (
+                  <tr key={activity.log_id}>
                     <td>{index + 1}</td>
-                    <td>{report.report_no || '-'}</td>
-                    <td>{report.title}</td>
-                    <td>{report.category}</td>
-                    <td>{new Date(report.submitted_at || report.updated_at || report.created_at).toLocaleDateString('en-US')}</td>
-                    <td>{report.created_by_name || 'Personnel'}</td>
-                    <td>
-                      <span className={`status-badge ${getStatusClass(report.status)}`}>
-                        {String(report.status || '').replace('_', ' ')}
+                    <td>{activity.action}</td>
+                    <td>{new Date(activity.performed_at).toLocaleString('en-US')}</td>
+                    <td className="status-column">
+                      <span className={`status-badge ${getStatusClass(activity.status)}`}>
+                        {activity.status}
                       </span>
                     </td>
-                    <td>
-                      {report.status === 'draft' ? (
-                        <button className="continue-btn" onClick={() => handleContinueDraft(report)}>
-                          Continue Draft
-                        </button>
-                      ) : (
-                        <button className="view-btn" onClick={() => handleView(report)}>View</button>
-                      )}
-                    </td>
+                    <td>{activity.details || '-'}</td>
                   </tr>
                 ))}
-                {!loadingReports && filteredReports.length === 0 && (
+                {!loadingActivities && filteredActivities.length === 0 && (
                   <tr>
-                    <td colSpan="8" className="no-data">No draft/submitted reports found</td>
+                    <td colSpan="5" className="no-data">No account activity found</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
           <div className="history-mobile-list">
-  {filteredReports.map((report, index) => (
-    <div className="history-card" key={report.report_id}>
-      <div className="history-card-header">
-        <span className="report-number">#{index + 1}</span>
+            {filteredActivities.map((activity, index) => (
+              <div className="history-card" key={activity.log_id}>
+                <div className="history-card-header">
+                  <span className="report-number">#{index + 1}</span>
+                  <span className={`status-badge ${getStatusClass(activity.status)}`}>
+                    {activity.status}
+                  </span>
+                </div>
 
-        <span className={`status-badge ${getStatusClass(report.status)}`}>
-          {String(report.status || "").replace("_", " ")}
-        </span>
-      </div>
+                <h3>{activity.action}</h3>
 
-      <h3>{report.title}</h3>
-
-      <p><strong>Report No:</strong> {report.report_no || "-"}</p>
-      <p><strong>Category:</strong> {report.category}</p>
-      <p><strong>Date:</strong> {new Date(report.submitted_at || report.updated_at || report.created_at).toLocaleDateString()}</p>
-      <p><strong>Created By:</strong> {report.created_by_name || "Personnel"}</p>
-
-      {report.status === "draft" ? (
-        <button
-          className="continue-btn"
-          onClick={() => handleContinueDraft(report)}
-        >
-          Continue Draft
-        </button>
-      ) : (
-        <button
-          className="view-btn"
-          onClick={() => handleView(report)}
-        >
-          View
-        </button>
-      )}
-    </div>
-  ))}
-</div>
+                <p><strong>Date &amp; Time:</strong> {new Date(activity.performed_at).toLocaleString()}</p>
+                <p><strong>Details:</strong> {activity.details || '-'}</p>
+              </div>
+            ))}
+            {!loadingActivities && filteredActivities.length === 0 && (
+              <p className="no-data">No account activity found</p>
+            )}
+          </div>
         </div>
       </div>
     </div>

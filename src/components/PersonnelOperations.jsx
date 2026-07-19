@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -9,6 +9,7 @@ import {
   getPersonnelShiftSchedule
 } from '../utils/personnelOperationsService';
 import { getManilaToday } from '../utils/dateUtils';
+import { logPersonnelActivity } from '../utils/activityLogService';
 import './PersonnelOperations.css';
 
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -27,6 +28,8 @@ const formatDate = (value) => {
     return value;
   }
 };
+
+const laterIso = (a, b) => (a > b ? a : b);
 
 const toIsoDate = (date) => {
   const year = date.getFullYear();
@@ -94,7 +97,6 @@ export default function PersonnelOperations() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const hasSeededLeaveFormRef = useRef(false);
 
   const loadPageData = useCallback(async () => {
     if (!currentUser?.admin_id) {
@@ -130,18 +132,6 @@ const [leaveRes, scheduleRes] = await Promise.all([
       setMessage({ type: 'error', text: `Failed to load leave request: ${leaveRes.error}` });
     } else if (leaveRes.data) {
       setLeaveRequest(leaveRes.data);
-      // Only seed the editable form once. This data also refreshes on window
-      // focus/visibility change (see effect below); re-seeding on every such
-      // refresh would silently wipe out dates the user has already picked
-      // but not yet submitted.
-      if (!hasSeededLeaveFormRef.current) {
-        const request = leaveRes.data.latest_request;
-        setLeaveForm({
-          startDate: request?.start_date || leaveRes.data.leave_start_date || '',
-          endDate: request?.end_date || leaveRes.data.leave_end_date || ''
-        });
-        hasSeededLeaveFormRef.current = true;
-      }
     }
 
     if (scheduleRes.error) {
@@ -224,10 +214,23 @@ const [leaveRes, scheduleRes] = await Promise.all([
   }, [shiftRows]);
 
   const todayIso = getManilaToday();
+  const minEndDate = leaveForm.startDate ? laterIso(todayIso, leaveForm.startDate) : todayIso;
 
   const handleLeaveInput = (event) => {
     const { name, value } = event.target;
-    setLeaveForm((prev) => ({ ...prev, [name]: value }));
+    setLeaveForm((prev) => {
+      const next = { ...prev, [name]: value };
+      // Start Date moving past the current End Date makes it invalid, so
+      // clear it rather than silently submitting an out-of-range value.
+      if (name === 'startDate' && next.endDate && next.endDate < value) {
+        next.endDate = '';
+      }
+      return next;
+    });
+  };
+
+  const handleClearLeaveDates = () => {
+    setLeaveForm((prev) => ({ ...prev, startDate: '', endDate: '' }));
   };
 
   const handleSubmitLeave = async () => {
@@ -235,6 +238,11 @@ const [leaveRes, scheduleRes] = await Promise.all([
 
     if (!currentUser?.admin_id) {
       setMessage({ type: 'error', text: 'No personnel account found in the current session.' });
+      return;
+    }
+
+    if (!leaveForm.startDate || !leaveForm.endDate) {
+      setMessage({ type: 'error', text: 'Please provide both leave start and end dates.' });
       return;
     }
 
@@ -273,11 +281,15 @@ const [leaveRes, scheduleRes] = await Promise.all([
         ...prev,
         latest_request: data
       }));
-      setLeaveForm({
-        startDate: data.start_date || '',
-        endDate: data.end_date || ''
-      });
+      setLeaveForm({ startDate: '', endDate: '' });
       setMessage({ type: 'success', text: 'Leave request submitted. Waiting for admin approval.' });
+
+      void logPersonnelActivity({
+        personnelId: currentUser.admin_id,
+        activityType: 'leave_request',
+        action: 'Leave Request Submitted',
+        details: `Requested leave from ${formatDate(data.start_date)} to ${formatDate(data.end_date)}.`
+      });
     } catch (err) {
       console.error('Unexpected error submitting leave request:', err);
       setMessage({ type: 'error', text: String(err?.message || err) });
@@ -324,7 +336,7 @@ const [leaveRes, scheduleRes] = await Promise.all([
               </span>
             </div>
 
-            <p className="ops-caption">Upcoming duty schedule for the next 21 days.</p>
+            <p className="ops-caption">Duty schedule calendar. Use the arrows to browse other months.</p>
 
             <div className="shift-summary-line">
               <span>Shift A dates configured: {shiftTotals.shiftA}</span>
@@ -350,6 +362,25 @@ const [leaveRes, scheduleRes] = await Promise.all([
                 </button>
               </div>
 
+              <div className="shift-calendar-legend">
+                <span className="shift-calendar-legend-item">
+                  <i className="shift-calendar-legend-dot legend-shift-a" />
+                  Shift A
+                </span>
+                <span className="shift-calendar-legend-item">
+                  <i className="shift-calendar-legend-dot legend-shift-b" />
+                  Shift B
+                </span>
+                <span className="shift-calendar-legend-item">
+                  <i className="shift-calendar-legend-dot legend-on-leave" />
+                  On Leave
+                </span>
+                <span className="shift-calendar-legend-item">
+                  <i className="shift-calendar-legend-dot legend-off-duty" />
+                  Off Duty
+                </span>
+              </div>
+
               <div className="shift-calendar-grid shift-calendar-weekdays">
                 {CALENDAR_WEEKDAYS.map((weekday) => (
                   <span key={weekday}>{weekday}</span>
@@ -372,13 +403,22 @@ const [leaveRes, scheduleRes] = await Promise.all([
                   const onLeave = row?.onLeaveCount || 0;
                   const hasData = Boolean(row);
                   const isMineOnDuty = Boolean(row?.onDutyPersonnel?.some((p) => p.admin_id === currentUser?.admin_id));
+                  // Display-only: past dates are visually disabled here but the
+                  // underlying schedule data is never modified.
+                  const isPastDate = isoDate < todayIso;
+                  const isToday = isoDate === todayIso;
+                  const shiftTagClass = row ? row.shift.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '';
 
                   return (
-                    <div key={isoDate} className={`shift-calendar-day-card ${hasData ? 'has-data' : ''} ${isMineOnDuty ? 'mine' : ''}`}>
+                    <div
+                      key={isoDate}
+                      className={`shift-calendar-day-card ${hasData ? 'has-data' : ''} ${isMineOnDuty ? 'mine' : ''} ${isPastDate ? 'is-past-date' : ''} ${isToday ? 'today' : ''}`}
+                      aria-disabled={isPastDate}
+                    >
                       <div className="shift-calendar-day-top">
                         <span className="shift-calendar-day-number">{dayDate.getDate()}</span>
                         {row && (
-                          <span className={`shift-tag ${row.shift.toLowerCase().replace(/\s+/g, '-')}`}>
+                          <span className={`shift-tag ${shiftTagClass}`}>
                             {row.shift}
                           </span>
                         )}
@@ -426,26 +466,43 @@ const [leaveRes, scheduleRes] = await Promise.all([
               <p><strong>Current End:</strong> {formatDate(leaveRequest.leave_end_date)}</p>
             </div>
 
-            <div className="leave-form-grid">
-              <label htmlFor="leave-start-date">Leave Start Date</label>
-              <input
-                id="leave-start-date"
-                type="date"
-                name="startDate"
-                min={todayIso}
-                value={leaveForm.startDate}
-                onChange={handleLeaveInput}
-              />
+            <div className="leave-form-toolbar">
+              <button
+                type="button"
+                className="leave-clear-dates-btn"
+                onClick={handleClearLeaveDates}
+                disabled={!leaveForm.startDate && !leaveForm.endDate}
+              >
+                Clear Dates
+              </button>
+            </div>
 
-              <label htmlFor="leave-end-date">Leave End Date</label>
-              <input
-                id="leave-end-date"
-                type="date"
-                name="endDate"
-                min={leaveForm.startDate || todayIso}
-                value={leaveForm.endDate}
-                onChange={handleLeaveInput}
-              />
+            <div className="leave-form-grid">
+              <div className="leave-field">
+                <label htmlFor="leave-start-date">Leave Start Date</label>
+                <input
+                  id="leave-start-date"
+                  type="date"
+                  name="startDate"
+                  className="leave-date-input"
+                  min={todayIso}
+                  value={leaveForm.startDate}
+                  onChange={handleLeaveInput}
+                />
+              </div>
+
+              <div className="leave-field">
+                <label htmlFor="leave-end-date">Leave End Date</label>
+                <input
+                  id="leave-end-date"
+                  type="date"
+                  name="endDate"
+                  className="leave-date-input"
+                  min={minEndDate}
+                  value={leaveForm.endDate}
+                  onChange={handleLeaveInput}
+                />
+              </div>
             </div>
 
             <button className="ops-primary-btn" type="button" onClick={handleSubmitLeave} disabled={leaveSaving || loading}>

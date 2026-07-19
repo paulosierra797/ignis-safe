@@ -28,19 +28,18 @@ const sessionId = searchParams.get("station");
   }
 
     setError('');
-    setIsLoading(false);
 
     if (!email.trim()) {
       setError('Please enter your account email');
-      setIsLoading(false);
       return;
     }
 
     if (!password) {
       setError('Please enter your account password');
-      setIsLoading(false);
       return;
     }
+
+    setIsLoading(true);
 
     // Authenticate
     const officer = await authenticatePersonnel(email, password);

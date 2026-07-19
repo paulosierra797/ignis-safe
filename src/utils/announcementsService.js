@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { logAdminActivity } from './usersService';
+import { logPersonnelActivity } from './activityLogService';
 
 const ANNOUNCEMENTS_TABLE = 'announcements';
 const ANNOUNCEMENT_ATTACHMENTS_BUCKET = 'announcement_attachments';
@@ -7,6 +8,18 @@ const ANNOUNCEMENT_ACK_TABLE = 'announcement_acknowledgments';
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 const ATTACHMENT_UPLOAD_TIMEOUT_MS = 120000;
+const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
+
+const emitDataChanged = (scope, detail = {}) => {
+  if (typeof window === 'undefined') return;
+
+  window.dispatchEvent(new CustomEvent(DATA_CHANGED_EVENT, {
+    detail: {
+      scope,
+      ...detail
+    }
+  }));
+};
 
 const ALLOWED_ATTACHMENT_TYPES = [
   'image/jpeg',
@@ -233,7 +246,7 @@ export const getAnnouncementsForUser = async (currentUser) => {
         query = query.eq('audience_type', 'all_personnel');
       } else {
         query = query.or(
-          `audience_type.eq.all_personnel,audience_type.eq.specific_personnel,target_personnel_id.eq.${userId}`
+          `audience_type.eq.all_personnel,and(audience_type.eq.specific_personnel,target_personnel_id.eq.${userId})`
         );
       }
     }
@@ -327,7 +340,7 @@ export const getAnnouncementsForUser = async (currentUser) => {
   }
 };
 
-export const acknowledgeAnnouncement = async (currentUser, announcementId) => {
+export const acknowledgeAnnouncement = async (currentUser, announcementId, announcementTitle = '') => {
   try {
     const role = normalizeRole(currentUser?.role);
     const personnelId = currentUser?.admin_id;
@@ -356,7 +369,33 @@ export const acknowledgeAnnouncement = async (currentUser, announcementId) => {
       .select('ack_id, announcement_id, personnel_id, acknowledged_at')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Database error inserting announcement_acknowledgments row:', error);
+      throw error;
+    }
+
+    // The acknowledgment write above is idempotent (upsert on announcement_id+
+    // personnel_id), so if this audit-log write fails we can safely surface the
+    // error and let the caller retry without creating duplicate acknowledgments.
+    const { error: auditError } = await logPersonnelActivity({
+      personnelId,
+      activityType: 'announcement_acknowledged',
+      action: 'Announcement Acknowledged',
+      details: 'Reviewed and acknowledged the assigned announcement.',
+      status: 'SUCCESS',
+      announcementId,
+      metadata: {
+        announcement_id: announcementId,
+        announcement_title: announcementTitle || ''
+      }
+    });
+
+    if (auditError) {
+      console.error('Database error recording announcement acknowledgment audit log:', auditError);
+      throw new Error(`Acknowledgment audit log failed: ${auditError}`);
+    }
+
+    emitDataChanged('announcements', { announcementId, personnelId });
 
     return { data, error: null };
   } catch (error) {
@@ -365,6 +404,9 @@ export const acknowledgeAnnouncement = async (currentUser, announcementId) => {
   }
 };
 
+// Sidebar navigation is only blocked for a memorandum/announcement addressed
+// specifically to this personnel account. Broadcast ("all_personnel") items
+// are informational and must never lock navigation.
 export const getPendingAcknowledgementCount = async (currentUser) => {
   try {
     const role = normalizeRole(currentUser?.role);
@@ -379,7 +421,12 @@ export const getPendingAcknowledgementCount = async (currentUser) => {
       return { data: { pendingCount: 0 }, error: announcementError };
     }
 
-    const pendingCount = (announcements || []).filter((row) => !row.acknowledged_by_current_user).length;
+    const pendingCount = (announcements || []).filter((row) =>
+      row.audience_type === 'specific_personnel' &&
+      row.target_personnel_id === personnelId &&
+      !row.acknowledged_by_current_user
+    ).length;
+
     return { data: { pendingCount }, error: null };
   } catch (error) {
     console.error('Error loading pending acknowledgements:', error);

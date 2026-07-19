@@ -210,6 +210,15 @@
   background-color: #f7fafc;
 }
 
+.dropdown-item--logout {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.dropdown-item--logout:hover {
+  background-color: #fef2f2;
+}
+
 .dropdown-icon {
   font-size: 1.1rem;
 }

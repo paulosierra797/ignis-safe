@@ -13,31 +13,6 @@
   overflow-y: auto;
 }
 
-@media (max-width: 900px) {
-  .history-content {
-    padding: 1rem;
-    height: auto;
-  }
-
-  .history-main {
-    padding: 1rem;
-  }
-
-  .history-filters,
-  .history-stats {
-    grid-template-columns: 1fr;
-  }
-
-  .filter-date-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-date-row .clear-filters-btn {
-    width: 100%;
-  }
-}
-
 .history-main {
   background: white;
   border-radius: 16px;
@@ -336,39 +311,6 @@
   font-weight: 600;
 }
 
-@media (max-width: 1024px) {
-  .history-content {
-    margin-left: 0;
-    padding: 1.5rem;
-  }
-
-  .history-filters {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .history-stats {
-    grid-template-columns: 1fr;
-  }
-
-  .filter-date-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-date-row .clear-filters-btn {
-    width: 100%;
-  }
-
-  .history-table-container {
-    overflow-x: scroll;
-  }
-
-  .history-table {
-    min-width: 800px;
-  }
-}
-
 .history-mobile-list{
     display:none;
 }
@@ -403,6 +345,48 @@
 .history-card button{
     margin-top:14px;
     width:100%;
+}
+
+/*
+  Responsive breakpoints — kept together at the end of the file, in
+  descending max-width order, so each override wins the cascade against
+  the base rules above regardless of matched media conditions.
+  900px matches the Sidebar's own off-canvas breakpoint (see Dashboard.css),
+  so content reclaims the full width at the same point the fixed sidebar
+  disappears behind the mobile drawer toggle.
+*/
+@media (max-width: 900px) {
+  .history-content {
+    margin-left: 0;
+    padding: 1rem;
+    height: auto;
+  }
+
+  .history-main {
+    padding: 1rem;
+  }
+
+  .history-filters,
+  .history-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-date-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-date-row .clear-filters-btn {
+    width: 100%;
+  }
+
+  .history-table-container {
+    overflow-x: scroll;
+  }
+
+  .history-table {
+    min-width: 800px;
+  }
 }
 
 @media (max-width:768px){

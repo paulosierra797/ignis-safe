@@ -13,25 +13,6 @@
   padding: 2rem 3rem;
 }
 
-@media (max-width: 900px) {
-  .reports-main {
-    padding: 1rem;
-  }
-
-  .reports-content {
-    padding: 1.25rem;
-  }
-
-  .report-cards-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .report-upload-actions {
-    flex-direction: column;
-  }
-}
-
-
 .reports-content {
   background: white;
   border-radius: 16px;
@@ -209,21 +190,6 @@
   filter: brightness(0.95);
 }
 
-@media (max-width: 768px) {
-  .reports-main {
-    margin-left: 0;
-    padding: 1.5rem;
-  }
-
-  .reports-content {
-    padding: 2rem 1.5rem;
-  }
-
-  .report-cards-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* Administrative Report History */
 
 .report-history-section {
@@ -297,6 +263,33 @@
 .report-history-search-clear:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/*
+  Responsive breakpoints — kept together at the end of the file, in
+  descending max-width order, so each override wins the cascade against
+  the base rules above regardless of matched media conditions.
+  900px matches the Sidebar's own off-canvas breakpoint (see Dashboard.css),
+  so content reclaims the full width at the same point the fixed sidebar
+  disappears behind the mobile drawer toggle.
+*/
+@media (max-width: 900px) {
+  .reports-main {
+    margin-left: 0;
+    padding: 1rem;
+  }
+
+  .reports-content {
+    padding: 1.25rem;
+  }
+
+  .report-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .report-upload-actions {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 600px) {

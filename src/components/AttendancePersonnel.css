@@ -37,22 +37,6 @@
   font-size: 2rem;
 }
 
-@media (max-width: 900px) {
-  .attendance-personnel-content {
-    padding: 1rem;
-  }
-
-  .qr-hero,
-  .attendance-panel-grid {
-    grid-template-columns: 1fr;
-    flex-direction: column;
-  }
-
-  .qr-hero {
-    padding: 1rem;
-  }
-}
-
 .attendance-personnel-qr {
   display: flex;
   flex-direction: column;
@@ -376,6 +360,7 @@
   padding: 20px 24px;
   box-shadow: 0 18px 36px rgba(32, 33, 36, 0.1);
   border: 1px solid rgba(0, 0, 0, 0.04);
+  overflow-x: auto;
 }
 
 .table-header {
@@ -446,22 +431,49 @@
   }
 }
 
-@media (max-width: 1024px) {
+/*
+  Responsive breakpoints — kept together at the end of the file, in
+  descending max-width order, so each override wins the cascade against
+  the base rules above regardless of matched media conditions.
+  900px matches the Sidebar's own off-canvas breakpoint (see Dashboard.css),
+  so content reclaims the full width at the same point the fixed sidebar
+  disappears behind the mobile drawer toggle.
+*/
+@media (max-width: 900px) {
   .attendance-personnel-content {
     margin-left: 0;
-    padding: 24px;
+    padding: 1rem;
   }
 
   .attendance-personnel-content .page-header {
-    margin: -24px -24px 2rem -24px;
+    margin: 0 0 1.25rem 0;
+    padding: 0.85rem 0;
+  }
+
+  .attendance-personnel-content .page-title {
+    font-size: 1.2rem;
+  }
+
+  .qr-hero,
+  .attendance-panel-grid {
+    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   .qr-hero {
-    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .qr-hero-text h2 {
+    font-size: 28px;
   }
 
   .qr-insights {
     grid-template-columns: 1fr;
+  }
+
+  .qr-link {
+    flex-wrap: wrap;
   }
 }
 

@@ -399,19 +399,26 @@
   text-align: center;
 }
 
-@media (max-width: 1024px) {
+/* 900px matches the Sidebar's off-canvas breakpoint (see Dashboard.css),
+   so content reclaims the full width at the same point the fixed sidebar
+   disappears behind the mobile drawer toggle. */
+@media (max-width: 900px) {
   .announcements-main {
     margin-left: 0;
+    padding: 1rem;
+  }
+
+  .announcements-main .page-header {
+    margin: 0 0 1.25rem 0;
+    padding: 0.85rem 0;
+  }
+
+  .announcements-main .page-title {
+    font-size: 1.2rem;
   }
 
   .form-row.two-col {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .announcements-main {
-    padding: 1rem;
   }
 
   .content-tabs {
@@ -427,5 +434,10 @@
   .list-card-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .announcement-image-link {
+    width: 100px;
+    height: 76px;
   }
 }

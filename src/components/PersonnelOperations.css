@@ -12,8 +12,12 @@
   padding: 2rem 3rem;
 }
 
+/* 900px matches the Sidebar's off-canvas breakpoint (see Dashboard.css),
+   so content reclaims the full width at the same point the fixed sidebar
+   disappears behind the mobile drawer toggle. */
 @media (max-width: 900px) {
   .personnel-ops-content {
+    margin-left: 0;
     padding: 1rem;
   }
 

@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getCurrentUser, onAuthStateChange, signOut } from '../utils/authService';
+import {
+  forgetCurrentDevice,
+  getCurrentUser,
+  onAuthStateChange,
+  signOut
+} from '../utils/authService';
 import { isAuthFlowGated } from '../utils/authFlowGate';
 import { logPersonnelActivity } from '../utils/activityLogService';
 
@@ -178,6 +183,10 @@ export const UserProvider = ({ children }) => {
     setCurrentUser(null);
   };
 
+  const forgetThisDevice = async () => {
+    return forgetCurrentDevice();
+  };
+
   const value = {
     currentUser,
     setCurrentUser,
@@ -185,6 +194,7 @@ export const UserProvider = ({ children }) => {
     switchRole,
     hasPermission,
     logout,
+    forgetThisDevice,
     loading
   };
 

@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { getStoredDeviceId, clearDeviceCredentials } from './deviceTrust';
+import { getStoredDeviceId } from './deviceTrust';
 
 const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 const ADMIN_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
@@ -311,25 +311,51 @@ export const verifyLoginOtp = async (email, token) => {
 // Sign out user
 export const signOut = async () => {
   try {
-    // Best-effort: revoke this device's trust so the next login on it
-    // requires OTP again. Must run before supabase.auth.signOut() while
-    // the session is still valid (the RPC is scoped to auth.uid()).
-    try {
-      const deviceId = getStoredDeviceId();
-      if (deviceId) {
-        await supabase.rpc('revoke_device', { p_device_id: deviceId });
-      }
-    } catch (revokeError) {
-      console.warn('Could not revoke trusted device on sign out:', revokeError);
-    }
-    clearDeviceCredentials();
-
-    const { error } = await supabase.auth.signOut();
+    // Normal logout ends only this browser's current Supabase session. The
+    // stable local device marker and its server-side trust record remain in
+    // place until expiry or an explicit revoke/forget action.
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) throw error;
     return { error: null };
   } catch (error) {
     console.error('Error signing out:', error);
     return { error: error.message };
+  }
+};
+
+// Explicitly forget the current browser without changing its stable local
+// identifier. The current Supabase session remains active, but the next login
+// on this browser must complete email OTP again.
+export const forgetCurrentDevice = async () => {
+  try {
+    const deviceId = getStoredDeviceId();
+    if (!deviceId) {
+      return { error: null };
+    }
+
+    const { error } = await supabase.rpc('revoke_device', {
+      p_device_id: deviceId
+    });
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error('Error forgetting trusted device:', error);
+    return { error: error?.message || 'Could not forget this device.' };
+  }
+};
+
+export const revokeTrustedDevicesForUser = async (userId) => {
+  try {
+    const { error } = await supabase.rpc('admin_revoke_trusted_devices', {
+      p_user_id: userId
+    });
+
+    if (error) throw error;
+    return { error: null };
+  } catch (error) {
+    console.error('Error revoking trusted devices:', error);
+    return { error: error?.message || 'Could not revoke trusted devices.' };
   }
 };
 
@@ -522,9 +548,8 @@ export const updatePassword = async (newPassword) => {
 
     // Password changed/reset: revoke every trusted device for this user so
     // OTP is required again everywhere, not just on this device.
-    try {
-      await supabase.rpc('revoke_all_devices');
-    } catch (revokeError) {
+    const { error: revokeError } = await supabase.rpc('revoke_all_devices');
+    if (revokeError) {
       console.warn('Could not revoke trusted devices after password update:', revokeError);
     }
 

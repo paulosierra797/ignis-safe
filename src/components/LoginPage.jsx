@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { resendSignupCode } from '../utils/authService';
 import { supabase } from '../utils/supabaseClient';
 import {
 sendPasswordResetEmail,
@@ -21,6 +20,26 @@ import ignissafe from '../assets/Logo1.png'
 
 const REMEMBER_ME_KEY = 'remember_me';
 const REMEMBERED_EMAIL_KEY = 'remembered_email';
+const OTP_LENGTH = 6;
+const TRUST_DURATION_MS = {
+  personnel: 14 * 24 * 60 * 60 * 1000,
+  admin: 12 * 60 * 60 * 1000
+};
+
+const validateTrustedDeviceRecord = (record, { deviceId, userId }) => {
+  const role = String(record?.role_at_trust || '').trim().toLowerCase();
+  const expectedDuration = role === 'personnel'
+    ? TRUST_DURATION_MS.personnel
+    : TRUST_DURATION_MS.admin;
+  const remainingDuration = new Date(record?.expires_at).getTime() - Date.now();
+  const clockTolerance = 10 * 60 * 1000;
+
+  return record?.trusted === true
+    && record?.device_id === deviceId
+    && record?.user_id === userId
+    && Number.isFinite(remainingDuration)
+    && Math.abs(remainingDuration - expectedDuration) <= clockTolerance;
+};
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -28,7 +47,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  const [rememberDevice, setRememberDevice] = useState(false);
+  const [pendingRole, setPendingRole] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -114,70 +133,77 @@ const handleLogin = async (e) => {
   e.preventDefault();
 
   setLoading(true);
-  setError("");
-  setRememberDevice(false);
+  setError('');
   setAuthFlowGated(true);
+  const normalizedEmail = email.trim().toLowerCase();
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-
-  if (error) {
-    setAuthFlowGated(false);
-    setError("Invalid email or password");
-    setLoading(false);
-    return;
+  if (rememberMe) {
+    localStorage.setItem(REMEMBER_ME_KEY, 'true');
+    localStorage.setItem(REMEMBERED_EMAIL_KEY, normalizedEmail);
+  } else {
+    localStorage.removeItem(REMEMBER_ME_KEY);
+    localStorage.removeItem(REMEMBERED_EMAIL_KEY);
   }
 
-
-  // password is correct now — check whether this device already completed
-  // OTP verification and was remembered, so we can skip OTP this time.
-  const { deviceId, deviceSecret } = getOrCreateDeviceCredentials();
-
-  let trusted = false;
   try {
-    const { data: isTrusted, error: trustError } = await supabase.rpc(
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (authError) {
+      throw new Error('Invalid email or password');
+    }
+
+    const { data: loginProfile } = await supabase
+      .from('admin')
+      .select('role')
+      .eq('admin_id', authData.user.id)
+      .maybeSingle();
+    setPendingRole(normalizeRole(loginProfile?.role));
+
+    // Password is correct. A stable device ID + secret checks whether this
+    // browser previously completed OTP and is still inside its trust window.
+    const { deviceId, deviceSecret } = getOrCreateDeviceCredentials();
+    const { data: isTrusted, error: trustCheckError } = await supabase.rpc(
       'check_trusted_device',
       { p_device_id: deviceId, p_device_secret: deviceSecret }
     );
-    trusted = !trustError && isTrusted === true;
-  } catch (trustCheckError) {
-    console.warn('Trusted device check failed, requiring OTP:', trustCheckError);
-    trusted = false;
-  }
 
-  if (trusted) {
-    // Load the full admin/personnel profile (name, rank, contact number,
-    // avatar, permissions) instead of a bare {authUser, role} object, so
-    // the profile card/header have real data immediately after login.
-    const refreshedUser = await refreshCurrentUser();
-    setAuthFlowGated(false);
+    if (trustCheckError) {
+      console.warn('Trusted device check failed; OTP will be required:', trustCheckError);
+    }
 
-    if (!refreshedUser) {
-      setError("Failed to load user profile.");
-      setLoading(false);
+    if (!trustCheckError && isTrusted === true) {
+      const refreshedUser = await refreshCurrentUser();
+      setAuthFlowGated(false);
+
+      if (!refreshedUser) {
+        throw new Error('Failed to load user profile.');
+      }
+
+      logLoginIfPersonnel(refreshedUser);
+      setAuthStep('authenticated');
       return;
     }
 
-    logLoginIfPersonnel(refreshedUser);
+    // An untrusted/expired browser must not keep the temporary password-only
+    // session. End only this session, then send the application email OTP.
+    const { error: localSignOutError } = await supabase.auth.signOut({ scope: 'local' });
+    if (localSignOutError) throw localSignOutError;
 
-    setAuthStep("authenticated");
+    const { error: otpError } = await sendLoginOtp(normalizedEmail);
+    if (otpError) throw otpError;
+
+    setResetEmail(normalizedEmail);
+    setResetCode('');
+    setAuthStep('otp');
+  } catch (loginError) {
+    setAuthFlowGated(false);
+    setError(loginError?.message || 'Login failed. Please try again.');
+  } finally {
     setLoading(false);
-    return;
   }
-
-  // Not a recognized trusted device — drop this password-only session
-  // locally (scope:'local' so we don't revoke the user's other, already
-  // trusted sessions elsewhere) and fall back to the normal OTP step.
-  await supabase.auth.signOut({ scope: 'local' });
-  await sendLoginOtp(email);
-
-  setResetEmail(email);
-  setAuthStep("otp");
-
-  setLoading(false);
 };
   const handleForgotPasswordClick = (e) => {
     e.preventDefault();
@@ -318,8 +344,14 @@ const handleLogin = async (e) => {
 const handleVerify = async (e) => {
   e.preventDefault();
 
+  if (resetCode.trim().length !== OTP_LENGTH) {
+    setError(`Enter the ${OTP_LENGTH}-digit OTP sent to your email.`);
+    return;
+  }
+
   setLoading(true);
-  setError("");
+  setError('');
+  setAuthFlowGated(true);
 
   try {
     const { data, error } = await verifyLoginOtp(
@@ -329,30 +361,38 @@ const handleVerify = async (e) => {
 
     if (error) {
       setError(error.message);
-      setLoading(false);
       return;
     }
 
-
-    // Restore Supabase session
-    if (data.session) {
-      await supabase.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      });
-    }
-
-
-    if (rememberDevice) {
+    // verifyOtp already installs the returned Supabase session. If Remember
+    // me was selected on the login form, persist and validate browser trust.
+    if (rememberMe) {
       try {
         const { deviceId, deviceSecret } = getOrCreateDeviceCredentials();
-        await supabase.rpc('trust_device', {
+        const { data: trustRecord, error: trustError } = await supabase.rpc('trust_device', {
           p_device_id: deviceId,
           p_device_secret: deviceSecret,
           p_user_agent: navigator.userAgent,
         });
+
+        if (trustError) throw trustError;
+
+        const authenticatedUserId = data?.user?.id || data?.session?.user?.id;
+        if (!validateTrustedDeviceRecord(trustRecord, {
+          deviceId,
+          userId: authenticatedUserId
+        })) {
+          throw new Error('The trusted-device record did not pass verification.');
+        }
       } catch (trustError) {
-        console.warn('Could not remember this device:', trustError);
+        console.error('Could not save Remember me:', trustError);
+        await supabase.auth.signOut({ scope: 'local' });
+        const { error: resendError } = await sendLoginOtp(resetEmail.trim());
+        setResetCode('');
+        setError(resendError
+          ? 'OTP was verified, but Remember me could not be saved. Return to login and try again.'
+          : 'OTP was verified, but Remember me could not be saved. A new OTP was sent so you can retry.');
+        return;
       }
     }
 
@@ -363,17 +403,33 @@ const handleVerify = async (e) => {
 
     if (!refreshedUser) {
       setError("Failed to load user profile.");
-      setLoading(false);
       return;
     }
 
     logLoginIfPersonnel(refreshedUser);
 
     setAuthStep("authenticated");
-
-    setLoading(false);
+  } catch (verifyError) {
+    setError(verifyError?.message || 'Could not verify the OTP. Please try again.');
   } finally {
     setAuthFlowGated(false);
+    setLoading(false);
+  }
+};
+
+const handleResendLoginOtp = async () => {
+  setLoading(true);
+  setError('');
+
+  try {
+    const { error: otpError } = await sendLoginOtp(resetEmail.trim());
+    if (otpError) throw otpError;
+    setResetCode('');
+    setError('A new OTP was sent to your email.');
+  } catch (otpError) {
+    setError(otpError?.message || 'Could not resend the OTP. Please try again.');
+  } finally {
+    setLoading(false);
   }
 };
 useEffect(() => {
@@ -408,37 +464,68 @@ useEffect(() => {
 
     <div className="login-right">
       <div className="login-form-container-verify">
+        <div className="verify-security-icon" aria-hidden="true">&#10003;</div>
+        <p className="verify-kicker">Secure sign in</p>
         <h1>Verify Login</h1>
         <p className="login-description-verify">
-          Enter the OTP sent to {resetEmail}
+          Enter the 6-digit code sent to <strong>{resetEmail}</strong>.
         </p>
 
-        <input
-          type="text"
-          className="verify-input"
-          placeholder="Enter OTP"
-          value={resetCode}
-          onChange={(e) => setResetCode(e.target.value)}
-        />
-
-        <label className="remember-me">
+        <form className="verify-login-form" onSubmit={handleVerify}>
+          <label className="verify-input-label" htmlFor="login-otp">One-time password</label>
           <input
-            type="checkbox"
-            checked={rememberDevice}
-            onChange={(e) => setRememberDevice(e.target.checked)}
+            id="login-otp"
+            type="text"
+            className="verify-input"
+            placeholder="000000"
+            value={resetCode}
+            onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, OTP_LENGTH))}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={OTP_LENGTH}
+            aria-describedby="remember-me-summary"
+            autoFocus
+            required
           />
-          Remember this device
-        </label>
 
-        {error && <p className="error-message">{error}</p>}
+          <div
+            id="remember-me-summary"
+            className={`verify-remember-summary ${rememberMe ? 'is-enabled' : ''}`}
+          >
+            <span className="verify-remember-dot" aria-hidden="true" />
+            <div>
+              <strong>Remember me {rememberMe ? 'is enabled' : 'is off'}</strong>
+              <p>
+                {rememberMe
+                  ? `After verification, this browser stays trusted for ${pendingRole === 'personnel' ? '14 days' : '12 hours'}.`
+                  : 'This browser will require OTP again after you log out.'}
+              </p>
+            </div>
+          </div>
 
-        <button onClick={handleVerify} className="login-button-verify">
-          Verify & Login
-        </button>
+          {error && <p className="error-message verify-message" role="alert">{error}</p>}
 
-        <button onClick={handleBackToLogin} className="back-button-verify">
-          Back
-        </button>
+          <button
+            type="submit"
+            className="login-button-verify"
+            disabled={loading || resetCode.length !== OTP_LENGTH}
+          >
+            {loading ? 'Verifying...' : 'Verify & Login'}
+          </button>
+
+          <button
+            type="button"
+            className="resend-otp-button"
+            onClick={handleResendLoginOtp}
+            disabled={loading}
+          >
+            Send a new code
+          </button>
+
+          <button type="button" onClick={handleBackToLogin} className="back-button-verify" disabled={loading}>
+            Back to Login
+          </button>
+        </form>
       </div>
     </div>
   </>

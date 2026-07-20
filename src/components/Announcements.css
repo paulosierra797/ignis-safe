@@ -100,6 +100,10 @@
   color: #64748b;
 }
 
+.required-asterisk {
+  color: #dc2626;
+}
+
 .form-field input,
 .form-field select,
 .form-field textarea {
@@ -131,6 +135,21 @@
   resize: vertical;
   min-height: 200px;
   line-height: 1.5;
+}
+
+.announcement-message-field {
+  grid-column: 1 / -1;
+  width: 100%;
+  box-sizing: border-box;
+  max-width: none;
+}
+
+.announcement-message-field textarea {
+  resize: none;
+  overflow: hidden;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
 }
 
 .form-help-text {

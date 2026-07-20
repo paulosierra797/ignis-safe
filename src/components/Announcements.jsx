@@ -80,6 +80,7 @@ export default function Announcements() {
   const [overflowingIds, setOverflowingIds] = useState(() => new Set());
   const contentRefs = useRef({});
   const titleRefs = useRef({});
+  const messageTextareaRef = useRef(null);
   const [archiveModalId, setArchiveModalId] = useState('');
   const [archiving, setArchiving] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
@@ -417,6 +418,13 @@ export default function Announcements() {
     return () => window.removeEventListener('resize', measureAnnouncementOverflow);
   }, [measureAnnouncementOverflow]);
 
+  useLayoutEffect(() => {
+    const textarea = messageTextareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [formData.content]);
+
   return (
     <div className="announcements-container">
       <Sidebar variant={sidebarVariant} />
@@ -465,7 +473,7 @@ export default function Announcements() {
             <form className="announcement-form" onSubmit={handleSubmitAnnouncement}>
               <div className="form-row two-col">
                 <div className="form-field">
-                  <label htmlFor="announcementTitle">Title</label>
+                  <label htmlFor="announcementTitle">Title <span className="required-asterisk">*</span></label>
                   <input
                     id="announcementTitle"
                     type="text"
@@ -478,9 +486,10 @@ export default function Announcements() {
                 </div>
 
                 <div className="form-field">
-                  <label htmlFor="announcementAudience">Audience</label>
+                  <label htmlFor="announcementAudience">Audience <span className="required-asterisk">*</span></label>
                   <select
                     id="announcementAudience"
+                    required
                     value={formData.audience_type}
                     onChange={(event) => setFormData((prev) => ({
                       ...prev,
@@ -521,10 +530,11 @@ export default function Announcements() {
               )}
 
               <div className="form-row">
-                <div className="form-field">
-                  <label htmlFor="announcementContent">Message</label>
+                <div className="form-field announcement-message-field">
+                  <label htmlFor="announcementContent">Message <span className="required-asterisk">*</span></label>
                   <textarea
                     id="announcementContent"
+                    ref={messageTextareaRef}
                     value={formData.content}
                     onChange={(event) => setFormData((prev) => ({ ...prev, content: event.target.value }))}
                     placeholder="Write the full announcement..."

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import inlogo from '../assets/inLOGO.png';
 import './Dashboard.css';
@@ -9,10 +9,17 @@ import { getPendingAcknowledgementCount } from '../utils/announcementsService';
 
 const PERSONNEL_ANNOUNCEMENTS_PATH = '/personnel/announcements';
 
+// Every admin page mounts its own <Sidebar/> rather than sharing one via a
+// layout, so the scroll container is destroyed and recreated on each nav.
+// Persisting the scroll offset here (module scope survives the remount)
+// lets us restore it before paint instead of snapping back to the top.
+const sidebarScrollPositions = {};
+
 export default function Sidebar({ variant = 'admin' }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentUser, hasPermission } = useUser();
+  const sidebarRef = useRef(null);
   const { isSidebarCollapsed, isMobileSidebarOpen, closeMobileSidebar } = useLayout();
   const isAdminAccount = String(currentUser?.role || '').toLowerCase() === 'admin';
   const [pendingProfileChangeRequests, setPendingProfileChangeRequests] = useState(0);
@@ -103,6 +110,17 @@ export default function Sidebar({ variant = 'admin' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
+  useLayoutEffect(() => {
+    const el = sidebarRef.current;
+    if (el) {
+      el.scrollTop = sidebarScrollPositions[variant] || 0;
+    }
+  }, [variant]);
+
+  const handleSidebarScroll = (event) => {
+    sidebarScrollPositions[variant] = event.currentTarget.scrollTop;
+  };
+
   const handleNavItemClick = (event, item) => {
     if (variant !== 'personnel' || !hasPendingAnnouncementAck) return;
     if (item.path === PERSONNEL_ANNOUNCEMENTS_PATH) return;
@@ -163,7 +181,12 @@ export default function Sidebar({ variant = 'admin' }) {
         />
       )}
 
-      <aside className={`sidebar ${variantClass} ${collapsedClass} ${mobileOpenClass}`.trim()} aria-hidden={!isMobileSidebarOpen && undefined}>
+      <aside
+        ref={sidebarRef}
+        className={`sidebar ${variantClass} ${collapsedClass} ${mobileOpenClass}`.trim()}
+        aria-hidden={!isMobileSidebarOpen && undefined}
+        onScroll={handleSidebarScroll}
+      >
         <div className="sidebar-header">
           <img src={inlogo} alt="Ignis Safe" className="sidebar-logo" />
           <span className="sidebar-title">IGNIS SAFE</span>

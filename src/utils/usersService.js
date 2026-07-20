@@ -90,6 +90,8 @@ export const saveShiftScheduleConfig = async (
 
     if (error) throw error;
 
+    emitDataChanged('dashboard', { action: 'shift_schedule_update' });
+
     return {
       data: {
         shift_a_dates: Array.isArray(data?.shift_a_dates) ? data.shift_a_dates : [],

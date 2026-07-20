@@ -168,15 +168,15 @@
 }
 
 .shift-summary-calendar-legend .legend-shift-a {
-  background: #ca8a04;
-}
-
-.shift-summary-calendar-legend .legend-shift-b {
   background: #ea580c;
 }
 
+.shift-summary-calendar-legend .legend-shift-b {
+  background: #2563eb;
+}
+
 .shift-summary-calendar-legend .legend-on-duty {
-  background: #166534;
+  background: #16a34a;
 }
 
 .shift-summary-calendar-legend .legend-on-leave {
@@ -265,10 +265,35 @@
   outline-offset: 2px;
 }
 
+.shift-summary-day.shift-a {
+  background: #ffe4cc;
+  border-color: #ea580c;
+}
+
+.shift-summary-day.shift-b {
+  background: #dbe7ff;
+  border-color: #2563eb;
+}
+
+.shift-summary-day.shift-a-b {
+  background: linear-gradient(135deg, #ffe4cc 50%, #dbe7ff 50%);
+  border-color: #ea580c;
+}
+
+.shift-summary-day.off-duty {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
 .shift-summary-day.today {
   border: 2px solid #f59e0b;
-  background: #fff8ec;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
   padding: calc(0.55rem - 1px) calc(0.6rem - 1px);
+}
+
+.shift-summary-day.today.off-duty {
+  background: #fff8ec;
+  border-color: #f59e0b;
 }
 
 /* Display-only disabled state for past dates — matches the Personnel duty
@@ -334,23 +359,23 @@
 }
 
 .shift-summary-shift-label.shift-a {
-  color: #ca8a04;
+  color: #9a3412;
 }
 
 .shift-summary-shift-label.shift-b {
-  color: #ea580c;
+  color: #1d4ed8;
 }
 
 .shift-summary-shift-label.shift-a-b {
-  color: #ca8a04;
+  color: #9a3412;
 }
 
 .shift-summary-shift-label.shift-a-b::before {
-  background: linear-gradient(135deg, #ca8a04 50%, #ea580c 50%);
+  background: linear-gradient(135deg, #ea580c 50%, #2563eb 50%);
 }
 
 .shift-summary-shift-label.off-duty {
-  color: #6b7280;
+  color: #4b5563;
 }
 
 .shift-summary-day-body {
@@ -1127,13 +1152,15 @@
 }
 
 .shift-calendar-day.shift-a {
-  background: #fef3c7;
-  border-color: #f59e0b;
+  background: #ffe4cc;
+  border-color: #ea580c;
+  color: #9a3412;
 }
 
 .shift-calendar-day.shift-b {
-  background: #ffedd5;
-  border-color: #ea580c;
+  background: #dbe7ff;
+  border-color: #2563eb;
+  color: #1e40af;
 }
 
 .shift-calendar-day.active {
@@ -1187,11 +1214,11 @@
 }
 
 .legend-shift-a {
-  background: #ca8a04;
+  background: #ea580c;
 }
 
 .legend-shift-b {
-  background: #ea580c;
+  background: #2563eb;
 }
 
 .legend-active {
@@ -1455,6 +1482,7 @@
 
 .shift-personnel-checkbox-item {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 1rem;
   min-height: 3rem;
@@ -1475,7 +1503,8 @@
 }
 
 .shift-personnel-checkbox-input {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  align-self: center;
   width: 20px;
   height: 20px;
   margin: 0;
@@ -1484,30 +1513,31 @@
 }
 
 .shift-personnel-checkbox-info {
-  display: grid;
-  grid-template-columns: minmax(140px, 1fr) auto;
+  display: flex;
+  flex-direction: row;
   align-items: center;
+  flex: 1 1 auto;
   gap: 1rem;
-  flex: 1;
   min-width: 0;
   line-height: 1.3;
 }
 
-.shift-personnel-checkbox-name {
-  font-weight: 600;
-  color: #1f2937;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .shift-personnel-checkbox-rank {
+  flex: 0 0 auto;
   color: #6b7280;
   font-size: 0.82rem;
   white-space: nowrap;
-  text-align: right;
   min-width: 90px;
-  padding-right: 0.15rem;
+}
+
+.shift-personnel-checkbox-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+  color: #1f2937;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .shift-personnel-selection-count {

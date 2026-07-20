@@ -529,6 +529,57 @@ export const getPersonnelForDate = async (dateIso) => {
   }
 };
 
+export const getShiftAssignmentSummaryForDate = async (dateIso) => {
+  try {
+    if (!dateIso) {
+      return { data: null, error: 'Missing date.' };
+    }
+
+    const [personnelResult, assignmentResult] = await Promise.all([
+      getAllUsers(),
+      getShiftAssignmentsForPeriod({ startDate: dateIso, endDate: dateIso })
+    ]);
+
+    if (personnelResult.error) return { data: null, error: personnelResult.error };
+    if (assignmentResult.error) return { data: null, error: assignmentResult.error };
+
+    const personnelRows = (Array.isArray(personnelResult.data) ? personnelResult.data : [])
+      .filter((personnel) => String(personnel.role || '').toLowerCase() === 'personnel');
+    const personnelById = new Map(personnelRows.map((personnel) => [personnel.admin_id, personnel]));
+    const assignments = Array.isArray(assignmentResult.data) ? assignmentResult.data : [];
+
+    const buildShiftList = (shiftType) => {
+      const personnelIds = new Set(
+        assignments
+          .filter((assignment) => String(assignment.shift_type || '').toUpperCase() === shiftType)
+          .filter((assignment) => isDateWithinInclusiveRange(dateIso, assignment.start_date, assignment.end_date))
+          .map((assignment) => assignment.personnel_id)
+      );
+
+      return Array.from(personnelIds)
+        .map((personnelId) => personnelById.get(personnelId))
+        .filter(Boolean)
+        .map((personnel) => ({
+          admin_id: personnel.admin_id,
+          name: formatPersonnelName(personnel),
+          rank: personnel.rank || '-'
+        }));
+    };
+
+    return {
+      data: {
+        date: dateIso,
+        shiftA: buildShiftList('A'),
+        shiftB: buildShiftList('B')
+      },
+      error: null
+    };
+  } catch (error) {
+    console.error('Error loading shift assignment summary for date:', error);
+    return { data: null, error: error.message };
+  }
+};
+
 const PERSONNEL_SHIFT_ASSIGNMENTS_TABLE = 'personnel_shift_assignments';
 
 export const assignPersonnelToShift = async ({ personnelId, shiftType, startDate, endDate, assignedBy }) => {
@@ -554,6 +605,8 @@ export const assignPersonnelToShift = async ({ personnelId, shiftType, startDate
       .single();
 
     if (error) throw error;
+
+    emitDataChanged('dashboard', { action: 'shift_assign', personnel_id: personnelId });
 
     return { data, error: null };
   } catch (error) {
@@ -628,6 +681,8 @@ export const removeShiftAssignment = async (assignmentId) => {
 
     if (error) throw error;
 
+    emitDataChanged('dashboard', { action: 'shift_remove', assignment_id: assignmentId });
+
     return { data, error: null };
   } catch (error) {
     console.error('Error removing shift assignment:', error);
@@ -656,6 +711,8 @@ export const updateShiftAssignment = async ({ assignmentId, startDate, endDate }
       .single();
 
     if (error) throw error;
+
+    emitDataChanged('dashboard', { action: 'shift_update', assignment_id: assignmentId });
 
     return { data, error: null };
   } catch (error) {

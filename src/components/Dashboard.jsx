@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { getPersonnelOverviewStats, getUsersFromProfiles } from '../utils/usersService';
 import { getAnalyticsDashboardStats, getAnalyticsChartsData } from '../utils/knowledgeAnalyticsService';
-import { getPersonnelForDate } from '../utils/personnelOperationsService';
+import { getPersonnelForDate, getShiftAssignmentSummaryForDate } from '../utils/personnelOperationsService';
 import { getManilaToday } from '../utils/dateUtils';
 import './Dashboard.css';
 
@@ -123,9 +123,16 @@ if (currentKnowledge < 40) {
   const [isOnDutyModalOpen, setIsOnDutyModalOpen] = useState(false);
   const [isOnLeaveModalOpen, setIsOnLeaveModalOpen] = useState(false);
 
+  const [shiftAssignments, setShiftAssignments] = useState({ shiftA: [], shiftB: [] });
+  const [shiftAssignmentsError, setShiftAssignmentsError] = useState('');
+  const [isShiftAModalOpen, setIsShiftAModalOpen] = useState(false);
+  const [isShiftBModalOpen, setIsShiftBModalOpen] = useState(false);
+
   const fetchDashboardData = useCallback(async () => {
       try {
         setLoadError('');
+
+        const today = getManilaToday();
 
         const [
           { data: personnelData, error: personnelError },
@@ -133,12 +140,14 @@ if (currentKnowledge < 40) {
           { data: charts, error: chartsError },
           { data: users, error: usersError },
           { data: todayPersonnelData, error: todayPersonnelFetchError },
+          { data: shiftSummaryData, error: shiftSummaryError },
         ] = await Promise.all([
           getPersonnelOverviewStats(),
           getAnalyticsDashboardStats({ timeframe: 'All-time', people: 'All', topic: 'All' }),
           getAnalyticsChartsData({ timeframe: 'All-time', people: 'All', topic: 'All' }),
           getUsersFromProfiles(),
-          getPersonnelForDate(getManilaToday()),
+          getPersonnelForDate(today),
+          getShiftAssignmentSummaryForDate(today),
         ]);
 
         if (personnelError) {
@@ -156,6 +165,9 @@ if (currentKnowledge < 40) {
         if (todayPersonnelFetchError) {
           console.error('Error fetching today\'s on-duty/on-leave personnel:', todayPersonnelFetchError);
         }
+        if (shiftSummaryError) {
+          console.error('Error fetching today\'s shift assignments:', shiftSummaryError);
+        }
 
         if (personnelData) {
           setPersonnelStats(personnelData);
@@ -165,6 +177,12 @@ if (currentKnowledge < 40) {
         setTodayPersonnel({
           onDuty: todayPersonnelData?.onDuty || [],
           onLeave: todayPersonnelData?.onLeave || [],
+        });
+
+        setShiftAssignmentsError(shiftSummaryError || '');
+        setShiftAssignments({
+          shiftA: shiftSummaryData?.shiftA || [],
+          shiftB: shiftSummaryData?.shiftB || [],
         });
 
         setAnalyticsStats(analyticsData || DEFAULT_ANALYTICS_STATS);
@@ -211,7 +229,7 @@ if (currentKnowledge < 40) {
           trainingCompletionPercent,
         });
 
-        if (personnelError || analyticsError || chartsError || usersError || todayPersonnelFetchError) {
+        if (personnelError || analyticsError || chartsError || usersError || todayPersonnelFetchError || shiftSummaryError) {
           setLoadError('Some dashboard metrics could not be loaded. Showing available data.');
         }
       } catch (err) {
@@ -240,6 +258,20 @@ if (currentKnowledge < 40) {
     }
 
     return undefined;
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
+    let currentManilaDate = getManilaToday();
+
+    const intervalId = setInterval(() => {
+      const latestManilaDate = getManilaToday();
+      if (latestManilaDate !== currentManilaDate) {
+        currentManilaDate = latestManilaDate;
+        void fetchDashboardData();
+      }
+    }, 60000);
+
+    return () => clearInterval(intervalId);
   }, [fetchDashboardData]);
 
   useEffect(() => {
@@ -344,9 +376,14 @@ if (currentKnowledge < 40) {
               className="metric-card clickable"
               role="button"
               tabIndex={0}
-              onClick={() => navigate('/attendance-admin')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/attendance-admin')}
-              aria-label="Open Attendance page"
+              onClick={() => setIsShiftAModalOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setIsShiftAModalOpen(true);
+                }
+              }}
+              aria-label="View personnel assigned to Shift A today"
             >
               <div className="metric-icon duty">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -355,18 +392,39 @@ if (currentKnowledge < 40) {
                 </svg>
               </div>
               <div className="metric-content">
-                <p className="metric-label">On-Duty Status</p>
-                <div className="duty-split">
-                  <div className="duty-item on-duty">
-                    <span className="duty-count">{personnelStats.onDuty}</span>
-                    <span className="duty-text">On-Duty</span>
-                  </div>
-                  <div className="duty-divider"></div>
-                  <div className="duty-item off-duty">
-                    <span className="duty-count">{personnelStats.offDuty}</span>
-                    <span className="duty-text">Off-Duty</span>
-                  </div>
+                <p className="metric-label">Shift A</p>
+                <div className="metric-value">
+                  <span className="main-number">{loading ? '...' : shiftAssignments.shiftA.length}</span>
                 </div>
+                <span className="metric-status active">View List</span>
+              </div>
+            </div>
+
+            <div
+              className="metric-card clickable"
+              role="button"
+              tabIndex={0}
+              onClick={() => setIsShiftBModalOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setIsShiftBModalOpen(true);
+                }
+              }}
+              aria-label="View personnel assigned to Shift B today"
+            >
+              <div className="metric-icon duty">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="metric-content">
+                <p className="metric-label">Shift B</p>
+                <div className="metric-value">
+                  <span className="main-number">{loading ? '...' : shiftAssignments.shiftB.length}</span>
+                </div>
+                <span className="metric-status active">View List</span>
               </div>
             </div>
 
@@ -881,6 +939,100 @@ if (currentKnowledge < 40) {
                             <td>{person.rank}</td>
                             <td>{person.leave_start_date} - {person.leave_end_date}</td>
                             <td>{person.approval_status}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isShiftAModalOpen && (
+          <div className="dashboard-modal-overlay" role="dialog" aria-modal="true">
+            <div className="dashboard-modal">
+              <div className="dashboard-modal-header">
+                <h3>Shift A Today ({shiftAssignments.shiftA.length})</h3>
+                <button
+                  className="dashboard-modal-close"
+                  onClick={() => setIsShiftAModalOpen(false)}
+                  aria-label="Close Shift A personnel modal"
+                >
+                  x
+                </button>
+              </div>
+              <div className="dashboard-modal-body">
+                {loading ? (
+                  <p className="dashboard-modal-empty">Loading Shift A assignments...</p>
+                ) : shiftAssignmentsError ? (
+                  <div className="dashboard-modal-message dashboard-modal-message-error">
+                    Unable to load Shift A assignments: {shiftAssignmentsError}
+                  </div>
+                ) : shiftAssignments.shiftA.length === 0 ? (
+                  <p className="dashboard-modal-empty">No personnel are assigned to Shift A today.</p>
+                ) : (
+                  <div className="dashboard-modal-table-wrap">
+                    <table className="dashboard-modal-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Rank</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shiftAssignments.shiftA.map((person) => (
+                          <tr key={person.admin_id}>
+                            <td>{person.name}</td>
+                            <td>{person.rank}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isShiftBModalOpen && (
+          <div className="dashboard-modal-overlay" role="dialog" aria-modal="true">
+            <div className="dashboard-modal">
+              <div className="dashboard-modal-header">
+                <h3>Shift B Today ({shiftAssignments.shiftB.length})</h3>
+                <button
+                  className="dashboard-modal-close"
+                  onClick={() => setIsShiftBModalOpen(false)}
+                  aria-label="Close Shift B personnel modal"
+                >
+                  x
+                </button>
+              </div>
+              <div className="dashboard-modal-body">
+                {loading ? (
+                  <p className="dashboard-modal-empty">Loading Shift B assignments...</p>
+                ) : shiftAssignmentsError ? (
+                  <div className="dashboard-modal-message dashboard-modal-message-error">
+                    Unable to load Shift B assignments: {shiftAssignmentsError}
+                  </div>
+                ) : shiftAssignments.shiftB.length === 0 ? (
+                  <p className="dashboard-modal-empty">No personnel are assigned to Shift B today.</p>
+                ) : (
+                  <div className="dashboard-modal-table-wrap">
+                    <table className="dashboard-modal-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Rank</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shiftAssignments.shiftB.map((person) => (
+                          <tr key={person.admin_id}>
+                            <td>{person.name}</td>
+                            <td>{person.rank}</td>
                           </tr>
                         ))}
                       </tbody>

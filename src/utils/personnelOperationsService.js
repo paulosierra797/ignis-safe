@@ -177,6 +177,52 @@ export const getPendingLeaveRequests = async () => {
   }
 };
 
+export const getAllLeaveRequests = async () => {
+  try {
+    const [requestsRes, usersRes] = await Promise.all([
+      supabase
+        .from(LEAVE_REQUESTS_TABLE)
+        .select('request_id, personnel_id, start_date, end_date, reason, status, approved_by, approved_at, rejection_reason, created_at, updated_at')
+        .order('created_at', { ascending: false }),
+      getAllUsers()
+    ]);
+
+    if (requestsRes.error) throw requestsRes.error;
+    if (usersRes.error) throw new Error(usersRes.error);
+
+    const usersById = new Map((usersRes.data || []).map((user) => [user.admin_id, user]));
+
+    const formatUserLabel = (user) => {
+      if (!user) return 'Unknown';
+      return [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.email || 'Unknown';
+    };
+
+    const rows = (requestsRes.data || []).map((row) => {
+      const personnel = usersById.get(row.personnel_id);
+      const reviewer = row.approved_by ? usersById.get(row.approved_by) : null;
+
+      return {
+        ...row,
+        personnel_name: formatUserLabel(personnel),
+        personnel_rank: personnel?.rank || '',
+        personnel_email: personnel?.email || '',
+        reviewed_by_name: reviewer ? formatUserLabel(reviewer) : null
+      };
+    });
+
+    return { data: rows, error: null };
+  } catch (error) {
+    console.error('Error fetching leave request history:', error);
+    if (error?.code === '42P01' || String(error?.message || '').toLowerCase().includes('leave_requests')) {
+      return {
+        data: [],
+        error: 'Leave request table is missing. Run leave_requests_setup.sql first, then try again.'
+      };
+    }
+    return { data: [], error: error.message };
+  }
+};
+
 export const approveLeaveRequest = async ({ requestId, personnelId, startDate, endDate, approvedBy }) => {
   try {
     const { data: accountUpdate, error: accountError } = await supabase
@@ -291,7 +337,8 @@ endDate: toIsoDate(end)
     }
 
     const config = configResult.data;
-    const personnelRows = Array.isArray(personnelResult.data) ? personnelResult.data : [];
+    const personnelRows = (Array.isArray(personnelResult.data) ? personnelResult.data : [])
+      .filter((personnel) => String(personnel.role || '').toLowerCase() === 'personnel');
     const assignments = Array.isArray(assignmentResult.data) ? assignmentResult.data : [];
     const personnelById = new Map(personnelRows.map((personnel) => [personnel.admin_id, personnel]));
 

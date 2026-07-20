@@ -25,6 +25,7 @@ import Progress from './components/Progress';
 import AuditLogs from './components/AuditLogs';
 import Announcements from './components/Announcements';
 import PersonnelProfile from './components/PersonnelProfile';
+import AdminProfile from './components/AdminProfile';
 import History from './components/History';
 import PersonnelOperations from './components/PersonnelOperations';
 import AdminReports from './components/AdminReports';
@@ -63,6 +64,7 @@ function App() {
               <Route path="/personnel/operations" element={<ProtectedRoute><PersonnelOperations /></ProtectedRoute>} />
               <Route path="/personnel/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/profile" element={<ProtectedRoute><AdminProfile /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
         
               <Route path="/attendance-admin" element={<ProtectedRoute><AttendanceAdmin /></ProtectedRoute>} />

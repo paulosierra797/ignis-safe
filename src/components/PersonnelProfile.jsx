@@ -41,7 +41,7 @@ export default function PersonnelProfile() {
   const [rankCustom, setRankCustom] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [profileImage, setProfileImage] = useState('/user-avatar.png');
+  const [profileImage, setProfileImage] = useState('/user-avatar.svg');
   const resolvedRank = rank === 'OTHER' ? rankCustom.trim() : rank;
   const displayName = `${resolvedRank || currentUser?.rank || ''} ${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'Personnel';
   const displayPhone = currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || currentUser?.mobile || 'Not available';
@@ -386,7 +386,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
           <div className="profile-layout">
             <aside className="profile-summary-card">
               <div className="profile-picture profile-picture-large">
-                <img src={profileImage} alt="Profile" onError={(e) => (e.target.src = '/user-avatar.png')} />
+                <img src={profileImage} alt="Profile" onError={(e) => (e.target.src = '/user-avatar.svg')} />
                 <button
                   className="edit-picture-btn"
                   onClick={() => document.getElementById('profileImageInput').click()}

@@ -25,6 +25,22 @@ const DEFAULT_CHARTS = {
   attemptsByModule: { labels: [], attempts: [] },
 };
 
+const ACTIVITY_TIMEFRAME_OPTIONS = ['Last 7 Days', 'Last 30 Days', 'This Month', 'This Year'];
+
+const getActivityTrendsParams = (option) => {
+  switch (option) {
+    case 'Last 30 Days':
+      return { timeframe: 'Last 30 days', activityTrendsView: 'Days30' };
+    case 'This Month':
+      return { timeframe: 'All-time', activityTrendsView: 'Month' };
+    case 'This Year':
+      return { timeframe: 'All-time', activityTrendsView: 'Year' };
+    case 'Last 7 Days':
+    default:
+      return { timeframe: 'Last 7 days', activityTrendsView: 'Week' };
+  }
+};
+
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -66,6 +82,8 @@ export default function Dashboard() {
  
   const [analyticsStats, setAnalyticsStats] = useState(DEFAULT_ANALYTICS_STATS);
   const [chartsData, setChartsData] = useState(DEFAULT_CHARTS);
+  const [activityTimeframe, setActivityTimeframe] = useState('Last 7 Days');
+  const [activityTrendsData, setActivityTrendsData] = useState(DEFAULT_CHARTS.activityTrends);
   const [mobileStats, setMobileStats] = useState({
     totalRegistered: 0,
     activeUsersToday: 0,
@@ -206,8 +224,35 @@ if (currentKnowledge < 40) {
     return undefined;
   }, [fetchDashboardData]);
 
-  const recentActivityLabels = chartsData.activityTrends.labels.slice(-7);
-  const recentActivityValues = chartsData.activityTrends.submitted.slice(-7);
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadActivityTrends = async () => {
+      const { data, error } = await getAnalyticsChartsData({
+        people: 'All',
+        topic: 'All',
+        ...getActivityTrendsParams(activityTimeframe),
+      });
+
+      if (!isMounted) return;
+
+      if (error) {
+        console.error('Error fetching activity trends:', error);
+        return;
+      }
+
+      setActivityTrendsData(data?.activityTrends || DEFAULT_CHARTS.activityTrends);
+    };
+
+    loadActivityTrends();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activityTimeframe]);
+
+  const recentActivityLabels = activityTrendsData.labels;
+  const recentActivityValues = activityTrendsData.submitted;
   const activityBarHeights = getBarHeights(recentActivityValues);
 
   const completionRows = chartsData.completionByModule.labels
@@ -597,10 +642,23 @@ if (currentKnowledge < 40) {
           >
             <div className="chart-header">
               <h3>User Activity Trends</h3>
-              <select className="chart-select">
-                <option>Last 7 Days</option>
-                <option>Last 30 Days</option>
-                <option>Last 3 Months</option>
+              <select
+                className="chart-select"
+                value={activityTimeframe}
+                aria-label="User Activity Trends timeframe"
+                onClick={(event) => event.stopPropagation()}
+                onMouseDown={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+                onChange={(event) => {
+                  event.stopPropagation();
+                  setActivityTimeframe(event.target.value);
+                }}
+              >
+                {ACTIVITY_TIMEFRAME_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="chart-body">

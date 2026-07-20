@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { supabase } from "../utils/supabaseClient";
@@ -14,8 +14,10 @@ import {
 } from '../utils/usersService';
 import {
   getPendingLeaveRequests,
+  getAllLeaveRequests,
   approveLeaveRequest,
   rejectLeaveRequest,
+  getPersonnelShiftSchedule,
   assignPersonnelToShift,
   getPersonnelShiftAssignments,
   getShiftAssignmentsForPeriod,
@@ -28,12 +30,20 @@ import {
   getProfileFieldLabel
 } from '../utils/profileChangeRequestsService';
 import { useUser } from '../context/UserContext';
+import { getManilaToday } from '../utils/dateUtils';
 
 const validPersonnelNamePattern = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
 const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const contactNumberRegex = /^09\d{9}$/;
 const ADD_PERSONNEL_TIMEOUT_MS = 60000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const toIsoDate = (date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 
 export default function Accounts() {
@@ -62,10 +72,16 @@ export default function Accounts() {
   const [pendingLeaveRequests, setPendingLeaveRequests] = useState([]);
   const [pendingRequestMessage, setPendingRequestMessage] = useState('');
   const [processingRequestId, setProcessingRequestId] = useState('');
+  const [leaveRequestHistory, setLeaveRequestHistory] = useState([]);
+  const [leaveHistoryLoading, setLeaveHistoryLoading] = useState(true);
+  const [leaveHistoryMessage, setLeaveHistoryMessage] = useState('');
+  const [leaveHistoryStatusFilter, setLeaveHistoryStatusFilter] = useState('all');
+  const [leaveHistorySearch, setLeaveHistorySearch] = useState('');
   const [profileChangeRequests, setProfileChangeRequests] = useState([]);
   const [profileRequestsLoading, setProfileRequestsLoading] = useState(true);
   const [profileRequestMessage, setProfileRequestMessage] = useState('');
-  const [profileRequestStatusFilter, setProfileRequestStatusFilter] = useState('pending');
+  const [profileHistoryStatusFilter, setProfileHistoryStatusFilter] = useState('all');
+  const [profileHistorySearch, setProfileHistorySearch] = useState('');
   const [processingProfileRequestId, setProcessingProfileRequestId] = useState('');
   const [pendingRejectRequest, setPendingRejectRequest] = useState(null);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
@@ -82,11 +98,14 @@ export default function Accounts() {
   const [shiftMessage, setShiftMessage] = useState({ type: '', text: '' });
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [shiftSchedule, setShiftSchedule] = useState({ shift_a_dates: [], shift_b_dates: [] });
-  const [shiftScheduleLoading, setShiftScheduleLoading] = useState(true);
   const [shiftSummaryMonth, setShiftSummaryMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [shiftSummaryRows, setShiftSummaryRows] = useState([]);
+  const [shiftSummaryLoading, setShiftSummaryLoading] = useState(true);
+  const [shiftSummaryError, setShiftSummaryError] = useState('');
+  const shiftSummaryRequestIdRef = useRef(0);
   const [shiftSelection, setShiftSelection] = useState({ shift_a_dates: [], shift_b_dates: [] });
   const [activeShift, setActiveShift] = useState('A');
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -111,13 +130,6 @@ export default function Accounts() {
   });
   const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
   const isOnLeave = (account) => String(account?.status || '').toLowerCase() === 'on leave';
-
-  const toIsoDate = (date) => {
-    const year = date.getFullYear();
-    const month = `${date.getMonth() + 1}`.padStart(2, '0');
-    const day = `${date.getDate()}`.padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   const fromIsoDate = (dateValue) => {
     const parts = String(dateValue || '').split('-');
@@ -162,6 +174,7 @@ export default function Accounts() {
     fetchAccounts();
     loadShiftSchedule();
     loadPendingLeaveRequests();
+    loadLeaveRequestHistory();
     loadProfileChangeRequests();
   }, []);
 
@@ -204,14 +217,6 @@ export default function Accounts() {
     return formatPersonnelName(match);
   };
 
-  const isDateWithinInclusiveRange = (dateValue, startDate, endDate) => {
-    if (!dateValue || !startDate || !endDate) {
-      return false;
-    }
-
-    return dateValue >= startDate && dateValue <= endDate;
-  };
-
   const formatCalendarMonthLabel = (dateValue) => {
     try {
       return dateValue.toLocaleDateString('en-US', {
@@ -240,11 +245,49 @@ export default function Accounts() {
     });
   };
 
+  const loadShiftSummary = useCallback(async (monthDate) => {
+    const requestId = shiftSummaryRequestIdRef.current + 1;
+    shiftSummaryRequestIdRef.current = requestId;
+
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const startDate = toIsoDate(new Date(year, month, 1));
+    const endDate = toIsoDate(new Date(year, month + 1, 0));
+
+    setShiftSummaryLoading(true);
+    setShiftSummaryError('');
+
+    const { data, error } = await getPersonnelShiftSchedule({ startDate, endDate });
+    if (requestId !== shiftSummaryRequestIdRef.current) {
+      return;
+    }
+
+    if (error) {
+      setShiftSummaryRows([]);
+      setShiftSummaryError(error);
+    } else {
+      setShiftSummaryRows(Array.isArray(data?.rows) ? data.rows : []);
+    }
+
+    setShiftSummaryLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadShiftSummary(shiftSummaryMonth);
+
+    return () => {
+      shiftSummaryRequestIdRef.current += 1;
+    };
+  }, [loadShiftSummary, shiftSummaryMonth]);
+
   const shiftASet = new Set(shiftSelection.shift_a_dates || []);
   const shiftBSet = new Set(shiftSelection.shift_b_dates || []);
 
   const toggleCalendarDate = (date) => {
     const targetIsoDate = toIsoDate(date);
+    if (targetIsoDate < getManilaToday()) {
+      return;
+    }
 
     setShiftSelection((prev) => {
       const activeKey = activeShift === 'A' ? 'shift_a_dates' : 'shift_b_dates';
@@ -269,9 +312,10 @@ export default function Accounts() {
 
   const resetActiveShiftDates = () => {
     const activeKey = activeShift === 'A' ? 'shift_a_dates' : 'shift_b_dates';
+    const todayIso = getManilaToday();
     setShiftSelection((prev) => ({
       ...prev,
-      [activeKey]: []
+      [activeKey]: (prev[activeKey] || []).filter((dateValue) => dateValue < todayIso)
     }));
   };
 
@@ -294,22 +338,16 @@ export default function Accounts() {
   };
 
   const loadShiftSchedule = async () => {
-    setShiftScheduleLoading(true);
-
-    try {
-      const { data, error } = await getShiftScheduleConfig();
-      if (error) {
-        console.warn('Unable to load shift schedule:', error);
-        return;
-      }
-
-      setShiftSchedule({
-        shift_a_dates: data?.shift_a_dates || [],
-        shift_b_dates: data?.shift_b_dates || []
-      });
-    } finally {
-      setShiftScheduleLoading(false);
+    const { data, error } = await getShiftScheduleConfig();
+    if (error) {
+      console.warn('Unable to load shift schedule:', error);
+      return;
     }
+
+    setShiftSchedule({
+      shift_a_dates: data?.shift_a_dates || [],
+      shift_b_dates: data?.shift_b_dates || []
+    });
   };
 
   const fetchAccounts = async () => {
@@ -343,6 +381,21 @@ export default function Accounts() {
     setPendingRequestsLoading(false);
   };
 
+  const loadLeaveRequestHistory = async () => {
+    setLeaveHistoryLoading(true);
+    setLeaveHistoryMessage('');
+
+    const { data, error } = await getAllLeaveRequests();
+    if (error) {
+      setLeaveHistoryMessage(error);
+      setLeaveRequestHistory([]);
+    } else {
+      setLeaveRequestHistory(data || []);
+    }
+
+    setLeaveHistoryLoading(false);
+  };
+
   const loadProfileChangeRequests = async () => {
     setProfileRequestsLoading(true);
     setProfileRequestMessage('');
@@ -361,10 +414,12 @@ export default function Accounts() {
   useEffect(() => {
     const handleDataChanged = (event) => {
       const scope = event?.detail?.scope || '';
-      if (!scope || scope === 'users' || scope === 'profile' || scope === 'shift-schedule') {
+      if (!scope || scope === 'users' || scope === 'profile' || scope === 'shift-schedule' || scope === 'leave_requests') {
         fetchAccounts();
         loadShiftSchedule();
+        loadShiftSummary(shiftSummaryMonth);
         loadPendingLeaveRequests();
+        loadLeaveRequestHistory();
       }
       if (!scope || scope === 'profile_change_requests') {
         loadProfileChangeRequests();
@@ -377,7 +432,7 @@ export default function Accounts() {
     }
 
     return undefined;
-  }, []);
+  }, [loadShiftSummary, shiftSummaryMonth]);
 
   const handleApproveLeaveRequest = async (request) => {
     if (!request?.request_id || !request?.personnel_id) {
@@ -414,6 +469,10 @@ export default function Accounts() {
           : account
       )
     );
+    await Promise.all([
+      loadShiftSummary(shiftSummaryMonth),
+      loadLeaveRequestHistory()
+    ]);
 
     const target = accounts.find((account) => account.admin_id === request.personnel_id);
     logAdminActivity({
@@ -480,6 +539,7 @@ export default function Accounts() {
     }
 
     setPendingLeaveRequests((prev) => prev.filter((row) => row.request_id !== request.request_id));
+    await loadLeaveRequestHistory();
 
     const target = accounts.find((account) => account.admin_id === request.personnel_id);
     logAdminActivity({
@@ -506,13 +566,69 @@ export default function Accounts() {
     setRejectReasonInput('');
   };
 
-  const filteredProfileChangeRequests = profileChangeRequests.filter((request) =>
-    profileRequestStatusFilter === 'all' || request.status === profileRequestStatusFilter
+  const formatRequestStatus = (status) => {
+    if (!status) return '—';
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  const matchesLeaveHistorySearch = (request, query) => {
+    if (!query) return true;
+
+    const haystack = [
+      request.personnel_name,
+      request.personnel_rank,
+      request.start_date,
+      request.end_date,
+      request.created_at,
+      request.approved_at,
+      formatLeaveDate(request.start_date),
+      formatLeaveDate(request.end_date),
+      request.created_at ? new Date(request.created_at).toLocaleDateString('en-US') : '',
+      request.approved_at ? new Date(request.approved_at).toLocaleDateString('en-US') : ''
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return haystack.includes(query);
+  };
+
+  const filteredLeaveRequestHistory = leaveRequestHistory.filter((request) => {
+    const matchesStatus =
+      leaveHistoryStatusFilter === 'all' || request.status === leaveHistoryStatusFilter;
+    if (!matchesStatus) return false;
+    return matchesLeaveHistorySearch(request, leaveHistorySearch.trim().toLowerCase());
+  });
+
+  const pendingProfileChangeRequests = profileChangeRequests.filter(
+    (request) => request.status === 'pending'
   );
 
-  const pendingProfileChangeRequestCount = profileChangeRequests.filter(
-    (request) => request.status === 'pending'
-  ).length;
+  const pendingProfileChangeRequestCount = pendingProfileChangeRequests.length;
+
+  const matchesProfileHistorySearch = (request, query) => {
+    if (!query) return true;
+
+    const haystack = [
+      request.personnel_name,
+      request.field_name,
+      getProfileFieldLabel(request.field_name),
+      request.current_value,
+      request.requested_value
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return haystack.includes(query);
+  };
+
+  const filteredProfileChangeHistory = profileChangeRequests.filter((request) => {
+    const matchesStatus =
+      profileHistoryStatusFilter === 'all' || request.status === profileHistoryStatusFilter;
+    if (!matchesStatus) return false;
+    return matchesProfileHistorySearch(request, profileHistorySearch.trim().toLowerCase());
+  });
 
   const handleApproveProfileChangeRequest = async (request) => {
     if (!request?.request_id || processingProfileRequestId) {
@@ -1087,6 +1203,7 @@ const permissions = getDefaultPermissions(formData.role);
     }
 
     await loadShiftAssignmentsForSchedule();
+    await loadShiftSummary(shiftSummaryMonth);
 
     if (selectedShiftPersonnel?.admin_id) {
       await loadPersonnelShiftAssignments(selectedShiftPersonnel.admin_id);
@@ -1176,6 +1293,9 @@ const permissions = getDefaultPermissions(formData.role);
     if (selectedShiftPersonnel) {
       await loadPersonnelShiftAssignments(selectedShiftPersonnel.admin_id);
     }
+
+    await loadShiftAssignmentsForSchedule();
+    await loadShiftSummary(shiftSummaryMonth);
 
     setPersonnelShiftMessage({ type: 'success', text: 'Shift assignment removed successfully.' });
   };
@@ -1326,6 +1446,7 @@ const permissions = getDefaultPermissions(formData.role);
     }
 
     setShiftSchedule(payload);
+    await loadShiftSummary(shiftSummaryMonth);
 
     logAdminActivity({
       actorId: currentUser?.admin_id || null,
@@ -1426,6 +1547,7 @@ const permissions = getDefaultPermissions(formData.role);
           : account
       )
     );
+    await loadShiftSummary(shiftSummaryMonth);
 
     logAdminActivity({
       actorId: currentUser?.admin_id || null,
@@ -1488,6 +1610,7 @@ const permissions = getDefaultPermissions(formData.role);
           : row
       )
     );
+    await loadShiftSummary(shiftSummaryMonth);
 
     logAdminActivity({
       actorId: currentUser?.admin_id || null,
@@ -1540,10 +1663,12 @@ const permissions = getDefaultPermissions(formData.role);
     return matchSearch && matchRank && matchStatus;
   });
 
-  const shiftScheduleASet = new Set(shiftSchedule.shift_a_dates || []);
-  const shiftScheduleBSet = new Set(shiftSchedule.shift_b_dates || []);
   const shiftSummaryCalendarCells = getCalendarCells(shiftSummaryMonth);
   const shiftSummaryMonthLabel = formatCalendarMonthLabel(shiftSummaryMonth);
+  const shiftSummaryTodayIso = getManilaToday();
+  const shiftSummaryRowsByDate = new Map(
+    shiftSummaryRows.map((row) => [row.date, row])
+  );
 
   const handleShiftSummaryMonthShift = (offset) => {
     setShiftSummaryMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
@@ -1601,74 +1726,68 @@ const permissions = getDefaultPermissions(formData.role);
           <div className="shift-summary-calendar-legend">
             <span><i className="legend-dot legend-shift-a" /> Shift A</span>
             <span><i className="legend-dot legend-shift-b" /> Shift B</span>
-            <span><i className="legend-dot legend-active" /> Both</span>
+            <span><i className="legend-dot legend-on-duty" /> On Duty</span>
+            <span><i className="legend-dot legend-on-leave" /> On Leave</span>
+            <span><i className="legend-dot legend-off-duty" /> Off Duty</span>
           </div>
 
-          <div className="shift-summary-calendar-grid shift-calendar-weekdays">
+          <div className="shift-summary-calendar-scroll">
+          <div className="shift-summary-calendar-grid shift-summary-calendar-weekdays">
             {CALENDAR_WEEKDAYS.map((weekday) => (
               <span key={weekday}>{weekday}</span>
             ))}
           </div>
 
-          <div className="shift-summary-calendar-grid shift-calendar-days">
-            {shiftScheduleLoading ? (
+          <div className="shift-summary-calendar-grid shift-summary-calendar-days">
+            {shiftSummaryLoading ? (
               <div className="shift-summary-calendar-loading">Loading shift schedule...</div>
+            ) : shiftSummaryError ? (
+              <div className="shift-summary-calendar-error" role="alert">
+                Unable to load the personnel schedule: {shiftSummaryError}
+              </div>
             ) : (
               shiftSummaryCalendarCells.map((dayDate, index) => {
                 if (!dayDate) {
-                  return <span key={`shift-empty-${index}`} className="shift-calendar-empty" />;
+                  return <span key={`shift-empty-${index}`} className="shift-summary-calendar-empty" />;
                 }
 
                 const isoDate = toIsoDate(dayDate);
-                const selectedA = shiftScheduleASet.has(isoDate);
-                const selectedB = shiftScheduleBSet.has(isoDate);
-                const leavePersonnel = accounts
-                  .filter((account) => isPersonnelAccount(account))
-                  .filter((account) => isOnLeave(account))
-                  .filter((account) => isDateWithinInclusiveRange(
-                    isoDate,
-                    account.leave_start_date,
-                    account.leave_end_date
-                  ))
-                  .map((account) => ({
-                    admin_id: account.admin_id,
-                    name: formatPersonnelName(account)
-                  }));
-
-                const uniqueLeavePersonnel = Array.from(
-                  new Map(leavePersonnel.map((personnel) => [personnel.admin_id, personnel])).values()
-                );
+                const row = shiftSummaryRowsByDate.get(isoDate);
+                const shiftLabel = row?.shift || 'Off Duty';
+                const onDutyCount = row?.onDutyCount ?? 0;
+                const onLeaveCount = row?.onLeaveCount ?? 0;
+                const isPastDate = isoDate < shiftSummaryTodayIso;
+                const isToday = isoDate === shiftSummaryTodayIso;
+                const shiftClass = shiftLabel === 'Shift A'
+                  ? 'shift-a'
+                  : shiftLabel === 'Shift B'
+                    ? 'shift-b'
+                    : shiftLabel === 'Shift A & B'
+                      ? 'shift-a-b'
+                      : 'off-duty';
 
                 return (
                   <div
                     key={isoDate}
-                    className={`shift-summary-day ${selectedA ? 'shift-a' : ''} ${selectedB ? 'shift-b' : ''} ${selectedA && selectedB ? 'both' : ''}`}
+                    className={`shift-summary-day ${isPastDate ? 'is-past-date' : ''} ${isToday ? 'today' : ''}`}
+                    aria-disabled={isPastDate || undefined}
+                    aria-label={`${row?.displayDate || isoDate}: ${shiftLabel}, On Duty ${onDutyCount}, On Leave ${onLeaveCount}${isPastDate ? ', past date' : ''}`}
                   >
-                    <span className="shift-summary-day-number">{dayDate.getDate()}</span>
-                    <div className="shift-summary-day-badges">
-                      {selectedA && <span className="shift-summary-day-badge shift-summary-day-badge-a">A</span>}
-                      {selectedB && <span className="shift-summary-day-badge shift-summary-day-badge-b">B</span>}
-                      {!selectedA && !selectedB && <span className="shift-summary-day-empty">Off</span>}
+                    <div className="shift-summary-day-top">
+                      <span className="shift-summary-day-number">{dayDate.getDate()}</span>
+                      <span className={`shift-summary-shift-label ${shiftClass}`}>{shiftLabel}</span>
                     </div>
-
-                    <div className="shift-summary-day-leave">
-                      <span className="shift-summary-day-leave-label">On Leave</span>
-                      <div className="shift-summary-day-leave-list">
-                        {uniqueLeavePersonnel.length ? (
-                          uniqueLeavePersonnel.map((personnel) => (
-                            <span key={personnel.admin_id} className="shift-summary-leave-pill">
-                              {personnel.name}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="shift-summary-day-leave-empty">None</span>
-                        )}
+                    <div className="shift-summary-day-body">
+                      <div className="shift-summary-day-stats">
+                        <span className="shift-summary-stat shift-summary-stat-duty">On Duty: {onDutyCount}</span>
+                        <span className="shift-summary-stat shift-summary-stat-leave">On Leave: {onLeaveCount}</span>
                       </div>
                     </div>
                   </div>
                 );
               })
             )}
+          </div>
           </div>
         </div>
 
@@ -1801,22 +1920,158 @@ const permissions = getDefaultPermissions(formData.role);
 </div>
         </div>
 
+        <div className="leave-approval-card leave-history-card">
+          <div className="leave-approval-header">
+            <h3>Leave Request History</h3>
+            <span>{filteredLeaveRequestHistory.length} shown</span>
+          </div>
+
+          <div className="request-history-toolbar">
+            <select
+              className="profile-request-status-select"
+              value={leaveHistoryStatusFilter}
+              onChange={(event) => setLeaveHistoryStatusFilter(event.target.value)}
+              aria-label="Filter leave request history by status"
+            >
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <input
+              type="text"
+              className="request-history-search"
+              placeholder="Search by name, rank, or date"
+              value={leaveHistorySearch}
+              onChange={(event) => setLeaveHistorySearch(event.target.value)}
+              aria-label="Search leave request history"
+            />
+          </div>
+
+          {leaveHistoryMessage && (
+            <div className="leave-approval-message">{leaveHistoryMessage}</div>
+          )}
+
+          {leaveHistoryLoading ? (
+            <p className="leave-approval-empty">Loading leave request history...</p>
+          ) : filteredLeaveRequestHistory.length === 0 ? (
+            <p className="leave-approval-empty">No leave request history found.</p>
+          ) : (
+            <div className="leave-approval-table-wrap">
+              <table className="leave-approval-table">
+                <thead>
+                  <tr>
+                    <th>Personnel</th>
+                    <th>Rank</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Date Requested</th>
+                    <th>Date Reviewed</th>
+                    <th>Reviewed By</th>
+                    <th>Rejection Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeaveRequestHistory.map((request) => (
+                    <tr key={request.request_id}>
+                      <td>{request.personnel_name || request.personnel_id}</td>
+                      <td>{request.personnel_rank || '—'}</td>
+                      <td>{formatLeaveDate(request.start_date)}</td>
+                      <td>{formatLeaveDate(request.end_date)}</td>
+                      <td>{request.reason || '—'}</td>
+                      <td className="profile-request-status-cell">
+                        <span className={`profile-request-status profile-request-status-${request.status}`}>
+                          {formatRequestStatus(request.status)}
+                        </span>
+                      </td>
+                      <td>
+                        {request.created_at
+                          ? new Date(request.created_at).toLocaleDateString('en-US')
+                          : '—'}
+                      </td>
+                      <td>
+                        {request.approved_at
+                          ? new Date(request.approved_at).toLocaleDateString('en-US')
+                          : '—'}
+                      </td>
+                      <td>{request.reviewed_by_name || '—'}</td>
+                      <td>
+                        {request.status === 'rejected'
+                          ? (request.rejection_reason || '—')
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="leave-history-mobile-list">
+            {filteredLeaveRequestHistory.map((request) => (
+              <div className="leave-request-card" key={request.request_id}>
+                <h3>{request.personnel_name || request.personnel_id}</h3>
+
+                <p>
+                  <strong>Rank</strong><br />
+                  {request.personnel_rank || '—'}
+                </p>
+
+                <p>
+                  <strong>Leave</strong><br />
+                  {formatLeaveDate(request.start_date)}
+                  {' - '}
+                  {formatLeaveDate(request.end_date)}
+                </p>
+
+                <p>
+                  <strong>Reason</strong><br />
+                  {request.reason || '—'}
+                </p>
+
+                <p>
+                  <strong>Status</strong><br />
+                  <span className={`profile-request-status profile-request-status-${request.status}`}>
+                    {formatRequestStatus(request.status)}
+                  </span>
+                </p>
+
+                <p>
+                  <strong>Date Requested</strong><br />
+                  {request.created_at
+                    ? new Date(request.created_at).toLocaleDateString('en-US')
+                    : '—'}
+                </p>
+
+                <p>
+                  <strong>Date Reviewed</strong><br />
+                  {request.approved_at
+                    ? new Date(request.approved_at).toLocaleDateString('en-US')
+                    : '—'}
+                </p>
+
+                <p>
+                  <strong>Reviewed By</strong><br />
+                  {request.reviewed_by_name || '—'}
+                </p>
+
+                {request.status === 'rejected' && (
+                  <p>
+                    <strong>Rejection Reason</strong><br />
+                    {request.rejection_reason || '—'}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="profile-request-card">
           <div className="leave-approval-header">
-            <h3>Profile Change Requests</h3>
-            <div className="profile-request-header-actions">
-              <select
-                className="profile-request-status-select"
-                value={profileRequestStatusFilter}
-                onChange={(event) => setProfileRequestStatusFilter(event.target.value)}
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-              </select>
-              <span>{pendingProfileChangeRequestCount} pending</span>
-            </div>
+            <h3>Pending Profile Change Requests</h3>
+            <span>{pendingProfileChangeRequestCount} pending</span>
           </div>
 
           {profileRequestMessage && (
@@ -1825,8 +2080,8 @@ const permissions = getDefaultPermissions(formData.role);
 
           {profileRequestsLoading ? (
             <p className="leave-approval-empty">Loading profile change requests...</p>
-          ) : filteredProfileChangeRequests.length === 0 ? (
-            <p className="leave-approval-empty">No profile change requests found.</p>
+          ) : pendingProfileChangeRequests.length === 0 ? (
+            <p className="leave-approval-empty">No pending profile change requests.</p>
           ) : (
             <div className="leave-approval-table-wrap">
               <table className="leave-approval-table">
@@ -1838,12 +2093,11 @@ const permissions = getDefaultPermissions(formData.role);
                     <th>Requested Value</th>
                     <th>Reason</th>
                     <th>Requested</th>
-                    <th>Status</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProfileChangeRequests.map((request) => {
+                  {pendingProfileChangeRequests.map((request) => {
                     const isProcessing = processingProfileRequestId === request.request_id;
 
                     return (
@@ -1857,36 +2111,25 @@ const permissions = getDefaultPermissions(formData.role);
                         <td className="profile-request-value-cell">{request.requested_value}</td>
                         <td>{request.reason || '—'}</td>
                         <td>{new Date(request.requested_at).toLocaleDateString('en-US')}</td>
-                        <td className="profile-request-status-cell">
-                          <span className={`profile-request-status profile-request-status-${request.status}`}>
-                            {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                          </span>
-                        </td>
                         <td>
-                          {request.status === 'pending' ? (
-                            <div className="profile-request-actions">
-                              <button
-                                className="leave-approve-btn"
-                                type="button"
-                                onClick={() => handleApproveProfileChangeRequest(request)}
-                                disabled={isProcessing}
-                              >
-                                {isProcessing ? 'Processing...' : 'Approve'}
-                              </button>
-                              <button
-                                className="leave-reject-btn"
-                                type="button"
-                                onClick={() => handleRejectProfileChangeRequest(request)}
-                                disabled={isProcessing}
-                              >
-                                Reject
-                              </button>
-                            </div>
-                          ) : (
-                            <span className="profile-request-reviewed-by">
-                              {request.reviewed_by_name || '—'}
-                            </span>
-                          )}
+                          <div className="profile-request-actions">
+                            <button
+                              className="leave-approve-btn"
+                              type="button"
+                              onClick={() => handleApproveProfileChangeRequest(request)}
+                              disabled={isProcessing}
+                            >
+                              {isProcessing ? 'Processing...' : 'Approve'}
+                            </button>
+                            <button
+                              className="leave-reject-btn"
+                              type="button"
+                              onClick={() => handleRejectProfileChangeRequest(request)}
+                              disabled={isProcessing}
+                            >
+                              Reject
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1897,7 +2140,7 @@ const permissions = getDefaultPermissions(formData.role);
           )}
 
           <div className="profile-request-mobile-list">
-            {filteredProfileChangeRequests.map((request) => {
+            {pendingProfileChangeRequests.map((request) => {
               const isProcessing = processingProfileRequestId === request.request_id;
 
               return (
@@ -1926,34 +2169,157 @@ const permissions = getDefaultPermissions(formData.role);
                     {new Date(request.requested_at).toLocaleDateString('en-US')}
                   </p>
 
-                  <p>
-                    <strong>Status</strong><br />
-                    <span className={`profile-request-status profile-request-status-${request.status}`}>
-                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                    </span>
-                  </p>
-
-                  {request.status === 'pending' && (
-                    <div className="leave-card-actions">
-                      <button
-                        className="leave-approve-btn"
-                        onClick={() => handleApproveProfileChangeRequest(request)}
-                        disabled={isProcessing}
-                      >
-                        Approve
-                      </button>
-                      <button
-                        className="leave-reject-btn"
-                        onClick={() => handleRejectProfileChangeRequest(request)}
-                        disabled={isProcessing}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  )}
+                  <div className="leave-card-actions">
+                    <button
+                      className="leave-approve-btn"
+                      onClick={() => handleApproveProfileChangeRequest(request)}
+                      disabled={isProcessing}
+                    >
+                      Approve
+                    </button>
+                    <button
+                      className="leave-reject-btn"
+                      onClick={() => handleRejectProfileChangeRequest(request)}
+                      disabled={isProcessing}
+                    >
+                      Reject
+                    </button>
+                  </div>
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        <div className="profile-request-card profile-history-card">
+          <div className="leave-approval-header">
+            <h3>Profile Change Request History</h3>
+            <span>{filteredProfileChangeHistory.length} shown</span>
+          </div>
+
+          <div className="request-history-toolbar">
+            <select
+              className="profile-request-status-select"
+              value={profileHistoryStatusFilter}
+              onChange={(event) => setProfileHistoryStatusFilter(event.target.value)}
+              aria-label="Filter profile change history by status"
+            >
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+            <input
+              type="text"
+              className="request-history-search"
+              placeholder="Search by name, field, or value"
+              value={profileHistorySearch}
+              onChange={(event) => setProfileHistorySearch(event.target.value)}
+              aria-label="Search profile change request history"
+            />
+          </div>
+
+          {profileRequestsLoading ? (
+            <p className="leave-approval-empty">Loading profile change request history...</p>
+          ) : filteredProfileChangeHistory.length === 0 ? (
+            <p className="leave-approval-empty">No profile change request history found.</p>
+          ) : (
+            <div className="leave-approval-table-wrap">
+              <table className="leave-approval-table">
+                <thead>
+                  <tr>
+                    <th>Personnel</th>
+                    <th>Requested Field</th>
+                    <th>Previous Value</th>
+                    <th>Requested Value</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Date Requested</th>
+                    <th>Date Reviewed</th>
+                    <th>Reviewed By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProfileChangeHistory.map((request) => (
+                    <tr key={request.request_id}>
+                      <td className="profile-request-personnel-cell">
+                        <div className="profile-request-personnel">{request.personnel_name}</div>
+                        <div className="profile-request-email">{request.personnel_email}</div>
+                      </td>
+                      <td>{getProfileFieldLabel(request.field_name)}</td>
+                      <td>{request.current_value || '—'}</td>
+                      <td className="profile-request-value-cell">{request.requested_value}</td>
+                      <td>{request.reason || '—'}</td>
+                      <td className="profile-request-status-cell">
+                        <span className={`profile-request-status profile-request-status-${request.status}`}>
+                          {formatRequestStatus(request.status)}
+                        </span>
+                      </td>
+                      <td>
+                        {request.requested_at
+                          ? new Date(request.requested_at).toLocaleDateString('en-US')
+                          : '—'}
+                      </td>
+                      <td>
+                        {request.reviewed_at
+                          ? new Date(request.reviewed_at).toLocaleDateString('en-US')
+                          : '—'}
+                      </td>
+                      <td>{request.reviewed_by_name || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="profile-history-mobile-list">
+            {filteredProfileChangeHistory.map((request) => (
+              <div className="leave-request-card" key={request.request_id}>
+                <h3>{request.personnel_name}</h3>
+
+                <p>
+                  <strong>Requested Field</strong><br />
+                  {getProfileFieldLabel(request.field_name)}
+                </p>
+
+                <p>
+                  <strong>Previous → Requested</strong><br />
+                  {request.current_value || '—'} → {request.requested_value}
+                </p>
+
+                <p>
+                  <strong>Reason</strong><br />
+                  {request.reason || '—'}
+                </p>
+
+                <p>
+                  <strong>Status</strong><br />
+                  <span className={`profile-request-status profile-request-status-${request.status}`}>
+                    {formatRequestStatus(request.status)}
+                  </span>
+                </p>
+
+                <p>
+                  <strong>Date Requested</strong><br />
+                  {request.requested_at
+                    ? new Date(request.requested_at).toLocaleDateString('en-US')
+                    : '—'}
+                </p>
+
+                <p>
+                  <strong>Date Reviewed</strong><br />
+                  {request.reviewed_at
+                    ? new Date(request.reviewed_at).toLocaleDateString('en-US')
+                    : '—'}
+                </p>
+
+                <p>
+                  <strong>Reviewed By</strong><br />
+                  {request.reviewed_by_name || '—'}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -2098,7 +2464,7 @@ const permissions = getDefaultPermissions(formData.role);
           
         </div>
         <div className="accounts-mobile-list">
-  {filteredAccounts.map((account, index) => (
+  {filteredAccounts.map((account) => (
     <div
       className="account-card"
       key={account.admin_id || account.id}
@@ -2592,7 +2958,12 @@ const permissions = getDefaultPermissions(formData.role);
                     </button>
                   </div>
 
-                  <button className="shift-picker-clear" type="button" onClick={resetActiveShiftDates}>
+                  <button
+                    className="shift-picker-clear"
+                    type="button"
+                    onClick={resetActiveShiftDates}
+                    title="Clear today and future dates; historical dates are preserved"
+                  >
                     Clear {activeShift}
                   </button>
                 </div>
@@ -2601,6 +2972,7 @@ const permissions = getDefaultPermissions(formData.role);
                   <button
                     className="shift-calendar-nav"
                     type="button"
+                    aria-label="Previous shift calendar month"
                     onClick={() =>
                       setCalendarMonth(
                         (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)
@@ -2641,6 +3013,7 @@ const permissions = getDefaultPermissions(formData.role);
                   <button
                     className="shift-calendar-nav"
                     type="button"
+                    aria-label="Next shift calendar month"
                     onClick={() =>
                       setCalendarMonth(
                         (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)
@@ -2668,14 +3041,17 @@ const permissions = getDefaultPermissions(formData.role);
                     const selectedB = shiftBSet.has(isoDate);
                     const selectedActive =
                       (activeShift === 'A' && selectedA) || (activeShift === 'B' && selectedB);
+                    const isPastDate = isoDate < shiftSummaryTodayIso;
 
                     return (
                       <button
                         key={isoDate}
                         type="button"
-                        className={`shift-calendar-day ${selectedA ? 'shift-a' : ''} ${selectedB ? 'shift-b' : ''} ${selectedActive ? 'active' : ''}`}
+                        className={`shift-calendar-day ${selectedA ? 'shift-a' : ''} ${selectedB ? 'shift-b' : ''} ${selectedActive ? 'active' : ''} ${isPastDate ? 'is-past-date' : ''}`}
                         onClick={() => toggleCalendarDate(dayDate)}
-                        title={`${isoDate}${selectedA ? ' - Shift A' : ''}${selectedB ? ' - Shift B' : ''}`}
+                        disabled={isPastDate}
+                        aria-label={`${isoDate}${selectedA ? ', Shift A' : ''}${selectedB ? ', Shift B' : ''}${isPastDate ? ', past date, editing disabled' : ''}`}
+                        title={`${isoDate}${selectedA ? ' - Shift A' : ''}${selectedB ? ' - Shift B' : ''}${isPastDate ? ' - Past date (editing disabled)' : ''}`}
                       >
                         {dayDate.getDate()}
                       </button>

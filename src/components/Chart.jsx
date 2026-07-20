@@ -11,6 +11,8 @@ import { logAdminActivity } from '../utils/usersService';
 import './Chart.css';
 
 const LEGACY_AVATAR_PLACEHOLDER_PATH = '/user-avatar.png';
+const AVATAR_MAX_SIZE = 5 * 1024 * 1024;
+const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 
 const buildAvatarPlaceholder = (name = '') => {
   const safeName = String(name || '').trim();
@@ -186,6 +188,92 @@ const applyNodeUpdate = (data, id, field, value) => ({
   departments: data.departments.map((dept) => updateNode(dept, id, field, value))
 });
 
+const flattenNodes = (data) => {
+  const nodes = [data.top, data.second];
+  data.departments.forEach((dept) => {
+    nodes.push(dept);
+    (dept.units || []).forEach((unit) => nodes.push(unit));
+  });
+  return nodes;
+};
+
+// Builds the list of changed fields (name/title/avatar) between the snapshot taken
+// when edit mode was entered and the current in-progress edits, so it can be shown
+// in the confirmation modal before anything is persisted.
+const buildChangeList = (original, current, pendingAvatarFiles) => {
+  const originalMap = new Map(flattenNodes(original).map((node) => [node.id, node]));
+  const changes = [];
+
+  flattenNodes(current).forEach((node) => {
+    const prev = originalMap.get(node.id);
+    if (!prev) return;
+
+    if (prev.name !== node.name) {
+      changes.push({
+        nodeId: node.id,
+        field: 'name',
+        label: 'Name',
+        oldValue: prev.name,
+        newValue: node.name
+      });
+    }
+
+    if (prev.title !== node.title) {
+      changes.push({
+        nodeId: node.id,
+        field: 'title',
+        label: 'Position',
+        oldValue: prev.title,
+        newValue: node.title
+      });
+    }
+
+    if (pendingAvatarFiles[node.id]) {
+      changes.push({
+        nodeId: node.id,
+        field: 'avatar',
+        label: 'Profile Image',
+        personName: node.name
+      });
+    }
+  });
+
+  return changes;
+};
+
+const buildActivityDetails = (changes) => {
+  if (!changes.length) return 'Organizational chart was updated.';
+
+  return changes
+    .map((change) => {
+      if (change.field === 'avatar') {
+        return `Updated profile image for ${change.personName}.`;
+      }
+      return `${change.label} changed from "${change.oldValue}" to "${change.newValue}".`;
+    })
+    .join(' ');
+};
+
+const buildSuccessSummary = (changes) =>
+  changes.map((change) => {
+    if (change.field === 'avatar') {
+      return {
+        headline: 'Profile image updated successfully.',
+        detail: `The profile image of ${change.personName} was changed.`
+      };
+    }
+    if (change.field === 'name') {
+      return {
+        headline: 'Name updated successfully.',
+        detail: `${change.oldValue} was changed to ${change.newValue}.`
+      };
+    }
+    return {
+      headline: 'Position updated successfully.',
+      detail: `${change.oldValue} was changed to ${change.newValue}.`
+    };
+  });
+
 const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
   const fallbackAvatar = useMemo(() => buildAvatarPlaceholder(node.name), [node.name]);
   const fileInputRef = useRef(null);
@@ -204,7 +292,7 @@ const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
   }, [node.avatar_url, fallbackAvatar]);
 
   return (
-    <div className="org-card">
+    <div className={`org-card${editMode ? ' org-card-editing' : ''}`}>
       <img
         src={avatarSrc}
         alt={node.name}
@@ -258,6 +346,22 @@ const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
   );
 };
 
+const OrgChangeLine = ({ change }) => {
+  if (change.field === 'avatar') {
+    return (
+      <>
+        <strong>Profile Image:</strong> Profile image of {change.personName} will be changed.
+      </>
+    );
+  }
+
+  return (
+    <>
+      <strong>{change.label}:</strong> {change.oldValue || '—'} → {change.newValue || '—'}
+    </>
+  );
+};
+
 export default function Chart() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editMode, setEditMode] = useState(false);
@@ -265,6 +369,13 @@ export default function Chart() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingChart, setIsLoadingChart] = useState(true);
   const [lastEditedAt, setLastEditedAt] = useState(null);
+  const [pendingAvatarFiles, setPendingAvatarFiles] = useState({});
+  const [avatarPreviewUrls, setAvatarPreviewUrls] = useState({});
+  const [pendingChanges, setPendingChanges] = useState([]);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [successSummary, setSuccessSummary] = useState(null);
+  const [errorInfo, setErrorInfo] = useState(null);
+  const editSnapshotRef = useRef(null);
   const { currentUser } = useUser();
   const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
 
@@ -305,13 +416,26 @@ export default function Chart() {
     loadChartConfig();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      Object.values(avatarPreviewUrls).forEach((url) => URL.revokeObjectURL(url));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const clearPendingAvatars = () => {
+    setAvatarPreviewUrls((prev) => {
+      Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
+      return {};
+    });
+    setPendingAvatarFiles({});
+  };
+
   const persistChart = async (chartData, activityDetails = 'Organizational chart was updated.') => {
-    setIsSaving(true);
     const { updatedAt, error } = await saveOrgChartConfig(chartData, currentUser?.admin_id || null);
-    setIsSaving(false);
 
     if (error) {
-      alert(`Failed to save chart: ${error}`);
+      console.error(error);
       return false;
     }
 
@@ -342,48 +466,114 @@ export default function Chart() {
     setOrgData((prev) => applyNodeUpdate(prev, id, field, value));
   };
 
-  const handleEditToggle = async () => {
+  const handleEditToggle = () => {
     if (!isAdmin || isSaving) {
       return;
     }
 
     if (!editMode) {
+      editSnapshotRef.current = orgData;
       setEditMode(true);
       return;
     }
 
-    const saved = await persistChart(orgData, 'Saved manual edits to organizational chart structure.');
-    if (saved) {
+    const changes = buildChangeList(editSnapshotRef.current || orgData, orgData, pendingAvatarFiles);
+
+    if (changes.length === 0) {
       setEditMode(false);
+      editSnapshotRef.current = null;
+      return;
+    }
+
+    setPendingChanges(changes);
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleCancelConfirm = () => {
+    if (isSaving) return;
+    setIsConfirmModalOpen(false);
+  };
+
+  const handleConfirmSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+
+    try {
+      let finalData = orgData;
+
+      for (const [nodeId, file] of Object.entries(pendingAvatarFiles)) {
+        const { data: imageUrl, error } = await uploadOrgChartAvatar(
+          nodeId,
+          file,
+          currentUser?.admin_id || 'admin'
+        );
+
+        if (error) {
+          throw new Error(error);
+        }
+
+        finalData = applyNodeUpdate(finalData, nodeId, 'avatar_url', imageUrl);
+      }
+
+      const saved = await persistChart(finalData, buildActivityDetails(pendingChanges));
+
+      if (!saved) {
+        throw new Error('Failed to save organizational chart changes.');
+      }
+
+      setOrgData(finalData);
+      clearPendingAvatars();
+      setEditMode(false);
+      editSnapshotRef.current = null;
+      setIsConfirmModalOpen(false);
+      setSuccessSummary(buildSuccessSummary(pendingChanges));
+      setPendingChanges([]);
+    } catch (error) {
+      console.error(error);
+      setIsConfirmModalOpen(false);
+      setErrorInfo({
+        message: 'Failed to save organizational chart changes. Please try again.'
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleAvatarUpload = async (id, event) => {
+  const handleAvatarSelect = (id, event) => {
     if (!isAdmin) {
       return;
     }
 
     const file = event.target.files?.[0];
+    event.target.value = '';
     if (!file) {
       return;
     }
 
-    const { data: imageUrl, error } = await uploadOrgChartAvatar(
-      id,
-      file,
-      currentUser?.admin_id || 'admin'
-    );
-
-    if (error) {
-      alert(`Failed to upload avatar: ${error}`);
+    if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
+      setErrorInfo({ message: 'Invalid file type. Please upload an image (JPEG, PNG, GIF, or WebP).' });
       return;
     }
 
-    const nextData = applyNodeUpdate(orgData, id, 'avatar_url', imageUrl);
-    setOrgData(nextData);
-    await persistChart(nextData, `Updated avatar image for chart node: ${id}.`);
-    event.target.value = '';
+    if (file.size > AVATAR_MAX_SIZE) {
+      setErrorInfo({ message: 'File size exceeds 5MB. Please upload a smaller image.' });
+      return;
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+
+    setAvatarPreviewUrls((prev) => {
+      if (prev[id]) {
+        URL.revokeObjectURL(prev[id]);
+      }
+      return { ...prev, [id]: previewUrl };
+    });
+
+    setPendingAvatarFiles((prev) => ({ ...prev, [id]: file }));
   };
+
+  const withPreview = (node) =>
+    avatarPreviewUrls[node.id] ? { ...node, avatar_url: avatarPreviewUrls[node.id] } : node;
 
   return (
     <div className="chart-container">
@@ -398,7 +588,7 @@ export default function Chart() {
 
         <div className="chart-header">
           <div>
-           
+
             <p className="chart-subtitle">Last edit: {lastEditLabel}</p>
           </div>
           <button
@@ -414,11 +604,11 @@ export default function Chart() {
           {isLoadingChart && <p className="chart-loading">Loading chart...</p>}
           <div className="org-level">
             <OrgCard
-              node={orgData.top}
+              node={withPreview(orgData.top)}
               editMode={editMode}
               canEdit={isAdmin}
               onChange={handleUpdate}
-              onImageChange={handleAvatarUpload}
+              onImageChange={handleAvatarSelect}
             />
           </div>
 
@@ -426,11 +616,11 @@ export default function Chart() {
 
           <div className="org-level">
             <OrgCard
-              node={orgData.second}
+              node={withPreview(orgData.second)}
               editMode={editMode}
               canEdit={isAdmin}
               onChange={handleUpdate}
-              onImageChange={handleAvatarUpload}
+              onImageChange={handleAvatarSelect}
             />
           </div>
 
@@ -441,22 +631,22 @@ export default function Chart() {
             {orgData.departments.map((department) => (
               <div className="org-column" key={department.id}>
                 <OrgCard
-                  node={department}
+                  node={withPreview(department)}
                   editMode={editMode}
                   canEdit={isAdmin}
                   onChange={handleUpdate}
-                  onImageChange={handleAvatarUpload}
+                  onImageChange={handleAvatarSelect}
                 />
                 <div className="org-connector vertical short" />
                 <div className="org-subunits">
                   {department.units.map((unit) => (
                     <OrgCard
                       key={unit.id}
-                      node={unit}
+                      node={withPreview(unit)}
                       editMode={editMode}
                       canEdit={isAdmin}
                       onChange={handleUpdate}
-                      onImageChange={handleAvatarUpload}
+                      onImageChange={handleAvatarSelect}
                     />
                   ))}
                 </div>
@@ -465,6 +655,94 @@ export default function Chart() {
           </div>
         </div>
       </div>
+
+      {isConfirmModalOpen && (
+        <div className="org-modal-overlay" role="dialog" aria-modal="true">
+          <div className="org-modal org-confirm-modal">
+            <h3 className="org-modal-title">Confirm Organizational Chart Changes</h3>
+            <p className="org-modal-subtitle">Are you sure you want to save the following changes?</p>
+
+            <ul className="org-change-list">
+              {pendingChanges.map((change, index) => (
+                <li className="org-change-item" key={`${change.nodeId}-${change.field}-${index}`}>
+                  <OrgChangeLine change={change} />
+                </li>
+              ))}
+            </ul>
+
+            <div className="org-modal-actions">
+              <button
+                type="button"
+                className="org-modal-btn org-modal-btn-cancel"
+                onClick={handleCancelConfirm}
+                disabled={isSaving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="org-modal-btn org-modal-btn-save"
+                onClick={handleConfirmSave}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {successSummary && (
+        <div className="org-modal-overlay" role="dialog" aria-modal="true">
+          <div className="org-modal org-result-modal">
+            <div className="org-modal-icon org-modal-icon-success">✓</div>
+
+            {successSummary.length > 1 ? (
+              <>
+                <h3 className="org-modal-title">Organizational Chart Updated Successfully</h3>
+                <ul className="org-change-list org-summary-list">
+                  {successSummary.map((item, index) => (
+                    <li className="org-change-item" key={index}>
+                      <strong>{item.headline}</strong>
+                      <span className="org-change-detail">{item.detail}</span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <>
+                <h3 className="org-modal-title">{successSummary[0]?.headline}</h3>
+                <p className="org-modal-message">{successSummary[0]?.detail}</p>
+              </>
+            )}
+
+            <button
+              type="button"
+              className="org-modal-btn org-modal-btn-save"
+              onClick={() => setSuccessSummary(null)}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {errorInfo && (
+        <div className="org-modal-overlay" role="dialog" aria-modal="true">
+          <div className="org-modal org-result-modal">
+            <div className="org-modal-icon org-modal-icon-error">!</div>
+            <h3 className="org-modal-title">Save Failed</h3>
+            <p className="org-modal-message">{errorInfo.message}</p>
+            <button
+              type="button"
+              className="org-modal-btn org-modal-btn-save"
+              onClick={() => setErrorInfo(null)}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

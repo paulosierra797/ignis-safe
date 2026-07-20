@@ -128,10 +128,6 @@
   transition: box-shadow 0.2s;
 }
 
-.page-user--no-avatar {
-  padding: 0.45rem 0.85rem;
-}
-
 .page-user:hover {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -141,6 +137,15 @@
   height: 36px;
   border-radius: 50%;
   object-fit: cover;
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.28);
+}
+
+.page-header--personnel .page-user-avatar {
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.28);
+}
+
+.page-header--admin .page-user-avatar {
+  box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.24);
 }
 
 .page-user-info {
@@ -281,10 +286,9 @@
     display: none;
   }
 
-  /* Avatar-only trigger on mobile; text chip stays for the admin variant,
-     which has no avatar image to fall back on. */
-  .page-user:not(.page-user--no-avatar) .page-user-info,
-  .page-user:not(.page-user--no-avatar) .page-user-arrow {
+  /* Avatar-only trigger on mobile for every variant. */
+  .page-user-info,
+  .page-user-arrow {
     display: none;
   }
 
@@ -297,10 +301,6 @@
 
   .page-user:hover {
     box-shadow: none;
-  }
-
-  .page-user--no-avatar {
-    padding: 0.4rem 0.7rem;
   }
 
   .page-user-name,
@@ -328,6 +328,14 @@
 
   .page-header--personnel .page-user:active .page-user-avatar {
     box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35), 0 2px 6px rgba(15, 23, 42, 0.18);
+  }
+
+  .page-header--admin .page-user-avatar {
+    box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.2), 0 2px 6px rgba(15, 23, 42, 0.14);
+  }
+
+  .page-header--admin .page-user:active .page-user-avatar {
+    box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.32), 0 2px 6px rgba(15, 23, 42, 0.18);
   }
 
   .page-user-dropdown {

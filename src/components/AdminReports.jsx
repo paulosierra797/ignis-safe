@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import {
@@ -29,6 +29,50 @@ const formatDateTime = (value) => {
   }
 };
 
+function ClampedText({ children }) {
+  const [expanded, setExpanded] = useState(false);
+  const [isClamped, setIsClamped] = useState(false);
+  const textRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (expanded) return undefined;
+
+    const el = textRef.current;
+    if (!el) return undefined;
+
+    const checkClamped = () => setIsClamped(el.scrollHeight > el.clientHeight + 1);
+    checkClamped();
+
+    const observer = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(checkClamped)
+      : null;
+    if (observer) observer.observe(el);
+
+    window.addEventListener('resize', checkClamped);
+    return () => {
+      window.removeEventListener('resize', checkClamped);
+      if (observer) observer.disconnect();
+    };
+  }, [children, expanded]);
+
+  return (
+    <div className="admin-reports-cell-content">
+      <span ref={textRef} className={`admin-reports-clamped-text${expanded ? ' expanded' : ''}`}>
+        {children}
+      </span>
+      {isClamped && (
+        <button
+          type="button"
+          className="admin-reports-see-more"
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          {expanded ? 'See less' : 'See more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function AdminReports() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -37,8 +81,8 @@ export default function AdminReports() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [processingId, setProcessingId] = useState('');
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
-const [rejectNotes, setRejectNotes] = useState('');
-const [selectedReport, setSelectedReport] = useState(null);
+  const [rejectNotes, setRejectNotes] = useState('');
+  const [selectedReport, setSelectedReport] = useState(null);
 
   const loadReports = async () => {
     setLoading(true);
@@ -61,77 +105,76 @@ const [selectedReport, setSelectedReport] = useState(null);
   }, []);
 
   const handleStatusChange = async (report, nextStatus) => {
-  if (!report?.report_id || !nextStatus) return;
+    if (!report?.report_id || !nextStatus) return;
 
-  // 🔥 NEW: reject modal flow
-  if (nextStatus === 'rejected') {
-    setSelectedReport(report);
-    setRejectModalOpen(true);
-    return;
-  }
+    if (nextStatus === 'rejected') {
+      setSelectedReport(report);
+      setRejectModalOpen(true);
+      return;
+    }
 
-  let notes = '';
+    let notes = '';
 
-  setProcessingId(report.report_id);
+    setProcessingId(report.report_id);
 
-  const { error } = await updateReportStatus(
-    report.report_id,
-    nextStatus,
-    notes
-  );
+    const { error } = await updateReportStatus(
+      report.report_id,
+      nextStatus,
+      notes
+    );
 
-  if (error) {
-    setMessage({ type: 'error', text: `Failed to update status: ${error}` });
-    setProcessingId('');
-    return;
-  }
+    if (error) {
+      setMessage({ type: 'error', text: `Failed to update status: ${error}` });
+      setProcessingId('');
+      return;
+    }
 
-  setReports((prev) =>
-    prev.map((row) =>
-      row.report_id === report.report_id
-        ? { ...row, status: nextStatus }
-        : row
-    )
-  );
-
-  setMessage({
-    type: 'success',
-    text: `Report marked as ${nextStatus.replace('_', ' ')}.`
-  });
-
-  setProcessingId('');
-};
-
-const confirmReject = async () => {
-  if (!selectedReport) return;
-
-  setProcessingId(selectedReport.report_id);
-
-  const { error } = await updateReportStatus(
-    selectedReport.report_id,
-    'rejected',
-    rejectNotes
-  );
-
-  if (error) {
-    setMessage({ type: 'error', text: `Failed to reject report: ${error}` });
-  } else {
     setReports((prev) =>
       prev.map((row) =>
-        row.report_id === selectedReport.report_id
-          ? { ...row, status: 'rejected' }
+        row.report_id === report.report_id
+          ? { ...row, status: nextStatus }
           : row
       )
     );
 
-    setMessage({ type: 'success', text: 'Report rejected.' });
-  }
+    setMessage({
+      type: 'success',
+      text: `Report marked as ${nextStatus.replace('_', ' ')}.`
+    });
 
-  setProcessingId('');
-  setRejectModalOpen(false);
-  setRejectNotes('');
-  setSelectedReport(null);
-};
+    setProcessingId('');
+  };
+
+  const confirmReject = async () => {
+    if (!selectedReport) return;
+
+    setProcessingId(selectedReport.report_id);
+
+    const { error } = await updateReportStatus(
+      selectedReport.report_id,
+      'rejected',
+      rejectNotes
+    );
+
+    if (error) {
+      setMessage({ type: 'error', text: `Failed to reject report: ${error}` });
+    } else {
+      setReports((prev) =>
+        prev.map((row) =>
+          row.report_id === selectedReport.report_id
+            ? { ...row, status: 'rejected' }
+            : row
+        )
+      );
+
+      setMessage({ type: 'success', text: 'Report rejected.' });
+    }
+
+    setProcessingId('');
+    setRejectModalOpen(false);
+    setRejectNotes('');
+    setSelectedReport(null);
+  };
 
   const filteredReports = reports.filter((report) => {
     const statusOk = statusFilter === 'all' || String(report.status || '').toLowerCase() === statusFilter;
@@ -144,6 +187,14 @@ const confirmReject = async () => {
   const reviewCount = reports.filter((report) => String(report.status || '').toLowerCase() === 'under_review').length;
   const approvedCount = reports.filter((report) => String(report.status || '').toLowerCase() === 'approved').length;
   const rejectedCount = reports.filter((report) => String(report.status || '').toLowerCase() === 'rejected').length;
+
+  const renderReportActions = (report, isBusy) => (
+    <div className="admin-reports-actions">
+      <button type="button" className="action-review" onClick={() => handleStatusChange(report, 'under_review')} disabled={isBusy}>Review</button>
+      <button type="button" className="action-approve" onClick={() => handleStatusChange(report, 'approved')} disabled={isBusy}>Approve</button>
+      <button type="button" className="action-reject" onClick={() => handleStatusChange(report, 'rejected')} disabled={isBusy}>Reject</button>
+    </div>
+  );
 
   return (
     <div className="admin-reports-container">
@@ -211,170 +262,159 @@ const confirmReject = async () => {
           ) : filteredReports.length === 0 ? (
             <div className="admin-reports-empty">No submitted reports found.</div>
           ) : (
-            <div className="admin-reports-table-wrap">
-              <table className="admin-reports-table">
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Submitted By</th>
-                    <th>Submitted At</th>
-                    <th>Status</th>
-                    <th>File</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredReports.map((report) => {
-                    const isBusy = processingId === report.report_id;
-                    return (
-                      <tr key={report.report_id}>
-                        <td>{report.title || '-'}</td>
-                        <td>{report.created_by_name || '-'}</td>
-                        <td>{formatDateTime(report.submitted_at)}</td>
-                        <td>
-                          <span className={`report-status-pill status-${String(report.status || '').toLowerCase().replace(/_/g, '-')}`}>
-                            {String(report.status || '-').replace('_', ' ').toUpperCase()}
-                          </span>
-                        </td>
-                        <td>
+            <>
+              <div className="admin-reports-table-wrap">
+                <table className="admin-reports-table">
+                  <thead>
+                    <tr>
+                      <th className="col-title">Title</th>
+                      <th className="col-submitted-by">Submitted By</th>
+                      <th className="col-submitted-at">Submitted At</th>
+                      <th className="col-category">Category</th>
+                      <th className="col-status">Status</th>
+                      <th className="col-file">File</th>
+                      <th className="col-actions">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredReports.map((report) => {
+                      const isBusy = processingId === report.report_id;
+                      return (
+                        <tr key={report.report_id}>
+                          <td className="col-title">
+                            <ClampedText>{report.title || '-'}</ClampedText>
+                          </td>
+                          <td className="col-submitted-by">
+                            <ClampedText>{report.created_by_name || '-'}</ClampedText>
+                          </td>
+                          <td className="col-submitted-at">
+                            <span className="admin-reports-date">{formatDateTime(report.submitted_at)}</span>
+                          </td>
+                          <td className="col-category">
+                            <ClampedText>{report.category || '-'}</ClampedText>
+                          </td>
+                          <td className="col-status">
+                            <span className={`report-status-pill status-${String(report.status || '').toLowerCase().replace(/_/g, '-')}`}>
+                              {String(report.status || '-').replace('_', ' ').toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="col-file">
+                            {report.pdf_url ? (
+                              <a className="action-open-file" href={report.pdf_url} target="_blank" rel="noreferrer">Open File</a>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                          <td className="col-actions">
+                            {renderReportActions(report, isBusy)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="admin-reports-mobile-list">
+                {filteredReports.map((report) => {
+                  const isBusy = processingId === report.report_id;
+
+                  return (
+                    <div className="admin-report-card" key={report.report_id}>
+                      <div className="admin-report-card-header">
+                        <h3>
+                          <ClampedText>{report.title || '-'}</ClampedText>
+                        </h3>
+
+                        <span
+                          className={`report-status-pill status-${String(report.status || '')
+                            .toLowerCase()
+                            .replace(/_/g, '-')}`}
+                        >
+                          {String(report.status || '-').replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+
+                      <div className="admin-report-card-body">
+                        <div className="admin-report-card-field">
+                          <strong>Submitted By</strong>
+                          <ClampedText>{report.created_by_name || '-'}</ClampedText>
+                        </div>
+
+                        <div className="admin-report-card-field">
+                          <strong>Submitted At</strong>
+                          <span>{formatDateTime(report.submitted_at)}</span>
+                        </div>
+
+                        <div className="admin-report-card-field">
+                          <strong>Category</strong>
+                          <ClampedText>{report.category || '-'}</ClampedText>
+                        </div>
+
+                        <div className="admin-report-card-field">
+                          <strong>PDF</strong>
                           {report.pdf_url ? (
-                            <a href={report.pdf_url} target="_blank" rel="noreferrer">Open File</a>
+                            <a
+                              className="action-open-file"
+                              href={report.pdf_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              Open File
+                            </a>
                           ) : (
-                            '-'
+                            <span>-</span>
                           )}
-                        </td>
-                        <td>
-                          <div className="admin-reports-actions">
-                            <button type="button" className="action-review" onClick={() => handleStatusChange(report, 'under_review')} disabled={isBusy}>Review</button>
-                            <button type="button" className="action-approve" onClick={() => handleStatusChange(report, 'approved')} disabled={isBusy}>Approve</button>
-                            <button type="button" className="action-reject" onClick={() => handleStatusChange(report, 'rejected')} disabled={isBusy}>Reject</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            
+                        </div>
+                      </div>
+
+                      <div className="admin-report-card-actions">
+                        {renderReportActions(report, isBusy)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
-          <div className="admin-reports-mobile-list">
-  {filteredReports.map((report) => {
-    const isBusy = processingId === report.report_id;
 
-    return (
-      <div className="admin-report-card" key={report.report_id}>
-        <div className="admin-report-card-header">
-          <h3>{report.title || '-'}</h3>
-
-          <span
-            className={`report-status-pill status-${String(report.status || '')
-              .toLowerCase()
-              .replace(/_/g, '-')}`}
-          >
-            {String(report.status || '-').replace('_', ' ').toUpperCase()}
-          </span>
-        </div>
-
-        <div className="admin-report-card-body">
-          <p>
-            <strong>Submitted By</strong><br />
-            {report.created_by_name || '-'}
-          </p>
-
-          <p>
-            <strong>Submitted At</strong><br />
-            {formatDateTime(report.submitted_at)}
-          </p>
-
-          <p>
-            <strong>PDF</strong><br />
-            {report.pdf_url ? (
-              <a
-                href={report.pdf_url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open File
-              </a>
-            ) : (
-              '-'
-            )}
-          </p>
-        </div>
-
-        <div className="admin-report-card-actions">
-          <button
-            className="action-review"
-            onClick={() =>
-              handleStatusChange(report, 'under_review')
-            }
-            disabled={isBusy}
-          >
-            Review
-          </button>
-
-          <button
-            className="action-approve"
-            onClick={() =>
-              handleStatusChange(report, 'approved')
-            }
-            disabled={isBusy}
-          >
-            Approve
-          </button>
-
-          <button
-            className="action-reject"
-            onClick={() =>
-              handleStatusChange(report, 'rejected')
-            }
-            disabled={isBusy}
-          >
-            Reject
-          </button>
-        </div>
-      </div>
-    );
-  })}
-</div>
           {rejectModalOpen && (
-  <div className="modal-overlay">
-    <div className="modal-box">
-      <h3>Reject Report</h3>
+            <div className="modal-overlay">
+              <div className="modal-box">
+                <h3>Reject Report</h3>
 
-      <p>Optional reason for rejection:</p>
+                <p>Optional reason for rejection:</p>
 
-      <textarea
-        value={rejectNotes}
-        onChange={(e) => setRejectNotes(e.target.value)}
-        placeholder="Enter reason..."
-        rows={4}
-      />
+                <textarea
+                  value={rejectNotes}
+                  onChange={(e) => setRejectNotes(e.target.value)}
+                  placeholder="Enter reason..."
+                  rows={4}
+                />
 
-      <div className="modal-actions">
-  <button
-    className="modal-btn cancel-btn"
-    onClick={() => {
-      setRejectModalOpen(false);
-      setRejectNotes('');
-      setSelectedReport(null);
-    }}
-  >
-    Cancel
-  </button>
+                <div className="modal-actions">
+                  <button
+                    className="modal-btn cancel-btn"
+                    onClick={() => {
+                      setRejectModalOpen(false);
+                      setRejectNotes('');
+                      setSelectedReport(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
 
-  <button
-    className="modal-btn confirm-btn"
-    onClick={confirmReject}
-    disabled={processingId}
-  >
-    Confirm Reject
-  </button>
-</div>
-    </div>
-  </div>
-)}
+                  <button
+                    className="modal-btn confirm-btn"
+                    onClick={confirmReject}
+                    disabled={processingId}
+                  >
+                    Confirm Reject
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

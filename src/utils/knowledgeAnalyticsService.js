@@ -252,57 +252,65 @@ const extractValidAppSessionDurations = (sessions) => {
   }, []);
 };
 
+const buildDailyActivityTrend = (filteredAttempts, dayCount, now, labelOptions) => {
+  const labels = [];
+  const started = Array(dayCount).fill(0);
+  const submitted = Array(dayCount).fill(0);
+
+  const dayKeys = Array.from({ length: dayCount }, (_, index) => {
+    const date = new Date(now);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (dayCount - 1 - index));
+    labels.push(date.toLocaleDateString('en-US', labelOptions));
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
+
+  const keyToIndex = dayKeys.reduce((accumulator, key, index) => {
+    accumulator[key] = index;
+    return accumulator;
+  }, {});
+
+  filteredAttempts.forEach((attempt) => {
+    if (attempt.started_at) {
+      const startedAt = new Date(attempt.started_at);
+      if (!Number.isNaN(startedAt.getTime())) {
+        const key = `${startedAt.getFullYear()}-${String(startedAt.getMonth() + 1).padStart(2, '0')}-${String(startedAt.getDate()).padStart(2, '0')}`;
+        const index = keyToIndex[key];
+        if (Number.isInteger(index)) {
+          started[index] += 1;
+        }
+      }
+    }
+
+    if (attempt.submitted_at) {
+      const submittedAt = new Date(attempt.submitted_at);
+      if (!Number.isNaN(submittedAt.getTime())) {
+        const key = `${submittedAt.getFullYear()}-${String(submittedAt.getMonth() + 1).padStart(2, '0')}-${String(submittedAt.getDate()).padStart(2, '0')}`;
+        const index = keyToIndex[key];
+        if (Number.isInteger(index)) {
+          submitted[index] += 1;
+        }
+      }
+    }
+  });
+
+  return { labels, started, submitted };
+};
+
 const buildActivityTrends = (filteredAttempts, view = 'Month') => {
   const selectedView = String(view || 'Month');
   const now = new Date();
 
   if (selectedView === 'Week') {
-    const labels = [];
-    const started = Array(7).fill(0);
-    const submitted = Array(7).fill(0);
+    return buildDailyActivityTrend(filteredAttempts, 7, now, { weekday: 'short' });
+  }
 
-    const dayKeys = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(now);
-      date.setHours(0, 0, 0, 0);
-      date.setDate(date.getDate() - (6 - index));
-      labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
-
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    });
-
-    const keyToIndex = dayKeys.reduce((accumulator, key, index) => {
-      accumulator[key] = index;
-      return accumulator;
-    }, {});
-
-    filteredAttempts.forEach((attempt) => {
-      if (attempt.started_at) {
-        const startedAt = new Date(attempt.started_at);
-        if (!Number.isNaN(startedAt.getTime())) {
-          const key = `${startedAt.getFullYear()}-${String(startedAt.getMonth() + 1).padStart(2, '0')}-${String(startedAt.getDate()).padStart(2, '0')}`;
-          const index = keyToIndex[key];
-          if (Number.isInteger(index)) {
-            started[index] += 1;
-          }
-        }
-      }
-
-      if (attempt.submitted_at) {
-        const submittedAt = new Date(attempt.submitted_at);
-        if (!Number.isNaN(submittedAt.getTime())) {
-          const key = `${submittedAt.getFullYear()}-${String(submittedAt.getMonth() + 1).padStart(2, '0')}-${String(submittedAt.getDate()).padStart(2, '0')}`;
-          const index = keyToIndex[key];
-          if (Number.isInteger(index)) {
-            submitted[index] += 1;
-          }
-        }
-      }
-    });
-
-    return { labels, started, submitted };
+  if (selectedView === 'Days30') {
+    return buildDailyActivityTrend(filteredAttempts, 30, now, { month: 'short', day: 'numeric' });
   }
 
   if (selectedView === 'Year') {

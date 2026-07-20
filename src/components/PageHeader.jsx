@@ -51,7 +51,7 @@ const PageHeader = ({
   const resolvedUserRole = userRole ?? (variant === 'personnel'
     ? 'Personnel'
     : formatRoleLabel(currentUser?.role));
-  const resolvedUserAvatar = userAvatar ?? currentUser?.avatar_url ?? '/user-avatar.png';
+  const resolvedUserAvatar = userAvatar ?? currentUser?.avatar_url ?? '/user-avatar.svg';
   const isAdminAccount = String(currentUser?.role || '').toLowerCase() === 'admin';
   const workspaceSwitchPath = variant === 'personnel' ? '/dashboard' : '/personnel/operations';
   const workspaceSwitchLabel = variant === 'personnel'
@@ -74,9 +74,11 @@ const PageHeader = ({
     navigate('/');
   };
 
+  const profilePath = variant === 'personnel' ? '/personnel/profile' : '/dashboard/profile';
+
   const handleOpenProfile = () => {
-    if (variant === 'personnel') {
-      navigate('/personnel/profile');
+    if (variant === 'personnel' || variant === 'admin') {
+      navigate(profilePath);
       setIsDropdownOpen(false);
     }
   };
@@ -88,7 +90,6 @@ const PageHeader = ({
 
   const variantClass = variant ? `page-header--${variant}` : '';
   const compactClass = compact ? 'page-header--compact' : '';
-  const showAvatar = variant !== 'admin';
 
   return (
     <div className={`page-header ${variantClass} ${compactClass}`.trim()}>
@@ -105,23 +106,21 @@ const PageHeader = ({
         <h1 className="page-title">{title}</h1>
       </div>
       <div className="page-header-right">
-        
+
         <div className="page-user-container" ref={dropdownRef}>
-          <div 
-            className={`page-user ${showAvatar ? '' : 'page-user--no-avatar'}`.trim()} 
+          <div
+            className="page-user"
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
-            {showAvatar && (
-              <img
-                src={resolvedUserAvatar}
-                alt="User"
-                className="page-user-avatar"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/user-avatar.png';
-                }}
-              />
-            )}
+            <img
+              src={resolvedUserAvatar}
+              alt="User"
+              className="page-user-avatar"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = '/user-avatar.svg';
+              }}
+            />
             <div className="page-user-info">
               <span className="page-user-name">{resolvedUserName}</span>
               <span className="page-user-role">{resolvedUserRole}</span>
@@ -135,7 +134,7 @@ const PageHeader = ({
                   {workspaceSwitchLabel}
                 </button>
               )}
-              {variant === 'personnel' && (
+              {(variant === 'personnel' || variant === 'admin') && (
                 <button className="dropdown-item" onClick={handleOpenProfile}>
                   Profile
                 </button>

@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import {
@@ -40,6 +41,22 @@ const FORMAT_BLOCK_REFERENCE = (block, moduleNo, pageNo) => {
   return `Block reference: Module ${moduleNo ?? '-'} • Page ${pageNo ?? '-'} • Block ${blockNo}`;
 };
 
+const cloneEditorValue = (value) => JSON.parse(JSON.stringify(value));
+
+const createEditorState = ({
+  editedModule,
+  fireGuides,
+  fireClassDetails,
+  learningTexts,
+  mediaAssets
+}) => ({
+  editedModule: cloneEditorValue(editedModule),
+  fireGuides: cloneEditorValue(fireGuides),
+  fireClassDetails: cloneEditorValue(fireClassDetails),
+  learningTexts: cloneEditorValue(learningTexts),
+  mediaAssets: cloneEditorValue(mediaAssets)
+});
+
 export default function LearningMaterials() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedModule, setSelectedModule] = useState('all');
@@ -56,6 +73,115 @@ export default function LearningMaterials() {
   const [currentPages, setCurrentPages] = useState({});
  
   const [selectedModuleCard, setSelectedModuleCard] = useState(null);
+  const [editorBaselineSnapshot, setEditorBaselineSnapshot] = useState('');
+  const [pendingEditorAction, setPendingEditorAction] = useState(null);
+  const editorBaselineRef = useRef(null);
+
+  const currentEditorSnapshot = useMemo(() => {
+    if (!editedModule) return '';
+
+    return JSON.stringify({
+      editedModule,
+      fireGuides,
+      fireClassDetails,
+      learningTexts,
+      mediaAssets
+    });
+  }, [editedModule, fireGuides, fireClassDetails, learningTexts, mediaAssets]);
+
+  const isEditorDirty = Boolean(
+    editedModule && editorBaselineSnapshot && currentEditorSnapshot !== editorBaselineSnapshot
+  );
+
+  const shouldBlockNavigation = useCallback(({ currentLocation, nextLocation }) => {
+    const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
+    const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
+    return isEditorDirty && currentPath !== nextPath;
+  }, [isEditorDirty]);
+
+  const blocker = useBlocker(shouldBlockNavigation);
+  const hasPendingEditorNavigation = Boolean(pendingEditorAction) || blocker.state === 'blocked';
+
+  useEffect(() => {
+    if (!isEditorDirty) return undefined;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isEditorDirty]);
+
+  const beginEditingModule = (module, dataOverride = null) => {
+    if (!module) return;
+
+    const sourceData = dataOverride || {
+      fireGuides,
+      fireClassDetails,
+      learningTexts,
+      mediaAssets
+    };
+    const moduleCopy = cloneEditorValue(module);
+    const baseline = createEditorState({
+      editedModule: moduleCopy,
+      fireGuides: sourceData.fireGuides,
+      fireClassDetails: sourceData.fireClassDetails,
+      learningTexts: sourceData.learningTexts,
+      mediaAssets: sourceData.mediaAssets
+    });
+
+    editorBaselineRef.current = baseline;
+    setEditorBaselineSnapshot(JSON.stringify(baseline));
+    setEditedModule(moduleCopy);
+    setSelectedModuleCard(module.module_no);
+  };
+
+  const closeModuleEditor = () => {
+    setSelectedModuleCard(null);
+    setEditedModule(null);
+    setEditorBaselineSnapshot('');
+    editorBaselineRef.current = null;
+  };
+
+  const restoreEditorBaseline = () => {
+    const baseline = editorBaselineRef.current;
+    if (!baseline) return null;
+
+    setFireGuides(cloneEditorValue(baseline.fireGuides));
+    setFireClassDetails(cloneEditorValue(baseline.fireClassDetails));
+    setLearningTexts(cloneEditorValue(baseline.learningTexts));
+    setMediaAssets(cloneEditorValue(baseline.mediaAssets));
+    return baseline;
+  };
+
+  const performEditorAction = (action, dataOverride = null) => {
+    if (!action) return;
+
+    if (action.type === 'module') {
+      const nextModule = modules.find((module) => Number(module.module_no) === Number(action.moduleNo));
+      beginEditingModule(nextModule, dataOverride);
+      return;
+    }
+
+    if (action.type === 'back') {
+      closeModuleEditor();
+    }
+  };
+
+  const requestEditorAction = (action) => {
+    if (action.type === 'module' && Number(action.moduleNo) === Number(selectedModuleCard)) {
+      return;
+    }
+
+    if (isEditorDirty) {
+      setPendingEditorAction(action);
+      return;
+    }
+
+    performEditorAction(action);
+  };
 
  
 
@@ -70,9 +196,9 @@ export default function LearningMaterials() {
   };
 
   
-  const handleSaveModule = async () => {
+  const handleSaveModule = async ({ exitAfterSave = true } = {}) => {
     if (!editedModule) {
-      return;
+      return false;
     }
 
     setSaving(true);
@@ -92,7 +218,7 @@ export default function LearningMaterials() {
         text: `Failed to update module details: ${moduleResult.error}`
       });
       setSaving(false);
-      return;
+      return false;
     }
 
     await Promise.all(
@@ -157,7 +283,7 @@ try {
   });
 
   setSaving(false);
-  return;
+  return false;
 }
 try {
   await Promise.all(
@@ -179,7 +305,7 @@ try {
   });
 
   setSaving(false);
-  return;
+  return false;
 }
 try {
   await Promise.all(
@@ -205,7 +331,7 @@ try {
   });
 
   setSaving(false);
-  return;
+  return false;
 }
 try {
   await Promise.all(
@@ -235,7 +361,7 @@ try {
   });
 
   setSaving(false);
-  return;
+  return false;
 }
    setModules((prev) =>
   prev.map((m) =>
@@ -244,15 +370,73 @@ try {
       : m
   )
 );
-setSelectedModuleCard(null);
-setEditedModule(null);
-setMessage({
-  type: "success",
-  text: "Changes have been saved successfully."
-});
+ const savedBaseline = createEditorState({
+   editedModule,
+   fireGuides,
+   fireClassDetails,
+   learningTexts,
+   mediaAssets
+ });
+ editorBaselineRef.current = savedBaseline;
+ setEditorBaselineSnapshot(JSON.stringify(savedBaseline));
 
-setSaving(false);
-    return;
+ if (exitAfterSave) {
+   closeModuleEditor();
+ }
+ setMessage({
+   type: "success",
+   text: "Changes have been saved successfully."
+ });
+
+ setSaving(false);
+    return true;
+  };
+
+  const handleCancelEditorNavigation = () => {
+    if (saving) return;
+
+    setPendingEditorAction(null);
+    if (blocker.state === 'blocked') {
+      blocker.reset();
+    }
+  };
+
+  const handleDiscardAndContinue = () => {
+    if (saving) return;
+
+    const action = pendingEditorAction;
+    const baseline = restoreEditorBaseline();
+    setPendingEditorAction(null);
+
+    if (action) {
+      performEditorAction(action, baseline);
+      if (blocker.state === 'blocked') blocker.reset();
+      return;
+    }
+
+    if (blocker.state === 'blocked') {
+      blocker.proceed();
+    }
+  };
+
+  const handleSaveAndContinue = async () => {
+    if (saving) return;
+
+    const action = pendingEditorAction;
+    const routeIsBlocked = blocker.state === 'blocked';
+    const saved = await handleSaveModule({ exitAfterSave: false });
+    if (!saved) return;
+
+    setPendingEditorAction(null);
+    if (action) {
+      performEditorAction(action);
+      if (routeIsBlocked) blocker.reset();
+      return;
+    }
+
+    if (routeIsBlocked) {
+      blocker.proceed();
+    }
   };
   
 
@@ -334,44 +518,46 @@ if (textsResult.error && !message.text) {
       <div className="learning-materials-main">
         <PageHeader title="Learning Materials" searchQuery={searchQuery} onSearchChange={setSearchQuery} variant="admin" />
 
-        <div className="learning-materials-hero">
-          <div>
-            <p className="learning-materials-kicker">Admin access</p>
-            <h2>Review the learning modules exactly as they are structured for the mobile experience.</h2>
-            <p>Use this view to audit module content, page order, block text, and fire-class guide data without leaving the admin workspace.</p>
-          </div>
-
-          <div>
-            <div className="learning-materials-filter-row">
-              <label htmlFor="module-select">Show module</label>
-              <select id="module-select" className="module-select" value={selectedModule} onChange={(e) => setSelectedModule(e.target.value)}>
-                <option value="all">All modules</option>
-                {modules.map((m) => (
-                  <option key={m.module_no} value={m.module_no}>{'Module ' + m.module_no + ' - ' + (m.title || '')}</option>
-                ))}
-              </select>
+        {selectedModuleCard === null && (
+          <div className="learning-materials-hero">
+            <div>
+              <p className="learning-materials-kicker">Admin access</p>
+              <h2>Review the learning modules exactly as they are structured for the mobile experience.</h2>
+              <p>Use this view to audit module content, page order, block text, and fire-class guide data without leaving the admin workspace.</p>
             </div>
 
-            <div className="learning-materials-stats">
-              <article>
-                <span>Modules</span>
-                <strong>{formatCount(displayedModules.length)}</strong>
-              </article>
-              <article>
-                <span>Pages</span>
-                <strong>{formatCount(visiblePages)}</strong>
-              </article>
-              <article>
-                <span>Blocks</span>
-                <strong>{formatCount(visibleBlocks)}</strong>
-              </article>
-              <article>
-                <span>Fire guides</span>
-                <strong>{formatCount(fireGuides.length)}</strong>
-              </article>
+            <div>
+              <div className="learning-materials-filter-row">
+                <label htmlFor="module-select">Show module</label>
+                <select id="module-select" className="module-select" value={selectedModule} onChange={(e) => setSelectedModule(e.target.value)}>
+                  <option value="all">All modules</option>
+                  {modules.map((m) => (
+                    <option key={m.module_no} value={m.module_no}>{'Module ' + m.module_no + ' - ' + (m.title || '')}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="learning-materials-stats">
+                <article>
+                  <span>Modules</span>
+                  <strong>{formatCount(displayedModules.length)}</strong>
+                </article>
+                <article>
+                  <span>Pages</span>
+                  <strong>{formatCount(visiblePages)}</strong>
+                </article>
+                <article>
+                  <span>Blocks</span>
+                  <strong>{formatCount(visibleBlocks)}</strong>
+                </article>
+                <article>
+                  <span>Fire guides</span>
+                  <strong>{formatCount(fireGuides.length)}</strong>
+                </article>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {message.text && <div className={`learning-materials-message ${message.type}`}>{message.text}</div>}
 
@@ -387,14 +573,11 @@ if (textsResult.error && !message.text) {
 
  <div className="module-card-grid">
   {displayedModules.map((module) => (
-    <ModuleCard
-      key={module.module_no}
-      module={module}
-      onOpen={() => {
-        setEditedModule(JSON.parse(JSON.stringify(module)));
-        setSelectedModuleCard(module.module_no);
-      }}
-    />
+     <ModuleCard
+       key={module.module_no}
+       module={module}
+       onOpen={() => beginEditingModule(module)}
+     />
   ))}
 </div>
 
@@ -404,10 +587,7 @@ if (textsResult.error && !message.text) {
    <div className="back-button-container">
   <button
     className="back-button"
-    onClick={() => {
-      setSelectedModuleCard(null);
-      setEditedModule(null);
-    }}
+    onClick={() => requestEditorAction({ type: 'back' })}
   >
     ← Back to Modules
   </button>
@@ -417,6 +597,8 @@ if (textsResult.error && !message.text) {
     moduleEntry={editedModule}
     editedModule={editedModule}
     setEditedModule={setEditedModule}
+    moduleOptions={modules}
+    onSelectModule={(moduleNo) => requestEditorAction({ type: 'module', moduleNo })}
 
     currentPages={currentPages}
     handlePageChange={handlePageChange}
@@ -433,15 +615,53 @@ if (textsResult.error && !message.text) {
 
     handleSaveModule={handleSaveModule}
     saving={saving}
-    onBack={() => {
-      setSelectedModuleCard(null);
-      setEditedModule(null);
-    }}
 />
   </>
 )}
-        
-       
+
+        {hasPendingEditorNavigation && (
+          <div
+            className="confirm-overlay learning-materials-unsaved-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="learningMaterialsUnsavedTitle"
+            aria-describedby="learningMaterialsUnsavedDescription"
+          >
+            <div className="confirm-modal learning-materials-unsaved-modal">
+              <div className="confirm-icon learning-materials-unsaved-icon" aria-hidden="true">!</div>
+              <h3 id="learningMaterialsUnsavedTitle">Unsaved Learning Material Changes</h3>
+              <p id="learningMaterialsUnsavedDescription">
+                You changed this module but have not saved it yet. What would you like to do before leaving or switching modules?
+              </p>
+              <div className="confirm-buttons learning-materials-unsaved-actions">
+                <button
+                  type="button"
+                  className="confirm-btn"
+                  onClick={handleSaveAndContinue}
+                  disabled={saving}
+                >
+                  {saving ? 'Saving...' : 'Save and Continue'}
+                </button>
+                <button
+                  type="button"
+                  className="discard-btn"
+                  onClick={handleDiscardAndContinue}
+                  disabled={saving}
+                >
+                  Leave Without Saving
+                </button>
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={handleCancelEditorNavigation}
+                  disabled={saving}
+                >
+                  Keep Editing
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

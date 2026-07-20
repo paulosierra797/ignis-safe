@@ -11,9 +11,17 @@
 .learning-materials-main {
   flex: 1;
   min-width: 0;
-  margin-left: 270px;
-  padding: 1.5rem 1.75rem 2rem;
+  margin-left: 250px;
+  padding: 0 1.75rem 2rem;
   overflow-x: auto;
+}
+
+.learning-materials-main > .page-header {
+  margin: 0 -1.75rem 2rem;
+}
+
+body.sidebar-collapsed .learning-materials-main {
+  margin-left: 72px;
 }
 
 .learning-material-card,
@@ -437,11 +445,19 @@
   }
 }
 
-@media (max-width: 768px) {
-  .learning-materials-main {
+@media (max-width: 900px) {
+  .learning-materials-main,
+  body.sidebar-collapsed .learning-materials-main {
+    margin-left: 0;
     padding: 1rem;
   }
 
+  .learning-materials-main > .page-header {
+    margin: 0 0 1rem;
+  }
+}
+
+@media (max-width: 768px) {
   .learning-materials-hero {
     padding: 1rem;
   }
@@ -566,4 +582,40 @@
 .back-button:focus {
   outline: none;
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+}
+
+.learning-materials-unsaved-modal {
+  width: min(560px, 100%);
+}
+
+.learning-materials-unsaved-icon {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.learning-materials-unsaved-actions button {
+  min-width: 0;
+}
+
+.learning-materials-unsaved-actions .confirm-btn {
+  border: 1px solid #0f766e;
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.learning-materials-unsaved-actions .discard-btn {
+  border: 1px solid #fecaca;
+  background: #fff7f7;
+  color: #b91c1c;
+}
+
+.learning-materials-unsaved-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 560px) {
+  .learning-materials-unsaved-actions {
+    flex-direction: column;
+  }
 }

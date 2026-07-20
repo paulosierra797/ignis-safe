@@ -26,10 +26,18 @@ const shouldShowBlock = (moduleNo, pageNo, blockNo) => {
   return !(hiddenLimit && blockNo >= 1 && blockNo <= hiddenLimit);
 };
 
+const isReadingProgressBlock = (block) => {
+  const blockType = String(block?.block_type || '').trim().toLowerCase();
+  const blockKey = String(block?.block_key || '').trim().toLowerCase();
+  return blockType === 'reading_progress' || blockKey.endsWith('reading_progress');
+};
+
 export default function ModuleEditor({
   moduleEntry,
   editedModule,
   setEditedModule,
+  moduleOptions,
+  onSelectModule,
   currentPages,
   handlePageChange,
   fireGuides,
@@ -41,8 +49,7 @@ export default function ModuleEditor({
   setLearningTexts,
   setMediaAssets,
   handleSaveModule,
-  saving,
-  onBack
+  saving
 }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const activeModule = moduleEntry;
@@ -61,6 +68,7 @@ export default function ModuleEditor({
   );
   const visibleBlocks = page
     ? page.blocks.filter((block) =>
+        !isReadingProgressBlock(block) &&
         shouldShowBlock(moduleEntry.module_no, page.page_no, block.block_no)
       )
     : [];
@@ -121,10 +129,6 @@ export default function ModuleEditor({
     <div className="module-editor-shell">
       <header className="module-editor-toolbar">
         <div className="module-editor-toolbar-main">
-          <button type="button" className="module-editor-back" onClick={onBack}>
-            <span aria-hidden="true">←</span>
-            Back to Modules
-          </button>
           <div className="module-editor-heading">
             <span>Module {moduleEntry.module_no}</span>
             <h2>{editedModule.title || `Module ${moduleEntry.module_no}`}</h2>
@@ -132,11 +136,38 @@ export default function ModuleEditor({
           </div>
         </div>
 
-        <div className="module-editor-metrics" aria-label="Module content totals">
-          <span><strong>{formatCount(moduleEntry.pages.length)}</strong> pages</span>
-          <span><strong>{formatCount(moduleEntry.blockCount)}</strong> blocks</span>
+        <div className="module-editor-toolbar-actions">
+          <label className="module-editor-module-picker" htmlFor="module-editor-select">
+            <span>Switch module</span>
+            <select
+              id="module-editor-select"
+              value={moduleEntry.module_no}
+              onChange={(event) => onSelectModule(Number(event.target.value))}
+            >
+              {moduleOptions.map((module) => (
+                <option key={module.module_no} value={module.module_no}>
+                  Module {module.module_no} - {module.title || 'Untitled module'}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="module-editor-metrics" aria-label="Module content totals">
+            <span><strong>{formatCount(moduleEntry.pages.length)}</strong> pages</span>
+            <span><strong>{formatCount(moduleEntry.blockCount)}</strong> blocks</span>
+          </div>
         </div>
       </header>
+
+      <aside className="module-editor-scope-notice" role="note">
+        <span className="module-editor-scope-icon" aria-hidden="true">i</span>
+        <div>
+          <strong>Existing content updates only</strong>
+          <p>
+            You can revise the current text, labels, guides, and media. Adding, deleting, or reordering modules, pages, and blocks is locked because their identifiers and sequence are used by mobile routes, database mappings, progress tracking, and saved learner records.
+          </p>
+        </div>
+      </aside>
 
       <EditorSection
         eyebrow="Module settings"

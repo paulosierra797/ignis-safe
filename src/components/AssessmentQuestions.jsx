@@ -600,6 +600,17 @@ export default function AssessmentQuestions() {
 
         <div className="assessment-table-card">
           <table className="assessment-table">
+            <colgroup>
+              <col style={{ width: '64px' }} />
+              <col style={{ width: '130px' }} />
+              <col style={{ width: '320px' }} />
+              <col style={{ width: '190px' }} />
+              <col style={{ width: '190px' }} />
+              <col style={{ width: '190px' }} />
+              <col style={{ width: '190px' }} />
+              <col style={{ width: '70px' }} />
+              <col style={{ width: '110px' }} />
+            </colgroup>
             <thead>
               <tr>
                 <th>No.</th>
@@ -632,6 +643,7 @@ export default function AssessmentQuestions() {
                       <input
                         type="number"
                         min="1"
+                        className="assessment-no-input"
                         value={question.question_no}
                         onChange={(event) => setRowValue(question.id, 'question_no', Number(event.target.value || 0))}
                       />

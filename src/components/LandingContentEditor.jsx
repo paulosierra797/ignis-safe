@@ -148,6 +148,32 @@ const getChangedFields = (oldContent, newContent) => {
   return changes;
 };
 
+const AutoResizeTextarea = ({ value, onChange, className = '', minHeight = 100, maxHeight = 340, ...props }) => {
+  const textareaRef = useRef(null);
+
+  React.useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = 'auto';
+    const contentHeight = textarea.scrollHeight;
+    const nextHeight = Math.min(Math.max(contentHeight, minHeight), maxHeight);
+    textarea.style.height = `${nextHeight}px`;
+    textarea.style.overflowY = contentHeight > maxHeight ? 'auto' : 'hidden';
+  }, [value, minHeight, maxHeight]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      className={`editor-auto-textarea ${className}`.trim()}
+      value={value || ''}
+      onChange={onChange}
+      style={{ minHeight: `${minHeight}px`, maxHeight: `${maxHeight}px` }}
+      {...props}
+    />
+  );
+};
+
 const Field = ({ label, helper, children }) => (
   <label className="editor-field">
     <span className="editor-field-label">{label}</span>
@@ -213,8 +239,29 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
     discardUnsavedChanges: () => {
       clearLandingDraft();
       setDraft(deepClone(content));
+    },
+    hasUnsavedChanges: () => JSON.stringify(draft) !== JSON.stringify(content),
+    saveChanges: async () => {
+      const mobileNumber = String(draft?.contact?.mobile || '').trim();
+      const normalizedMobileNumber = mobileNumber.replace(/\D/g, '');
+      if (mobileNumber && !mobileNumberRegex.test(normalizedMobileNumber)) {
+        setSaveMessage('Mobile number must start with 09 and be exactly 11 digits.');
+        window.setTimeout(() => setSaveMessage(''), 3000);
+        return false;
+      }
+
+      const nextDraft = {
+        ...draft,
+        contact: {
+          ...draft.contact,
+          mobile: normalizedMobileNumber || mobileNumber,
+        },
+      };
+
+      await performSave(nextDraft);
+      return true;
     }
-  }), [content]);
+  }), [content, draft]);
 
   const updateField = (section, field, value) => {
     setDraft((prev) => ({
@@ -401,7 +448,12 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
 
       {!embedded && (
         <div className="landing-editor-toolbar">
-          <p>Edit the text shown on your public landing page.</p>
+          <div className="landing-editor-toolbar-info">
+            <p>Edit the text shown on your public landing page.</p>
+            {hasChanges && (
+              <span className="landing-editor-unsaved-badge">Unsaved changes</span>
+            )}
+          </div>
           <div className="landing-editor-actions">
             <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges || saving}>
               Discard changes
@@ -419,7 +471,12 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       {embedded && (
         <div className="landing-editor-compact-toolbar">
           <div>
-            <h3>Landing Page Content</h3>
+            <h3>
+              Landing Page Content
+              {hasChanges && (
+                <span className="landing-editor-unsaved-badge">Unsaved changes</span>
+              )}
+            </h3>
             <p>Edit the public landing page sections.</p>
           </div>
           <div className="landing-editor-actions">
@@ -459,7 +516,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             label="Supporting Description"
             helper="A longer sentence shown below the welcome message, explaining what the site offers."
           >
-            <textarea className="editor-textarea-lg" rows={4} value={draft.hero.description} onChange={(e) => updateField('hero', 'description', e.target.value)} />
+            <AutoResizeTextarea minHeight={110} maxHeight={300} value={draft.hero.description} onChange={(e) => updateField('hero', 'description', e.target.value)} />
           </Field>
         </GroupCard>
 
@@ -477,7 +534,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             label="About Us Description"
             helper="The main paragraph that introduces your organization to visitors."
           >
-            <textarea className="editor-textarea-lg" rows={7} value={draft.about.intro} onChange={(e) => updateField('about', 'intro', e.target.value)} />
+            <AutoResizeTextarea minHeight={160} maxHeight={380} value={draft.about.intro} onChange={(e) => updateField('about', 'intro', e.target.value)} />
           </Field>
         </GroupCard>
 
@@ -495,7 +552,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             label="Mission Description"
             helper="The text shown underneath the Mission title."
           >
-            <textarea className="editor-textarea-lg" rows={4} value={draft.about.missionText} onChange={(e) => updateField('about', 'missionText', e.target.value)} />
+            <AutoResizeTextarea minHeight={110} maxHeight={280} value={draft.about.missionText} onChange={(e) => updateField('about', 'missionText', e.target.value)} />
           </Field>
           <Field
             label="Vision Title"
@@ -507,7 +564,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             label="Vision Description"
             helper="The text shown underneath the Vision title."
           >
-            <textarea rows={3} value={draft.about.visionText} onChange={(e) => updateField('about', 'visionText', e.target.value)} />
+            <AutoResizeTextarea minHeight={90} maxHeight={240} value={draft.about.visionText} onChange={(e) => updateField('about', 'visionText', e.target.value)} />
           </Field>
         </GroupCard>
 
@@ -590,8 +647,9 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
                 />
               </Field>
               <Field label="Steps (one line per step)">
-                <textarea
-                  rows={5}
+                <AutoResizeTextarea
+                  minHeight={120}
+                  maxHeight={320}
                   value={(section.steps || []).map((step) => step.text).join('\n')}
                   onChange={(e) => updateProcessSectionSteps('english', index, e.target.value)}
                 />
@@ -614,8 +672,9 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
                 />
               </Field>
               <Field label="Steps (one line per step)">
-                <textarea
-                  rows={5}
+                <AutoResizeTextarea
+                  minHeight={120}
+                  maxHeight={320}
                   value={(section.steps || []).map((step) => step.text).join('\n')}
                   onChange={(e) => updateProcessSectionSteps('tagalog', index, e.target.value)}
                 />
@@ -634,7 +693,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
                 <input type="text" value={faqItem.question} onChange={(e) => updateFaqQuestion('english', index, e.target.value)} />
               </Field>
               <Field label="Answer (single paragraph or one line per bullet)">
-                <textarea rows={5} value={toLines(faqItem.answer)} onChange={(e) => updateFaqAnswer('english', index, e.target.value)} />
+                <AutoResizeTextarea minHeight={120} maxHeight={320} value={toLines(faqItem.answer)} onChange={(e) => updateFaqAnswer('english', index, e.target.value)} />
               </Field>
             </div>
           ))}
@@ -650,7 +709,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
                 <input type="text" value={faqItem.question} onChange={(e) => updateFaqQuestion('tagalog', index, e.target.value)} />
               </Field>
               <Field label="Answer (single paragraph or one line per bullet)">
-                <textarea rows={5} value={toLines(faqItem.answer)} onChange={(e) => updateFaqAnswer('tagalog', index, e.target.value)} />
+                <AutoResizeTextarea minHeight={120} maxHeight={320} value={toLines(faqItem.answer)} onChange={(e) => updateFaqAnswer('tagalog', index, e.target.value)} />
               </Field>
             </div>
           ))}

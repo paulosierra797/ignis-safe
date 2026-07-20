@@ -10,10 +10,11 @@ const toLines = (value) => (Array.isArray(value) ? value : [String(value || '')]
 const fromLines = (value) => String(value || '').split('\n').map((line) => line.trim()).filter(Boolean);
 const mobileNumberRegex = /^09\d{9}$/;
 
-const Field = ({ label, children }) => (
-  <label>
-    {label}
+const Field = ({ label, helper, children }) => (
+  <label className="editor-field">
+    <span className="editor-field-label">{label}</span>
     {children}
+    {helper && <span className="editor-field-helper">{helper}</span>}
   </label>
 );
 
@@ -21,6 +22,16 @@ const SectionBlock = ({ title, children }) => (
   <section className="editor-card editor-card--wide">
     <h3>{title}</h3>
     {children}
+  </section>
+);
+
+const GroupCard = ({ title, description, children }) => (
+  <section className="editor-card editor-group-card">
+    <div className="editor-group-heading">
+      <h3>{title}</h3>
+      {description && <p className="editor-group-description">{description}</p>}
+    </div>
+    <div className="editor-group-fields">{children}</div>
   </section>
 );
 
@@ -161,10 +172,24 @@ export default function LandingContentEditor({ embedded = false }) {
     }
   };
 
-  const handleDiscard = () => setDraft(deepClone(content));
+  const handleDiscard = () => {
+    if (!hasChanges) {
+      return;
+    }
+    const confirmed = window.confirm('Discard your unsaved changes? This cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+    setDraft(deepClone(content));
+  };
 
   const handleResetDefaults = async () => {
     if (saving) {
+      return;
+    }
+
+    const confirmed = window.confirm('Reset the entire landing page back to the default content? This will overwrite everything currently saved and cannot be undone.');
+    if (!confirmed) {
       return;
     }
 
@@ -228,57 +253,111 @@ export default function LandingContentEditor({ embedded = false }) {
 
       {saveMessage && <div className="landing-editor-alert">{saveMessage}</div>}
 
-      <div className="landing-editor-grid">
-        <section className="editor-card">
-          <h3>Hero Section</h3>
-          <Field label="Hero title">
+      <div className="landing-editor-groups">
+        <GroupCard
+          title="Main Banner"
+          description="The large banner visitors see first at the top of the landing page."
+        >
+          <Field
+            label="Main Page Title"
+            helper="The large headline shown at the very top of the public landing page."
+          >
             <input type="text" value={draft.hero.title} onChange={(e) => updateField('hero', 'title', e.target.value)} />
           </Field>
-          <Field label="Lead text">
+          <Field
+            label="Welcome Message"
+            helper="A short line of text shown right under the main page title."
+          >
             <input type="text" value={draft.hero.lead} onChange={(e) => updateField('hero', 'lead', e.target.value)} />
           </Field>
-          <Field label="Description">
-            <textarea rows={4} value={draft.hero.description} onChange={(e) => updateField('hero', 'description', e.target.value)} />
+          <Field
+            label="Supporting Description"
+            helper="A longer sentence shown below the welcome message, explaining what the site offers."
+          >
+            <textarea className="editor-textarea-lg" rows={4} value={draft.hero.description} onChange={(e) => updateField('hero', 'description', e.target.value)} />
           </Field>
-        </section>
+        </GroupCard>
 
-        <section className="editor-card">
-          <h3>About Section</h3>
-          <Field label="Section title">
+        <GroupCard
+          title="About Us"
+          description="Tells visitors who you are and what your organization does."
+        >
+          <Field
+            label="Section Heading"
+            helper='The title shown above the About Us section (e.g. "About Us").'
+          >
             <input type="text" value={draft.about.title} onChange={(e) => updateField('about', 'title', e.target.value)} />
           </Field>
-          <Field label="Intro paragraph">
-            <textarea rows={6} value={draft.about.intro} onChange={(e) => updateField('about', 'intro', e.target.value)} />
+          <Field
+            label="About Us Description"
+            helper="The main paragraph that introduces your organization to visitors."
+          >
+            <textarea className="editor-textarea-lg" rows={7} value={draft.about.intro} onChange={(e) => updateField('about', 'intro', e.target.value)} />
           </Field>
-          <Field label="Mission card title">
+        </GroupCard>
+
+        <GroupCard
+          title="Mission"
+          description="The Mission and Vision cards shown on the landing page."
+        >
+          <Field
+            label="Mission Title"
+            helper="The heading shown on the Mission card."
+          >
             <input type="text" value={draft.about.missionTitle} onChange={(e) => updateField('about', 'missionTitle', e.target.value)} />
           </Field>
-          <Field label="Mission card text">
-            <textarea rows={4} value={draft.about.missionText} onChange={(e) => updateField('about', 'missionText', e.target.value)} />
+          <Field
+            label="Mission Description"
+            helper="The text shown underneath the Mission title."
+          >
+            <textarea className="editor-textarea-lg" rows={4} value={draft.about.missionText} onChange={(e) => updateField('about', 'missionText', e.target.value)} />
           </Field>
-          <Field label="Vision card title">
+          <Field
+            label="Vision Title"
+            helper="The heading shown on the Vision card."
+          >
             <input type="text" value={draft.about.visionTitle} onChange={(e) => updateField('about', 'visionTitle', e.target.value)} />
           </Field>
-          <Field label="Vision card text">
+          <Field
+            label="Vision Description"
+            helper="The text shown underneath the Vision title."
+          >
             <textarea rows={3} value={draft.about.visionText} onChange={(e) => updateField('about', 'visionText', e.target.value)} />
           </Field>
-        </section>
+        </GroupCard>
 
-        <section className="editor-card">
-          <h3>Contact Section</h3>
-          <Field label="Section title">
+        <GroupCard
+          title="Contact Information"
+          description="How visitors can reach or find your station, shown in the Contact section."
+        >
+          <Field
+            label="Section Heading"
+            helper="The title shown above the Contact Information section."
+          >
             <input type="text" value={draft.contact.title} onChange={(e) => updateField('contact', 'title', e.target.value)} />
           </Field>
-          <Field label="Emergency title">
+          <Field
+            label="Emergency Hotline Title"
+            helper="The label shown above the emergency contact numbers."
+          >
             <input type="text" value={draft.contact.emergencyTitle} onChange={(e) => updateField('contact', 'emergencyTitle', e.target.value)} />
           </Field>
-          <Field label="Landline 1">
+          <Field
+            label="Landline Number 1"
+            helper="The first landline number shown on the public page."
+          >
             <input type="text" value={draft.contact.landlinePrimary} onChange={(e) => updateField('contact', 'landlinePrimary', e.target.value)} />
           </Field>
-          <Field label="Landline 2">
+          <Field
+            label="Landline Number 2"
+            helper="The second landline number shown on the public page."
+          >
             <input type="text" value={draft.contact.landlineSecondary} onChange={(e) => updateField('contact', 'landlineSecondary', e.target.value)} />
           </Field>
-          <Field label="Mobile">
+          <Field
+            label="Mobile Number"
+            helper="Must start with 09 and be exactly 11 digits (e.g. 09XXXXXXXXX)."
+          >
             <input
               type="text"
               value={draft.contact.mobile}
@@ -290,17 +369,28 @@ export default function LandingContentEditor({ embedded = false }) {
               title="Must start with 09 and be exactly 11 digits"
             />
           </Field>
-          <Field label="Email">
+          <Field
+            label="Email Address"
+            helper="The email address shown for visitors to contact you."
+          >
             <input type="text" value={draft.contact.email} onChange={(e) => updateField('contact', 'email', e.target.value)} />
           </Field>
-          <Field label="Facebook label">
+          <Field
+            label="Facebook Page Name"
+            helper="The name displayed for your Facebook page link."
+          >
             <input type="text" value={draft.contact.facebookLabel} onChange={(e) => updateField('contact', 'facebookLabel', e.target.value)} />
           </Field>
-          <Field label="Facebook URL">
+          <Field
+            label="Facebook Page Link"
+            helper="The full web address (URL) of your Facebook page."
+          >
             <input type="text" value={draft.contact.facebookUrl} onChange={(e) => updateField('contact', 'facebookUrl', e.target.value)} />
           </Field>
-        </section>
+        </GroupCard>
+      </div>
 
+      <div className="landing-editor-grid">
         <SectionBlock title="Process Section (English)">
           <Field label="Section title">
             <input type="text" value={draft.process.english.title} onChange={(e) => updateNested('process', 'english', 'title', e.target.value)} />

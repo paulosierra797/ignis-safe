@@ -29,7 +29,8 @@
     width: 100%;
   }
 
-  .landing-editor-grid {
+  .landing-editor-grid,
+  .landing-editor-groups {
     grid-template-columns: 1fr;
   }
 }
@@ -88,15 +89,23 @@
   display: flex;
   gap: 0.6rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .btn {
   border: none;
   border-radius: 8px;
-  padding: 0.55rem 0.9rem;
+  padding: 0.6rem 1.1rem;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
+  min-width: 8.5rem;
+  text-align: center;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .btn:disabled {
@@ -129,6 +138,13 @@
   font-weight: 600;
 }
 
+.landing-editor-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
 .landing-editor-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -138,6 +154,58 @@
 
 .editor-card--wide {
   grid-column: 1 / -1;
+}
+
+.editor-group-card {
+  padding: 1.4rem 1.5rem;
+  gap: 1.1rem;
+}
+
+.editor-group-heading {
+  border-bottom: 1px solid #eef0f3;
+  padding-bottom: 0.75rem;
+}
+
+.editor-group-heading h3 {
+  margin: 0 0 0.3rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.editor-group-description {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.editor-group-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.editor-field-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.editor-field-helper {
+  font-size: 0.78rem;
+  color: #6b7280;
+  line-height: 1.35;
+}
+
+.editor-textarea-lg {
+  min-height: 7.5rem;
 }
 
 .sub-editor {
@@ -177,13 +245,22 @@
 .editor-card textarea {
   border: 1px solid #d1d5db;
   border-radius: 8px;
-  padding: 0.55rem 0.65rem;
+  padding: 0.65rem 0.75rem;
   font-size: 0.92rem;
   font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.editor-card input:focus,
+.editor-card textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .editor-card textarea {
   resize: vertical;
+  line-height: 1.5;
 }
 
 .preview-card .preview-title {

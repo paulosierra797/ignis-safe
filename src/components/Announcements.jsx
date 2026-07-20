@@ -132,7 +132,9 @@ export default function Announcements() {
     const draft = readAnnouncementDraft();
     return Array.isArray(draft?.attachments) ? draft.attachments : [];
   });
-  const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
+  const [exitModalContext, setExitModalContext] = useState(null); // 'announcement' | 'landing' | null
+  const [isLandingDirty, setIsLandingDirty] = useState(false);
+  const landingEditorRef = useRef(null);
   const pendingNavigationRef = useRef(null);
   const bypassNavigationRef = useRef(false);
 
@@ -162,6 +164,8 @@ export default function Announcements() {
     draftAttachmentMeta.length > 0
   );
 
+  const isAnyFormDirty = isAnnouncementFormDirty || isLandingDirty;
+
   const shouldBlockAnnouncementNavigation = useCallback(({ currentLocation, nextLocation }) => {
     if (bypassNavigationRef.current) {
       bypassNavigationRef.current = false;
@@ -170,10 +174,16 @@ export default function Announcements() {
 
     const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
     const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
-    return isAnnouncementFormDirty && currentPath !== nextPath;
-  }, [isAnnouncementFormDirty]);
+    return isAnyFormDirty && currentPath !== nextPath;
+  }, [isAnyFormDirty]);
   const announcementBlocker = useBlocker(shouldBlockAnnouncementNavigation);
-  const hasPendingAnnouncementExit = isExitConfirmOpen || announcementBlocker.state === 'blocked';
+  const hasPendingAnnouncementExit = exitModalContext !== null || announcementBlocker.state === 'blocked';
+
+  useEffect(() => {
+    if (announcementBlocker.state === 'blocked' && exitModalContext === null) {
+      setExitModalContext(isLandingDirty ? 'landing' : 'announcement');
+    }
+  }, [announcementBlocker.state, isLandingDirty, exitModalContext]);
 
   useEffect(() => {
     if (!isAnnouncementFormDirty) {
@@ -193,7 +203,7 @@ export default function Announcements() {
   }, [isAnnouncementFormDirty, formData, attachmentFiles, draftAttachmentMeta]);
 
   useEffect(() => {
-    if (!isAnnouncementFormDirty) return undefined;
+    if (!isAnyFormDirty) return undefined;
 
     const handleBeforeUnload = (event) => {
       event.preventDefault();
@@ -202,7 +212,7 @@ export default function Announcements() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isAnnouncementFormDirty]);
+  }, [isAnyFormDirty]);
 
   const resetAnnouncementForm = () => {
     setFormData({
@@ -230,30 +240,30 @@ export default function Announcements() {
   };
 
   const handleAnnouncementHeaderNavigationRequest = (navigation) => {
-    if (!isAnnouncementFormDirty) {
+    if (!isAnyFormDirty) {
       navigation.action();
       return;
     }
 
     pendingNavigationRef.current = { type: 'manual', navigation };
-    setIsExitConfirmOpen(true);
+    setExitModalContext(isLandingDirty ? 'landing' : 'announcement');
   };
 
   const handleContentTabClick = (tabId) => {
     if (tabId === activeTab) return;
 
-    if (!isAnnouncementFormDirty) {
+    if (!isAnyFormDirty) {
       setActiveTab(tabId);
       return;
     }
 
     pendingNavigationRef.current = { type: 'tab', tab: tabId };
-    setIsExitConfirmOpen(true);
+    setExitModalContext(isLandingDirty ? 'landing' : 'announcement');
   };
 
   const handleKeepEditingAnnouncement = () => {
     pendingNavigationRef.current = null;
-    setIsExitConfirmOpen(false);
+    setExitModalContext(null);
 
     if (announcementBlocker.state === 'blocked') {
       announcementBlocker.reset();
@@ -263,7 +273,7 @@ export default function Announcements() {
   const proceedPendingAnnouncementNavigation = () => {
     const pending = pendingNavigationRef.current;
     pendingNavigationRef.current = null;
-    setIsExitConfirmOpen(false);
+    setExitModalContext(null);
 
     if (pending?.type === 'tab') {
       setActiveTab(pending.tab);
@@ -281,8 +291,12 @@ export default function Announcements() {
   };
 
   const handleLeaveAnnouncementWithoutSaving = () => {
-    clearAnnouncementDraft();
-    resetAnnouncementForm();
+    if (exitModalContext === 'landing') {
+      landingEditorRef.current?.discardUnsavedChanges();
+    } else {
+      clearAnnouncementDraft();
+      resetAnnouncementForm();
+    }
     proceedPendingAnnouncementNavigation();
   };
 
@@ -784,7 +798,7 @@ export default function Announcements() {
 
         {isAdmin && activeTab === 'landing' ? (
           <div className="announcement-card landing-editor-card">
-            <LandingContentEditor embedded />
+            <LandingContentEditor embedded ref={landingEditorRef} onDirtyChange={setIsLandingDirty} />
           </div>
         ) : (
           <div className="announcement-card list-card">
@@ -1033,40 +1047,42 @@ export default function Announcements() {
 
       {hasPendingAnnouncementExit && (
         <div
-          className="announcement-unsaved-overlay"
+          className="unsaved-exit-overlay"
           role="alertdialog"
           aria-modal="true"
-          aria-labelledby="announcementUnsavedTitle"
-          aria-describedby="announcementUnsavedDescription"
+          aria-labelledby="unsavedExitTitle"
+          aria-describedby="unsavedExitDescription"
         >
-          <div className="announcement-unsaved-modal">
-            <div className="announcement-unsaved-icon" aria-hidden="true">
+          <div className="unsaved-exit-modal">
+            <div className="unsaved-exit-icon" aria-hidden="true">
               !
             </div>
-            <h3 id="announcementUnsavedTitle" className="announcement-unsaved-title">
-              Unsaved Announcement
+            <h3 id="unsavedExitTitle" className="unsaved-exit-title">
+              {exitModalContext === 'landing' ? 'Unsaved Landing Page' : 'Unsaved Announcement'}
             </h3>
-            <p id="announcementUnsavedDescription" className="announcement-unsaved-message">
-              You have unsaved changes in this announcement. What would you like to do before leaving this page?
+            <p id="unsavedExitDescription" className="unsaved-exit-message">
+              {exitModalContext === 'landing'
+                ? 'You have unsaved changes in this landing page. What would you like to do before leaving this page?'
+                : 'You have unsaved changes in this announcement. What would you like to do before leaving this page?'}
             </p>
-            <div className="announcement-unsaved-actions">
+            <div className="unsaved-exit-actions">
               <button
                 type="button"
-                className="announcement-unsaved-btn announcement-unsaved-btn-save"
+                className="unsaved-exit-btn unsaved-exit-btn-save"
                 onClick={handleSaveAnnouncementDraftAndContinue}
               >
                 Save Draft and Continue
               </button>
               <button
                 type="button"
-                className="announcement-unsaved-btn announcement-unsaved-btn-leave"
+                className="unsaved-exit-btn unsaved-exit-btn-leave"
                 onClick={handleLeaveAnnouncementWithoutSaving}
               >
                 Leave Without Saving
               </button>
               <button
                 type="button"
-                className="announcement-unsaved-btn announcement-unsaved-btn-cancel"
+                className="unsaved-exit-btn unsaved-exit-btn-cancel"
                 onClick={handleKeepEditingAnnouncement}
               >
                 Cancel

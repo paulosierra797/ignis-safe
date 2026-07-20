@@ -1,8 +1,43 @@
-import React, { useMemo, useState } from 'react';
+import React, { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { useLandingContent } from '../context/LandingContentContext';
 import './LandingContentEditor.css';
+
+const LANDING_DRAFT_STORAGE_KEY = 'ignis-safe:landing-draft';
+
+const isBrowserStorageAvailable = () => typeof window !== 'undefined' && typeof sessionStorage !== 'undefined';
+
+const readLandingDraft = () => {
+  if (!isBrowserStorageAvailable()) return null;
+
+  try {
+    const raw = sessionStorage.getItem(LANDING_DRAFT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeLandingDraft = (draft) => {
+  if (!isBrowserStorageAvailable()) return;
+
+  try {
+    sessionStorage.setItem(LANDING_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // Ignore storage write failures (e.g. quota exceeded, private browsing).
+  }
+};
+
+const clearLandingDraft = () => {
+  if (!isBrowserStorageAvailable()) return;
+  sessionStorage.removeItem(LANDING_DRAFT_STORAGE_KEY);
+};
+
+const isValidLandingDraftShape = (value) => Boolean(
+  value && typeof value === 'object' &&
+  value.hero && value.about && value.contact && value.process && value.faq
+);
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
 const toPhoneHref = (value) => `tel:${String(value || '').replace(/[^\d+]/g, '')}`;
@@ -138,21 +173,48 @@ const GroupCard = ({ title, description, children }) => (
   </section>
 );
 
-export default function LandingContentEditor({ embedded = false }) {
+const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded = false, onDirtyChange }, ref) {
   const [searchQuery, setSearchQuery] = useState('');
   const { content, setContent, resetContent, defaults, loadingContent } = useLandingContent();
-  const [draft, setDraft] = useState(() => deepClone(content));
+  const [draft, setDraft] = useState(() => {
+    const storedDraft = readLandingDraft();
+    return isValidLandingDraftShape(storedDraft) ? storedDraft : deepClone(content);
+  });
   const [saveMessage, setSaveMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ open: false, changes: [], onConfirm: null });
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [discardModalOpen, setDiscardModalOpen] = useState(false);
+  const isFirstContentSync = useRef(true);
 
   React.useEffect(() => {
+    if (isFirstContentSync.current) {
+      isFirstContentSync.current = false;
+      return;
+    }
     setDraft(deepClone(content));
   }, [content]);
 
   const hasChanges = useMemo(() => JSON.stringify(draft) !== JSON.stringify(content), [draft, content]);
+
+  React.useEffect(() => {
+    if (hasChanges) {
+      writeLandingDraft(draft);
+    } else {
+      clearLandingDraft();
+    }
+  }, [hasChanges, draft]);
+
+  React.useEffect(() => {
+    onDirtyChange?.(hasChanges);
+  }, [hasChanges, onDirtyChange]);
+
+  useImperativeHandle(ref, () => ({
+    discardUnsavedChanges: () => {
+      clearLandingDraft();
+      setDraft(deepClone(content));
+    }
+  }), [content]);
 
   const updateField = (section, field, value) => {
     setDraft((prev) => ({
@@ -728,4 +790,6 @@ export default function LandingContentEditor({ embedded = false }) {
       </div>
     </div>
   );
-}
+});
+
+export default LandingContentEditor;

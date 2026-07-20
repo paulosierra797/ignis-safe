@@ -372,12 +372,16 @@ const [leaveRes, scheduleRes] = await Promise.all([
                   Shift B
                 </span>
                 <span className="shift-calendar-legend-item">
-                  <i className="shift-calendar-legend-dot legend-on-leave" />
-                  On Leave
+                  <i className="shift-calendar-legend-dot legend-on-duty" />
+                  On Duty
                 </span>
                 <span className="shift-calendar-legend-item">
                   <i className="shift-calendar-legend-dot legend-off-duty" />
                   Off Duty
+                </span>
+                <span className="shift-calendar-legend-item">
+                  <i className="shift-calendar-legend-dot legend-on-leave" />
+                  On Leave
                 </span>
               </div>
 

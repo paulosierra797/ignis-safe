@@ -335,19 +335,23 @@
 }
 
 .shift-calendar-legend-dot.legend-shift-a {
-  background: #ca8a04;
+  background: #c2410c;
 }
 
 .shift-calendar-legend-dot.legend-shift-b {
-  background: #ea580c;
+  background: #2563eb;
 }
 
-.shift-calendar-legend-dot.legend-on-leave {
-  background: #dc2626;
+.shift-calendar-legend-dot.legend-on-duty {
+  background: #166534;
 }
 
 .shift-calendar-legend-dot.legend-off-duty {
   background: #6b7280;
+}
+
+.shift-calendar-legend-dot.legend-on-leave {
+  background: #dc2626;
 }
 
 .shift-calendar-grid {
@@ -399,7 +403,7 @@
 }
 
 .shift-calendar-day-card.mine {
-  border-color: rgba(16, 185, 129, 0.45);
+  border-color: rgba(22, 163, 74, 0.45);
   background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 100%);
 }
 
@@ -615,27 +619,31 @@
 }
 
 .shift-tag.shift-a {
-  color: #ca8a04;
+  color: #c2410c;
 }
 
 .shift-tag.shift-b {
-  color: #ea580c;
+  color: #2563eb;
 }
 
 .shift-tag.shift-a-b {
-  color: #ca8a04;
+  color: #c2410c;
 }
 
 .shift-tag.shift-a-b::before {
-  background: linear-gradient(135deg, #ca8a04 50%, #ea580c 50%);
+  background: linear-gradient(135deg, #c2410c 50%, #2563eb 50%);
 }
 
-.shift-tag.on-leave {
-  color: #dc2626;
+.shift-tag.on-duty {
+  color: #166534;
 }
 
 .shift-tag.off-duty {
   color: #6b7280;
+}
+
+.shift-tag.on-leave {
+  color: #dc2626;
 }
 
 .ops-secondary-btn {
@@ -773,8 +781,8 @@
     font-size:1.1rem;
 }
 .shift-calendar-day-card.shift-a{
-    background:#effdf5;
-    border:1px solid #9ae6b4;
+    background:#fff7ed;
+    border:1px solid #fdba74;
 }
 
 .shift-calendar-day-card.shift-b{

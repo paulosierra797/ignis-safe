@@ -233,6 +233,7 @@ export default function Accounts() {
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [isPersonnelShiftModalOpen, setIsPersonnelShiftModalOpen] = useState(false);
+  const [isPersonnelShiftExitConfirmOpen, setIsPersonnelShiftExitConfirmOpen] = useState(false);
   const [isShiftConfirmModalOpen, setIsShiftConfirmModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLeaveSaving, setIsLeaveSaving] = useState(false);
@@ -300,6 +301,7 @@ export default function Accounts() {
   // Form state
   const [formData, setFormData] = useState({ ...EMPTY_PERSONNEL_FORM });
   const pendingAddNavigationRef = useRef(null);
+  const pendingPersonnelShiftNavigationRef = useRef(null);
   const bypassAddNavigationRef = useRef(false);
   const passwordRequirementStatus = useMemo(() => {
     const password = String(formData.password || '');
@@ -332,7 +334,10 @@ export default function Accounts() {
   const isAddFormDirty = isAddModalOpen && Object.values(formData).some(
     (value) => String(value || '').trim() !== ''
   );
-  const shouldBlockAddNavigation = useCallback(({ currentLocation, nextLocation }) => {
+  const isPersonnelShiftDirty = isPersonnelShiftModalOpen && (
+    selectedShiftPersonnelIds.length > 0 || selectedShiftForAssignment !== 'A'
+  );
+  const shouldBlockAccountsNavigation = useCallback(({ currentLocation, nextLocation }) => {
     if (bypassAddNavigationRef.current) {
       bypassAddNavigationRef.current = false;
       return false;
@@ -340,10 +345,13 @@ export default function Accounts() {
 
     const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
     const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
-    return isAddFormDirty && currentPath !== nextPath;
-  }, [isAddFormDirty]);
-  const addPersonnelBlocker = useBlocker(shouldBlockAddNavigation);
-  const hasPendingAddExit = isAddExitConfirmOpen || addPersonnelBlocker.state === 'blocked';
+    return (isAddFormDirty || isPersonnelShiftDirty) && currentPath !== nextPath;
+  }, [isAddFormDirty, isPersonnelShiftDirty]);
+  const addPersonnelBlocker = useBlocker(shouldBlockAccountsNavigation);
+  const hasPendingAddExit = isAddExitConfirmOpen
+    || (addPersonnelBlocker.state === 'blocked' && isAddFormDirty);
+  const hasPendingPersonnelShiftExit = isPersonnelShiftExitConfirmOpen
+    || (addPersonnelBlocker.state === 'blocked' && isPersonnelShiftDirty);
   const [leaveFormData, setLeaveFormData] = useState({
     start_date: '',
     end_date: ''
@@ -352,7 +360,7 @@ export default function Accounts() {
   const isOnLeave = (account) => String(account?.status || '').toLowerCase() === 'on leave';
 
   useEffect(() => {
-    if (!isAddFormDirty) {
+    if (!isAddFormDirty && !isPersonnelShiftDirty) {
       return undefined;
     }
 
@@ -363,7 +371,7 @@ export default function Accounts() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isAddFormDirty]);
+  }, [isAddFormDirty, isPersonnelShiftDirty]);
 
   const fromIsoDate = (dateValue) => {
     const parts = String(dateValue || '').split('-');
@@ -1385,13 +1393,21 @@ const permissions = getDefaultPermissions(formData.role);
   };
 
   const handleAccountsHeaderNavigationRequest = (navigation) => {
-    if (!isAddFormDirty) {
-      navigation.action();
+    if (isAddFormDirty) {
+      pendingAddNavigationRef.current = { type: 'manual', navigation };
+      setIsAddExitConfirmOpen(true);
       return;
     }
 
-    pendingAddNavigationRef.current = { type: 'manual', navigation };
-    setIsAddExitConfirmOpen(true);
+    if (isPersonnelShiftDirty) {
+      pendingPersonnelShiftNavigationRef.current = { type: 'manual', navigation };
+      setIsPersonnelShiftExitConfirmOpen(true);
+      return;
+    }
+
+    if (!isAddFormDirty && !isPersonnelShiftDirty) {
+      navigation.action();
+    }
   };
 
   const handleKeepEditingAddPersonnel = () => {
@@ -1445,7 +1461,7 @@ const permissions = getDefaultPermissions(formData.role);
         const account = accounts.find((acc) => acc.admin_id === id);
         return {
           id,
-          name: account ? `${account.first_name} ${account.last_name}` : getPersonnelNameById(id),
+          name: account ? `${account.first_name} ${account.last_name}` : 'Personnel',
           rank: account?.rank || 'N/A',
           pending: pendingIds.includes(id) && map === targetMap
         };
@@ -1492,7 +1508,7 @@ const permissions = getDefaultPermissions(formData.role);
       return;
     }
     setIsShiftConfirmModalOpen(false);
-    closePersonnelShiftModal();
+    requestClosePersonnelShiftModal();
   };
 
   const handleConfirmShiftAssignment = async () => {
@@ -1803,6 +1819,51 @@ const permissions = getDefaultPermissions(formData.role);
     setPersonnelShiftMessage({ type: '', text: '' });
     setSelectedShiftPersonnel(null);
     setSelectedShiftPersonnelIds([]);
+    setSelectedShiftForAssignment('A');
+    setIsPersonnelShiftExitConfirmOpen(false);
+    pendingPersonnelShiftNavigationRef.current = null;
+  };
+
+  const requestClosePersonnelShiftModal = () => {
+    if (isPersonnelShiftSaving) {
+      return;
+    }
+
+    if (!isPersonnelShiftDirty) {
+      closePersonnelShiftModal();
+      return;
+    }
+
+    pendingPersonnelShiftNavigationRef.current = { type: 'close' };
+    setIsPersonnelShiftExitConfirmOpen(true);
+  };
+
+  const handleKeepEditingPersonnelShift = () => {
+    pendingPersonnelShiftNavigationRef.current = null;
+    setIsPersonnelShiftExitConfirmOpen(false);
+
+    if (addPersonnelBlocker.state === 'blocked') {
+      addPersonnelBlocker.reset();
+    }
+  };
+
+  const handleDiscardPersonnelShift = () => {
+    const pendingExit = pendingPersonnelShiftNavigationRef.current;
+    pendingPersonnelShiftNavigationRef.current = null;
+    setIsPersonnelShiftExitConfirmOpen(false);
+    closePersonnelShiftModal();
+
+    if (pendingExit?.type === 'manual') {
+      if (addPersonnelBlocker.state === 'blocked') {
+        addPersonnelBlocker.reset();
+      }
+      runAddManualNavigation(pendingExit.navigation);
+      return;
+    }
+
+    if (addPersonnelBlocker.state === 'blocked') {
+      addPersonnelBlocker.proceed();
+    }
   };
 
   const handleSaveShiftSchedule = async () => {
@@ -3659,21 +3720,21 @@ const permissions = getDefaultPermissions(formData.role);
         )}
 
         {isPersonnelShiftModalOpen && (
-          <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
-            <div className="accounts-modal accounts-shift-modal">
+          <div
+            className="accounts-modal-overlay"
+            role="dialog"
+            aria-modal="true"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) requestClosePersonnelShiftModal();
+            }}
+          >
+            <div className="accounts-modal accounts-shift-modal accounts-personnel-shift-modal">
               <div className="accounts-modal-header">
                 <h3>Assign Personnel to Shifts</h3>
-                <button
-                  className="accounts-modal-close"
-                  onClick={closePersonnelShiftModal}
-                  aria-label="Close personnel shift assignment modal"
-                >
-                  x
-                </button>
               </div>
 
               <div className="accounts-modal-body">
-                <div className="shift-personnel-selector">
+                <div className={`shift-personnel-selector shift-personnel-selector-${selectedShiftForAssignment.toLowerCase()}`}>
                   <label>
                     <strong>Select Personnel (multiple allowed):</strong>
                   </label>
@@ -3709,8 +3770,8 @@ const permissions = getDefaultPermissions(formData.role);
                 </div>
 
                 <div className="shift-overview-grid">
-                  <div className="shift-overview-col">
-                    <div className="shift-overview-header">Shift A</div>
+                  <div className="shift-overview-col shift-overview-col-a">
+                    <div className="shift-overview-header shift-overview-header-a">Shift A</div>
                     <div className="shift-overview-list">
                       {(() => {
                         const ids = Array.from(new Set(periodAssignments
@@ -3733,8 +3794,8 @@ const permissions = getDefaultPermissions(formData.role);
                     </div>
                   </div>
 
-                  <div className="shift-overview-col">
-                    <div className="shift-overview-header">Shift B</div>
+                  <div className="shift-overview-col shift-overview-col-b">
+                    <div className="shift-overview-header shift-overview-header-b">Shift B</div>
                     <div className="shift-overview-list">
                       {(() => {
                         const ids = Array.from(new Set(periodAssignments
@@ -3759,7 +3820,7 @@ const permissions = getDefaultPermissions(formData.role);
                 </div>
 
                 {selectedShiftPersonnelIds.length > 0 && (
-                  <div className="shift-assignment-form">
+                  <div className={`shift-assignment-form shift-assignment-form-${selectedShiftForAssignment.toLowerCase()}`}>
                     <h4>Assign {selectedShiftPersonnelIds.length} selected personnel to:</h4>
 
                     <div className="shift-assignment-simple">
@@ -3821,7 +3882,9 @@ const permissions = getDefaultPermissions(formData.role);
                           {shiftAssignments.map((assignment) => (
                             <div key={assignment.assignment_id} className="assignment-row">
                               <div className="assignment-info">
-                                <span className="assignment-shift">Shift {assignment.shift_type}</span>
+                                <span className={`assignment-shift assignment-shift-${String(assignment.shift_type || '').toLowerCase()}`}>
+                                  Shift {assignment.shift_type}
+                                </span>
                                 <span className="assignment-dates">
                                   {formatShiftDate(assignment.start_date)} - {formatShiftDate(assignment.end_date)}
                                 </span>
@@ -3849,8 +3912,8 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
 
               <div className="accounts-modal-footer">
-                <button className="accounts-modal-draft" onClick={closePersonnelShiftModal} disabled={isPersonnelShiftSaving}>
-                  Close
+                <button className="accounts-modal-draft" onClick={requestClosePersonnelShiftModal} disabled={isPersonnelShiftSaving}>
+                  Cancel
                 </button>
               </div>
             </div>
@@ -3866,8 +3929,8 @@ const permissions = getDefaultPermissions(formData.role);
 
               <div className="accounts-modal-body">
                 <div className="shift-overview-grid">
-                  <div className="shift-overview-col">
-                    <div className="shift-overview-header">Shift A</div>
+                  <div className="shift-overview-col shift-overview-col-a">
+                    <div className="shift-overview-header shift-overview-header-a">Shift A</div>
                     <div className="shift-overview-list">
                       {shiftConfirmPreview.shiftA.length ? (
                         shiftConfirmPreview.shiftA.map((person) => (
@@ -3885,8 +3948,8 @@ const permissions = getDefaultPermissions(formData.role);
                     </div>
                   </div>
 
-                  <div className="shift-overview-col">
-                    <div className="shift-overview-header">Shift B</div>
+                  <div className="shift-overview-col shift-overview-col-b">
+                    <div className="shift-overview-header shift-overview-header-b">Shift B</div>
                     <div className="shift-overview-list">
                       {shiftConfirmPreview.shiftB.length ? (
                         shiftConfirmPreview.shiftB.map((person) => (
@@ -3921,6 +3984,45 @@ const permissions = getDefaultPermissions(formData.role);
                 </button>
                 <button className="accounts-modal-add" onClick={handleConfirmShiftAssignment} disabled={isPersonnelShiftSaving}>
                   {isPersonnelShiftSaving ? 'Assigning...' : 'Confirm Assignment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasPendingPersonnelShiftExit && (
+          <div
+            className="accounts-modal-overlay accounts-unsaved-overlay"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="personnelShiftUnsavedTitle"
+            aria-describedby="personnelShiftUnsavedDescription"
+          >
+            <div className="accounts-modal accounts-unsaved-modal">
+              <div className="accounts-modal-header">
+                <h3 id="personnelShiftUnsavedTitle">Discard pending shift changes?</h3>
+              </div>
+
+              <div className="accounts-modal-body">
+                <p id="personnelShiftUnsavedDescription" className="accounts-unsaved-message">
+                  Your personnel selection and shift choice have not been assigned yet. Are you sure you want to discard them and leave?
+                </p>
+              </div>
+
+              <div className="accounts-modal-footer">
+                <button
+                  type="button"
+                  className="accounts-modal-draft"
+                  onClick={handleKeepEditingPersonnelShift}
+                >
+                  Keep Editing
+                </button>
+                <button
+                  type="button"
+                  className="accounts-modal-discard"
+                  onClick={handleDiscardPersonnelShift}
+                >
+                  Discard Changes
                 </button>
               </div>
             </div>

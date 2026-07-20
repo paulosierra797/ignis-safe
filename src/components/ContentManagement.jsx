@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingContentEditor from './LandingContentEditor';
@@ -76,7 +77,122 @@ export default function ContentManagement() {
     target_personnel_id: ''
   });
 
+  const landingEditorRef = useRef(null);
+  const bypassNavigationRef = useRef(false);
+  const [isLandingDirty, setIsLandingDirty] = useState(false);
+  const [isLandingSaving, setIsLandingSaving] = useState(false);
+  const [pendingTab, setPendingTab] = useState('');
+  const [pendingManualNavigation, setPendingManualNavigation] = useState(null);
+
   const sidebarVariant = 'admin';
+
+  const shouldBlockNavigation = useCallback(({ currentLocation, nextLocation }) => {
+    if (bypassNavigationRef.current) {
+      bypassNavigationRef.current = false;
+      return false;
+    }
+
+    const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
+    const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
+    return activeTab === 'landing' && isLandingDirty && currentPath !== nextPath;
+  }, [activeTab, isLandingDirty]);
+  const blocker = useBlocker(shouldBlockNavigation);
+  const hasPendingExit = Boolean(pendingTab || pendingManualNavigation || blocker.state === 'blocked');
+
+  useEffect(() => {
+    if (!isLandingDirty) return undefined;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isLandingDirty]);
+
+  const requestTabChange = (nextTab) => {
+    if (nextTab === activeTab) return;
+
+    if (activeTab === 'landing' && isLandingDirty) {
+      if (hasPendingExit) return;
+      setPendingTab(nextTab);
+      return;
+    }
+
+    setActiveTab(nextTab);
+  };
+
+  const handleHeaderNavigationRequest = (navigation) => {
+    if (!(activeTab === 'landing' && isLandingDirty)) {
+      navigation.action();
+      return;
+    }
+
+    if (hasPendingExit) return;
+    setPendingManualNavigation(navigation);
+  };
+
+  const runManualNavigation = (navigation) => {
+    bypassNavigationRef.current = true;
+
+    try {
+      const navigationResult = navigation.action();
+      Promise.resolve(navigationResult).finally(() => {
+        bypassNavigationRef.current = false;
+      });
+    } catch (navigationError) {
+      bypassNavigationRef.current = false;
+      throw navigationError;
+    }
+  };
+
+  const resumePendingExit = () => {
+    const manualNavigation = pendingManualNavigation;
+    const nextTab = pendingTab;
+    setPendingManualNavigation(null);
+    setPendingTab('');
+
+    if (nextTab) {
+      if (blocker.state === 'blocked') blocker.reset();
+      setActiveTab(nextTab);
+      return;
+    }
+
+    if (manualNavigation) {
+      if (blocker.state === 'blocked') blocker.reset();
+      runManualNavigation(manualNavigation);
+      return;
+    }
+
+    if (blocker.state === 'blocked') blocker.proceed();
+  };
+
+  const handleCancelExit = () => {
+    if (isLandingSaving) return;
+    setPendingManualNavigation(null);
+    setPendingTab('');
+    if (blocker.state === 'blocked') blocker.reset();
+  };
+
+  const handleLeaveWithoutSaving = () => {
+    if (isLandingSaving) return;
+    landingEditorRef.current?.discardUnsavedChanges();
+    setIsLandingDirty(false);
+    resumePendingExit();
+  };
+
+  const handleSaveAndContinue = async () => {
+    if (isLandingSaving) return;
+    setIsLandingSaving(true);
+    try {
+      const saved = await landingEditorRef.current?.saveChanges();
+      setIsLandingSaving(false);
+      if (saved) resumePendingExit();
+    } catch {
+      setIsLandingSaving(false);
+    }
+  };
 
   const loadAnnouncements = async () => {
     const { data, error } = await getAnnouncementsForUser(currentUser);
@@ -228,13 +344,14 @@ export default function ContentManagement() {
           onSearchChange={activeTab === 'announcements' ? setSearchQuery : () => {}}
           variant={sidebarVariant}
           showSearch={activeTab === 'announcements'}
+          onNavigationRequest={handleHeaderNavigationRequest}
         />
 
         <div className="content-tabs" role="tablist" aria-label="Content management tabs">
           <button
             type="button"
             className={`content-tab ${activeTab === 'announcements' ? 'active' : ''}`}
-            onClick={() => setActiveTab('announcements')}
+            onClick={() => requestTabChange('announcements')}
             role="tab"
             aria-selected={activeTab === 'announcements'}
           >
@@ -243,11 +360,14 @@ export default function ContentManagement() {
           <button
             type="button"
             className={`content-tab ${activeTab === 'landing' ? 'active' : ''}`}
-            onClick={() => setActiveTab('landing')}
+            onClick={() => requestTabChange('landing')}
             role="tab"
             aria-selected={activeTab === 'landing'}
           >
             Landing Page
+            {activeTab === 'landing' && isLandingDirty && (
+              <span className="content-tab-unsaved-dot" aria-hidden="true" />
+            )}
           </button>
         </div>
 
@@ -441,10 +561,56 @@ export default function ContentManagement() {
 
         {activeTab === 'landing' && (
           <div className="announcement-card landing-editor-card">
-            <LandingContentEditor embedded />
+            <LandingContentEditor embedded ref={landingEditorRef} onDirtyChange={setIsLandingDirty} />
           </div>
         )}
       </div>
+
+      {hasPendingExit && (
+        <div
+          className="content-unsaved-overlay"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="content-unsaved-title"
+          aria-describedby="content-unsaved-description"
+        >
+          <div className="content-unsaved-modal">
+            <div className="content-unsaved-icon" aria-hidden="true">!</div>
+            <h3 id="content-unsaved-title" className="content-unsaved-title">
+              Unsaved Landing Page Changes
+            </h3>
+            <p id="content-unsaved-description" className="content-unsaved-message">
+              You have unsaved changes in the Landing Page editor. What would you like to do before leaving?
+            </p>
+            <div className="content-unsaved-actions">
+              <button
+                type="button"
+                className="content-unsaved-btn content-unsaved-btn-save"
+                onClick={handleSaveAndContinue}
+                disabled={isLandingSaving}
+              >
+                {isLandingSaving ? 'Saving...' : 'Save Draft and Continue'}
+              </button>
+              <button
+                type="button"
+                className="content-unsaved-btn content-unsaved-btn-leave"
+                onClick={handleLeaveWithoutSaving}
+                disabled={isLandingSaving}
+              >
+                Leave Without Saving
+              </button>
+              <button
+                type="button"
+                className="content-unsaved-btn content-unsaved-btn-cancel"
+                onClick={handleCancelExit}
+                disabled={isLandingSaving}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

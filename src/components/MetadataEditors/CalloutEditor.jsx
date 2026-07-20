@@ -1,4 +1,5 @@
 import "./CalloutEditor.css";
+import { BilingualGrid, EditorField } from '../EditorUI/ModuleEditorUI';
 export default function CalloutEditor({
   block,
   page,
@@ -35,36 +36,44 @@ export default function CalloutEditor({
 
   return (
    <div className="lines-section">
-  <h4>English Lines</h4>
-
-  {(metadata.lines_en || []).map((line, index) => (
-    <textarea
-      className="line-textarea"
-      key={index}
-      value={line}
-      onChange={(e) => {
-        const updated = [...metadata.lines_en];
-        updated[index] = e.target.value;
-        updateMetadata("lines_en", updated);
-      }}
-    />
-  ))}
-
-
-  <h4>Tagalog Lines</h4>
-
-  {(metadata.lines_tl || []).map((line, index) => (
-    <textarea
-      className="line-textarea"
-      key={index}
-      value={line}
-      onChange={(e) => {
-        const updated = [...metadata.lines_tl];
-        updated[index] = e.target.value;
-        updateMetadata("lines_tl", updated);
-      }}
-    />
-  ))}
+  <BilingualGrid>
+    <EditorField label="Callout Lines" language="English">
+      <div className="module-editor-repeater-list">
+        {(metadata.lines_en || []).map((line, index) => (
+          <div className="module-editor-repeater-row" key={index}>
+            <span>{index + 1}</span>
+            <textarea
+              className="line-textarea"
+              value={line}
+              onChange={(e) => {
+                const updated = [...metadata.lines_en];
+                updated[index] = e.target.value;
+                updateMetadata("lines_en", updated);
+              }}
+            />
+          </div>
+        ))}
+      </div>
+    </EditorField>
+    <EditorField label="Callout Lines" language="Tagalog">
+      <div className="module-editor-repeater-list">
+        {(metadata.lines_tl || []).map((line, index) => (
+          <div className="module-editor-repeater-row" key={index}>
+            <span>{index + 1}</span>
+            <textarea
+              className="line-textarea"
+              value={line}
+              onChange={(e) => {
+                const updated = [...metadata.lines_tl];
+                updated[index] = e.target.value;
+                updateMetadata("lines_tl", updated);
+              }}
+            />
+          </div>
+        ))}
+      </div>
+    </EditorField>
+  </BilingualGrid>
 </div>
   );
 }

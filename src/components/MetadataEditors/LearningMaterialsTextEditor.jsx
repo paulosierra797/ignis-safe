@@ -1,4 +1,5 @@
 import  "./LearningMaterials.css";
+import { BilingualGrid, EditorField } from '../EditorUI/ModuleEditorUI';
 
 export default function LearningMaterialTextsEditor({
   text,
@@ -6,25 +7,22 @@ export default function LearningMaterialTextsEditor({
 }) {
   return (
     <div className="learning-material-text-card">
-  <h4>Learning Material Text</h4>
-
-  <label>English</label>
-  <textarea
-    className="material-text"
-    value={text.text_en || ""}
-    onChange={(e) =>
-      updateText("text_en", e.target.value)
-    }
-  />
-
-  <label>Tagalog</label>
-  <textarea
-    className="material-text"
-    value={text.text_tl || ""}
-    onChange={(e) =>
-      updateText("text_tl", e.target.value)
-    }
-  />
+  <BilingualGrid>
+    <EditorField label="Learning Material Text" language="English">
+      <textarea
+        className="material-text"
+        value={text.text_en || ""}
+        onChange={(e) => updateText("text_en", e.target.value)}
+      />
+    </EditorField>
+    <EditorField label="Learning Material Text" language="Tagalog">
+      <textarea
+        className="material-text"
+        value={text.text_tl || ""}
+        onChange={(e) => updateText("text_tl", e.target.value)}
+      />
+    </EditorField>
+  </BilingualGrid>
 </div>
   );
 }

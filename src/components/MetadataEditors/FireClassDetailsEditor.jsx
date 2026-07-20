@@ -1,184 +1,136 @@
-import React from "react";
-import "./fireclass.css";
+import React from 'react';
+import { BilingualGrid, EditorField } from '../EditorUI/ModuleEditorUI';
+import './fireclass.css';
 
-export default function FireClassDetailsEditor({
-  detail,
-  guide,
-  updateDetail,
-  updateGuide
-}) {
+function ArrayEditorField({ label, language, items, onChange }) {
   return (
-<div className="fire-details-section">
-  <h4>Fire Class Details</h4>
+    <EditorField label={label} language={language}>
+      <div className="module-editor-repeater-list">
+        {(items || []).map((item, index) => (
+          <div className="module-editor-repeater-row" key={index}>
+            <span>{index + 1}</span>
+            <input
+              className="examples"
+              value={item}
+              onChange={(event) => {
+                const updated = [...items];
+                updated[index] = event.target.value;
+                onChange(updated);
+              }}
+            />
+          </div>
+        ))}
+      </div>
+    </EditorField>
+  );
+}
 
-  <div className="detail-group">
-    <label>Title (English)</label>
-    <input
-      className="title"
-      value={detail.title_en || ""}
-      onChange={(e) => updateDetail("title_en", e.target.value)}
-    />
+export default function FireClassDetailsEditor({ detail, guide, updateDetail, updateGuide }) {
+  const safeGuide = guide || {
+    examples_en: [],
+    examples_tl: [],
+    agents_en: [],
+    agents_tl: []
+  };
 
-    <label>Title (Tagalog)</label>
-    <input
-      className="title"
-      value={detail.title_tl || ""}
-      onChange={(e) => updateDetail("title_tl", e.target.value)}
-    />
-  </div>
-
-
-  <div className="detail-group">
-    <label>Description (English)</label>
-    <textarea
-      className="desc"
-      value={detail.description_en || ""}
-      onChange={(e) =>
-        updateDetail("description_en", e.target.value)
-      }
-    />
-
-    <label>Description (Tagalog)</label>
-    <textarea
-      className="desc"
-      value={detail.description_tl || ""}
-      onChange={(e) =>
-        updateDetail("description_tl", e.target.value)
-      }
-    />
-  </div>
-
-
-  <div className="detail-group">
-    <label>Note (English)</label>
-    <textarea
-      className="desc"
-      value={detail.note_en || ""}
-      onChange={(e) =>
-        updateDetail("note_en", e.target.value)
-      }
-    />
-
-    <label>Note (Tagalog)</label>
-    <textarea
-      className="desc"
-      value={detail.note_tl || ""}
-      onChange={(e) =>
-        updateDetail("note_tl", e.target.value)
-      }
-    />
-  </div>
-
-
-  <div className="detail-group">
-    <label>Section 1 Title (English)</label>
-    <input
-      className="title"
-      value={detail.section1_title_en || ""}
-      onChange={(e) =>
-        updateDetail("section1_title_en", e.target.value)
-      }
-    />
-
-    <label>Section 1 Title (Tagalog)</label>
-    <input
-      className="title"
-      value={detail.section1_title_tl || ""}
-      onChange={(e) =>
-        updateDetail("section1_title_tl", e.target.value)
-      }
-    />
-  </div>
-
-
-  <div className="detail-group">
-    <label>Section 2 Title (English)</label>
-    <input
-      className="title"
-      value={detail.section2_title_en || ""}
-      onChange={(e) =>
-        updateDetail("section2_title_en", e.target.value)
-      }
-    />
-
-    <label>Section 2 Title (Tagalog)</label>
-    <input
-      className="title"
-      value={detail.section2_title_tl || ""}
-      onChange={(e) =>
-        updateDetail("section2_title_tl", e.target.value)
-      }
-    />
-  </div>
-
-
-  <div className="detail-group">
-    <label>Examples (English)</label>
-
-    {(guide.examples_en || []).map((item, index) => (
-      <input
-        className="examples"
-        key={index}
-        value={item}
-        onChange={(e) => {
-          const updated = [...guide.examples_en];
-          updated[index] = e.target.value;
-          updateGuide("examples_en", updated);
-        }}
-      />
-    ))}
-
-
-    <label>Examples (Tagalog)</label>
-
-    {(guide.examples_tl || []).map((item, index) => (
-      <input
-        className="examples"
-        key={index}
-        value={item}
-        onChange={(e) => {
-          const updated = [...guide.examples_tl];
-          updated[index] = e.target.value;
-          updateGuide("examples_tl", updated);
-        }}
-      />
-    ))}
-  </div>
-
-
-  <div className="detail-group">
-    <label>Agents (English)</label>
-
-    {(guide.agents_en || []).map((item, index) => (
-      <input
-        className="examples"
-        key={index}
-        value={item}
-        onChange={(e) => {
-          const updated = [...guide.agents_en];
-          updated[index] = e.target.value;
-          updateGuide("agents_en", updated);
-        }}
-      />
-    ))}
-
-
-    <label>Agents (Tagalog)</label>
-
-    {(guide.agents_tl || []).map((item, index) => (
-      <input
-        className="examples"
-        key={index}
-        value={item}
-        onChange={(e) => {
-          const updated = [...guide.agents_tl];
-          updated[index] = e.target.value;
-          updateGuide("agents_tl", updated);
-        }}
-      />
-    ))}
-  </div>
-
-</div> 
- );
+  return (
+    <div className="fire-details-section">
+      <BilingualGrid>
+        <EditorField label="Title" language="English">
+          <input
+            className="title"
+            value={detail.title_en || ''}
+            onChange={(event) => updateDetail('title_en', event.target.value)}
+          />
+        </EditorField>
+        <EditorField label="Title" language="Tagalog">
+          <input
+            className="title"
+            value={detail.title_tl || ''}
+            onChange={(event) => updateDetail('title_tl', event.target.value)}
+          />
+        </EditorField>
+        <EditorField label="Description" language="English">
+          <textarea
+            className="desc"
+            value={detail.description_en || ''}
+            onChange={(event) => updateDetail('description_en', event.target.value)}
+          />
+        </EditorField>
+        <EditorField label="Description" language="Tagalog">
+          <textarea
+            className="desc"
+            value={detail.description_tl || ''}
+            onChange={(event) => updateDetail('description_tl', event.target.value)}
+          />
+        </EditorField>
+        <EditorField label="Note" language="English">
+          <textarea
+            className="desc"
+            value={detail.note_en || ''}
+            onChange={(event) => updateDetail('note_en', event.target.value)}
+          />
+        </EditorField>
+        <EditorField label="Note" language="Tagalog">
+          <textarea
+            className="desc"
+            value={detail.note_tl || ''}
+            onChange={(event) => updateDetail('note_tl', event.target.value)}
+          />
+        </EditorField>
+        <EditorField label="Section 1 Title" language="English">
+          <input
+            className="title"
+            value={detail.section1_title_en || ''}
+            onChange={(event) => updateDetail('section1_title_en', event.target.value)}
+          />
+        </EditorField>
+        <EditorField label="Section 1 Title" language="Tagalog">
+          <input
+            className="title"
+            value={detail.section1_title_tl || ''}
+            onChange={(event) => updateDetail('section1_title_tl', event.target.value)}
+          />
+        </EditorField>
+        <EditorField label="Section 2 Title" language="English">
+          <input
+            className="title"
+            value={detail.section2_title_en || ''}
+            onChange={(event) => updateDetail('section2_title_en', event.target.value)}
+          />
+        </EditorField>
+        <EditorField label="Section 2 Title" language="Tagalog">
+          <input
+            className="title"
+            value={detail.section2_title_tl || ''}
+            onChange={(event) => updateDetail('section2_title_tl', event.target.value)}
+          />
+        </EditorField>
+        <ArrayEditorField
+          label="Examples"
+          language="English"
+          items={safeGuide.examples_en}
+          onChange={(value) => updateGuide('examples_en', value)}
+        />
+        <ArrayEditorField
+          label="Examples"
+          language="Tagalog"
+          items={safeGuide.examples_tl}
+          onChange={(value) => updateGuide('examples_tl', value)}
+        />
+        <ArrayEditorField
+          label="Agents"
+          language="English"
+          items={safeGuide.agents_en}
+          onChange={(value) => updateGuide('agents_en', value)}
+        />
+        <ArrayEditorField
+          label="Agents"
+          language="Tagalog"
+          items={safeGuide.agents_tl}
+          onChange={(value) => updateGuide('agents_tl', value)}
+        />
+      </BilingualGrid>
+    </div>
+  );
 }

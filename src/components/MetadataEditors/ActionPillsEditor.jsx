@@ -1,221 +1,132 @@
-import React from "react";
-import "./ActionPillsEditor.css";
+import React from 'react';
+import { BilingualGrid, EditorField, EditorItemCard } from '../EditorUI/ModuleEditorUI';
+import './ActionPillsEditor.css';
 
-export default function ActionPillsEditor({
-  block,
-  page,
-  editedModule,
-  setEditedModule,
-}) {
+export default function ActionPillsEditor({ block, page, editedModule, setEditedModule }) {
   const metadata = block.metadata || {};
 
-  const updateMetadata = (field, value) => {
-    const updatedPages = editedModule.pages.map((p) => {
-      if (p.page_no !== page.page_no) return p;
-
-      return {
-        ...p,
-        blocks: p.blocks.map((b) =>
-          b.id === block.id
-            ? {
-                ...b,
-                metadata: {
-                  ...b.metadata,
-                  [field]: value,
-                },
-              }
-            : b
-        ),
-      };
-    });
-
-    setEditedModule({
-      ...editedModule,
-      pages: updatedPages,
-    });
-  };
-
   const updatePill = (index, field, value) => {
-    const updatedPages = editedModule.pages.map((p) => {
-      if (p.page_no !== page.page_no) return p;
-
+    const updatedPages = editedModule.pages.map((entry) => {
+      if (entry.page_no !== page.page_no) return entry;
       return {
-        ...p,
-        blocks: p.blocks.map((b) => {
-          if (b.id !== block.id) return b;
-
-          const pills = [...(b.metadata.pills || [])];
-
-          pills[index] = {
-            ...pills[index],
-            [field]: value,
-          };
-
-          return {
-            ...b,
-            metadata: {
-              ...b.metadata,
-              pills,
-            },
-          };
-        }),
+        ...entry,
+        blocks: entry.blocks.map((candidate) => {
+          if (candidate.id !== block.id) return candidate;
+          const pills = [...(candidate.metadata.pills || [])];
+          pills[index] = { ...pills[index], [field]: value };
+          return { ...candidate, metadata: { ...candidate.metadata, pills } };
+        })
       };
     });
-
-    setEditedModule({
-      ...editedModule,
-      pages: updatedPages,
-    });
+    setEditedModule({ ...editedModule, pages: updatedPages });
   };
 
   const updateWideCard = (field, value) => {
-    const updatedPages = editedModule.pages.map((p) => {
-      if (p.page_no !== page.page_no) return p;
-
+    const updatedPages = editedModule.pages.map((entry) => {
+      if (entry.page_no !== page.page_no) return entry;
       return {
-        ...p,
-        blocks: p.blocks.map((b) =>
-          b.id === block.id
+        ...entry,
+        blocks: entry.blocks.map((candidate) =>
+          candidate.id === block.id
             ? {
-                ...b,
+                ...candidate,
                 metadata: {
-                  ...b.metadata,
-                  wide_card: {
-                    ...b.metadata.wide_card,
-                    [field]: value,
-                  },
-                },
+                  ...candidate.metadata,
+                  wide_card: { ...candidate.metadata.wide_card, [field]: value }
+                }
               }
-            : b
-        ),
+            : candidate
+        )
       };
     });
-
-    setEditedModule({
-      ...editedModule,
-      pages: updatedPages,
-    });
+    setEditedModule({ ...editedModule, pages: updatedPages });
   };
 
   return (
-    <div className="metadata-editor">
-     <div className="metadata-pills-section">
-  <h4>Action Pills</h4>
+    <div className="metadata-editor metadata-pills-section">
+      <div className="module-editor-item-list">
+        {(metadata.pills || []).map((pill, index) => (
+          <EditorItemCard key={index} number={index + 1} label="Action Pill">
+            <BilingualGrid>
+              <EditorField label="Label" language="English">
+                <input
+                  className="pill-input"
+                  value={pill.label_en || ''}
+                  onChange={(event) => updatePill(index, 'label_en', event.target.value)}
+                />
+              </EditorField>
+              <EditorField label="Label" language="Tagalog">
+                <input
+                  className="pill-input"
+                  value={pill.label_tl || ''}
+                  onChange={(event) => updatePill(index, 'label_tl', event.target.value)}
+                />
+              </EditorField>
+              <EditorField label="Popup Title" language="English">
+                <input
+                  className="pill-input"
+                  value={pill.popup_title_en || ''}
+                  onChange={(event) => updatePill(index, 'popup_title_en', event.target.value)}
+                />
+              </EditorField>
+              <EditorField label="Popup Title" language="Tagalog">
+                <input
+                  className="pill-input"
+                  value={pill.popup_title_tl || ''}
+                  onChange={(event) => updatePill(index, 'popup_title_tl', event.target.value)}
+                />
+              </EditorField>
+              <EditorField label="Popup Body" language="English">
+                <textarea
+                  className="pill-textarea"
+                  value={pill.popup_body_en || ''}
+                  onChange={(event) => updatePill(index, 'popup_body_en', event.target.value)}
+                />
+              </EditorField>
+              <EditorField label="Popup Body" language="Tagalog">
+                <textarea
+                  className="pill-textarea"
+                  value={pill.popup_body_tl || ''}
+                  onChange={(event) => updatePill(index, 'popup_body_tl', event.target.value)}
+                />
+              </EditorField>
+            </BilingualGrid>
+          </EditorItemCard>
+        ))}
 
-  <h5>Pills</h5>
-
-  {(metadata.pills || []).map((pill, index) => (
-    <div key={index} className="metadata-pill-card">
-      <h5>Pill {index + 1}</h5>
-
-      <label>Label (English)</label>
-      <input
-        className="pill-input"
-        type="text"
-        value={pill.label_en || ""}
-        onChange={(e) =>
-          updatePill(index, "label_en", e.target.value)
-        }
-      />
-
-      <label>Label (Tagalog)</label>
-      <input
-        className="pill-input"
-        type="text"
-        value={pill.label_tl || ""}
-        onChange={(e) =>
-          updatePill(index, "label_tl", e.target.value)
-        }
-      />
-
-
-      <label>Popup Title (English)</label>
-      <input
-        className="pill-input"
-        type="text"
-        value={pill.popup_title_en || ""}
-        onChange={(e) =>
-          updatePill(index, "popup_title_en", e.target.value)
-        }
-      />
-
-      <label>Popup Title (Tagalog)</label>
-      <input
-        className="pill-input"
-        type="text"
-        value={pill.popup_title_tl || ""}
-        onChange={(e) =>
-          updatePill(index, "popup_title_tl", e.target.value)
-        }
-      />
-
-
-      <label>Popup Body (English)</label>
-      <textarea
-        className="pill-textarea"
-        value={pill.popup_body_en || ""}
-        onChange={(e) =>
-          updatePill(index, "popup_body_en", e.target.value)
-        }
-      />
-
-      <label>Popup Body (Tagalog)</label>
-      <textarea
-        className="pill-textarea"
-        value={pill.popup_body_tl || ""}
-        onChange={(e) =>
-          updatePill(index, "popup_body_tl", e.target.value)
-        }
-      />
-    </div>
-  ))}
-</div>
-
-     
-
-      <div className="wide-card-section">
-  <h4>Wide Card</h4>
-
-  <label>Title (English)</label>
-  <input
-    className="widecard-title"
-    type="text"
-    value={metadata.wide_card?.title_en || ""}
-    onChange={(e) =>
-      updateWideCard("title_en", e.target.value)
-    }
-  />
-
-  <label>Title (Tagalog)</label>
-  <input
-    className="widecard-title"
-    type="text"
-    value={metadata.wide_card?.title_tl || ""}
-    onChange={(e) =>
-      updateWideCard("title_tl", e.target.value)
-    }
-  />
-
-  <label>Subtitle (English)</label>
-  <textarea
-    className="widecard-subtitle"
-    value={metadata.wide_card?.subtitle_en || ""}
-    onChange={(e) =>
-      updateWideCard("subtitle_en", e.target.value)
-    }
-  />
-
-  <label>Subtitle (Tagalog)</label>
-  <textarea
-    className="widecard-subtitle"
-    value={metadata.wide_card?.subtitle_tl || ""}
-    onChange={(e) =>
-      updateWideCard("subtitle_tl", e.target.value)
-    }
-  />
-</div>
-
-      
+        <EditorItemCard label="Wide Card">
+          <BilingualGrid>
+            <EditorField label="Title" language="English">
+              <input
+                className="widecard-title"
+                value={metadata.wide_card?.title_en || ''}
+                onChange={(event) => updateWideCard('title_en', event.target.value)}
+              />
+            </EditorField>
+            <EditorField label="Title" language="Tagalog">
+              <input
+                className="widecard-title"
+                value={metadata.wide_card?.title_tl || ''}
+                onChange={(event) => updateWideCard('title_tl', event.target.value)}
+              />
+            </EditorField>
+            <EditorField label="Subtitle" language="English">
+              <textarea
+                className="widecard-subtitle"
+                value={metadata.wide_card?.subtitle_en || ''}
+                onChange={(event) => updateWideCard('subtitle_en', event.target.value)}
+              />
+            </EditorField>
+            <EditorField label="Subtitle" language="Tagalog">
+              <textarea
+                className="widecard-subtitle"
+                value={metadata.wide_card?.subtitle_tl || ''}
+                onChange={(event) => updateWideCard('subtitle_tl', event.target.value)}
+              />
+            </EditorField>
+          </BilingualGrid>
+        </EditorItemCard>
+      </div>
     </div>
   );
 }

@@ -27,8 +27,8 @@ import ModuleCard from "./ModuleCard";
 import './LearningMaterials.css';
 
 const formatCount = (value) => new Intl.NumberFormat('en-US').format(Number(value || 0));
-const formatSourceLine = (line) => (Number.isInteger(line) ? `Line ${line}` : '-');
-const formatBlockReference = (block, moduleNo, pageNo) => {
+const FORMAT_SOURCE_LINE = (line) => (Number.isInteger(line) ? `Line ${line}` : '-');
+const FORMAT_BLOCK_REFERENCE = (block, moduleNo, pageNo) => {
   const rawKey = String(block?.block_key || '').trim();
   const match = rawKey.match(/^m(\d+)_p(\d+)_b(\d+)$/i);
 
@@ -321,7 +321,7 @@ if (textsResult.error && !message.text) {
     const n = Number(selectedModule);
     return searchedModules.filter((m) => Number(m.module_no) === n);
   }, [searchedModules, selectedModule]);
-  const selectedModuleData = displayedModules.find(
+  const SELECTED_MODULE_DATA = displayedModules.find(
   m => m.module_no === selectedModuleCard
 );
 
@@ -433,6 +433,10 @@ if (textsResult.error && !message.text) {
 
     handleSaveModule={handleSaveModule}
     saving={saving}
+    onBack={() => {
+      setSelectedModuleCard(null);
+      setEditedModule(null);
+    }}
 />
   </>
 )}

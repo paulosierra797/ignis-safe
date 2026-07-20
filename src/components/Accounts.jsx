@@ -3692,11 +3692,11 @@ const permissions = getDefaultPermissions(formData.role);
                             }}
                           />
                           <span className="shift-personnel-checkbox-info">
-                            <span className="shift-personnel-checkbox-name">
-                              {account.first_name} {account.last_name}
-                            </span>
                             <span className="shift-personnel-checkbox-rank">
                               {account.rank || 'N/A'}
+                            </span>
+                            <span className="shift-personnel-checkbox-name">
+                              {account.first_name} {account.last_name}
                             </span>
                           </span>
                         </label>

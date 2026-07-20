@@ -55,6 +55,14 @@ create index if not exists idx_announcement_ack_announcement
 create index if not exists idx_announcement_ack_personnel
   on public.announcement_acknowledgments (personnel_id);
 
+alter table public.announcements
+  add column if not exists is_archived boolean not null default false,
+  add column if not exists archived_at timestamptz null,
+  add column if not exists archived_by uuid null references public.admin(admin_id) on delete set null;
+
+create index if not exists idx_announcements_is_archived
+  on public.announcements (is_archived);
+
 alter table public.announcements enable row level security;
 alter table public.announcement_acknowledgments enable row level security;
 
@@ -65,6 +73,7 @@ for select
 to anon
 using (
   audience_type = 'public'
+  and is_archived = false
 );
 
 drop policy if exists "announcements_select_authenticated" on public.announcements;
@@ -80,7 +89,8 @@ using (
       and lower(actor.role) = 'admin'
   )
   or (
-    audience_type = 'all_personnel'
+    is_archived = false
+    and audience_type = 'all_personnel'
     and exists (
       select 1
       from public.admin actor
@@ -89,7 +99,8 @@ using (
     )
   )
   or (
-    audience_type = 'specific_personnel'
+    is_archived = false
+    and audience_type = 'specific_personnel'
     and target_personnel_id = auth.uid()
   )
 );

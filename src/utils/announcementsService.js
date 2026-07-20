@@ -164,7 +164,14 @@ const mapAnnouncement = (row = {}) => ({
   target_personnel_name: [row.target?.rank, row.target?.first_name, row.target?.last_name]
     .filter(Boolean)
     .join(' ')
-    .trim() || row.target?.email || ''
+    .trim() || row.target?.email || '',
+  is_archived: Boolean(row.is_archived),
+  archived_at: row.archived_at || null,
+  archived_by: row.archived_by || null,
+  archived_by_name: [row.archiver?.rank, row.archiver?.first_name, row.archiver?.last_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim() || row.archiver?.email || ''
 });
 
 export const getPublicAnnouncements = async () => {
@@ -236,9 +243,14 @@ export const getAnnouncementsForUser = async (currentUser) => {
         target_personnel_id,
         created_by,
         created_at,
+        is_archived,
+        archived_at,
+        archived_by,
         creator:admin!announcements_created_by_fkey(first_name, last_name, rank, email),
-        target:admin!announcements_target_personnel_id_fkey(first_name, last_name, rank, email)
+        target:admin!announcements_target_personnel_id_fkey(first_name, last_name, rank, email),
+        archiver:admin!announcements_archived_by_fkey(first_name, last_name, rank, email)
       `)
+      .eq('is_archived', false)
       .order('created_at', { ascending: false });
 
     if (role !== 'admin') {
@@ -287,7 +299,7 @@ export const getAnnouncementsForUser = async (currentUser) => {
       const [personnelResult, ackResult] = await Promise.all([
         supabase
           .from('admin')
-          .select('admin_id')
+          .select('admin_id, first_name, last_name, rank, email')
           .ilike('role', 'personnel')
           .eq('status', 'Active'),
         supabase
@@ -299,7 +311,14 @@ export const getAnnouncementsForUser = async (currentUser) => {
       if (personnelResult.error) throw personnelResult.error;
       if (ackResult.error) throw ackResult.error;
 
-      const activePersonnelIds = new Set((personnelResult.data || []).map((row) => row.admin_id));
+      const activePersonnel = personnelResult.data || [];
+      const activePersonnelIds = new Set(activePersonnel.map((row) => row.admin_id));
+      const personnelNameById = new Map(
+        activePersonnel.map((row) => [
+          row.admin_id,
+          [row.rank, row.first_name, row.last_name].filter(Boolean).join(' ').trim() || row.email || 'Personnel'
+        ])
+      );
       const ackMap = new Map();
 
       (ackResult.data || []).forEach((row) => {
@@ -311,19 +330,32 @@ export const getAnnouncementsForUser = async (currentUser) => {
 
       return {
         data: announcements.map((row) => {
-          const acknowledgedCount = (ackMap.get(row.announcement_id) || new Set()).size;
+          const acknowledgedIds = ackMap.get(row.announcement_id) || new Set();
+          const acknowledgedCount = acknowledgedIds.size;
           const totalRecipients = row.audience_type === 'all_personnel'
             ? activePersonnelIds.size
             : row.audience_type === 'specific_personnel'
               ? 1
               : 0;
 
+          let pendingPersonnel = [];
+          if (row.audience_type === 'all_personnel') {
+            pendingPersonnel = activePersonnel
+              .filter((person) => !acknowledgedIds.has(person.admin_id))
+              .map((person) => personnelNameById.get(person.admin_id));
+          } else if (row.audience_type === 'specific_personnel' && row.target_personnel_id) {
+            if (!acknowledgedIds.has(row.target_personnel_id)) {
+              pendingPersonnel = [row.target_personnel_name || personnelNameById.get(row.target_personnel_id) || 'Personnel'];
+            }
+          }
+
           return {
             ...row,
             acknowledgement_summary: {
               acknowledgedCount,
               totalRecipients
-            }
+            },
+            pending_personnel: pendingPersonnel
           };
         }),
         error: null
@@ -502,6 +534,122 @@ export const createAnnouncement = async (currentUser, payload) => {
   } catch (error) {
     console.error('Error creating announcement:', error);
     return { data: null, error: error.message };
+  }
+};
+
+export const archiveAnnouncement = async (currentUser, announcementId) => {
+  try {
+    if (normalizeRole(currentUser?.role) !== 'admin') {
+      throw new Error('Only admin users can archive announcements.');
+    }
+
+    if (!announcementId) {
+      throw new Error('Missing announcement id.');
+    }
+
+    const { error } = await supabase
+      .from(ANNOUNCEMENTS_TABLE)
+      .update({
+        is_archived: true,
+        archived_at: new Date().toISOString(),
+        archived_by: currentUser.admin_id
+      })
+      .eq('announcement_id', announcementId);
+
+    if (error) throw error;
+
+    await logAdminActivity({
+      actorId: currentUser.admin_id,
+      actorName: currentUser.name || currentUser.email || 'Admin User',
+      action: 'Announcement Archived',
+      actionType: 'archive',
+      details: `Announcement ${announcementId} archived.`,
+      status: 'SUCCESS',
+      metadata: { announcementId }
+    });
+
+    emitDataChanged('announcements', { announcementId, action: 'archived' });
+
+    return { data: { announcementId }, error: null };
+  } catch (error) {
+    console.error('Error archiving announcement:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const restoreAnnouncement = async (currentUser, announcementId) => {
+  try {
+    if (normalizeRole(currentUser?.role) !== 'admin') {
+      throw new Error('Only admin users can restore announcements.');
+    }
+
+    if (!announcementId) {
+      throw new Error('Missing announcement id.');
+    }
+
+    const { error } = await supabase
+      .from(ANNOUNCEMENTS_TABLE)
+      .update({
+        is_archived: false,
+        archived_at: null,
+        archived_by: null
+      })
+      .eq('announcement_id', announcementId);
+
+    if (error) throw error;
+
+    await logAdminActivity({
+      actorId: currentUser.admin_id,
+      actorName: currentUser.name || currentUser.email || 'Admin User',
+      action: 'Announcement Restored',
+      actionType: 'restore',
+      details: `Announcement ${announcementId} restored.`,
+      status: 'SUCCESS',
+      metadata: { announcementId }
+    });
+
+    emitDataChanged('announcements', { announcementId, action: 'restored' });
+
+    return { data: { announcementId }, error: null };
+  } catch (error) {
+    console.error('Error restoring announcement:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const getArchivedAnnouncements = async (currentUser) => {
+  try {
+    if (normalizeRole(currentUser?.role) !== 'admin') {
+      return { data: [], error: 'Only admin users can view archived announcements.' };
+    }
+
+    const { data, error } = await supabase
+      .from(ANNOUNCEMENTS_TABLE)
+      .select(`
+        announcement_id,
+        title,
+        content,
+        attachments,
+        audience_type,
+        target_personnel_id,
+        created_by,
+        created_at,
+        is_archived,
+        archived_at,
+        archived_by,
+        creator:admin!announcements_created_by_fkey(first_name, last_name, rank, email),
+        target:admin!announcements_target_personnel_id_fkey(first_name, last_name, rank, email),
+        archiver:admin!announcements_archived_by_fkey(first_name, last_name, rank, email)
+      `)
+      .eq('is_archived', true)
+      .order('archived_at', { ascending: false });
+
+    if (error) throw error;
+
+    return { data: (data || []).map(mapAnnouncement), error: null };
+  } catch (error) {
+    console.error('Error fetching archived announcements:', error);
+    return { data: [], error: error.message };
   }
 };
 

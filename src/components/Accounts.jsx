@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -205,6 +205,7 @@ export default function Accounts() {
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [isPersonnelShiftModalOpen, setIsPersonnelShiftModalOpen] = useState(false);
+  const [isShiftConfirmModalOpen, setIsShiftConfirmModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLeaveSaving, setIsLeaveSaving] = useState(false);
   const [isShiftSaving, setIsShiftSaving] = useState(false);
@@ -1358,6 +1359,87 @@ const permissions = getDefaultPermissions(formData.role);
     }
   };
 
+  const shiftConfirmPreview = useMemo(() => {
+    const selectedType = String(selectedShiftForAssignment || '').toUpperCase();
+    const existingA = new Map();
+    const existingB = new Map();
+
+    periodAssignments.forEach((assignment) => {
+      const type = String(assignment.shift_type || '').toUpperCase();
+      const target = type === 'A' ? existingA : type === 'B' ? existingB : null;
+      if (target) {
+        target.set(assignment.personnel_id, true);
+      }
+    });
+
+    const oppositeMap = selectedType === 'A' ? existingB : existingA;
+    const pendingIds = selectedShiftPersonnelIds.filter((id) => !oppositeMap.has(id));
+    const targetMap = selectedType === 'A' ? existingA : existingB;
+    pendingIds.forEach((id) => targetMap.set(id, true));
+
+    const buildList = (map) =>
+      Array.from(map.keys()).map((id) => {
+        const account = accounts.find((acc) => acc.admin_id === id);
+        return {
+          id,
+          name: account ? `${account.first_name} ${account.last_name}` : getPersonnelNameById(id),
+          rank: account?.rank || 'N/A',
+          pending: pendingIds.includes(id) && map === targetMap
+        };
+      });
+
+    return {
+      shiftA: buildList(existingA),
+      shiftB: buildList(existingB),
+      skippedCount: selectedShiftPersonnelIds.length - pendingIds.length
+    };
+  }, [periodAssignments, selectedShiftPersonnelIds, selectedShiftForAssignment, accounts]);
+
+  const openShiftConfirmModal = () => {
+    if (!selectedShiftPersonnelIds.length) {
+      setPersonnelShiftMessage({ type: 'error', text: 'Please select at least one personnel member.' });
+      return;
+    }
+
+    const shiftDates = selectedShiftForAssignment === 'A'
+      ? shiftSchedule.shift_a_dates
+      : shiftSchedule.shift_b_dates;
+
+    if (!shiftDates || shiftDates.length === 0) {
+      setPersonnelShiftMessage({
+        type: 'error',
+        text: `Shift ${selectedShiftForAssignment} has no dates set. Please set shift dates first.`
+      });
+      return;
+    }
+
+    setPersonnelShiftMessage({ type: '', text: '' });
+    setIsShiftConfirmModalOpen(true);
+  };
+
+  const closeShiftConfirmModal = () => {
+    if (isPersonnelShiftSaving) {
+      return;
+    }
+    setIsShiftConfirmModalOpen(false);
+  };
+
+  const handleCancelShiftConfirm = () => {
+    if (isPersonnelShiftSaving) {
+      return;
+    }
+    setIsShiftConfirmModalOpen(false);
+    closePersonnelShiftModal();
+  };
+
+  const handleConfirmShiftAssignment = async () => {
+    if (isPersonnelShiftSaving) {
+      return;
+    }
+    setIsShiftConfirmModalOpen(false);
+    await handleAssignPersonnelToShift();
+  };
+
   const handleAssignPersonnelToShift = async () => {
     if (!selectedShiftPersonnelIds.length) {
       setPersonnelShiftMessage({ type: 'error', text: 'Please select at least one personnel member.' });
@@ -1609,6 +1691,7 @@ const permissions = getDefaultPermissions(formData.role);
     setSelectedShiftForAssignment('A');
     setShiftAssignments([]);
     setPersonnelShiftMessage({ type: '', text: '' });
+    setIsShiftConfirmModalOpen(false);
     setIsPersonnelShiftModalOpen(true);
     // load assignments for the configured shift schedule period so admin can see who is assigned
     loadShiftAssignmentsForSchedule().catch((err) => {
@@ -1652,6 +1735,7 @@ const permissions = getDefaultPermissions(formData.role);
       return;
     }
 
+    setIsShiftConfirmModalOpen(false);
     setIsPersonnelShiftModalOpen(false);
     setPersonnelShiftMessage({ type: '', text: '' });
     setSelectedShiftPersonnel(null);
@@ -3641,7 +3725,7 @@ const permissions = getDefaultPermissions(formData.role);
 
                     <button
                       className="shift-assign-btn"
-                      onClick={handleAssignPersonnelToShift}
+                      onClick={openShiftConfirmModal}
                       disabled={isPersonnelShiftSaving}
                     >
                       {isPersonnelShiftSaving ? 'Assigning...' : 'Add Shift Assignment'}
@@ -3686,6 +3770,76 @@ const permissions = getDefaultPermissions(formData.role);
               <div className="accounts-modal-footer">
                 <button className="accounts-modal-draft" onClick={closePersonnelShiftModal} disabled={isPersonnelShiftSaving}>
                   Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isShiftConfirmModalOpen && (
+          <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
+            <div className="accounts-modal accounts-shift-confirm-modal">
+              <div className="accounts-modal-header">
+                <h3>Confirm Shift Assignments</h3>
+              </div>
+
+              <div className="accounts-modal-body">
+                <div className="shift-overview-grid">
+                  <div className="shift-overview-col">
+                    <div className="shift-overview-header">Shift A</div>
+                    <div className="shift-overview-list">
+                      {shiftConfirmPreview.shiftA.length ? (
+                        shiftConfirmPreview.shiftA.map((person) => (
+                          <div key={person.id} className="shift-overview-item">
+                            <span>
+                              <span className="shift-overview-item-name">{person.name}</span>
+                              <span className="shift-overview-item-rank">{person.rank}</span>
+                            </span>
+                            {person.pending && <span className="shift-pending-tag">Pending</span>}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="shift-overview-empty">No personnel assigned</div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="shift-overview-col">
+                    <div className="shift-overview-header">Shift B</div>
+                    <div className="shift-overview-list">
+                      {shiftConfirmPreview.shiftB.length ? (
+                        shiftConfirmPreview.shiftB.map((person) => (
+                          <div key={person.id} className="shift-overview-item">
+                            <span>
+                              <span className="shift-overview-item-name">{person.name}</span>
+                              <span className="shift-overview-item-rank">{person.rank}</span>
+                            </span>
+                            {person.pending && <span className="shift-pending-tag">Pending</span>}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="shift-overview-empty">No personnel assigned</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {shiftConfirmPreview.skippedCount > 0 && (
+                  <p className="shift-confirm-warning">
+                    {shiftConfirmPreview.skippedCount} selected personnel will be skipped &mdash; already assigned to the opposite shift this period.
+                  </p>
+                )}
+              </div>
+
+              <div className="accounts-modal-footer">
+                <button className="accounts-modal-draft" onClick={closeShiftConfirmModal} disabled={isPersonnelShiftSaving}>
+                  Back to Edit
+                </button>
+                <button className="accounts-modal-draft" onClick={handleCancelShiftConfirm} disabled={isPersonnelShiftSaving}>
+                  Cancel
+                </button>
+                <button className="accounts-modal-add" onClick={handleConfirmShiftAssignment} disabled={isPersonnelShiftSaving}>
+                  {isPersonnelShiftSaving ? 'Assigning...' : 'Confirm Assignment'}
                 </button>
               </div>
             </div>

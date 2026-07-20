@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
+import { wrapChartLabels } from '../utils/chartLabelUtils';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -34,7 +35,12 @@ const options = {
     x: {
       grid: {
         display: false
-      }
+      },
+      ticks: {
+        autoSkip: false,
+        maxRotation: 0,
+        minRotation: 0,
+      },
     }
   }
 };
@@ -61,7 +67,7 @@ const data = {
 
 export default function TrainingProgressChart({ chartData }) {
   const liveData = {
-    labels: chartData?.labels?.length ? chartData.labels : data.labels,
+    labels: wrapChartLabels(chartData?.labels?.length ? chartData.labels : data.labels),
     datasets: [
       {
         ...data.datasets[0],

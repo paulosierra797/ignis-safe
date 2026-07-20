@@ -434,7 +434,7 @@ const { data: chartsData } =
           {/* Learning Improvement */}
           <div className="analytics-chart-card">
             <h3>Learning Improvement by Module</h3>
-            <div style={{ height: '240px', padding: '1rem 0.5rem' }}>
+            <div style={{ height: '300px', padding: '1rem 0.5rem' }}>
               <TrainingProgressChart chartData={charts.learningByModule} />
             </div>
             <div className="training-legend">
@@ -452,7 +452,7 @@ const { data: chartsData } =
           {/* Completion and Simulation */}
           <div className="analytics-chart-card">
             <h3>Completion and Simulation</h3>
-            <div style={{ height: '240px', padding: '1rem 0.5rem' }}>
+            <div style={{ height: '300px', padding: '1rem 0.5rem' }}>
               <CompletionSimulationChart chartData={charts.completionByModule} />
             </div>
             <div className="training-legend">
@@ -488,7 +488,7 @@ const { data: chartsData } =
         <div className="analytics-chart-card performance-chart">
           <h3>Test Attempts per Module</h3>
           <div className="performance-subheader">Engagement</div>
-          <div style={{ height: '200px', padding: '1rem' }}>
+          <div style={{ height: '260px', padding: '1rem' }}>
             <PerformanceChart chartData={charts.attemptsByModule} />
           </div>
           <div className="performance-legend">

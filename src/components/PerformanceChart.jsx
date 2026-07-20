@@ -9,6 +9,7 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
+import { wrapChartLabels } from '../utils/chartLabelUtils';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -20,7 +21,7 @@ const options = {
     },
     title: {
       display: false
-    }
+    },
   },
   scales: {
     y: {
@@ -28,12 +29,19 @@ const options = {
       ticks: {
         precision: 0
       }
-    }
+    },
+    x: {
+      ticks: {
+        autoSkip: false,
+        maxRotation: 0,
+        minRotation: 0,
+      },
+    },
   }
 };
 
 const data = {
-  labels: ['Module 1', 'Module 2', 'Module 3'],
+  labels: [],
   datasets: [
     {
       label: 'Attempts',
@@ -50,7 +58,7 @@ export default function PerformanceChart({ chartData }) {
   const liveAttempts = chartData?.attempts?.length ? chartData.attempts : data.datasets[0].data;
 
   const liveData = {
-    labels: chartData?.labels?.length ? chartData.labels : data.labels,
+    labels: wrapChartLabels(chartData?.labels?.length ? chartData.labels : data.labels),
     datasets: [
       {
         ...data.datasets[0],

@@ -9,7 +9,10 @@ import {
   getAnnouncementsForUser,
   acknowledgeAnnouncement,
   getAudienceLabel,
-  getPersonnelRecipients
+  getPersonnelRecipients,
+  archiveAnnouncement,
+  restoreAnnouncement,
+  getArchivedAnnouncements
 } from '../utils/announcementsService';
 import './Announcements.css';
 
@@ -76,6 +79,15 @@ export default function Announcements() {
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [overflowingIds, setOverflowingIds] = useState(() => new Set());
   const contentRefs = useRef({});
+  const titleRefs = useRef({});
+  const messageTextareaRef = useRef(null);
+  const [archiveModalId, setArchiveModalId] = useState('');
+  const [archiving, setArchiving] = useState(false);
+  const [archivedOpen, setArchivedOpen] = useState(false);
+  const [archivedLoaded, setArchivedLoaded] = useState(false);
+  const [archivedAnnouncements, setArchivedAnnouncements] = useState([]);
+  const [archivedLoading, setArchivedLoading] = useState(false);
+  const [restoringId, setRestoringId] = useState('');
   const ITEMS_PER_PAGE = 3;
   const [formData, setFormData] = useState({
     title: '',
@@ -133,6 +145,41 @@ export default function Announcements() {
 
     initialize();
   }, [isAdmin, isPersonnelWorkspace, currentUser?.admin_id]);
+
+  // Announcements has no polling of its own; other tabs/users emit this
+  // event (e.g. a personnel acknowledging) so an already-open admin view
+  // can refresh its ack counts / pending list without a manual reload.
+  useEffect(() => {
+    const handleDataChanged = (event) => {
+      if (event?.detail?.scope !== 'announcements') return;
+      loadAnnouncements();
+    };
+
+    window.addEventListener('ignis-safe:data-changed', handleDataChanged);
+    return () => window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
+  }, [effectiveUser]);
+
+  const loadArchivedAnnouncements = async () => {
+    setArchivedLoading(true);
+    const { data, error } = await getArchivedAnnouncements(currentUser);
+    if (error) {
+      setMessage({ type: 'error', text: `Failed to load archived announcements: ${error}` });
+    } else {
+      setArchivedAnnouncements(data || []);
+      setArchivedLoaded(true);
+    }
+    setArchivedLoading(false);
+  };
+
+  const toggleArchivedPanel = () => {
+    setArchivedOpen((prev) => {
+      const next = !prev;
+      if (next && !archivedLoaded) {
+        loadArchivedAnnouncements();
+      }
+      return next;
+    });
+  };
 
   const filteredAnnouncements = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -283,6 +330,41 @@ export default function Announcements() {
     setAcknowledgingId('');
   };
 
+  const handleArchiveAnnouncement = async () => {
+    if (!archiveModalId) return;
+
+    setArchiving(true);
+    const { error } = await archiveAnnouncement(currentUser, archiveModalId);
+    setArchiving(false);
+
+    if (error) {
+      setMessage({ type: 'error', text: `Failed to archive announcement: ${error}` });
+      return;
+    }
+
+    setAnnouncements((prev) => prev.filter((row) => row.announcement_id !== archiveModalId));
+    setArchiveModalId('');
+    setMessage({ type: 'success', text: 'Announcement archived.' });
+    setArchivedLoaded(false);
+  };
+
+  const handleRestoreAnnouncement = async (announcementId) => {
+    if (!announcementId) return;
+
+    setRestoringId(announcementId);
+    const { error } = await restoreAnnouncement(currentUser, announcementId);
+    setRestoringId('');
+
+    if (error) {
+      setMessage({ type: 'error', text: `Failed to restore announcement: ${error}` });
+      return;
+    }
+
+    setArchivedAnnouncements((prev) => prev.filter((row) => row.announcement_id !== announcementId));
+    setMessage({ type: 'success', text: 'Announcement restored.' });
+    await loadAnnouncements();
+  };
+
   const toggleAnnouncementExpanded = (announcementId) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -299,11 +381,21 @@ export default function Announcements() {
     setOverflowingIds((prev) => {
       let changed = false;
       const next = new Set(prev);
+      const announcementIds = new Set([
+        ...Object.keys(contentRefs.current),
+        ...Object.keys(titleRefs.current)
+      ]);
 
-      Object.entries(contentRefs.current).forEach(([announcementId, element]) => {
-        if (!element || expandedIds.has(announcementId)) return;
+      announcementIds.forEach((announcementId) => {
+        if (expandedIds.has(announcementId)) return;
 
-        const isOverflowing = element.scrollHeight - element.clientHeight > 1;
+        const contentElement = contentRefs.current[announcementId];
+        const titleElement = titleRefs.current[announcementId];
+        const isOverflowing = Boolean(
+          (contentElement && contentElement.scrollHeight - contentElement.clientHeight > 1) ||
+          (titleElement && titleElement.scrollHeight - titleElement.clientHeight > 1)
+        );
+
         if (isOverflowing && !next.has(announcementId)) {
           next.add(announcementId);
           changed = true;
@@ -325,6 +417,13 @@ export default function Announcements() {
     window.addEventListener('resize', measureAnnouncementOverflow);
     return () => window.removeEventListener('resize', measureAnnouncementOverflow);
   }, [measureAnnouncementOverflow]);
+
+  useLayoutEffect(() => {
+    const textarea = messageTextareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [formData.content]);
 
   return (
     <div className="announcements-container">
@@ -374,7 +473,7 @@ export default function Announcements() {
             <form className="announcement-form" onSubmit={handleSubmitAnnouncement}>
               <div className="form-row two-col">
                 <div className="form-field">
-                  <label htmlFor="announcementTitle">Title</label>
+                  <label htmlFor="announcementTitle">Title <span className="required-asterisk">*</span></label>
                   <input
                     id="announcementTitle"
                     type="text"
@@ -387,9 +486,10 @@ export default function Announcements() {
                 </div>
 
                 <div className="form-field">
-                  <label htmlFor="announcementAudience">Audience</label>
+                  <label htmlFor="announcementAudience">Audience <span className="required-asterisk">*</span></label>
                   <select
                     id="announcementAudience"
+                    required
                     value={formData.audience_type}
                     onChange={(event) => setFormData((prev) => ({
                       ...prev,
@@ -430,10 +530,11 @@ export default function Announcements() {
               )}
 
               <div className="form-row">
-                <div className="form-field">
-                  <label htmlFor="announcementContent">Message</label>
+                <div className="form-field announcement-message-field">
+                  <label htmlFor="announcementContent">Message <span className="required-asterisk">*</span></label>
                   <textarea
                     id="announcementContent"
+                    ref={messageTextareaRef}
                     value={formData.content}
                     onChange={(event) => setFormData((prev) => ({ ...prev, content: event.target.value }))}
                     placeholder="Write the full announcement..."
@@ -507,7 +608,14 @@ export default function Announcements() {
               {paginatedAnnouncements.map((announcement) => (
                 <article key={announcement.announcement_id} className="announcement-item">
                   <div className="announcement-item-header">
-                    <h3>{announcement.title}</h3>
+                    <h3
+                      className={`announcement-title ${expandedIds.has(announcement.announcement_id) ? '' : 'clamped'}`}
+                      ref={(element) => {
+                        titleRefs.current[announcement.announcement_id] = element;
+                      }}
+                    >
+                      {announcement.title}
+                    </h3>
                     <span className="announcement-audience">{getAudienceLabel(announcement)}</span>
                   </div>
                   <p
@@ -555,7 +663,6 @@ export default function Announcements() {
                     </div>
                   )}
                   <div className="announcement-meta">
-                    <span>By: {announcement.created_by_name}</span>
                     {isAdmin && announcement.acknowledgement_summary?.totalRecipients > 0 && (
                       <span>
                         Acknowledged: {announcement.acknowledgement_summary.acknowledgedCount}/
@@ -570,6 +677,12 @@ export default function Announcements() {
                     <span>{formatDate(announcement.created_at)}</span>
                   </div>
 
+                  {isAdmin && announcement.pending_personnel?.length > 0 && (
+                    <div className="announcement-pending-by">
+                      Pending acknowledgement by: {announcement.pending_personnel.join(', ')}
+                    </div>
+                  )}
+
                   {!isAdmin && !announcement.acknowledged_by_current_user && (
                     <div className="announcement-ack-action">
                       <button
@@ -578,6 +691,18 @@ export default function Announcements() {
                         disabled={acknowledgingId === announcement.announcement_id}
                       >
                         {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}
+                      </button>
+                    </div>
+                  )}
+
+                  {isAdmin && (
+                    <div className="announcement-archive-action">
+                      <button
+                        type="button"
+                        className="announcement-archive-button"
+                        onClick={() => setArchiveModalId(announcement.announcement_id)}
+                      >
+                        Archive
                       </button>
                     </div>
                   )}
@@ -609,7 +734,107 @@ export default function Announcements() {
           )}
           </div>
         )}
+
+        {isAdmin && isAnnouncementTab && (
+          <div className="announcement-card archived-card">
+            <button
+              type="button"
+              className="archived-toggle-button"
+              onClick={toggleArchivedPanel}
+              aria-expanded={archivedOpen}
+            >
+              {archivedOpen ? '▾' : '▸'} Archived Announcements{archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}
+            </button>
+
+            {archivedOpen && (
+              <div className="archived-panel">
+                {archivedLoading ? (
+                  <div className="announcement-empty">Loading archived announcements...</div>
+                ) : archivedAnnouncements.length === 0 ? (
+                  <div className="announcement-empty">No archived announcements.</div>
+                ) : (
+                  archivedAnnouncements.map((announcement) => (
+                    <article key={announcement.announcement_id} className="archived-item">
+                      <div className="announcement-item-header">
+                        <h3>{announcement.title}</h3>
+                        <span className="announcement-audience">{getAudienceLabel(announcement)}</span>
+                      </div>
+                      <p className="announcement-content">{announcement.content}</p>
+                      {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
+                        <div className="announcement-attachments">
+                          {announcement.attachments.map((attachment, index) => (
+                            attachment.is_image ? (
+                              <a
+                                key={`${announcement.announcement_id}-img-${index}`}
+                                className="announcement-image-link"
+                                href={attachment.file_url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <img src={attachment.file_url} alt={attachment.file_name || 'Attached image'} loading="lazy" />
+                              </a>
+                            ) : (
+                              <a
+                                key={`${announcement.announcement_id}-file-${index}`}
+                                className="announcement-file-link"
+                                href={attachment.file_url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {attachment.file_name || 'Attachment'}
+                              </a>
+                            )
+                          ))}
+                        </div>
+                      )}
+                      <div className="announcement-meta">
+                        <span>Archived {formatDate(announcement.archived_at)}{announcement.archived_by_name ? ` by ${announcement.archived_by_name}` : ''}</span>
+                      </div>
+                      <div className="archived-restore-action">
+                        <button
+                          type="button"
+                          className="archived-restore-button"
+                          onClick={() => handleRestoreAnnouncement(announcement.announcement_id)}
+                          disabled={restoringId === announcement.announcement_id}
+                        >
+                          {restoringId === announcement.announcement_id ? 'Restoring...' : 'Restore'}
+                        </button>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {archiveModalId && (
+        <div className="announcement-confirm-modal-overlay">
+          <div className="announcement-confirm-modal-card">
+            <h3>Archive Announcement</h3>
+            <p>Are you sure you want to archive this announcement? It will be removed from the active list but remains stored and can be restored later.</p>
+            <div className="announcement-confirm-modal-actions">
+              <button
+                type="button"
+                className="announcement-confirm-modal-cancel"
+                onClick={() => setArchiveModalId('')}
+                disabled={archiving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="announcement-confirm-modal-confirm"
+                onClick={handleArchiveAnnouncement}
+                disabled={archiving}
+              >
+                {archiving ? 'Archiving...' : 'Archive'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -22,7 +22,8 @@ import {
   assignPersonnelToShift,
   getPersonnelShiftAssignments,
   getShiftAssignmentsForPeriod,
-  removeShiftAssignment
+  removeShiftAssignment,
+  getPersonnelForDate
 } from '../utils/personnelOperationsService';
 import {
   getAllProfileChangeRequests,
@@ -240,6 +241,12 @@ export default function Accounts() {
   const [shiftSummaryLoading, setShiftSummaryLoading] = useState(true);
   const [shiftSummaryError, setShiftSummaryError] = useState('');
   const shiftSummaryRequestIdRef = useRef(0);
+  const [isDayDetailModalOpen, setIsDayDetailModalOpen] = useState(false);
+  const [dayDetailDate, setDayDetailDate] = useState('');
+  const [dayDetailLoading, setDayDetailLoading] = useState(false);
+  const [dayDetailError, setDayDetailError] = useState('');
+  const [dayDetailData, setDayDetailData] = useState({ onDuty: [], onLeave: [] });
+  const dayDetailRequestIdRef = useRef(0);
   const [shiftSelection, setShiftSelection] = useState({ shift_a_dates: [], shift_b_dates: [] });
   const [activeShift, setActiveShift] = useState('A');
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -1823,6 +1830,37 @@ const permissions = getDefaultPermissions(formData.role);
     setShiftSummaryMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
   };
 
+  const openDayDetailModal = async (isoDate) => {
+    const requestId = dayDetailRequestIdRef.current + 1;
+    dayDetailRequestIdRef.current = requestId;
+
+    setDayDetailDate(isoDate);
+    setIsDayDetailModalOpen(true);
+    setDayDetailLoading(true);
+    setDayDetailError('');
+    setDayDetailData({ onDuty: [], onLeave: [] });
+
+    const { data, error } = await getPersonnelForDate(isoDate);
+    if (requestId !== dayDetailRequestIdRef.current) {
+      return;
+    }
+
+    if (error) {
+      setDayDetailError(error);
+    } else {
+      setDayDetailData({ onDuty: data?.onDuty || [], onLeave: data?.onLeave || [] });
+    }
+
+    setDayDetailLoading(false);
+  };
+
+  const closeDayDetailModal = () => {
+    dayDetailRequestIdRef.current += 1;
+    setIsDayDetailModalOpen(false);
+    setDayDetailError('');
+    setDayDetailData({ onDuty: [], onLeave: [] });
+  };
+
   return (
     <div className="accounts-container">
       <Sidebar />
@@ -1921,6 +1959,15 @@ const permissions = getDefaultPermissions(formData.role);
                     className={`shift-summary-day ${isPastDate ? 'is-past-date' : ''} ${isToday ? 'today' : ''}`}
                     aria-disabled={isPastDate || undefined}
                     aria-label={`${row?.displayDate || isoDate}: ${shiftLabel}, On Duty ${onDutyCount}, On Leave ${onLeaveCount}${isPastDate ? ', past date' : ''}`}
+                    role="button"
+                    tabIndex={isPastDate ? -1 : 0}
+                    onClick={() => !isPastDate && openDayDetailModal(isoDate)}
+                    onKeyDown={(event) => {
+                      if (!isPastDate && (event.key === 'Enter' || event.key === ' ')) {
+                        event.preventDefault();
+                        openDayDetailModal(isoDate);
+                      }
+                    }}
                   >
                     <div className="shift-summary-day-top">
                       <span className="shift-summary-day-number">{dayDate.getDate()}</span>
@@ -3495,6 +3542,97 @@ const permissions = getDefaultPermissions(formData.role);
                 <button className="leave-reject-btn" onClick={confirmActionModal} disabled={isConfirmActionProcessing}>
                   {isConfirmActionProcessing ? 'Processing...' : pendingConfirmAction.confirmLabel}
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isDayDetailModalOpen && (
+          <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
+            <div className="accounts-modal accounts-day-detail-modal">
+              <div className="accounts-modal-header">
+                <h3>{dayDetailDate ? formatLeaveDate(dayDetailDate) : 'Personnel for Date'}</h3>
+                <button
+                  className="accounts-modal-close"
+                  onClick={closeDayDetailModal}
+                  aria-label="Close personnel detail modal"
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="accounts-modal-body">
+                {dayDetailLoading ? (
+                  <p className="leave-approval-empty">Loading personnel for this date...</p>
+                ) : dayDetailError ? (
+                  <div className="accounts-modal-message accounts-modal-message-error">
+                    Unable to load personnel for this date: {dayDetailError}
+                  </div>
+                ) : (
+                  <>
+                    <div className="day-detail-section">
+                      <h4>On Duty ({dayDetailData.onDuty.length})</h4>
+                      {dayDetailData.onDuty.length === 0 ? (
+                        <p className="leave-approval-empty">No personnel on duty for this date.</p>
+                      ) : (
+                        <div className="leave-approval-table-wrap">
+                          <table className="leave-approval-table">
+                            <thead>
+                              <tr>
+                                <th>Name</th>
+                                <th>Rank</th>
+                                <th>Time In</th>
+                                <th>Time Out</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {dayDetailData.onDuty.map((person) => (
+                                <tr key={person.admin_id}>
+                                  <td>{person.name}</td>
+                                  <td>{person.rank}</td>
+                                  <td>{person.time_in || '-'}</td>
+                                  <td>{person.time_out || '-'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="day-detail-section">
+                      <h4>On Leave ({dayDetailData.onLeave.length})</h4>
+                      {dayDetailData.onLeave.length === 0 ? (
+                        <p className="leave-approval-empty">No personnel on leave for this date.</p>
+                      ) : (
+                        <div className="leave-approval-table-wrap">
+                          <table className="leave-approval-table">
+                            <thead>
+                              <tr>
+                                <th>Name</th>
+                                <th>Rank</th>
+                                <th>Leave Start</th>
+                                <th>Leave End</th>
+                                <th>Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {dayDetailData.onLeave.map((person) => (
+                                <tr key={person.admin_id}>
+                                  <td>{person.name}</td>
+                                  <td>{person.rank}</td>
+                                  <td>{formatLeaveDate(person.leave_start_date)}</td>
+                                  <td>{formatLeaveDate(person.leave_end_date)}</td>
+                                  <td>{person.approval_status}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>

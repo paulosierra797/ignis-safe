@@ -4,6 +4,8 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { getPersonnelOverviewStats, getUsersFromProfiles } from '../utils/usersService';
 import { getAnalyticsDashboardStats, getAnalyticsChartsData } from '../utils/knowledgeAnalyticsService';
+import { getPersonnelForDate } from '../utils/personnelOperationsService';
+import { getManilaToday } from '../utils/dateUtils';
 import './Dashboard.css';
 
 const DEFAULT_ANALYTICS_STATS = {
@@ -116,6 +118,11 @@ if (currentKnowledge < 40) {
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const [todayPersonnel, setTodayPersonnel] = useState({ onDuty: [], onLeave: [] });
+  const [todayPersonnelError, setTodayPersonnelError] = useState('');
+  const [isOnDutyModalOpen, setIsOnDutyModalOpen] = useState(false);
+  const [isOnLeaveModalOpen, setIsOnLeaveModalOpen] = useState(false);
+
   const fetchDashboardData = useCallback(async () => {
       try {
         setLoadError('');
@@ -125,11 +132,13 @@ if (currentKnowledge < 40) {
           { data: analyticsData, error: analyticsError },
           { data: charts, error: chartsError },
           { data: users, error: usersError },
+          { data: todayPersonnelData, error: todayPersonnelFetchError },
         ] = await Promise.all([
           getPersonnelOverviewStats(),
           getAnalyticsDashboardStats({ timeframe: 'All-time', people: 'All', topic: 'All' }),
           getAnalyticsChartsData({ timeframe: 'All-time', people: 'All', topic: 'All' }),
           getUsersFromProfiles(),
+          getPersonnelForDate(getManilaToday()),
         ]);
 
         if (personnelError) {
@@ -144,10 +153,19 @@ if (currentKnowledge < 40) {
         if (usersError) {
           console.error('Error fetching users for dashboard metrics:', usersError);
         }
+        if (todayPersonnelFetchError) {
+          console.error('Error fetching today\'s on-duty/on-leave personnel:', todayPersonnelFetchError);
+        }
 
         if (personnelData) {
           setPersonnelStats(personnelData);
         }
+
+        setTodayPersonnelError(todayPersonnelFetchError || '');
+        setTodayPersonnel({
+          onDuty: todayPersonnelData?.onDuty || [],
+          onLeave: todayPersonnelData?.onLeave || [],
+        });
 
         setAnalyticsStats(analyticsData || DEFAULT_ANALYTICS_STATS);
         setChartsData(charts || DEFAULT_CHARTS);
@@ -193,7 +211,7 @@ if (currentKnowledge < 40) {
           trainingCompletionPercent,
         });
 
-        if (personnelError || analyticsError || chartsError || usersError) {
+        if (personnelError || analyticsError || chartsError || usersError || todayPersonnelFetchError) {
           setLoadError('Some dashboard metrics could not be loaded. Showing available data.');
         }
       } catch (err) {
@@ -211,7 +229,7 @@ if (currentKnowledge < 40) {
   useEffect(() => {
     const handleDataChanged = (event) => {
       const scope = event?.detail?.scope || '';
-      if (!scope || scope === 'users' || scope === 'profile' || scope === 'dashboard') {
+      if (!scope || ['users', 'profile', 'dashboard', 'attendance', 'leave_requests'].includes(scope)) {
         void fetchDashboardData();
       }
     };
@@ -375,6 +393,61 @@ if (currentKnowledge < 40) {
                 <div className="progress-bar">
                   <div className="progress-fill" style={{ width: `${personnelStats.attendancePercentage}%` }}></div>
                 </div>
+              </div>
+            </div>
+
+            <div
+              className="metric-card clickable"
+              role="button"
+              tabIndex={0}
+              onClick={() => setIsOnDutyModalOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setIsOnDutyModalOpen(true);
+                }
+              }}
+              aria-label="View personnel on duty today"
+            >
+              <div className="metric-icon duty">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M9 11L12 14L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="metric-content">
+                <p className="metric-label">On Duty Today</p>
+                <div className="metric-value">
+                  <span className="main-number">{loading ? '...' : todayPersonnel.onDuty.length}</span>
+                </div>
+                <span className="metric-status active">View List</span>
+              </div>
+            </div>
+
+            <div
+              className="metric-card clickable"
+              role="button"
+              tabIndex={0}
+              onClick={() => setIsOnLeaveModalOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  setIsOnLeaveModalOpen(true);
+                }
+              }}
+              aria-label="View personnel on leave today"
+            >
+              <div className="metric-icon leave">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M3 10H21M7 3V6M17 3V6M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="metric-content">
+                <p className="metric-label">On Leave Today</p>
+                <div className="metric-value">
+                  <span className="main-number">{loading ? '...' : todayPersonnel.onLeave.length}</span>
+                </div>
+                <span className="metric-status active">View List</span>
               </div>
             </div>
           </div>
@@ -716,6 +789,108 @@ if (currentKnowledge < 40) {
             </div>
           </div>
         </div>
+
+        {isOnDutyModalOpen && (
+          <div className="dashboard-modal-overlay" role="dialog" aria-modal="true">
+            <div className="dashboard-modal">
+              <div className="dashboard-modal-header">
+                <h3>On Duty Today ({todayPersonnel.onDuty.length})</h3>
+                <button
+                  className="dashboard-modal-close"
+                  onClick={() => setIsOnDutyModalOpen(false)}
+                  aria-label="Close on duty personnel modal"
+                >
+                  x
+                </button>
+              </div>
+              <div className="dashboard-modal-body">
+                {loading ? (
+                  <p className="dashboard-modal-empty">Loading today's on-duty personnel...</p>
+                ) : todayPersonnelError ? (
+                  <div className="dashboard-modal-message dashboard-modal-message-error">
+                    Unable to load on-duty personnel: {todayPersonnelError}
+                  </div>
+                ) : todayPersonnel.onDuty.length === 0 ? (
+                  <p className="dashboard-modal-empty">No personnel are on duty today.</p>
+                ) : (
+                  <div className="dashboard-modal-table-wrap">
+                    <table className="dashboard-modal-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Rank</th>
+                          <th>Time In</th>
+                          <th>Time Out</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {todayPersonnel.onDuty.map((person) => (
+                          <tr key={person.admin_id}>
+                            <td>{person.name}</td>
+                            <td>{person.rank}</td>
+                            <td>{person.time_in || '-'}</td>
+                            <td>{person.time_out || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isOnLeaveModalOpen && (
+          <div className="dashboard-modal-overlay" role="dialog" aria-modal="true">
+            <div className="dashboard-modal">
+              <div className="dashboard-modal-header">
+                <h3>On Leave Today ({todayPersonnel.onLeave.length})</h3>
+                <button
+                  className="dashboard-modal-close"
+                  onClick={() => setIsOnLeaveModalOpen(false)}
+                  aria-label="Close on leave personnel modal"
+                >
+                  x
+                </button>
+              </div>
+              <div className="dashboard-modal-body">
+                {loading ? (
+                  <p className="dashboard-modal-empty">Loading today's on-leave personnel...</p>
+                ) : todayPersonnelError ? (
+                  <div className="dashboard-modal-message dashboard-modal-message-error">
+                    Unable to load on-leave personnel: {todayPersonnelError}
+                  </div>
+                ) : todayPersonnel.onLeave.length === 0 ? (
+                  <p className="dashboard-modal-empty">No personnel are on leave today.</p>
+                ) : (
+                  <div className="dashboard-modal-table-wrap">
+                    <table className="dashboard-modal-table">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Rank</th>
+                          <th>Leave Period</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {todayPersonnel.onLeave.map((person) => (
+                          <tr key={person.admin_id}>
+                            <td>{person.name}</td>
+                            <td>{person.rank}</td>
+                            <td>{person.leave_start_date} - {person.leave_end_date}</td>
+                            <td>{person.approval_status}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

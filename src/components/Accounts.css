@@ -251,6 +251,18 @@
   gap: 0.35rem;
   overflow: hidden;
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+  cursor: pointer;
+  text-align: left;
+}
+
+.shift-summary-day:hover:not(.is-past-date) {
+  border-color: #f59e0b;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
+.shift-summary-day:focus-visible:not(.is-past-date) {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
 }
 
 .shift-summary-day.today {
@@ -951,6 +963,26 @@
   width: min(1000px, 95%);
   max-height: none;
   overflow: visible;
+}
+
+.accounts-day-detail-modal {
+  width: min(720px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.day-detail-section {
+  margin-bottom: 1.25rem;
+}
+
+.day-detail-section:last-child {
+  margin-bottom: 0;
+}
+
+.day-detail-section h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+  color: #111827;
 }
 
 .shift-picker-controls {

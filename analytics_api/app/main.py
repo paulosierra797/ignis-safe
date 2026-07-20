@@ -165,6 +165,7 @@ class Filters(BaseModel):
     people: str = "All"
     topic: str = "All"
     activityTrendsView: str = "Month"
+    userOverviewRange: str = "Month"
 
 
 class DeleteUserRequest(BaseModel):
@@ -820,25 +821,51 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
 
         filtered_attempts.append(attempt)
 
-    day_count = 7 if filters.timeframe == "Last 7 days" else 30
-    day_buckets = [
-        (datetime.utcnow() - timedelta(days=(day_count - 1 - idx))).replace(hour=0, minute=0, second=0, microsecond=0)
-        for idx in range(day_count)
-    ]
-    active_users_by_day = {day.strftime("%Y-%m-%d"): set() for day in day_buckets}
+    if filters.userOverviewRange == "Year":
+        current_year = datetime.utcnow().year
+        month_buckets = [
+            {
+                "key": f"{current_year}-{month:02d}",
+                "label": datetime(current_year, month, 1).strftime("%b"),
+            }
+            for month in range(1, 13)
+        ]
+        active_users_by_month = {bucket["key"]: set() for bucket in month_buckets}
 
-    for attempt in filtered_attempts:
-        timestamp = parse_iso_date(get_attempt_timestamp(attempt))
-        if not timestamp:
-            continue
-        day_key = timestamp.strftime("%Y-%m-%d")
-        if day_key in active_users_by_day:
-            active_users_by_day[day_key].add(attempt.get("user_id"))
+        for attempt in filtered_attempts:
+            timestamp = parse_iso_date(get_attempt_timestamp(attempt))
+            if not timestamp or timestamp.year != current_year:
+                continue
+            month_key = timestamp.strftime("%Y-%m")
+            if month_key in active_users_by_month:
+                active_users_by_month[month_key].add(attempt.get("user_id"))
 
-    user_overview = {
-        "labels": [day.strftime("%b %d") for day in day_buckets],
-        "values": [len(active_users_by_day[day.strftime("%Y-%m-%d")]) for day in day_buckets],
-    }
+        user_overview = {
+            "labels": [bucket["label"] for bucket in month_buckets],
+            "values": [len(active_users_by_month[bucket["key"]]) for bucket in month_buckets],
+        }
+    else:
+        day_count = 7 if filters.userOverviewRange == "Week" else 30
+        day_buckets = [
+            (datetime.utcnow() - timedelta(days=(day_count - 1 - idx))).replace(
+                hour=0, minute=0, second=0, microsecond=0
+            )
+            for idx in range(day_count)
+        ]
+        active_users_by_day = {day.strftime("%Y-%m-%d"): set() for day in day_buckets}
+
+        for attempt in filtered_attempts:
+            timestamp = parse_iso_date(get_attempt_timestamp(attempt))
+            if not timestamp:
+                continue
+            day_key = timestamp.strftime("%Y-%m-%d")
+            if day_key in active_users_by_day:
+                active_users_by_day[day_key].add(attempt.get("user_id"))
+
+        user_overview = {
+            "labels": [day.strftime("%b %d") for day in day_buckets],
+            "values": [len(active_users_by_day[day.strftime("%Y-%m-%d")]) for day in day_buckets],
+        }
 
     activity_trends = build_activity_trends(filtered_attempts, filters.activityTrendsView)
 

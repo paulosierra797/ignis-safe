@@ -42,62 +42,13 @@ export default function Analytics() {
   const [timeframe, setTimeframe] = useState('All-time');
   const [people, setPeople] = useState('All');
   const [topic, setTopic] = useState('All');
+  const [userOverviewRange, setUserOverviewRange] = useState('Month');
   const [activityTrendsView, setActivityTrendsView] = useState('Month');
   const [topics, setTopics] = useState(['All']);
   const [stats, setStats] = useState(DEFAULT_STATS);
   const [charts, setCharts] = useState(DEFAULT_CHARTS);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-
-  const circularColors = ['#3b82f6', '#14b8a6', '#fbbf24'];
-  const circularRadius = 65;
-  const circularCircumference = 2 * Math.PI * circularRadius;
-
-  const availableYears = charts.attemptsByYear?.availableYears || [];
-  const minAvailableYear = availableYears.length ? Math.min(...availableYears) : null;
-  const maxAvailableYear = availableYears.length ? Math.max(...availableYears) : null;
-  const isPrevYearDisabled =
-    isLoadingStats || minAvailableYear === null || selectedYear <= minAvailableYear;
-  const isNextYearDisabled =
-    isLoadingStats || maxAvailableYear === null || selectedYear >= maxAvailableYear;
-
-  const selectedYearData =
-    charts.attemptsByYear?.byYear?.[selectedYear] || { labels: [], attempts: [] };
-
-  const handlePrevYear = () => {
-    if (isPrevYearDisabled) return;
-    setSelectedYear((year) => year - 1);
-  };
-
-  const handleNextYear = () => {
-    if (isNextYearDisabled) return;
-    setSelectedYear((year) => year + 1);
-  };
-
-  const circularEntries = selectedYearData.labels
-    .map((label, index) => ({
-      label,
-      value: selectedYearData.attempts[index] || 0,
-    }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 3);
-
-  const circularTotal = circularEntries.reduce((sum, entry) => sum + entry.value, 0);
-
-  let circularProgressOffset = 0;
-  const circularSegments = circularEntries.map((entry, index) => {
-    const ratio = circularTotal > 0 ? entry.value / circularTotal : 0;
-    const arcLength = ratio * circularCircumference;
-    const rotateDeg = circularProgressOffset * 360 - 90;
-    circularProgressOffset += ratio;
-
-    return {
-      ...entry,
-      color: circularColors[index % circularColors.length],
-      arcLength,
-      rotateDeg,
-    };
-  });
+  const [isRecommendationsOpen, setIsRecommendationsOpen] = useState(false);
 // Starting Knowledge
 let startingColor = "#22c55e";
 if (stats.startingKnowledge < 30) {
@@ -106,13 +57,8 @@ if (stats.startingKnowledge < 30) {
   startingColor = "#f59e0b";
 }
 
-// Current Knowledge
-let currentColor = "#22c55e";
-if (stats.currentKnowledge < 40) {
-  currentColor = "#ef4444";
-} else if (stats.currentKnowledge < 70) {
-  currentColor = "#f59e0b";
-}
+// Current Knowledge stays green so it is clearly distinguished from the starting score.
+const currentColor = "#22c55e";
 
 // Knowledge Gain
 let gainColor = "#22c55e";
@@ -141,9 +87,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
 
       const nextTopics = data?.topics?.length ? data.topics : ['All'];
       setTopics(nextTopics);
-      if (!nextTopics.includes(topic)) {
-        setTopic('All');
-      }
+      setTopic((currentTopic) => (nextTopics.includes(currentTopic) ? currentTopic : 'All'));
     };
 
     loadFilterOptions();
@@ -171,6 +115,7 @@ const { data: chartsData } =
     people,
     topic,
     activityTrendsView,
+    userOverviewRange,
   });
 
       if (isMounted) {
@@ -185,7 +130,18 @@ const { data: chartsData } =
     return () => {
       isMounted = false;
     };
-  }, [timeframe, people, topic, activityTrendsView]);
+  }, [timeframe, people, topic, activityTrendsView, userOverviewRange]);
+
+  useEffect(() => {
+    if (!isRecommendationsOpen) return undefined;
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setIsRecommendationsOpen(false);
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isRecommendationsOpen]);
 
   return (
     <div className="analytics-container">
@@ -199,7 +155,7 @@ const { data: chartsData } =
         />
 
         <div className="analytics-filters">
-          <div className="filter-pill">
+          <div className="filter-pill filter-pill-timeframe">
             <span className="filter-label">Timeframe:</span>
             <select value={timeframe} onChange={(e) => setTimeframe(e.target.value)}>
               <option>All-time</option>
@@ -207,17 +163,22 @@ const { data: chartsData } =
               <option>Last 7 days</option>
             </select>
           </div>
-          <div className="filter-pill">
-            <span className="filter-label">People:</span>
+          <div className="filter-pill filter-pill-users">
+            <span className="filter-label">Users:</span>
             <select value={people} onChange={(e) => setPeople(e.target.value)}>
               <option>All</option>
               <option>Active</option>
               <option>Inactive</option>
             </select>
           </div>
-          <div className="filter-pill">
+          <div className="filter-pill filter-pill-topic">
             <span className="filter-label">Topic:</span>
-            <select value={topic} onChange={(e) => setTopic(e.target.value)}>
+            <select
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              title={topic}
+              aria-label="Filter analytics by topic"
+            >
               {topics.map((topicOption) => (
                 <option key={topicOption} value={topicOption}>
                   {topicOption}
@@ -240,14 +201,6 @@ const { data: chartsData } =
             <div className="stat-value">
               <span className="main-value">
                 {isLoadingStats ? '...' : stats.questionsAnswered.toLocaleString()}
-              </span>
-            </div>
-          </div>
-          <div className="analytics-stat-card">
-            <h3>Avg Mobile Session</h3>
-            <div className="stat-value">
-              <span className="main-value">
-                {isLoadingStats ? '...' : stats.avgSessionLength}
               </span>
             </div>
           </div>
@@ -338,14 +291,18 @@ const { data: chartsData } =
           </div>
         </div>
 
-        {/* AI Module Recommendations */}
-        <ModuleRecommendations />
-
         <div className="analytics-overview">
           <div className="overview-header">
             <h3>User Overview</h3>
-            <select className="time-select">
-              <option>This Month</option>
+            <select
+              className="time-select"
+              value={userOverviewRange}
+              onChange={(event) => setUserOverviewRange(event.target.value)}
+              aria-label="User overview date range"
+            >
+              <option value="Year">This Year</option>
+              <option value="Month">This Month</option>
+              <option value="Week">This Week</option>
             </select>
           </div>
           <div className="overview-chart">
@@ -372,62 +329,6 @@ const { data: chartsData } =
             </div>
             <div style={{ height: '220px', padding: '1rem 0.5rem' }}>
               <ActivityTrendsChart chartData={charts.activityTrends} />
-            </div>
-          </div>
-
-          {/* Circular Progress Chart */}
-          <div className="analytics-chart-card circular-progress-card">
-            <div className="year-navigation">
-              <button
-                type="button"
-                className="nav-arrow"
-                onClick={handlePrevYear}
-                disabled={isPrevYearDisabled}
-                aria-label="Previous year"
-              >
-                &lt;
-              </button>
-              <span className="year-display">{selectedYear}</span>
-              <button
-                type="button"
-                className="nav-arrow"
-                onClick={handleNextYear}
-                disabled={isNextYearDisabled}
-                aria-label="Next year"
-              >
-                &gt;
-              </button>
-            </div>
-            <div className="circular-progress-wrapper">
-              <svg width="160" height="160" viewBox="0 0 160 160">
-                <circle cx="80" cy="80" r="65" fill="none" stroke="#f0f0f0" strokeWidth="12"/>
-                {circularSegments.map((segment) => (
-                  <circle
-                    key={segment.label}
-                    cx="80"
-                    cy="80"
-                    r="65"
-                    fill="none"
-                    stroke={segment.color}
-                    strokeWidth="12"
-                    strokeDasharray={`${segment.arcLength} ${circularCircumference - segment.arcLength}`}
-                    strokeLinecap="round"
-                    transform={`rotate(${segment.rotateDeg} 80 80)`}
-                  />
-                ))}
-              </svg>
-              <div className="circular-progress-text">
-                <span className="progress-value">{circularTotal.toLocaleString()}</span>
-                <span className="progress-label">Total this year</span>
-              </div>
-            </div>
-            <div className="circular-legend">
-              {circularSegments.map((segment) => (
-                <div className="legend-item" key={segment.label}>
-                  <span className="legend-dot" style={{ background: segment.color }}></span>
-                  <span>{segment.label}</span>
-                </div>
-              ))}
             </div>
           </div>
 
@@ -498,6 +399,52 @@ const { data: chartsData } =
             </div>
           </div>
         </div>
+
+        <button
+          type="button"
+          className="ai-recommendations-fab"
+          onClick={() => setIsRecommendationsOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={isRecommendationsOpen}
+        >
+          <span className="ai-recommendations-fab-icon" aria-hidden="true">✦</span>
+          <span>AI Recommendations</span>
+        </button>
+
+        {isRecommendationsOpen && (
+          <div
+            className="ai-recommendations-overlay"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setIsRecommendationsOpen(false);
+            }}
+          >
+            <section
+              className="ai-recommendations-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ai-recommendations-title"
+            >
+              <div className="ai-recommendations-dialog-header">
+                <div>
+                  <span className="ai-recommendations-eyebrow">AI insights</span>
+                  <h2 id="ai-recommendations-title">Module Recommendations</h2>
+                </div>
+                <button
+                  type="button"
+                  className="ai-recommendations-close"
+                  onClick={() => setIsRecommendationsOpen(false)}
+                  aria-label="Close AI recommendations"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="ai-recommendations-dialog-body">
+                <ModuleRecommendations />
+              </div>
+            </section>
+          </div>
+        )}
       </div>
     </div>
   );

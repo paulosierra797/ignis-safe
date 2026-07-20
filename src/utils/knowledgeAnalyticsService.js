@@ -895,14 +895,6 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       return true;
     });
 
-    const dayCount = filters.timeframe === 'Last 7 days' ? 7 : 30;
-    const dayBuckets = Array.from({ length: dayCount }, (_, index) => {
-      const date = new Date();
-      date.setHours(0, 0, 0, 0);
-      date.setDate(date.getDate() - (dayCount - 1 - index));
-      return date;
-    });
-
     const toDayKey = (dateInput) => {
       const date = new Date(dateInput);
       if (Number.isNaN(date.getTime())) return null;
@@ -912,29 +904,66 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       return `${year}-${month}-${day}`;
     };
 
-    const activeUsersByDay = dayBuckets.reduce((accumulator, date) => {
-      accumulator[toDayKey(date)] = new Set();
-      return accumulator;
-    }, {});
+    const overviewRange = filters.userOverviewRange || 'Month';
+    let userOverview;
 
-    filteredAttempts.forEach((attempt) => {
-      const timestamp = getAttemptTimestamp(attempt);
-      if (!timestamp) return;
+    if (overviewRange === 'Year') {
+      const currentYear = new Date().getFullYear();
+      const monthBuckets = Array.from({ length: 12 }, (_, monthIndex) => {
+        const date = new Date(currentYear, monthIndex, 1);
+        return {
+          key: `${currentYear}-${String(monthIndex + 1).padStart(2, '0')}`,
+          label: date.toLocaleDateString('en-US', { month: 'short' }),
+        };
+      });
+      const activeUsersByMonth = monthBuckets.reduce((accumulator, bucket) => {
+        accumulator[bucket.key] = new Set();
+        return accumulator;
+      }, {});
 
-      const dayKey = toDayKey(timestamp);
-      if (!dayKey || !activeUsersByDay[dayKey]) return;
-      activeUsersByDay[dayKey].add(attempt.user_id);
-    });
+      filteredAttempts.forEach((attempt) => {
+        const timestamp = getAttemptTimestamp(attempt);
+        if (!timestamp) return;
 
-    const userOverview = {
-      labels: dayBuckets.map((date) =>
-        date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
-      ),
-      values: dayBuckets.map((date) => {
-        const key = toDayKey(date);
-        return activeUsersByDay[key]?.size || 0;
-      }),
-    };
+        const date = new Date(timestamp);
+        if (Number.isNaN(date.getTime()) || date.getFullYear() !== currentYear) return;
+        const monthKey = `${currentYear}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        activeUsersByMonth[monthKey]?.add(attempt.user_id);
+      });
+
+      userOverview = {
+        labels: monthBuckets.map((bucket) => bucket.label),
+        values: monthBuckets.map((bucket) => activeUsersByMonth[bucket.key]?.size || 0),
+      };
+    } else {
+      const dayCount = overviewRange === 'Week' ? 7 : 30;
+      const dayBuckets = Array.from({ length: dayCount }, (_, index) => {
+        const date = new Date();
+        date.setHours(0, 0, 0, 0);
+        date.setDate(date.getDate() - (dayCount - 1 - index));
+        return date;
+      });
+      const activeUsersByDay = dayBuckets.reduce((accumulator, date) => {
+        accumulator[toDayKey(date)] = new Set();
+        return accumulator;
+      }, {});
+
+      filteredAttempts.forEach((attempt) => {
+        const timestamp = getAttemptTimestamp(attempt);
+        if (!timestamp) return;
+
+        const dayKey = toDayKey(timestamp);
+        if (!dayKey || !activeUsersByDay[dayKey]) return;
+        activeUsersByDay[dayKey].add(attempt.user_id);
+      });
+
+      userOverview = {
+        labels: dayBuckets.map((date) =>
+          date.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
+        ),
+        values: dayBuckets.map((date) => activeUsersByDay[toDayKey(date)]?.size || 0),
+      };
+    }
 
     const activityTrends = buildActivityTrends(filteredAttempts, filters.activityTrendsView);
 
@@ -1195,7 +1224,7 @@ export const getModuleRecommendations = async () => {
   }
 
   try {
-    const { users, attempts, assessments, modules } = await loadAnalyticsBaseData();
+    const { attempts, assessments, modules } = await loadAnalyticsBaseData();
 
     const assessmentsById = assessments.reduce((acc, row) => {
       acc[row.id] = row;

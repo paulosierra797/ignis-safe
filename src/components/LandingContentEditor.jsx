@@ -146,6 +146,7 @@ export default function LandingContentEditor({ embedded = false }) {
   const [saving, setSaving] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ open: false, changes: [], onConfirm: null });
   const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [discardModalOpen, setDiscardModalOpen] = useState(false);
 
   React.useEffect(() => {
     setDraft(deepClone(content));
@@ -294,11 +295,12 @@ export default function LandingContentEditor({ embedded = false }) {
     if (!hasChanges) {
       return;
     }
-    const confirmed = window.confirm('Discard your unsaved changes? This cannot be undone.');
-    if (!confirmed) {
-      return;
-    }
+    setDiscardModalOpen(true);
+  };
+
+  const confirmDiscard = () => {
     setDraft(deepClone(content));
+    setDiscardModalOpen(false);
   };
 
   const handleResetDefaults = () => {
@@ -677,6 +679,34 @@ export default function LandingContentEditor({ embedded = false }) {
                 disabled={saving}
               >
                 {saving ? 'Working...' : 'Reset Defaults'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {discardModalOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="discardChangesTitle" aria-describedby="discardChangesMessage">
+          <div className="modal reset-defaults-modal">
+            <div className="reset-defaults-icon" aria-hidden="true">!</div>
+            <h3 id="discardChangesTitle" className="reset-defaults-title">Discard Unsaved Changes?</h3>
+            <p id="discardChangesMessage" className="reset-defaults-message">
+              Your unsaved landing-page changes will be removed and the last saved content will be restored. This action cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setDiscardModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="save-btn"
+                onClick={confirmDiscard}
+              >
+                Discard Changes
               </button>
             </div>
           </div>

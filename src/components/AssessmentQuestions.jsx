@@ -139,7 +139,6 @@ export default function AssessmentQuestions() {
   const [moduleTitles, setModuleTitles] = useState(MODULE_TITLE_FALLBACKS);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
   const [questions, setQuestions] = useState([]);
-  const [questionNavigatorSearch, setQuestionNavigatorSearch] = useState('');
   const [focusedQuestionId, setFocusedQuestionId] = useState('');
   const [isLoadingAssessments, setIsLoadingAssessments] = useState(true);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
@@ -253,7 +252,6 @@ export default function AssessmentQuestions() {
   }, [selectedAssessmentId]);
 
   useEffect(() => {
-    setQuestionNavigatorSearch('');
     setFocusedQuestionId('');
   }, [selectedAssessmentId]);
 
@@ -300,17 +298,8 @@ export default function AssessmentQuestions() {
   }, [questions, searchQuery]);
 
   const questionNavigatorOptions = useMemo(() => {
-    const query = questionNavigatorSearch.trim().toLowerCase();
-    const sortedQuestions = questions.slice().sort((left, right) => left.question_no - right.question_no);
-    if (!query) return sortedQuestions;
-
-    return sortedQuestions.filter((question) => [
-      String(question.question_no),
-      `question ${question.question_no}`,
-      question.prompt,
-      question.prompt_tl
-    ].some((value) => String(value || '').toLowerCase().includes(query)));
-  }, [questions, questionNavigatorSearch]);
+    return questions.slice().sort((left, right) => left.question_no - right.question_no);
+  }, [questions]);
 
   useEffect(() => {
     if (!isDirty) return undefined;
@@ -847,16 +836,10 @@ export default function AssessmentQuestions() {
           </div>
 
           <div className="assessment-question-navigator">
-            <label htmlFor="assessment-question-search">Quick question access</label>
+            <label htmlFor="assessment-question-jump">Quick question access</label>
             <div className="assessment-question-navigator-controls">
-              <input
-                id="assessment-question-search"
-                type="search"
-                value={questionNavigatorSearch}
-                onChange={(event) => setQuestionNavigatorSearch(event.target.value)}
-                placeholder="Search number or question text"
-              />
               <select
+                id="assessment-question-jump"
                 value=""
                 onChange={handleQuestionJump}
                 disabled={isLoadingQuestions || questionNavigatorOptions.length === 0}

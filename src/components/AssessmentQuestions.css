@@ -80,12 +80,11 @@
 
 .assessment-question-navigator-controls {
   display: grid;
-  grid-template-columns: minmax(135px, 0.7fr) minmax(180px, 1.3fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.55rem;
   min-width: 0;
 }
 
-.assessment-question-navigator input,
 .assessment-question-navigator select {
   box-sizing: border-box;
   width: 100%;
@@ -100,7 +99,6 @@
   font-size: 0.78rem;
 }
 
-.assessment-question-navigator input:focus,
 .assessment-question-navigator select:focus {
   outline: none;
   border-color: #b91c1c;

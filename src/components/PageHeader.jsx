@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaBars, FaSearch } from 'react-icons/fa';
+import { FaBars } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useLayout } from '../context/LayoutContext';
@@ -32,21 +32,18 @@ const getDisplayName = (currentUser) => {
 
 const PageHeader = ({
   title,
-  searchQuery = '',
-  onSearchChange = () => {},
   userName,
   userRole,
   userAvatar,
   variant = 'admin',
-  showSearch = true,
   compact = false,
   onNavigationRequest
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const { currentUser, logout } = useUser();
-  const { isSidebarCollapsed, toggleSidebar, toggleMobileSidebar } = useLayout();
+  const { currentUser, forgetThisDevice, logout } = useUser();
+  const { isSidebarCollapsed, toggleMobileSidebar } = useLayout();
 
   const resolvedUserName = userName ?? getDisplayName(currentUser);
   const resolvedUserRole = userRole ?? (variant === 'personnel'
@@ -89,6 +86,23 @@ const PageHeader = ({
         navigate('/');
       }
     });
+  };
+
+  const handleForgetThisDevice = async () => {
+    setIsDropdownOpen(false);
+
+    const confirmed = window.confirm(
+      'Forget this device? You will need an email OTP the next time you log in on this browser.'
+    );
+    if (!confirmed) return;
+
+    const { error } = await forgetThisDevice();
+    if (error) {
+      window.alert(`This device could not be forgotten: ${error}`);
+      return;
+    }
+
+    window.alert('This device has been forgotten. Your current session will stay signed in.');
   };
 
   const profilePath = variant === 'personnel' ? '/personnel/profile' : '/dashboard/profile';
@@ -160,6 +174,9 @@ const PageHeader = ({
                   Profile
                 </button>
               )}
+              <button className="dropdown-item dropdown-item--security" onClick={handleForgetThisDevice}>
+                Forget this device
+              </button>
               <button className="dropdown-item dropdown-item--logout" onClick={handleLogout}>
 
                 Logout

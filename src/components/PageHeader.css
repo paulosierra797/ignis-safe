@@ -215,6 +215,15 @@
   background-color: #f7fafc;
 }
 
+.dropdown-item--security {
+  border-top: 1px solid #edf2f7;
+  color: #92400e;
+}
+
+.dropdown-item--security:hover {
+  background-color: #fffbeb;
+}
+
 .dropdown-item--logout {
   color: #dc2626;
   font-weight: 700;

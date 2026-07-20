@@ -1011,39 +1011,42 @@ export default function AssessmentQuestions() {
 
         {hasPendingExit && !pendingDeleteQuestion && (
           <div
-            className="assessment-modal-overlay"
-            role="dialog"
+            className="assessment-unsaved-overlay"
+            role="alertdialog"
             aria-modal="true"
             aria-labelledby="assessment-unsaved-title"
             aria-describedby="assessment-unsaved-description"
           >
-            <div className="assessment-modal-box assessment-unsaved-modal">
-              <div className="assessment-unsaved-icon" aria-hidden="true">!</div>
-              <h3 id="assessment-unsaved-title">Unsaved assessment changes</h3>
-              <p id="assessment-unsaved-description">
-                You have {dirtyQuestionIds.size} unsaved question{dirtyQuestionIds.size === 1 ? '' : 's'}.
-                Save your changes before leaving, or discard them and continue.
+            <div className="assessment-unsaved-modal">
+              <div className="assessment-unsaved-icon" aria-hidden="true">
+                !
+              </div>
+              <h3 id="assessment-unsaved-title" className="assessment-unsaved-title">
+                Unsaved Assessment Questions
+              </h3>
+              <p id="assessment-unsaved-description" className="assessment-unsaved-message">
+                You have unsaved changes in this assessment. What would you like to do before leaving this page?
               </p>
-              <div className="assessment-modal-actions assessment-unsaved-actions">
+              <div className="assessment-unsaved-actions">
                 <button
                   type="button"
-                  className="assessment-modal-save"
+                  className="assessment-unsaved-btn assessment-unsaved-btn-save"
                   onClick={handleSaveAndContinue}
                   disabled={isSavingAll}
                 >
-                  {isSavingAll ? 'Saving...' : 'Save and continue'}
+                  {isSavingAll ? 'Saving...' : 'Save Draft and Continue'}
                 </button>
                 <button
                   type="button"
-                  className="assessment-modal-discard"
+                  className="assessment-unsaved-btn assessment-unsaved-btn-leave"
                   onClick={handleLeaveWithoutSaving}
                   disabled={isSavingAll}
                 >
-                  Leave without saving
+                  Leave Without Saving
                 </button>
                 <button
                   type="button"
-                  className="assessment-modal-cancel"
+                  className="assessment-unsaved-btn assessment-unsaved-btn-cancel"
                   onClick={handleCancelExit}
                   disabled={isSavingAll}
                 >

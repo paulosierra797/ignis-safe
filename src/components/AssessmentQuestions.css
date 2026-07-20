@@ -529,24 +529,6 @@
   line-height: 1.6;
 }
 
-.assessment-unsaved-modal {
-  text-align: center;
-}
-
-.assessment-unsaved-icon {
-  display: inline-grid;
-  width: 50px;
-  height: 50px;
-  place-items: center;
-  margin-bottom: 0.85rem;
-  border: 1px solid #fed7aa;
-  border-radius: 15px;
-  background: #fff7ed;
-  color: #c2410c;
-  font-size: 1.4rem;
-  font-weight: 850;
-}
-
 .assessment-modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -555,14 +537,8 @@
   margin-top: 1.15rem;
 }
 
-.assessment-unsaved-actions {
-  justify-content: center;
-}
-
 .assessment-modal-cancel,
-.assessment-modal-confirm,
-.assessment-modal-save,
-.assessment-modal-discard {
+.assessment-modal-confirm {
   min-height: 41px;
   padding: 0.62rem 0.9rem;
   border: 0;
@@ -578,23 +554,164 @@
   color: #334155;
 }
 
-.assessment-modal-confirm,
-.assessment-modal-discard {
+.assessment-modal-confirm {
   background: #fee2e2;
   color: #991b1b;
 }
 
-.assessment-modal-save {
-  background: #0f766e;
-  color: #fff;
-}
-
 .assessment-modal-cancel:disabled,
-.assessment-modal-confirm:disabled,
-.assessment-modal-save:disabled,
-.assessment-modal-discard:disabled {
+.assessment-modal-confirm:disabled {
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+.assessment-unsaved-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.25rem;
+  z-index: 999999;
+}
+
+.assessment-unsaved-modal {
+  width: 620px;
+  max-width: 100%;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  background: white;
+  border-radius: 18px;
+  padding: 1.85rem 1.75rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+  animation: assessmentUnsavedModalIn 0.25s ease-out;
+  font-family: 'Poppins', sans-serif;
+}
+
+.assessment-unsaved-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.assessment-unsaved-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.assessment-unsaved-message {
+  margin: 0;
+  max-width: 520px;
+  font-size: 0.92rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.assessment-unsaved-actions {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.assessment-unsaved-btn {
+  flex: 1 1 0;
+  min-width: 160px;
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.assessment-unsaved-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.assessment-unsaved-btn:focus-visible {
+  outline: 3px solid #fdba74;
+  outline-offset: 2px;
+}
+
+.assessment-unsaved-btn-save {
+  background: #f97316;
+  color: white;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.35);
+}
+
+.assessment-unsaved-btn-save:hover {
+  transform: translateY(-1px);
+}
+
+.assessment-unsaved-btn-leave {
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.assessment-unsaved-btn-leave:hover {
+  background: #ffe4e6;
+}
+
+.assessment-unsaved-btn-cancel {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.assessment-unsaved-btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+@keyframes assessmentUnsavedModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .assessment-unsaved-modal {
+    width: 100%;
+  }
+
+  .assessment-unsaved-actions {
+    flex-direction: column;
+  }
+
+  .assessment-unsaved-btn {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 1100px) {

@@ -270,7 +270,7 @@ export default function ModuleEditor({
                     key={block.id || `${moduleEntry.module_no}-${page.page_no}-${block.block_no}`}
                     number={block.block_no ?? index + 1}
                     label={block.block_type ? block.block_type.replace(/_/g, ' ') : 'Content block'}
-                    meta={block.block_key || undefined}
+                    meta={`Module ${moduleEntry.module_no} • Page ${page.page_no}`}
                   >
                     <BilingualGrid>
                       <EditorField label="Content" language="English">

@@ -39,7 +39,8 @@ const PageHeader = ({
   userAvatar,
   variant = 'admin',
   showSearch = true,
-  compact = false
+  compact = false,
+  onNavigationRequest
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -69,23 +70,43 @@ const PageHeader = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
+  const requestNavigation = (navigation) => {
+    setIsDropdownOpen(false);
+
+    if (onNavigationRequest) {
+      onNavigationRequest(navigation);
+      return;
+    }
+
+    navigation.action();
+  };
+
+  const handleLogout = () => {
+    requestNavigation({
+      to: '/',
+      action: async () => {
+        await logout();
+        navigate('/');
+      }
+    });
   };
 
   const profilePath = variant === 'personnel' ? '/personnel/profile' : '/dashboard/profile';
 
   const handleOpenProfile = () => {
     if (variant === 'personnel' || variant === 'admin') {
-      navigate(profilePath);
-      setIsDropdownOpen(false);
+      requestNavigation({
+        to: profilePath,
+        action: () => navigate(profilePath)
+      });
     }
   };
 
   const handleWorkspaceSwitch = () => {
-    navigate(workspaceSwitchPath);
-    setIsDropdownOpen(false);
+    requestNavigation({
+      to: workspaceSwitchPath,
+      action: () => navigate(workspaceSwitchPath)
+    });
   };
 
   const variantClass = variant ? `page-header--${variant}` : '';

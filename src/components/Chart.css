@@ -467,6 +467,45 @@
   max-width: 100%;
 }
 
+.org-unsaved-modal {
+  width: 620px;
+  gap: 1rem;
+}
+
+.org-modal-icon-warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.org-unsaved-modal .org-modal-message {
+  max-width: 520px;
+  color: #475569;
+}
+
+.org-unsaved-actions {
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.org-unsaved-actions .org-modal-btn {
+  min-width: 160px;
+}
+
+.org-modal-btn-leave {
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.org-modal-btn-leave:hover {
+  background: #ffe4e6;
+}
+
+.org-modal-btn:focus-visible {
+  outline: 3px solid #fdba74;
+  outline-offset: 2px;
+}
+
 @keyframes chartModalIn {
   from {
     opacity: 0;
@@ -480,8 +519,19 @@
 
 @media (max-width: 600px) {
   .org-modal,
-  .org-confirm-modal {
+  .org-confirm-modal,
+  .org-unsaved-modal {
     width: 100%;
+  }
+
+  .org-unsaved-actions {
+    flex-direction: column;
+  }
+
+  .org-unsaved-actions .org-modal-btn {
+    flex: none;
+    width: 100%;
+    min-width: 0;
   }
 }
 

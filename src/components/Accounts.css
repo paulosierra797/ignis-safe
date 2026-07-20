@@ -1678,3 +1678,236 @@
     justify-content: space-between;
   }
 }
+
+/* Personnel table layout and compact row actions */
+.accounts-container,
+.accounts-main {
+  min-width: 0;
+}
+
+.accounts-container {
+  overflow-x: hidden;
+}
+
+.accounts-table-card {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.accounts-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.accounts-table {
+  table-layout: fixed;
+  min-width: 900px;
+}
+
+.accounts-table col.accounts-col-number { width: 7%; }
+.accounts-table col.accounts-col-name { width: 22%; }
+.accounts-table col.accounts-col-email { width: 27%; }
+.accounts-table col.accounts-col-rank { width: 11%; }
+.accounts-table col.accounts-col-role { width: 11%; }
+.accounts-table col.accounts-col-status { width: 14%; }
+.accounts-table col.accounts-col-actions { width: 8%; }
+
+.accounts-table th,
+.accounts-table td {
+  box-sizing: border-box;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.accounts-table tbody td {
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.account-table-text {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-status-cell {
+  overflow: visible !important;
+}
+
+.accounts-actions-heading,
+.accounts-actions-cell {
+  position: sticky;
+  right: 0;
+  width: 92px;
+  min-width: 92px;
+  max-width: 92px;
+  text-align: center !important;
+}
+
+.accounts-actions-heading {
+  z-index: 3;
+  background: #b91c1c;
+}
+
+.accounts-actions-cell {
+  z-index: 2;
+  background: #fff;
+  box-shadow: -8px 0 12px rgba(15, 23, 42, 0.08);
+}
+
+.accounts-table tbody tr:hover .accounts-actions-cell {
+  background: #fff;
+}
+
+.account-action-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #475569;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.account-action-menu-trigger span {
+  display: block;
+  margin-top: -5px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+
+.account-action-menu-trigger:hover,
+.account-action-menu-trigger:focus-visible {
+  border-color: #b91c1c;
+  background: #fff7ed;
+  color: #991b1b;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.14);
+}
+
+.account-action-menu {
+  position: fixed;
+  z-index: 2000;
+  width: min(196px, calc(100vw - 24px));
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+}
+
+.account-action-menu-item {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #334155;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-action-menu-item:hover,
+.account-action-menu-item:focus-visible {
+  background: #f8fafc;
+  color: #991b1b;
+  outline: none;
+}
+
+.account-action-menu-item.is-destructive {
+  color: #b91c1c;
+}
+
+.account-action-menu-item.is-destructive:hover,
+.account-action-menu-item.is-destructive:focus-visible {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.account-card {
+  min-width: 0;
+}
+
+.account-card-header {
+  min-width: 0;
+}
+
+.account-card-title,
+.account-card-value {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.account-card-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-card-value {
+  color: #334155;
+}
+
+.account-card-email {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.account-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 34px;
+}
+
+@media (max-width: 768px) {
+  .accounts-table-scroll {
+    display: none;
+  }
+
+  .accounts-mobile-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .account-card-header {
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .account-card-title {
+    flex: 1 1 auto;
+  }
+}
+.account-action-menu {
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
+.account-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}

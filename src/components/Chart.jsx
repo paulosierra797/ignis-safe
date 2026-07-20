@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { useUser } from '../context/UserContext';
@@ -375,9 +376,35 @@ export default function Chart() {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [successSummary, setSuccessSummary] = useState(null);
   const [errorInfo, setErrorInfo] = useState(null);
+  const [hasPendingManualNavigation, setHasPendingManualNavigation] = useState(false);
   const editSnapshotRef = useRef(null);
+  const pendingManualNavigationRef = useRef(null);
+  const bypassNavigationRef = useRef(false);
   const { currentUser } = useUser();
   const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
+
+  const currentChanges = useMemo(
+    () => editMode
+      ? buildChangeList(editSnapshotRef.current || orgData, orgData, pendingAvatarFiles)
+      : [],
+    [editMode, orgData, pendingAvatarFiles]
+  );
+  const isDirty = editMode && currentChanges.length > 0;
+
+  const shouldBlockNavigation = useCallback(({ currentLocation, nextLocation }) => {
+    if (bypassNavigationRef.current) {
+      bypassNavigationRef.current = false;
+      return false;
+    }
+
+    const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
+    const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
+
+    return isDirty && currentPath !== nextPath;
+  }, [isDirty]);
+
+  const blocker = useBlocker(shouldBlockNavigation);
+  const hasPendingNavigation = hasPendingManualNavigation || blocker.state === 'blocked';
 
   const lastEditLabel = useMemo(() => {
     if (!lastEditedAt) {
@@ -417,6 +444,27 @@ export default function Chart() {
   }, []);
 
   useEffect(() => {
+    if (!isDirty) {
+      return undefined;
+    }
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      setIsConfirmModalOpen(false);
+      setPendingChanges([]);
+    }
+  }, [blocker.state]);
+
+  useEffect(() => {
     return () => {
       Object.values(avatarPreviewUrls).forEach((url) => URL.revokeObjectURL(url));
     };
@@ -424,10 +472,8 @@ export default function Chart() {
   }, []);
 
   const clearPendingAvatars = () => {
-    setAvatarPreviewUrls((prev) => {
-      Object.values(prev).forEach((url) => URL.revokeObjectURL(url));
-      return {};
-    });
+    Object.values(avatarPreviewUrls).forEach((url) => URL.revokeObjectURL(url));
+    setAvatarPreviewUrls({});
     setPendingAvatarFiles({});
   };
 
@@ -494,40 +540,145 @@ export default function Chart() {
     setIsConfirmModalOpen(false);
   };
 
+  const saveChartChanges = async (changes) => {
+    let finalData = orgData;
+
+    for (const [nodeId, file] of Object.entries(pendingAvatarFiles)) {
+      const { data: imageUrl, error } = await uploadOrgChartAvatar(
+        nodeId,
+        file,
+        currentUser?.admin_id || 'admin'
+      );
+
+      if (error) {
+        throw new Error(error);
+      }
+
+      finalData = applyNodeUpdate(finalData, nodeId, 'avatar_url', imageUrl);
+    }
+
+    const saved = await persistChart(finalData, buildActivityDetails(changes));
+
+    if (!saved) {
+      throw new Error('Failed to save organizational chart changes.');
+    }
+
+    return finalData;
+  };
+
+  const clearEditSession = (finalData) => {
+    setOrgData(finalData);
+    clearPendingAvatars();
+    setEditMode(false);
+    editSnapshotRef.current = null;
+    setIsConfirmModalOpen(false);
+    setPendingChanges([]);
+  };
+
+  const runManualNavigation = (navigation) => {
+    bypassNavigationRef.current = true;
+
+    try {
+      const actionResult = navigation.action();
+      Promise.resolve(actionResult).finally(() => {
+        bypassNavigationRef.current = false;
+      });
+    } catch (error) {
+      bypassNavigationRef.current = false;
+      throw error;
+    }
+  };
+
+  const resumePendingNavigation = () => {
+    const manualNavigation = pendingManualNavigationRef.current;
+    pendingManualNavigationRef.current = null;
+    setHasPendingManualNavigation(false);
+
+    if (manualNavigation) {
+      if (blocker.state === 'blocked') {
+        blocker.reset();
+      }
+      runManualNavigation(manualNavigation);
+      return;
+    }
+
+    if (blocker.state === 'blocked') {
+      blocker.proceed();
+    }
+  };
+
+  const handleHeaderNavigationRequest = (navigation) => {
+    if (!isDirty) {
+      navigation.action();
+      return;
+    }
+
+    if (pendingManualNavigationRef.current || blocker.state === 'blocked') {
+      return;
+    }
+
+    pendingManualNavigationRef.current = navigation;
+    setHasPendingManualNavigation(true);
+    setIsConfirmModalOpen(false);
+    setPendingChanges([]);
+  };
+
+  const handleCancelNavigation = () => {
+    if (isSaving) return;
+
+    pendingManualNavigationRef.current = null;
+    setHasPendingManualNavigation(false);
+
+    if (blocker.state === 'blocked') {
+      blocker.reset();
+    }
+  };
+
+  const discardEditSession = () => {
+    if (editSnapshotRef.current) {
+      setOrgData(editSnapshotRef.current);
+    }
+    clearPendingAvatars();
+    setEditMode(false);
+    editSnapshotRef.current = null;
+    setIsConfirmModalOpen(false);
+    setPendingChanges([]);
+  };
+
+  const handleLeaveWithoutSaving = () => {
+    if (isSaving) return;
+    discardEditSession();
+    resumePendingNavigation();
+  };
+
+  const handleSaveAndContinue = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+
+    try {
+      const changes = currentChanges;
+      const finalData = await saveChartChanges(changes);
+      clearEditSession(finalData);
+      resumePendingNavigation();
+    } catch (error) {
+      console.error(error);
+      setErrorInfo({
+        message: 'Failed to save organizational chart changes. Please try again.'
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleConfirmSave = async () => {
     if (isSaving) return;
     setIsSaving(true);
 
     try {
-      let finalData = orgData;
-
-      for (const [nodeId, file] of Object.entries(pendingAvatarFiles)) {
-        const { data: imageUrl, error } = await uploadOrgChartAvatar(
-          nodeId,
-          file,
-          currentUser?.admin_id || 'admin'
-        );
-
-        if (error) {
-          throw new Error(error);
-        }
-
-        finalData = applyNodeUpdate(finalData, nodeId, 'avatar_url', imageUrl);
-      }
-
-      const saved = await persistChart(finalData, buildActivityDetails(pendingChanges));
-
-      if (!saved) {
-        throw new Error('Failed to save organizational chart changes.');
-      }
-
-      setOrgData(finalData);
-      clearPendingAvatars();
-      setEditMode(false);
-      editSnapshotRef.current = null;
-      setIsConfirmModalOpen(false);
-      setSuccessSummary(buildSuccessSummary(pendingChanges));
-      setPendingChanges([]);
+      const changes = pendingChanges.length > 0 ? pendingChanges : currentChanges;
+      const finalData = await saveChartChanges(changes);
+      clearEditSession(finalData);
+      setSuccessSummary(buildSuccessSummary(changes));
     } catch (error) {
       console.error(error);
       setIsConfirmModalOpen(false);
@@ -584,6 +735,7 @@ export default function Chart() {
           title="Organizational Chart"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          onNavigationRequest={handleHeaderNavigationRequest}
         />
 
         <div className="chart-header">
@@ -656,7 +808,59 @@ export default function Chart() {
         </div>
       </div>
 
-      {isConfirmModalOpen && (
+      {hasPendingNavigation && !errorInfo && (
+        <div
+          className="org-modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="orgUnsavedTitle"
+          aria-describedby="orgUnsavedDescription"
+        >
+          <div className="org-modal org-unsaved-modal">
+            <div
+              className="org-modal-icon org-modal-icon-warning"
+              aria-hidden="true"
+            >
+              !
+            </div>
+            <h3 id="orgUnsavedTitle" className="org-modal-title">
+              Unsaved Organizational Chart Changes
+            </h3>
+            <p id="orgUnsavedDescription" className="org-modal-message">
+              You have unsaved changes in the Organizational Chart. What would you like to do before leaving this page?
+            </p>
+
+            <div className="org-modal-actions org-unsaved-actions">
+              <button
+                type="button"
+                className="org-modal-btn org-modal-btn-save"
+                onClick={handleSaveAndContinue}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save and Continue'}
+              </button>
+              <button
+                type="button"
+                className="org-modal-btn org-modal-btn-leave"
+                onClick={handleLeaveWithoutSaving}
+                disabled={isSaving}
+              >
+                Leave Without Saving
+              </button>
+              <button
+                type="button"
+                className="org-modal-btn org-modal-btn-cancel"
+                onClick={handleCancelNavigation}
+                disabled={isSaving}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isConfirmModalOpen && !hasPendingNavigation && !errorInfo && (
         <div className="org-modal-overlay" role="dialog" aria-modal="true">
           <div className="org-modal org-confirm-modal">
             <h3 className="org-modal-title">Confirm Organizational Chart Changes</h3>
@@ -692,7 +896,7 @@ export default function Chart() {
         </div>
       )}
 
-      {successSummary && (
+      {successSummary && !hasPendingNavigation && !errorInfo && (
         <div className="org-modal-overlay" role="dialog" aria-modal="true">
           <div className="org-modal org-result-modal">
             <div className="org-modal-icon org-modal-icon-success">✓</div>

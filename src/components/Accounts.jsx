@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { supabase } from "../utils/supabaseClient";
@@ -46,6 +47,139 @@ const toIsoDate = (date) => {
 };
 
 
+
+const ACCOUNT_ACTION_MENU_WIDTH = 196;
+
+function AccountActionsMenu({ account, actions }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const updateMenuPosition = useCallback(() => {
+    if (!triggerRef.current || !isOpen) {
+      return;
+    }
+
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const menuHeight = menuRef.current?.getBoundingClientRect().height || Math.max(136, actions.length * 42 + 12);
+    const viewportPadding = 12;
+    const gap = 8;
+    const openAbove = triggerRect.bottom + gap + menuHeight > window.innerHeight - viewportPadding;
+    const preferredTop = openAbove
+      ? triggerRect.top - menuHeight - gap
+      : triggerRect.bottom + gap;
+    const top = Math.min(
+      Math.max(preferredTop, viewportPadding),
+      Math.max(viewportPadding, window.innerHeight - menuHeight - viewportPadding)
+    );
+    const left = Math.min(
+      Math.max(triggerRect.right - ACCOUNT_ACTION_MENU_WIDTH, viewportPadding),
+      Math.max(viewportPadding, window.innerWidth - ACCOUNT_ACTION_MENU_WIDTH - viewportPadding)
+    );
+
+    setMenuPosition({ top, left });
+  }, [actions.length, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return undefined;
+    }
+
+    updateMenuPosition();
+
+    const handleOutsidePointer = (event) => {
+      if (
+        !triggerRef.current?.contains(event.target) &&
+        !menuRef.current?.contains(event.target)
+      ) {
+        setMenuPosition(null);
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setMenuPosition(null);
+        setIsOpen(false);
+        triggerRef.current?.focus();
+      }
+    };
+
+    const handleViewportChange = () => updateMenuPosition();
+
+    document.addEventListener('pointerdown', handleOutsidePointer);
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('scroll', handleViewportChange, true);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointer);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
+    };
+  }, [isOpen, updateMenuPosition]);
+
+  useEffect(() => {
+    if (isOpen && menuPosition) {
+      menuRef.current?.querySelector('[role="menuitem"]')?.focus();
+    }
+  }, [isOpen, menuPosition]);
+
+  const handleMenuToggle = () => {
+    setMenuPosition(null);
+    setIsOpen((open) => !open);
+  };
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="account-action-menu-trigger"
+        aria-label={`Open actions for ${account.first_name || ''} ${account.last_name || ''}`.trim()}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        onClick={handleMenuToggle}
+      >
+        <span aria-hidden="true">...</span>
+      </button>
+
+      {isOpen && createPortal(
+        <div
+          ref={menuRef}
+          className="account-action-menu"
+          role="menu"
+          aria-label="Personnel actions"
+          style={{
+            top: menuPosition?.top ?? 0,
+            left: menuPosition?.left ?? 0,
+            visibility: menuPosition ? 'visible' : 'hidden'
+          }}
+        >
+          {actions.map((action) => (
+            <button
+              key={action.key}
+              type="button"
+              role="menuitem"
+              className={`account-action-menu-item${action.destructive ? ' is-destructive' : ''}`}
+              onClick={() => {
+                setMenuPosition(null);
+                setIsOpen(false);
+                action.onSelect();
+              }}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 export default function Accounts() {
   const { currentUser } = useUser();
   const [accounts, setAccounts] = useState([]);
@@ -1663,6 +1797,21 @@ const permissions = getDefaultPermissions(formData.role);
     return matchSearch && matchRank && matchStatus;
   });
 
+  const getAccountActions = (account) => [
+    ...(isPersonnelAccount(account)
+      ? [{ key: 'set-leave', label: 'Set Leave', onSelect: () => openLeaveModal(account) }]
+      : []),
+    ...(isPersonnelAccount(account) && isOnLeave(account)
+      ? [{ key: 'clear-leave', label: 'Clear Leave', onSelect: () => handleClearLeaveDate(account) }]
+      : []),
+    { key: 'edit', label: 'Edit', onSelect: () => openEditModal(account) },
+    {
+      key: 'delete',
+      label: 'Delete',
+      destructive: true,
+      onSelect: () => handleDeleteUser(account.admin_id || account.id)
+    }
+  ];
   const shiftSummaryCalendarCells = getCalendarCells(shiftSummaryMonth);
   const shiftSummaryMonthLabel = formatCalendarMonthLabel(shiftSummaryMonth);
   const shiftSummaryTodayIso = getManilaToday();
@@ -2390,166 +2539,126 @@ const permissions = getDefaultPermissions(formData.role);
               <p>No accounts found.</p>
             </div>
           ) : (
-            <table className="accounts-table">
-              <thead>
-                <tr>
-                  <th>No.</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Rank</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAccounts.map((account, index) => (
-                  <tr key={account.admin_id || account.id}>
-                    <td>{index + 1}.</td>
-                    <td>{account.first_name} {account.last_name}</td>
-                    <td>{account.email}</td>
-                    <td>{account.rank}</td>
-                    <td>{account.role}</td>
-                    <td>
-                      <span
-                        className={`status-pill ${account.status
-                          .toLowerCase()
-                          .replace(/\s+/g, '-')}`}
-                      >
-                        {account.status.toUpperCase()}
-                      </span>
-                      {isOnLeave(account) && (
-                        <p className="leave-date-meta">
-                          {`Leave: ${formatLeaveDate(account.leave_start_date)} to ${formatLeaveDate(account.leave_end_date)}`}
-                        </p>
-                      )}
-                    </td>
-                    <td>
-                      <div className="action-buttons">
-                        {isPersonnelAccount(account) && (
-                          <button
-                            className="leave-btn"
-                            onClick={() => openLeaveModal(account)}
-                          >
-                            Set Leave
-                          </button>
-                        )}
-                        {isPersonnelAccount(account) && isOnLeave(account) && (
-                          <button
-                            className="leave-clear-btn"
-                            onClick={() => handleClearLeaveDate(account)}
-                          >
-                            Clear Leave
-                          </button>
-                        )}
-                        <button 
-                          className="delete-btn"
-                          onClick={() => handleDeleteUser(account.admin_id || account.id)}
-                        >
-                          Delete
-                        </button>
-                        <button
-  className="edit-btn"
-  onClick={() => openEditModal(account)}
->
-  Edit
-</button>
-                      </div>
-                    </td>
+            <div className="accounts-table-scroll">
+              <table className="accounts-table">
+                <colgroup>
+                  <col className="accounts-col-number" />
+                  <col className="accounts-col-name" />
+                  <col className="accounts-col-email" />
+                  <col className="accounts-col-rank" />
+                  <col className="accounts-col-role" />
+                  <col className="accounts-col-status" />
+                  <col className="accounts-col-actions" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>No.</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Rank</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th className="accounts-actions-heading">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredAccounts.map((account, index) => {
+                    const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || 'Personnel';
+                    return (
+                      <tr key={account.admin_id || account.id}>
+                        <td className="account-index-cell">{index + 1}.</td>
+                        <td>
+                          <span className="account-table-text" title={accountName}>{accountName}</span>
+                        </td>
+                        <td>
+                          <span className="account-table-text" title={account.email || ''}>{account.email || '—'}</span>
+                        </td>
+                        <td>
+                          <span className="account-table-text" title={account.rank || ''}>{account.rank || '—'}</span>
+                        </td>
+                        <td>
+                          <span className="account-table-text" title={account.role || ''}>{account.role || '—'}</span>
+                        </td>
+                        <td className="account-status-cell">
+                          <span
+                            className={`status-pill ${account.status
+                              .toLowerCase()
+                              .replace(/\s+/g, '-')}`}
+                          >
+                            {account.status.toUpperCase()}
+                          </span>
+                          {isOnLeave(account) && (
+                            <p className="leave-date-meta" title={`Leave: ${formatLeaveDate(account.leave_start_date)} to ${formatLeaveDate(account.leave_end_date)}`}>
+                              {`Leave: ${formatLeaveDate(account.leave_start_date)} to ${formatLeaveDate(account.leave_end_date)}`}
+                            </p>
+                          )}
+                        </td>
+                        <td className="accounts-actions-cell">
+                          <AccountActionsMenu account={account} actions={getAccountActions(account)} />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
-          
         </div>
+
         <div className="accounts-mobile-list">
-  {filteredAccounts.map((account) => (
-    <div
-      className="account-card"
-      key={account.admin_id || account.id}
-    >
-      <div className="account-card-header">
-        <h3>
-          {account.first_name} {account.last_name}
-        </h3>
+          {filteredAccounts.map((account) => {
+            const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || 'Personnel';
+            return (
+              <div
+                className="account-card"
+                key={account.admin_id || account.id}
+              >
+                <div className="account-card-header">
+                  <h3 className="account-card-title" title={accountName}>{accountName}</h3>
 
-        <span
-          className={`status-pill ${account.status
-            .toLowerCase()
-            .replace(/\s+/g, "-")}`}
-        >
-          {account.status}
-        </span>
-      </div>
+                  <span
+                    className={`status-pill ${account.status
+                      .toLowerCase()
+                      .replace(/\s+/g, '-')}`}
+                  >
+                    {account.status}
+                  </span>
+                </div>
 
-      <p>
-        <strong>Rank</strong><br />
-        {account.rank}
-      </p>
+                <p>
+                  <strong>Rank</strong><br />
+                  <span className="account-card-value" title={account.rank || ''}>{account.rank || '—'}</span>
+                </p>
 
-      <p>
-        <strong>Role</strong><br />
-        {account.role}
-      </p>
+                <p>
+                  <strong>Role</strong><br />
+                  <span className="account-card-value" title={account.role || ''}>{account.role || '—'}</span>
+                </p>
 
-      <p>
-        <strong>Email</strong><br />
-        {account.email}
-      </p>
+                <p>
+                  <strong>Email</strong><br />
+                  <span className="account-card-value account-card-email" title={account.email || ''}>{account.email || '—'}</span>
+                </p>
 
-      {isOnLeave(account) && (
-        <p>
-          <strong>Leave</strong><br />
-          {formatLeaveDate(account.leave_start_date)}
-          {" - "}
-          {formatLeaveDate(account.leave_end_date)}
-        </p>
-      )}
+                {isOnLeave(account) && (
+                  <p>
+                    <strong>Leave</strong><br />
+                    <span className="account-card-value">
+                      {formatLeaveDate(account.leave_start_date)}
+                      {' - '}
+                      {formatLeaveDate(account.leave_end_date)}
+                    </span>
+                  </p>
+                )}
 
-      <div className="account-card-actions">
+                <div className="account-card-actions">
+                  <AccountActionsMenu account={account} actions={getAccountActions(account)} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
 
-        {isPersonnelAccount(account) && (
-          <button
-            className="leave-btn"
-            onClick={() => openLeaveModal(account)}
-          >
-            Set Leave
-          </button>
-        )}
-
-        {isPersonnelAccount(account) &&
-          isOnLeave(account) && (
-            <button
-              className="leave-clear-btn"
-              onClick={() =>
-                handleClearLeaveDate(account)
-              }
-            >
-              Clear Leave
-            </button>
-          )}
-
-        <button
-          className="edit-btn"
-          onClick={() => openEditModal(account)}
-        >
-          Edit
-        </button>
-
-        <button
-          className="delete-btn"
-          onClick={() =>
-            handleDeleteUser(account.admin_id || account.id)
-          }
-        >
-          Delete
-        </button>
-
-      </div>
-    </div>
-  ))}
-</div>
         {isEditModalOpen && (
   <div className="accounts-modal-overlay" role="dialog">
     <div className="accounts-modal">

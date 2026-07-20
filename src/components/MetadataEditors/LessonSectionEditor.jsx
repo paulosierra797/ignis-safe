@@ -1,185 +1,117 @@
-import React from "react";
-import "./LessonSection.css";
+import React from 'react';
+import { BilingualGrid, EditorField } from '../EditorUI/ModuleEditorUI';
+import './LessonSection.css';
 
-export default function LessonSectionEditor({
-  block,
-  page,
-  editedModule,
-  setEditedModule
-}) {
+export default function LessonSectionEditor({ block, page, editedModule, setEditedModule }) {
   const metadata = block.metadata || {};
 
   const updateMetadata = (field, value) => {
-    const updatedPages = editedModule.pages.map((p) => {
-      if (p.page_no !== page.page_no) return p;
-
+    const updatedPages = editedModule.pages.map((entry) => {
+      if (entry.page_no !== page.page_no) return entry;
       return {
-        ...p,
-        blocks: p.blocks.map((b) =>
-          b.id === block.id
-            ? {
-                ...b,
-                metadata: {
-                  ...b.metadata,
-                  [field]: value
-                }
-              }
-            : b
+        ...entry,
+        blocks: entry.blocks.map((candidate) =>
+          candidate.id === block.id
+            ? { ...candidate, metadata: { ...candidate.metadata, [field]: value } }
+            : candidate
         )
       };
     });
 
-    setEditedModule({
-      ...editedModule,
-      pages: updatedPages
-    });
+    setEditedModule({ ...editedModule, pages: updatedPages });
   };
 
-  const updateBullet = (lang, index, value) => {
-    const field = `bullets_${lang}`;
-
+  const updateBullet = (language, index, value) => {
+    const field = `bullets_${language}`;
     const bullets = [...(metadata[field] || [])];
     bullets[index] = value;
-
     updateMetadata(field, bullets);
   };
 
+  const renderBodyPair = (englishField, tagalogField, label) => (
+    <BilingualGrid>
+      <EditorField label={label} language="English">
+        <textarea
+          className="lesson-textarea"
+          value={metadata[englishField] || ''}
+          onChange={(event) => updateMetadata(englishField, event.target.value)}
+        />
+      </EditorField>
+      <EditorField label={label} language="Tagalog">
+        <textarea
+          className="lesson-textarea"
+          value={metadata[tagalogField] || ''}
+          onChange={(event) => updateMetadata(tagalogField, event.target.value)}
+        />
+      </EditorField>
+    </BilingualGrid>
+  );
+
   return (
-   <div className="lesson-editor">
-
-      {/* IMAGE ROW */}
-      {metadata.content_kind === "image_row" && (
-        <>
-          <label>Body (English)</label>
-          <textarea
-           className="lesson-textarea"
-            value={metadata.body_en || ""}
-            onChange={(e) =>
-              updateMetadata("body_en", e.target.value)
-            }
-          />
-
-          <label>Body (Tagalog)</label>
-          <textarea
-           className="lesson-textarea"
-            value={metadata.body_tl || ""}
-            onChange={(e) =>
-              updateMetadata("body_tl", e.target.value)
-            }
-          />
-
-          <label>Secondary Body (English)</label>
-          <textarea
-           className="lesson-textarea"
-            value={metadata.body_secondary_en || ""}
-            onChange={(e) =>
-              updateMetadata("body_secondary_en", e.target.value)
-            }
-          />
-
-          <label>Secondary Body (Tagalog)</label>
-          <textarea
-           className="lesson-textarea"
-            value={metadata.body_secondary_tl || ""}
-            onChange={(e) =>
-              updateMetadata("body_secondary_tl", e.target.value)
-            }
-          />
-        </>
+    <div className="lesson-editor">
+      {metadata.content_kind === 'image_row' && (
+        <div className="module-editor-stack">
+          {renderBodyPair('body_en', 'body_tl', 'Body')}
+          {renderBodyPair('body_secondary_en', 'body_secondary_tl', 'Secondary Body')}
+        </div>
       )}
 
-      {/* BULLETS */}
-      {metadata.content_kind === "bullets" && (
-        <>
-          <h4>English Bullets</h4>
-
-          {(metadata.bullets_en || []).map((bullet, index) => (
-            <textarea
-             className="lesson-textarea"
-              key={`en-${index}`}
-              value={bullet}
-              onChange={(e) =>
-                updateBullet("en", index, e.target.value)
-              }
-            />
-          ))}
-
-          <h4>Tagalog Bullets</h4>
-
-          {(metadata.bullets_tl || []).map((bullet, index) => (
-            <textarea
-             className="lesson-textarea"
-              key={`tl-${index}`}
-              value={bullet}
-              onChange={(e) =>
-                updateBullet("tl", index, e.target.value)
-              }
-            />
-          ))}
-        </>
+      {metadata.content_kind === 'bullets' && (
+        <BilingualGrid>
+          <EditorField label="Bullet Items" language="English">
+            <div className="module-editor-repeater-list">
+              {(metadata.bullets_en || []).map((bullet, index) => (
+                <div className="module-editor-repeater-row" key={`en-${index}`}>
+                  <span>{index + 1}</span>
+                  <textarea
+                    className="lesson-textarea"
+                    value={bullet}
+                    onChange={(event) => updateBullet('en', index, event.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </EditorField>
+          <EditorField label="Bullet Items" language="Tagalog">
+            <div className="module-editor-repeater-list">
+              {(metadata.bullets_tl || []).map((bullet, index) => (
+                <div className="module-editor-repeater-row" key={`tl-${index}`}>
+                  <span>{index + 1}</span>
+                  <textarea
+                    className="lesson-textarea"
+                    value={bullet}
+                    onChange={(event) => updateBullet('tl', index, event.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </EditorField>
+        </BilingualGrid>
       )}
 
-      {metadata.content_kind === "body" && (
-  <>
-    <label>Body (English)</label>
-    <textarea
-     className="lesson-textarea"
-      value={metadata.body_en || ""}
-      onChange={(e) =>
-        updateMetadata("body_en", e.target.value)
-      }
-    />
+      {metadata.content_kind === 'body' && renderBodyPair('body_en', 'body_tl', 'Body')}
 
-    <label>Body (Tagalog)</label>
-    <textarea
-     className="lesson-textarea"
-      value={metadata.body_tl || ""}
-      onChange={(e) =>
-        updateMetadata("body_tl", e.target.value)
-      }
-    />
-  </>
-)}
-{metadata.content_kind === "body_action" && (
-  <>
-    <label>Body (English)</label>
-    <textarea
-     className="lesson-textarea"
-      value={metadata.body_en || ""}
-      onChange={(e) =>
-        updateMetadata("body_en", e.target.value)
-      }
-    />
-
-    <label>Body (Tagalog)</label>
-    <textarea
-     className="lesson-textarea"
-      value={metadata.body_tl || ""}
-      onChange={(e) =>
-        updateMetadata("body_tl", e.target.value)
-      }
-    />
-
-    <label>Button Label (English)</label>
-    <input
-     className="lesson-input"
-      value={metadata.action_label_en || ""}
-      onChange={(e) =>
-        updateMetadata("action_label_en", e.target.value)
-      }
-    />
-
-    <label>Button Label (Tagalog)</label>
-    <input
-     className="lesson-input"
-      value={metadata.action_label_tl || ""}
-      onChange={(e) =>
-        updateMetadata("action_label_tl", e.target.value)
-      }
-    />
-  </>
-)}
-
+      {metadata.content_kind === 'body_action' && (
+        <div className="module-editor-stack">
+          {renderBodyPair('body_en', 'body_tl', 'Body')}
+          <BilingualGrid>
+            <EditorField label="Button Label" language="English">
+              <input
+                className="lesson-input"
+                value={metadata.action_label_en || ''}
+                onChange={(event) => updateMetadata('action_label_en', event.target.value)}
+              />
+            </EditorField>
+            <EditorField label="Button Label" language="Tagalog">
+              <input
+                className="lesson-input"
+                value={metadata.action_label_tl || ''}
+                onChange={(event) => updateMetadata('action_label_tl', event.target.value)}
+              />
+            </EditorField>
+          </BilingualGrid>
+        </div>
+      )}
     </div>
   );
 }

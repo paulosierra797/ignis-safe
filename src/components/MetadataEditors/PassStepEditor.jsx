@@ -1,5 +1,6 @@
 
 import "./PassStep.css";
+import { BilingualGrid, EditorField } from '../EditorUI/ModuleEditorUI';
 
 export default function PassStepEditor({
   block,
@@ -39,52 +40,44 @@ export default function PassStepEditor({
    <div className="letter-section">
   <h4>Letter Details</h4>
 
-  <label>Letter</label>
-  <input
-    className="letter"
-    value={metadata.letter || ""}
-    onChange={(e) =>
-      updateMetadata("letter", e.target.value)
-    }
-  />
+  <EditorField label="Letter" className="module-editor-compact-field">
+    <input
+      className="letter"
+      value={metadata.letter || ""}
+      onChange={(e) => updateMetadata("letter", e.target.value)}
+    />
+  </EditorField>
 
-
-  <label>Description (English)</label>
-  <textarea
-    className="description"
-    value={metadata.desc_en || ""}
-    onChange={(e) =>
-      updateMetadata("desc_en", e.target.value)
-    }
-  />
-
-  <label>Description (Tagalog)</label>
-  <textarea
-    className="description"
-    value={metadata.desc_tl || ""}
-    onChange={(e) =>
-      updateMetadata("desc_tl", e.target.value)
-    }
-  />
-
-
-  <label>Video Title (English)</label>
-  <input
-    className="video-title"
-    value={metadata.video_title_en || ""}
-    onChange={(e) =>
-      updateMetadata("video_title_en", e.target.value)
-    }
-  />
-
-  <label>Video Title (Tagalog)</label>
-  <input
-    className="video-title"
-    value={metadata.video_title_tl || ""}
-    onChange={(e) =>
-      updateMetadata("video_title_tl", e.target.value)
-    }
-  />
+  <BilingualGrid>
+    <EditorField label="Description" language="English">
+      <textarea
+        className="description"
+        value={metadata.desc_en || ""}
+        onChange={(e) => updateMetadata("desc_en", e.target.value)}
+      />
+    </EditorField>
+    <EditorField label="Description" language="Tagalog">
+      <textarea
+        className="description"
+        value={metadata.desc_tl || ""}
+        onChange={(e) => updateMetadata("desc_tl", e.target.value)}
+      />
+    </EditorField>
+    <EditorField label="Video Title" language="English">
+      <input
+        className="video-title"
+        value={metadata.video_title_en || ""}
+        onChange={(e) => updateMetadata("video_title_en", e.target.value)}
+      />
+    </EditorField>
+    <EditorField label="Video Title" language="Tagalog">
+      <input
+        className="video-title"
+        value={metadata.video_title_tl || ""}
+        onChange={(e) => updateMetadata("video_title_tl", e.target.value)}
+      />
+    </EditorField>
+  </BilingualGrid>
 </div>
   );
 }

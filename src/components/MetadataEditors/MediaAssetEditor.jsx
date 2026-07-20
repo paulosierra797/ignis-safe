@@ -1,53 +1,44 @@
-export default function MediaAssetEditor({
-    asset,
-    updateAsset,
-    uploadFile
-})
- {
-     console.log(asset);
-    return (
-        <div className="media-editor">
+import React from 'react';
+import { BilingualGrid, EditorField } from '../EditorUI/ModuleEditorUI';
 
-           {asset.asset_type === "image" ? (
-  <img
-    src={asset.public_url}
-    alt={asset.alt_en}
-    className="media-preview"
-  />
-) : (
-  <video
-    className="media-preview"
-    controls
-    width={300}
-  >
-    <source src={asset.public_url} type="video/mp4" />
-    Your browser does not support the video tag.
-  </video>
-)}
-            <input
-                type="file"
-                accept="image/*,video/*"
-                onChange={(e)=>uploadFile(asset,e.target.files[0])}
-            />
+export default function MediaAssetEditor({ asset, updateAsset, uploadFile }) {
+  return (
+    <div className="media-editor">
+      {asset.asset_type === 'image' ? (
+        <img
+          src={asset.public_url}
+          alt={asset.alt_en}
+          className="media-preview"
+        />
+      ) : (
+        <video className="media-preview" controls>
+          <source src={asset.public_url} type="video/mp4" />
+          Your browser does not support the video tag.
+        </video>
+      )}
 
-            <label>English Alt</label>
+      <EditorField label="Replace Media File" className="module-editor-full-field">
+        <input
+          type="file"
+          accept="image/*,video/*"
+          onChange={(event) => uploadFile(asset, event.target.files[0])}
+        />
+      </EditorField>
 
-            <input
-                value={asset.alt_en || ""}
-                onChange={(e)=>
-                    updateAsset("alt_en",e.target.value)
-                }
-            />
-
-            <label>Tagalog Alt</label>
-
-            <input
-                value={asset.alt_tl || ""}
-                onChange={(e)=>
-                    updateAsset("alt_tl",e.target.value)
-                }
-            />
-
-        </div>
-    );
+      <BilingualGrid className="module-editor-full-field">
+        <EditorField label="Alternative Text" language="English">
+          <input
+            value={asset.alt_en || ''}
+            onChange={(event) => updateAsset('alt_en', event.target.value)}
+          />
+        </EditorField>
+        <EditorField label="Alternative Text" language="Tagalog">
+          <input
+            value={asset.alt_tl || ''}
+            onChange={(event) => updateAsset('alt_tl', event.target.value)}
+          />
+        </EditorField>
+      </BilingualGrid>
+    </div>
+  );
 }

@@ -28,6 +28,7 @@ const DEFAULT_CHARTS_DATA = {
   learningByModule: { labels: [], preTest: [], postTest: [] },
   completionByModule: { labels: [], completionRate: [], simulationCompletion: [] },
   attemptsByModule: { labels: [], attempts: [] },
+  attemptsByYear: { availableYears: [], byYear: {} },
   knowledgeGainTrend: { labels: [], values: [] },
   riskDistribution: { labels: ['High', 'Moderate', 'Low'], values: [0, 0, 0] },
 };
@@ -1059,6 +1060,43 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       attempts: modulesForAttempts.map((row) => attemptsAccumulator[row.id] || 0),
     };
 
+    const attemptsByModuleYearAccumulator = {};
+
+    filteredAttempts.forEach((attempt) => {
+      const assessment = assessmentsById[attempt.assessment_id];
+      if (!assessment?.module_id) return;
+
+      const timestamp = getAttemptTimestamp(attempt);
+      if (!timestamp) return;
+
+      const date = new Date(timestamp);
+      if (Number.isNaN(date.getTime())) return;
+
+      const year = date.getFullYear();
+      if (!attemptsByModuleYearAccumulator[year]) {
+        attemptsByModuleYearAccumulator[year] = {};
+      }
+
+      const moduleId = assessment.module_id;
+      attemptsByModuleYearAccumulator[year][moduleId] =
+        (attemptsByModuleYearAccumulator[year][moduleId] || 0) + 1;
+    });
+
+    const availableYears = Object.keys(attemptsByModuleYearAccumulator)
+      .map(Number)
+      .sort((a, b) => a - b);
+
+    const byYear = availableYears.reduce((accumulator, year) => {
+      const moduleCounts = attemptsByModuleYearAccumulator[year];
+      accumulator[year] = {
+        labels: modulesForAttempts.map((row) => formatModuleLabel(row.module_no)),
+        attempts: modulesForAttempts.map((row) => moduleCounts[row.id] || 0),
+      };
+      return accumulator;
+    }, {});
+
+    const attemptsByYear = { availableYears, byYear };
+
     const overviewRows = buildOverviewRows({
       attempts: filteredAttempts,
       assessmentsById,
@@ -1132,6 +1170,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
         learningByModule,
         completionByModule,
         attemptsByModule,
+        attemptsByYear,
         knowledgeGainTrend,
         riskDistribution,
       },

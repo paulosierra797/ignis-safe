@@ -32,6 +32,7 @@ const DEFAULT_CHARTS = {
   learningByModule: { labels: [], preTest: [], postTest: [] },
   completionByModule: { labels: [], completionRate: [], simulationCompletion: [] },
   attemptsByModule: { labels: [], attempts: [] },
+  attemptsByYear: { availableYears: [], byYear: {} },
   knowledgeGainTrend: { labels: [], values: [] },
   riskDistribution: { labels: ['High', 'Moderate', 'Low'], values: [0, 0, 0] },
 };
@@ -46,15 +47,37 @@ export default function Analytics() {
   const [stats, setStats] = useState(DEFAULT_STATS);
   const [charts, setCharts] = useState(DEFAULT_CHARTS);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const circularColors = ['#3b82f6', '#14b8a6', '#fbbf24'];
   const circularRadius = 65;
   const circularCircumference = 2 * Math.PI * circularRadius;
 
-  const circularEntries = charts.attemptsByModule.labels
+  const availableYears = charts.attemptsByYear?.availableYears || [];
+  const minAvailableYear = availableYears.length ? Math.min(...availableYears) : null;
+  const maxAvailableYear = availableYears.length ? Math.max(...availableYears) : null;
+  const isPrevYearDisabled =
+    isLoadingStats || minAvailableYear === null || selectedYear <= minAvailableYear;
+  const isNextYearDisabled =
+    isLoadingStats || maxAvailableYear === null || selectedYear >= maxAvailableYear;
+
+  const selectedYearData =
+    charts.attemptsByYear?.byYear?.[selectedYear] || { labels: [], attempts: [] };
+
+  const handlePrevYear = () => {
+    if (isPrevYearDisabled) return;
+    setSelectedYear((year) => year - 1);
+  };
+
+  const handleNextYear = () => {
+    if (isNextYearDisabled) return;
+    setSelectedYear((year) => year + 1);
+  };
+
+  const circularEntries = selectedYearData.labels
     .map((label, index) => ({
       label,
-      value: charts.attemptsByModule.attempts[index] || 0,
+      value: selectedYearData.attempts[index] || 0,
     }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 3);
@@ -92,8 +115,22 @@ if (stats.currentKnowledge < 40) {
 }
 
 // Knowledge Gain
-const gainColor =
-  stats.knowledgeGainPercent < 0 ? "#ef4444" : "#22c55e";
+let gainColor = "#22c55e";
+let gainArrow = "▲";
+let gainStatusLabel = "Improved";
+if (stats.knowledgeGainPercent < 0) {
+  gainColor = "#ef4444";
+  gainArrow = "▼";
+  gainStatusLabel = "Declined";
+} else if (stats.knowledgeGainPercent === 0) {
+  gainColor = "#9ca3af";
+  gainArrow = "●";
+  gainStatusLabel = "No Change";
+}
+
+const gainMagnitude = Math.min(Math.abs(stats.knowledgeGainPercent || 0), 100);
+const gainMeterHalfWidth = gainMagnitude / 2; // track is split into two 50% halves around the zero line
+const isGainPositive = stats.knowledgeGainPercent > 0;
   useEffect(() => {
     let isMounted = true;
 
@@ -216,61 +253,93 @@ const { data: chartsData } =
           </div>
         </div>
 
-        <div className="analytics-stats-row">
-          <div className="analytics-stat-card">
-            <h3>Starting Knowledge</h3>
-            <div className="stat-value">
-             <span
-  className="main-value"
-  style={{ color: startingColor }}
->
-  {isLoadingStats ? '...' : `${stats.startingKnowledge}%`}
-</span>
+        <div className="knowledge-section">
+          <div className="knowledge-compare-card">
+            <div className="knowledge-compare-header">
+              <h3>Knowledge Progress</h3>
+              <span className="knowledge-compare-sub">Starting vs. Current</span>
             </div>
-            <div
-  className="sparkline"
-  style={{
-    background: `linear-gradient(to right, ${startingColor}33, ${startingColor}66)`
-  }}
-></div>
-          </div>
-          <div className="analytics-stat-card">
-            <h3>Current Knowledge</h3>
-            <div className="stat-value">
-             <span
-  className="main-value"
-  style={{ color: currentColor }}
->
-  {isLoadingStats ? '...' : `${stats.currentKnowledge}%`}
-</span>
+
+            <div className="knowledge-bar-row">
+              <div className="knowledge-bar-label">
+                <span className="knowledge-bar-dot" style={{ background: startingColor }}></span>
+                <span>Starting Knowledge</span>
+                <span className="knowledge-bar-value" style={{ color: startingColor }}>
+                  {isLoadingStats ? '...' : `${stats.startingKnowledge}%`}
+                </span>
+              </div>
+              <div className="knowledge-bar-track">
+                <div
+                  className="knowledge-bar-fill"
+                  style={{
+                    width: `${isLoadingStats ? 0 : Math.min(Math.max(stats.startingKnowledge, 0), 100)}%`,
+                    background: startingColor,
+                  }}
+                ></div>
+              </div>
             </div>
-            <div
-  className="sparkline"
-  style={{
-    background: `linear-gradient(to right, ${currentColor}33, ${currentColor}66)`
-  }}
-></div>
+
+            <div className="knowledge-bar-row">
+              <div className="knowledge-bar-label">
+                <span className="knowledge-bar-dot" style={{ background: currentColor }}></span>
+                <span>Current Knowledge</span>
+                <span className="knowledge-bar-value" style={{ color: currentColor }}>
+                  {isLoadingStats ? '...' : `${stats.currentKnowledge}%`}
+                </span>
+              </div>
+              <div className="knowledge-bar-track">
+                <div
+                  className="knowledge-bar-fill"
+                  style={{
+                    width: `${isLoadingStats ? 0 : Math.min(Math.max(stats.currentKnowledge, 0), 100)}%`,
+                    background: currentColor,
+                  }}
+                ></div>
+              </div>
+            </div>
           </div>
-          <div className="analytics-stat-card">
+
+          <div className="knowledge-gain-card">
             <h3>Knowledge Gain</h3>
-            <div className="stat-value">
-             <span
-  className="main-value"
-  style={{ color: gainColor }}
->
-  {isLoadingStats
-    ? '...'
-    : `${stats.knowledgeGainPercent >= 0 ? '+' : ''}${stats.knowledgeGainPercent}%`}
-</span>
+            <div className="gain-indicator">
+              <span className="gain-arrow" style={{ color: gainColor }}>{gainArrow}</span>
+              <span className="gain-value" style={{ color: gainColor }}>
+                {isLoadingStats
+                  ? '...'
+                  : `${stats.knowledgeGainPercent > 0 ? '+' : ''}${stats.knowledgeGainPercent}%`}
+              </span>
             </div>
             <div
-  className="sparkline"
-  style={{
-    background: `linear-gradient(to right, ${gainColor}33, ${gainColor}66)`
-  }}
-></div>
+              className="gain-status-pill"
+              style={{ background: `${gainColor}1a`, color: gainColor }}
+            >
+              {isLoadingStats ? 'Loading...' : gainStatusLabel}
+            </div>
+            <div className="gain-meter">
+              <div className="gain-meter-track">
+                <div className="gain-meter-zero-line"></div>
+                {!isLoadingStats && gainMagnitude > 0 && (
+                  <div
+                    className="gain-meter-fill"
+                    style={{
+                      background: gainColor,
+                      width: `${gainMeterHalfWidth}%`,
+                      left: isGainPositive ? '50%' : `${50 - gainMeterHalfWidth}%`,
+                    }}
+                  ></div>
+                )}
+              </div>
+              <div className="gain-meter-scale">
+                <span>-100%</span>
+                <span>0</span>
+                <span>+100%</span>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* AI Module Recommendations */}
+        <ModuleRecommendations />
 
         <div className="analytics-overview">
           <div className="overview-header">
@@ -309,9 +378,25 @@ const { data: chartsData } =
           {/* Circular Progress Chart */}
           <div className="analytics-chart-card circular-progress-card">
             <div className="year-navigation">
-              <button className="nav-arrow">&lt;</button>
-              <span className="year-display">{new Date().getFullYear()}</span>
-              <button className="nav-arrow">&gt;</button>
+              <button
+                type="button"
+                className="nav-arrow"
+                onClick={handlePrevYear}
+                disabled={isPrevYearDisabled}
+                aria-label="Previous year"
+              >
+                &lt;
+              </button>
+              <span className="year-display">{selectedYear}</span>
+              <button
+                type="button"
+                className="nav-arrow"
+                onClick={handleNextYear}
+                disabled={isNextYearDisabled}
+                aria-label="Next year"
+              >
+                &gt;
+              </button>
             </div>
             <div className="circular-progress-wrapper">
               <svg width="160" height="160" viewBox="0 0 160 160">
@@ -413,9 +498,6 @@ const { data: chartsData } =
             </div>
           </div>
         </div>
-
-        {/* AI Module Recommendations */}
-        <ModuleRecommendations />
       </div>
     </div>
   );

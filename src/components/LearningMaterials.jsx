@@ -584,21 +584,43 @@ if (textsResult.error && !message.text) {
 ) : (
 
   <>
-   <div className="back-button-container">
-  <button
-    className="back-button"
-    onClick={() => requestEditorAction({ type: 'back' })}
-  >
-    ← Back to Modules
-  </button>
-</div>
+    <nav className="learning-materials-editor-nav" aria-label="Module editor navigation">
+      <button
+        type="button"
+        className="back-button"
+        onClick={() => requestEditorAction({ type: 'back' })}
+      >
+        ← Back to Modules
+      </button>
+
+      <label className="learning-materials-module-picker" htmlFor="learning-materials-module-select">
+        <span>Switch module</span>
+        <select
+          id="learning-materials-module-select"
+          value={editedModule.module_no}
+          title={`Module ${editedModule.module_no} - ${editedModule.title || 'Untitled module'}`}
+          onChange={(event) => requestEditorAction({
+            type: 'module',
+            moduleNo: Number(event.target.value)
+          })}
+        >
+          {modules.map((module) => {
+            const optionTitle = `Module ${module.module_no} - ${module.title || 'Untitled module'}`;
+
+            return (
+              <option key={module.module_no} value={module.module_no} title={optionTitle}>
+                {optionTitle}
+              </option>
+            );
+          })}
+        </select>
+      </label>
+    </nav>
 
     <ModuleEditor
     moduleEntry={editedModule}
     editedModule={editedModule}
     setEditedModule={setEditedModule}
-    moduleOptions={modules}
-    onSelectModule={(moduleNo) => requestEditorAction({ type: 'module', moduleNo })}
 
     currentPages={currentPages}
     handlePageChange={handlePageChange}

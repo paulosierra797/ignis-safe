@@ -36,8 +36,6 @@ export default function ModuleEditor({
   moduleEntry,
   editedModule,
   setEditedModule,
-  moduleOptions,
-  onSelectModule,
   currentPages,
   handlePageChange,
   fireGuides,
@@ -137,21 +135,6 @@ export default function ModuleEditor({
         </div>
 
         <div className="module-editor-toolbar-actions">
-          <label className="module-editor-module-picker" htmlFor="module-editor-select">
-            <span>Switch module</span>
-            <select
-              id="module-editor-select"
-              value={moduleEntry.module_no}
-              onChange={(event) => onSelectModule(Number(event.target.value))}
-            >
-              {moduleOptions.map((module) => (
-                <option key={module.module_no} value={module.module_no}>
-                  Module {module.module_no} - {module.title || 'Untitled module'}
-                </option>
-              ))}
-            </select>
-          </label>
-
           <div className="module-editor-metrics" aria-label="Module content totals">
             <span><strong>{formatCount(moduleEntry.pages.length)}</strong> pages</span>
             <span><strong>{formatCount(moduleEntry.blockCount)}</strong> blocks</span>
@@ -164,7 +147,7 @@ export default function ModuleEditor({
         <div>
           <strong>Existing content updates only</strong>
           <p>
-            You can revise the current text, labels, guides, and media. Adding, deleting, or reordering modules, pages, and blocks is locked because their identifiers and sequence are used by mobile routes, database mappings, progress tracking, and saved learner records.
+            You can revise the current text, labels, and guides. Adding, deleting, or reordering modules, pages, and blocks is locked because their identifiers and sequence are used by mobile routes, database mappings, progress tracking, and saved learner records.
           </p>
         </div>
       </aside>

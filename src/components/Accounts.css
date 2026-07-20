@@ -1152,13 +1152,15 @@
 }
 
 .shift-calendar-day.shift-a {
-  background: #fef3c7;
-  border-color: #f59e0b;
+  background: #ffe4cc;
+  border-color: #ea580c;
+  color: #9a3412;
 }
 
 .shift-calendar-day.shift-b {
-  background: #ffedd5;
-  border-color: #ea580c;
+  background: #dbe7ff;
+  border-color: #2563eb;
+  color: #1e40af;
 }
 
 .shift-calendar-day.active {
@@ -1212,11 +1214,11 @@
 }
 
 .legend-shift-a {
-  background: #ca8a04;
+  background: #ea580c;
 }
 
 .legend-shift-b {
-  background: #ea580c;
+  background: #2563eb;
 }
 
 .legend-active {

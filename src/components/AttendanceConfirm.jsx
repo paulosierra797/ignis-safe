@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useBlocker, useSearchParams, useNavigate } from 'react-router-dom';
 import { loadFaceModels } from '../utils/loadFaceModels';
 import { getFaceByAdminId } from '../utils/attendanceService';
 import * as faceapi from 'face-api.js';
@@ -31,25 +31,39 @@ const AttendanceConfirm = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmStatus, setConfirmStatus] = useState(null);
   const [authError, setAuthError] = useState('');
-  const [faceDebug, setFaceDebug] = useState([]);
+  const faceDebug = [];
+  const [verificationPhotoBlob, setVerificationPhotoBlob] = useState(null);
+  const [verifiedStationId, setVerifiedStationId] = useState(null);
+  const [showAttendanceConfirmation, setShowAttendanceConfirmation] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
-  const verificationTimerRef = useRef(null);
-  const requestIdRef = useRef(0);
  
   const authSessionId = searchParams.get('auth');
-  const stationId = searchParams.get('station');
-  const stationGeo = useMemo(() => getStationGeo(stationId), [stationId]);
+  const qrSessionId = searchParams.get('station');
+  const stationGeo = useMemo(() => getStationGeo(verifiedStationId), [verifiedStationId]);
   const stationLabel = stationGeo.stationId && stationGeo.stationId !== 'DEFAULT'
     ? `${stationGeo.name} (${stationGeo.stationId})`
     : stationGeo.name;
-const [modelsReady, setModelsReady] = useState(false);
+  const hasPendingVerification = Boolean(mode || geoLocation || verificationPhotoBlob) &&
+    confirmStatus?.type !== 'success';
+  const navigationBlocker = useBlocker(hasPendingVerification && !isProcessing);
+
+  useEffect(() => {
+    if (!hasPendingVerification) return undefined;
+
+    const warnBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', warnBeforeUnload);
+    return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+  }, [hasPendingVerification]);
 
 useEffect(() => {
   const init = async () => {
     await loadFaceModels();
-    setModelsReady(true);
   };
 
   init();
@@ -59,7 +73,7 @@ useEffect(() => {
   useEffect(() => {
     try {
       window.localStorage.setItem('faceLogs', window.localStorage.getItem('faceLogs') || new Date().toISOString() + ' - confirm page loaded');
-    } catch (error) {
+    } catch {
       // ignore storage errors
     }
 
@@ -82,32 +96,23 @@ useEffect(() => {
     setAuthenticatedOfficer(token);
   }, [authSessionId, navigate]);
 
-  const recordFaceDebug = (message) => {
-    const entry = `${new Date().toISOString()} - ${message}`;
-    setFaceDebug((current) => [...current.slice(-9), entry]);
-
-    try {
-      const existing = window.localStorage.getItem('faceLogs');
-      const next = existing ? `${existing}\n${entry}` : entry;
-      window.localStorage.setItem('faceLogs', next);
-    } catch (error) {
-      // ignore storage errors
-    }
-  };
 useEffect(() => {
   const checkSession = async () => {
-    if (!stationId) return;
+    if (!qrSessionId) return;
 
-    const result = await validateQRSession(stationId);
+    const result = await validateQRSession(qrSessionId);
 
     if (!result.valid) {
       setAuthError(result.reason);
       setTimeout(() => navigate('/attendance-login'), 1500);
+      return;
     }
+
+    setVerifiedStationId(result.session?.station_id || 'DEFAULT');
   };
 
   checkSession();
-}, [stationId]);
+}, [navigate, qrSessionId]);
   
   const handleRequestLocation = async () => {
     setIsProcessing(true);
@@ -153,6 +158,7 @@ const handleVerifyFace = async () => {
 
   setFaceError('');
   setFaceScore(null);
+  setVerificationPhotoBlob(null);
   setIsVerifyingFace(true);
   setFaceStatus('Loading face data...');
 
@@ -219,6 +225,17 @@ const handleVerifyFace = async () => {
       return;
     }
 
+    const capturedPhoto = await new Promise((resolve) => {
+      canvas.toBlob(resolve, 'image/jpeg', 0.88);
+    });
+
+    if (!capturedPhoto) {
+      setFaceError('Unable to capture the verification photo. Please try again.');
+      stopFaceCamera();
+      setIsVerifyingFace(false);
+      return;
+    }
+
     // 5. Compare faces
     const distance = faceapi.euclideanDistance(
       detection.descriptor,
@@ -231,6 +248,7 @@ const handleVerifyFace = async () => {
     setFaceScore(1 - distance);
 
     if (isMatch) {
+      setVerificationPhotoBlob(capturedPhoto);
       setFaceStatus('Face verified ✓');
 
       const updated = {
@@ -243,6 +261,7 @@ const handleVerifyFace = async () => {
       saveAuthToken(updated);
       setAuthenticatedOfficer(updated);
     } else {
+      setVerificationPhotoBlob(null);
       setFaceError('Face does not match.');
       setFaceStatus('Verification failed ✗');
     }
@@ -259,7 +278,7 @@ const handleVerifyFace = async () => {
   }
 };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!mode) {
       setStatus('Please choose a time mode before confirming.');
       return;
@@ -272,6 +291,10 @@ const handleVerifyFace = async () => {
       setStatus('Please share your location for verification.');
       return;
     }
+    if (!authenticatedOfficer.faceVerified || !verificationPhotoBlob) {
+      setStatus('Please complete Face ID verification and capture a current photo.');
+      return;
+    }
 
     const proximity = validateProximity(geoLocation, stationGeo, stationGeo.radius || 100);
     if (!proximity.isValid) {
@@ -282,6 +305,12 @@ const handleVerifyFace = async () => {
       return;
     }
 
+    setShowAttendanceConfirmation(true);
+  };
+
+  const saveConfirmedAttendance = async () => {
+    const proximity = validateProximity(geoLocation, stationGeo, stationGeo.radius || 100);
+
     setIsProcessing(true);
     setConfirmStatus(null);
 
@@ -290,8 +319,21 @@ const handleVerifyFace = async () => {
   officer: authenticatedOfficer,
   mode,
   location: geoLocation,
-  stationId
+  qrSessionId,
+  verification: {
+    photoBlob: verificationPhotoBlob,
+    faceMatchScore: faceScore ?? authenticatedOfficer.faceMatchScore,
+    facePassed: authenticatedOfficer.faceVerified,
+    faceVerifiedAt: authenticatedOfficer.faceVerifiedAt,
+    locationPassed: proximity.isValid,
+    distanceMeters: proximity.distance,
+    stationRadiusMeters: proximity.radius,
+    stationId: stationGeo.stationId,
+    stationName: stationLabel,
+    locationAddress: stationGeo.address || stationLabel
+  }
 });
+      setShowAttendanceConfirmation(false);
       setConfirmStatus({
         type: 'success',
         message: `✓ Attendance confirmed for ${authenticatedOfficer.name} (${authenticatedOfficer.rank}) at ${stationLabel}.`
@@ -432,7 +474,7 @@ const handleVerifyFace = async () => {
               type="button" 
               className="confirm-submit" 
               onClick={handleConfirm}
-              disabled={!authenticatedOfficer || !geoLocation || !authenticatedOfficer.faceVerified || isProcessing}
+              disabled={!authenticatedOfficer || !geoLocation || !authenticatedOfficer.faceVerified || !verificationPhotoBlob || isProcessing}
             >
               {isProcessing ? 'Saving...' : 'Confirm Attendance'}
             </button>
@@ -448,6 +490,73 @@ const handleVerifyFace = async () => {
             <div className="confirm-footer">
               Your face, location, and attendance details are verified and logged instantly. Only you can mark attendance with this session.
             </div>
+
+            {showAttendanceConfirmation && (
+              <div className="attendance-confirm-overlay" role="presentation">
+                <div
+                  className="attendance-confirm-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="attendanceConfirmTitle"
+                >
+                  <div className="attendance-confirm-dialog-icon" aria-hidden="true">?</div>
+                  <h2 id="attendanceConfirmTitle">Are you sure?</h2>
+                  <p>
+                    Record <strong>{mode === 'in' ? 'Time In' : 'Time Out'}</strong> for{' '}
+                    <strong>{authenticatedOfficer.name}</strong> using the completed Face ID and location verification?
+                  </p>
+                  <div className="attendance-confirm-dialog-actions">
+                    <button
+                      type="button"
+                      className="attendance-confirm-cancel"
+                      onClick={() => setShowAttendanceConfirmation(false)}
+                      disabled={isProcessing}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="attendance-confirm-approve"
+                      onClick={saveConfirmedAttendance}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? 'Saving...' : `Yes, Record ${mode === 'in' ? 'Time In' : 'Time Out'}`}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {navigationBlocker.state === 'blocked' && (
+              <div className="attendance-confirm-overlay" role="presentation">
+                <div
+                  className="attendance-confirm-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="attendanceLeaveTitle"
+                >
+                  <div className="attendance-confirm-dialog-icon warning" aria-hidden="true">!</div>
+                  <h2 id="attendanceLeaveTitle">Leave attendance verification?</h2>
+                  <p>Your verification details have not been recorded. Are you sure you want to leave?</p>
+                  <div className="attendance-confirm-dialog-actions">
+                    <button
+                      type="button"
+                      className="attendance-confirm-cancel"
+                      onClick={() => navigationBlocker.reset()}
+                    >
+                      Stay Here
+                    </button>
+                    <button
+                      type="button"
+                      className="attendance-confirm-danger"
+                      onClick={() => navigationBlocker.proceed()}
+                    >
+                      Yes, Leave
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>

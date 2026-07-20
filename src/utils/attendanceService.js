@@ -23,15 +23,11 @@ const formatDateDisplay = (date) => {
   return date.toLocaleDateString();
 };
 
-const formatTimeDisplay = (date) => {
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
 const getStoredUserProfile = () => {
   try {
     const raw = localStorage.getItem('user');
     return raw ? JSON.parse(raw) : null;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -112,7 +108,6 @@ export const validateQRSession = async (sessionId) => {
 export const isSessionValid = (session) => {
   if (!session) return false;
 
-  const now = new Date().getTime();
  if (new Date(session.expires_at) < new Date()) {
   return "QR expired";
 }
@@ -233,6 +228,78 @@ export const isAuthValid = () => {
 };
 
 
+const ATTENDANCE_VERIFICATION_BUCKET = 'attendance_verifications';
+const SIGNED_PHOTO_URL_TTL_SECONDS = 10 * 60;
+
+const toFiniteNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const getVerificationStatus = ({ facePassed, locationPassed }) => {
+  if (facePassed && locationPassed) return 'passed';
+  if (!facePassed && !locationPassed) return 'failed';
+  return 'partial';
+};
+
+const buildVerificationFields = ({ officer, mode, location, verification, photoPath }) => {
+  const faceMatchScore = toFiniteNumber(verification?.faceMatchScore);
+  const faceMatchPercentage = faceMatchScore == null
+    ? null
+    : Math.min(100, Math.max(0, faceMatchScore * 100));
+  const facePassed = Boolean(verification?.facePassed);
+  const locationPassed = Boolean(verification?.locationPassed);
+
+  return {
+    personnel_user_id: officer.admin_id || null,
+    latitude: location?.latitude ?? null,
+    longitude: location?.longitude ?? null,
+    accuracy: location?.accuracy ?? null,
+    location_address: verification?.locationAddress || null,
+    distance_from_station_m: toFiniteNumber(verification?.distanceMeters),
+    station_id: verification?.stationId || null,
+    station_name: verification?.stationName || null,
+    face_match_percentage: faceMatchPercentage,
+    verification_photo_path: photoPath,
+    face_verification_passed: facePassed,
+    location_verification_passed: locationPassed,
+    verification_status: getVerificationStatus({ facePassed, locationPassed }),
+    verification_type: mode,
+    verification_recorded_at: new Date().toISOString(),
+    verification_metadata: {
+      station_radius_m: toFiniteNumber(verification?.stationRadiusMeters),
+      face_verified_at: verification?.faceVerifiedAt || null
+    }
+  };
+};
+
+const uploadAttendanceVerificationPhoto = async ({ officer, attendanceId, mode, photoBlob }) => {
+  if (!photoBlob || !officer?.admin_id) {
+    throw new Error('A current verification photo and authenticated personnel ID are required.');
+  }
+
+  const dateFolder = new Date().toISOString().slice(0, 10);
+  const photoPath = `${officer.admin_id}/${dateFolder}/${attendanceId}-${mode}-${Date.now()}.jpg`;
+  const { error } = await supabase.storage
+    .from(ATTENDANCE_VERIFICATION_BUCKET)
+    .upload(photoPath, photoBlob, {
+      cacheControl: '3600',
+      contentType: 'image/jpeg',
+      upsert: false
+    });
+
+  if (error) {
+    throw new Error(error.message || 'Failed to save the verification photo.');
+  }
+
+  return photoPath;
+};
+
+const removeAttendanceVerificationPhoto = async (photoPath) => {
+  if (!photoPath) return;
+  await supabase.storage.from(ATTENDANCE_VERIFICATION_BUCKET).remove([photoPath]);
+};
+
 // Attendance Records
 const mapAttendanceRow = (row) => {
   const rowDate = row.attendance_date ? new Date(`${row.attendance_date}T00:00:00`) : null;
@@ -254,9 +321,21 @@ const mapAttendanceRow = (row) => {
       ? {
           latitude: row.latitude,
           longitude: row.longitude,
-          accuracy: row.accuracy
+          accuracy: row.accuracy,
+          address: row.location_address || ''
         }
-      : null
+      : null,
+    distanceFromStationMeters: row.distance_from_station_m,
+    stationId: row.station_id || '',
+    stationName: row.station_name || '',
+    faceMatchPercentage: row.face_match_percentage,
+    verificationPhotoPath: row.verification_photo_path || '',
+    verificationPhotoUrl: '',
+    faceVerificationPassed: row.face_verification_passed,
+    locationVerificationPassed: row.location_verification_passed,
+    verificationStatus: row.verification_status || 'not_recorded',
+    verificationType: row.verification_type || '',
+    verificationRecordedAt: row.verification_recorded_at || null
   };
 };
 
@@ -270,13 +349,41 @@ export const getAttendanceRecords = async () => {
     throw new Error(error.message || 'Failed to fetch attendance records');
   }
 
-  return (data || []).map(mapAttendanceRow);
+  const records = (data || []).map(mapAttendanceRow);
+  const photoPaths = [...new Set(records
+    .map((record) => record.verificationPhotoPath)
+    .filter(Boolean))];
+
+  if (photoPaths.length === 0) {
+    return records;
+  }
+
+  const { data: signedPhotos, error: signedPhotoError } = await supabase.storage
+    .from(ATTENDANCE_VERIFICATION_BUCKET)
+    .createSignedUrls(photoPaths, SIGNED_PHOTO_URL_TTL_SECONDS);
+
+  if (signedPhotoError) {
+    console.warn('Unable to create signed attendance photo URLs:', signedPhotoError.message);
+    return records;
+  }
+
+  const signedUrlByPath = new Map(
+    (signedPhotos || [])
+      .filter((photo) => photo?.path && photo?.signedUrl)
+      .map((photo) => [photo.path, photo.signedUrl])
+  );
+
+  return records.map((record) => ({
+    ...record,
+    verificationPhotoUrl: signedUrlByPath.get(record.verificationPhotoPath) || ''
+  }));
 };
 
-export const recordAttendance = async ({ officer, mode, location, stationId }) => {
+export const recordAttendance = async ({ officer, mode, location, qrSessionId, verification }) => {
   const now = new Date();
   const dateIso = now.toISOString().slice(0, 10);
   const signature = `${officer.name} (QR Verified)`;
+  let uploadedPhotoPath = null;
 
   if (mode === 'in') {
     const { data: openRows, error: openRowsError } = await supabase
@@ -317,6 +424,20 @@ export const recordAttendance = async ({ officer, mode, location, stationId }) =
 
 
     if (openRows && openRows.length > 0) {
+      uploadedPhotoPath = await uploadAttendanceVerificationPhoto({
+        officer,
+        attendanceId: openRows[0].id,
+        mode,
+        photoBlob: verification?.photoBlob
+      });
+
+      const verificationFields = buildVerificationFields({
+        officer,
+        mode,
+        location,
+        verification,
+        photoPath: uploadedPhotoPath
+      });
 
       const { data: updatedRow, error: updateError } = await supabase
         .from('attendance_records')
@@ -324,10 +445,7 @@ export const recordAttendance = async ({ officer, mode, location, stationId }) =
           time_out: now.toISOString(),
           signature,
           updated_at: now.toISOString(),
-
-          latitude: location?.latitude ?? null,
-          longitude: location?.longitude ?? null,
-          accuracy: location?.accuracy ?? null
+          ...verificationFields
         })
         .eq('id', openRows[0].id)
         .select()
@@ -335,16 +453,17 @@ export const recordAttendance = async ({ officer, mode, location, stationId }) =
 
 
       if (updateError) {
+        await removeAttendanceVerificationPhoto(uploadedPhotoPath);
         throw new Error(updateError.message);
       }
 
 
       // ✅ Disable QR after successful timeout
-      if (stationId) {
+      if (qrSessionId) {
         await supabase
           .from('qr_sessions')
           .update({ used: true })
-          .eq('session_id', stationId);
+          .eq('session_id', qrSessionId);
       }
 
 
@@ -359,7 +478,23 @@ export const recordAttendance = async ({ officer, mode, location, stationId }) =
 
   // CREATE NEW ATTENDANCE
 
+  const attendanceId = crypto.randomUUID();
+  uploadedPhotoPath = await uploadAttendanceVerificationPhoto({
+    officer,
+    attendanceId,
+    mode,
+    photoBlob: verification?.photoBlob
+  });
+  const verificationFields = buildVerificationFields({
+    officer,
+    mode,
+    location,
+    verification,
+    photoPath: uploadedPhotoPath
+  });
+
   const payload = {
+    id: attendanceId,
     personnel_id: officer.id,
     name: officer.name,
     rank: officer.rank,
@@ -376,9 +511,7 @@ export const recordAttendance = async ({ officer, mode, location, stationId }) =
 
     signature,
 
-    latitude: location?.latitude ?? null,
-    longitude: location?.longitude ?? null,
-    accuracy: location?.accuracy ?? null,
+    ...verificationFields,
 
     created_at: now.toISOString(),
     updated_at: now.toISOString()
@@ -394,17 +527,18 @@ export const recordAttendance = async ({ officer, mode, location, stationId }) =
 
 
   if (insertError) {
+    await removeAttendanceVerificationPhoto(uploadedPhotoPath);
     throw new Error(insertError.message);
   }
 
 
 
   // ✅ Disable QR after successful attendance creation
-  if (stationId) {
+  if (qrSessionId) {
     await supabase
       .from('qr_sessions')
       .update({ used: true })
-      .eq('session_id', stationId);
+      .eq('session_id', qrSessionId);
   }
 
 
@@ -478,6 +612,7 @@ const defaultStation = {
   latitude: parseNumber(import.meta.env.VITE_STATION_LATITUDE, 14.5994),
   longitude: parseNumber(import.meta.env.VITE_STATION_LONGITUDE, 120.9842),
   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
+  address: import.meta.env.VITE_STATION_ADDRESS || '',
   stationId: 'DEFAULT',
   radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS)
 };
@@ -490,6 +625,7 @@ export const STATION_GEO_MAP = {
     latitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LATITUDE, defaultStation.latitude),
     longitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LONGITUDE, defaultStation.longitude),
     name: import.meta.env.VITE_STATION_ZINI_M3_NAME || 'Station Delta',
+    address: import.meta.env.VITE_STATION_ZINI_M3_ADDRESS || defaultStation.address,
     stationId: 'ZINI-M3',
     radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius)
   }

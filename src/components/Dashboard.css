@@ -119,6 +119,11 @@
   color: #7c3aed;
 }
 
+.metric-icon.leave {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
 .metric-content {
   flex: 1;
 }
@@ -486,6 +491,116 @@
     width: 100px;
     height: 35px;
   }
+}
+
+/* Personnel Detail Modals (On Duty / On Leave) */
+.dashboard-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 1000;
+}
+
+.dashboard-modal {
+  background: white;
+  width: min(720px, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.dashboard-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dashboard-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.dashboard-modal-close {
+  border: none;
+  background: #f3f4f6;
+  color: #374151;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.dashboard-modal-close:hover {
+  background: #e5e7eb;
+}
+
+.dashboard-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dashboard-modal-empty {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+.dashboard-modal-message {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.dashboard-modal-message-error {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.dashboard-modal-table-wrap {
+  overflow-x: auto;
+}
+
+.dashboard-modal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.dashboard-modal-table th,
+.dashboard-modal-table td {
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.dashboard-modal-table th {
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.3px;
+}
+
+.dashboard-modal-table td {
+  color: #1f2937;
 }
 
 /* Sidebar Styles */

@@ -419,6 +419,116 @@ endDate: toIsoDate(end)
   }
 };
 
+const formatAttendanceTime = (value) => {
+  if (!value) return null;
+  try {
+    return new Date(value).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return null;
+  }
+};
+
+export const getPersonnelForDate = async (dateIso) => {
+  try {
+    if (!dateIso) {
+      return { data: null, error: 'Missing date.' };
+    }
+
+    const [configResult, personnelResult, assignmentResult, attendanceResult, leaveRequestResult] = await Promise.all([
+      getShiftScheduleConfig(),
+      getAllUsers(),
+      getShiftAssignmentsForPeriod({ startDate: dateIso, endDate: dateIso }),
+      supabase
+        .from('attendance_records')
+        .select('personnel_id, time_in, time_out')
+        .eq('attendance_date', dateIso),
+      supabase
+        .from(LEAVE_REQUESTS_TABLE)
+        .select('personnel_id, start_date, end_date, status')
+        .lte('start_date', dateIso)
+        .gte('end_date', dateIso)
+        .order('created_at', { ascending: false })
+    ]);
+
+    if (configResult.error) return { data: null, error: configResult.error };
+    if (personnelResult.error) return { data: null, error: personnelResult.error };
+    if (assignmentResult.error) return { data: null, error: assignmentResult.error };
+    if (attendanceResult.error) throw attendanceResult.error;
+    if (leaveRequestResult.error) throw leaveRequestResult.error;
+
+    const config = configResult.data;
+    const personnelRows = (Array.isArray(personnelResult.data) ? personnelResult.data : [])
+      .filter((personnel) => String(personnel.role || '').toLowerCase() === 'personnel');
+    const personnelById = new Map(personnelRows.map((personnel) => [personnel.admin_id, personnel]));
+    const assignments = Array.isArray(assignmentResult.data) ? assignmentResult.data : [];
+
+    const attendanceByPersonnelId = new Map(
+      (attendanceResult.data || []).map((row) => [row.personnel_id, row])
+    );
+
+    const leaveRequestByPersonnelId = new Map();
+    (leaveRequestResult.data || []).forEach((row) => {
+      if (!leaveRequestByPersonnelId.has(row.personnel_id)) {
+        leaveRequestByPersonnelId.set(row.personnel_id, row);
+      }
+    });
+
+    const shiftA = new Set(config?.shift_a_dates || []);
+    const shiftB = new Set(config?.shift_b_dates || []);
+    const hasA = shiftA.has(dateIso);
+    const hasB = shiftB.has(dateIso);
+    const shiftTypes = [hasA ? 'A' : null, hasB ? 'B' : null].filter(Boolean);
+
+    const onLeave = personnelRows
+      .filter((personnel) => String(personnel.status || '').toLowerCase() === 'on leave')
+      .filter((personnel) => isDateWithinInclusiveRange(dateIso, personnel.leave_start_date, personnel.leave_end_date))
+      .map((personnel) => {
+        const request = leaveRequestByPersonnelId.get(personnel.admin_id);
+        const status = request?.status || 'approved';
+        return {
+          admin_id: personnel.admin_id,
+          name: formatPersonnelName(personnel),
+          rank: personnel.rank || '-',
+          leave_start_date: personnel.leave_start_date,
+          leave_end_date: personnel.leave_end_date,
+          approval_status: status.charAt(0).toUpperCase() + status.slice(1)
+        };
+      });
+
+    const onLeaveIds = new Set(onLeave.map((personnel) => personnel.admin_id));
+
+    const onDutyPersonnelIds = new Set(
+      assignments
+        .filter((assignment) => shiftTypes.includes(String(assignment.shift_type || '').toUpperCase()))
+        .filter((assignment) => isDateWithinInclusiveRange(dateIso, assignment.start_date, assignment.end_date))
+        .map((assignment) => assignment.personnel_id)
+    );
+
+    const onDuty = Array.from(onDutyPersonnelIds)
+      .filter((personnelId) => !onLeaveIds.has(personnelId))
+      .map((personnelId) => personnelById.get(personnelId))
+      .filter(Boolean)
+      .map((personnel) => {
+        const attendance = attendanceByPersonnelId.get(personnel.admin_id);
+        return {
+          admin_id: personnel.admin_id,
+          name: formatPersonnelName(personnel),
+          rank: personnel.rank || '-',
+          time_in: formatAttendanceTime(attendance?.time_in),
+          time_out: formatAttendanceTime(attendance?.time_out)
+        };
+      });
+
+    return {
+      data: { date: dateIso, onDuty, onLeave },
+      error: null
+    };
+  } catch (error) {
+    console.error('Error loading personnel for date:', error);
+    return { data: null, error: error.message };
+  }
+};
+
 const PERSONNEL_SHIFT_ASSIGNMENTS_TABLE = 'personnel_shift_assignments';
 
 export const assignPersonnelToShift = async ({ personnelId, shiftType, startDate, endDate, assignedBy }) => {

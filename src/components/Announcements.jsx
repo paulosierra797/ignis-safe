@@ -1033,38 +1033,43 @@ export default function Announcements() {
 
       {hasPendingAnnouncementExit && (
         <div
-          className="announcement-confirm-modal-overlay"
+          className="announcement-unsaved-overlay"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="announcementUnsavedTitle"
           aria-describedby="announcementUnsavedDescription"
         >
-          <div className="announcement-confirm-modal-card">
-            <h3 id="announcementUnsavedTitle">Unsaved Announcement</h3>
-            <p id="announcementUnsavedDescription">
-              You have an unfinished announcement. What would you like to do?
+          <div className="announcement-unsaved-modal">
+            <div className="announcement-unsaved-icon" aria-hidden="true">
+              !
+            </div>
+            <h3 id="announcementUnsavedTitle" className="announcement-unsaved-title">
+              Unsaved Announcement
+            </h3>
+            <p id="announcementUnsavedDescription" className="announcement-unsaved-message">
+              You have unsaved changes in this announcement. What would you like to do before leaving this page?
             </p>
-            <div className="announcement-confirm-modal-actions announcement-unsaved-actions">
+            <div className="announcement-unsaved-actions">
               <button
                 type="button"
-                className="announcement-confirm-modal-cancel"
-                onClick={handleKeepEditingAnnouncement}
+                className="announcement-unsaved-btn announcement-unsaved-btn-save"
+                onClick={handleSaveAnnouncementDraftAndContinue}
               >
-                Cancel
+                Save Draft and Continue
               </button>
               <button
                 type="button"
-                className="announcement-unsaved-leave"
+                className="announcement-unsaved-btn announcement-unsaved-btn-leave"
                 onClick={handleLeaveAnnouncementWithoutSaving}
               >
                 Leave Without Saving
               </button>
               <button
                 type="button"
-                className="announcement-unsaved-save"
-                onClick={handleSaveAnnouncementDraftAndContinue}
+                className="announcement-unsaved-btn announcement-unsaved-btn-cancel"
+                onClick={handleKeepEditingAnnouncement}
               >
-                Save Draft and Continue
+                Cancel
               </button>
             </div>
           </div>

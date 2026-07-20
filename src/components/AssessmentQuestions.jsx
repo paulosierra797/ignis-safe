@@ -10,7 +10,7 @@ import {
   getQuestionsByAssessment,
   createAssessmentQuestion,
   updateAssessmentQuestion,
- deactivateAssessmentQuestions,
+  deactivateAssessmentQuestions,
   getAssessmentOptionsByQuestionIds,
   syncAssessmentQuestionOptions,
   buildDefaultAssessmentOptions,
@@ -19,6 +19,39 @@ import {
 import { getLearningMaterialsAdminView } from '../utils/learningMaterialsService';
 
 const AI_OPTION_KEYS = ['A', 'B', 'C', 'D'];
+const MODULE_TITLE_FALLBACKS = {
+  1: 'Fire Extinguisher: Basics, Types, and How to Use',
+  2: 'House Fire: How to Get Out Safely During a Fire',
+  3: 'Electrical Fire: Causes, Safe Actions, and Prevention',
+  4: 'Kitchen Fire: What It Is, Common Types, and What To Do',
+  5: 'Tenement Fire: What It Is, Common Causes, and What To Do'
+};
+
+const getAssessmentTypeLabel = (assessment = {}) => {
+  const typeValue = String(assessment.type_label || assessment.type || '').trim().toLowerCase();
+
+  if (typeValue.includes('pre')) return 'Pre-assessment';
+  if (typeValue.includes('post')) return 'Post-assessment';
+  return assessment.type_label || assessment.type || 'Assessment';
+};
+
+const getAssessmentTypeOrder = (assessment = {}) => {
+  const label = getAssessmentTypeLabel(assessment);
+  if (label === 'Pre-assessment') return 1;
+  if (label === 'Post-assessment') return 2;
+  return 99;
+};
+
+const sortAssessments = (rows = []) => rows.slice().sort((left, right) => {
+  const moduleDifference = Number(left.module_no || Number.MAX_SAFE_INTEGER)
+    - Number(right.module_no || Number.MAX_SAFE_INTEGER);
+  if (moduleDifference !== 0) return moduleDifference;
+
+  const typeDifference = getAssessmentTypeOrder(left) - getAssessmentTypeOrder(right);
+  if (typeDifference !== 0) return typeDifference;
+
+  return String(left.title || '').localeCompare(String(right.title || ''));
+});
 
 const AutoResizeTextarea = ({ value, onChange, className = '', ...props }) => {
   const textareaRef = useRef(null);
@@ -62,20 +95,15 @@ const mergeQuestionsWithOptions = (questionRows = [], optionRows = []) => {
 const formatAssessmentLabel = (assessment = {}) => {
   const moduleNo = Number(assessment.module_no || 0);
   const moduleText = moduleNo > 0 ? `Module ${moduleNo}` : 'Module';
-  const typeText = assessment.type_label || assessment.type || '';
-
-  if (!typeText) {
-    return moduleText;
-  }
-
-  return `${moduleText} - ${typeText}`;
+  return `${moduleText}: ${getAssessmentTypeLabel(assessment)}`;
 };
 
 const isPreferredAssessment = (assessment = {}) => {
   const moduleNo = Number(assessment.module_no || 0);
-  const typeLabel = String(assessment.type_label || '').toLowerCase();
+  const typeLabel = getAssessmentTypeLabel(assessment);
 
-  return moduleNo >= 1 && moduleNo <= 5 && (typeLabel === 'pre-test' || typeLabel === 'post-test');
+  return moduleNo >= 1 && moduleNo <= 5
+    && (typeLabel === 'Pre-assessment' || typeLabel === 'Post-assessment');
 };
 
 const formatGenerateQuestionsError = (error) => {
@@ -108,8 +136,11 @@ export default function AssessmentQuestions() {
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [assessments, setAssessments] = useState([]);
+  const [moduleTitles, setModuleTitles] = useState(MODULE_TITLE_FALLBACKS);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState('');
   const [questions, setQuestions] = useState([]);
+  const [questionNavigatorSearch, setQuestionNavigatorSearch] = useState('');
+  const [focusedQuestionId, setFocusedQuestionId] = useState('');
   const [isLoadingAssessments, setIsLoadingAssessments] = useState(true);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -121,6 +152,7 @@ export default function AssessmentQuestions() {
   const [pendingDeleteQuestion, setPendingDeleteQuestion] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const bypassNavigationRef = useRef(false);
+  const questionHighlightTimeoutRef = useRef(null);
 
   const isDirty = dirtyQuestionIds.size > 0;
   const shouldBlockNavigation = useCallback(({ currentLocation, nextLocation }) => {
@@ -151,13 +183,29 @@ export default function AssessmentQuestions() {
   useEffect(() => {
     const loadAssessments = async () => {
       setIsLoadingAssessments(true);
-      const { data, error } = await getAssessmentOptions();
+      const [assessmentResult, learningMaterialsResult] = await Promise.all([
+        getAssessmentOptions(),
+        getLearningMaterialsAdminView()
+      ]);
+      const { data, error } = assessmentResult;
+
+      if (!learningMaterialsResult.error) {
+        const loadedTitles = (learningMaterialsResult.data || []).reduce((titles, row) => {
+          const moduleNo = Number(row.module_no || 0);
+          const moduleTitle = String(row.module_title_en || '').trim();
+          if (moduleNo > 0 && moduleTitle && !titles[moduleNo]) {
+            titles[moduleNo] = moduleTitle;
+          }
+          return titles;
+        }, {});
+        setModuleTitles({ ...MODULE_TITLE_FALLBACKS, ...loadedTitles });
+      }
 
       if (error) {
         setMessage({ type: 'error', text: `Failed to load assessments: ${error}` });
         setAssessments([]);
       } else {
-        const loadedAssessments = data || [];
+        const loadedAssessments = sortAssessments(data || []);
         setAssessments(loadedAssessments);
         if (loadedAssessments.length > 0) {
           const preferred = loadedAssessments.find((row) => isPreferredAssessment(row));
@@ -204,16 +252,36 @@ export default function AssessmentQuestions() {
     loadQuestions();
   }, [selectedAssessmentId]);
 
+  useEffect(() => {
+    setQuestionNavigatorSearch('');
+    setFocusedQuestionId('');
+  }, [selectedAssessmentId]);
+
+  useEffect(() => () => {
+    if (questionHighlightTimeoutRef.current) {
+      window.clearTimeout(questionHighlightTimeoutRef.current);
+    }
+  }, []);
+
   const displayAssessments = useMemo(() => {
     const preferred = assessments.filter((row) => isPreferredAssessment(row));
-    return preferred.length > 0 ? preferred : assessments;
+    return sortAssessments(preferred.length > 0 ? preferred : assessments);
   }, [assessments]);
 
+  const selectedAssessment = useMemo(
+    () => assessments.find((row) => row.id === selectedAssessmentId) || null,
+    [assessments, selectedAssessmentId]
+  );
+
   const selectedAssessmentLabel = useMemo(() => {
-    const selected = assessments.find((row) => row.id === selectedAssessmentId);
-    if (!selected) return '';
-    return formatAssessmentLabel(selected);
-  }, [assessments, selectedAssessmentId]);
+    if (!selectedAssessment) return '';
+    return formatAssessmentLabel(selectedAssessment);
+  }, [selectedAssessment]);
+
+  const selectedModuleNo = Number(selectedAssessment?.module_no || 0);
+  const selectedModuleTitle = moduleTitles[selectedModuleNo]
+    || selectedAssessment?.title
+    || 'Assessment Questions';
 
   const filteredQuestions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -222,14 +290,27 @@ export default function AssessmentQuestions() {
     return questions.filter((item) => {
       return (
         String(item.question_no).includes(q)
-        || item.prompt.toLowerCase().includes(q)
-        || item.prompt_tl.toLowerCase().includes(q)
-        || item.explanation.toLowerCase().includes(q)
-        || item.explanation_tl.toLowerCase().includes(q)
-        || item.question_type.toLowerCase().includes(q)
+        || String(item.prompt || '').toLowerCase().includes(q)
+        || String(item.prompt_tl || '').toLowerCase().includes(q)
+        || String(item.explanation || '').toLowerCase().includes(q)
+        || String(item.explanation_tl || '').toLowerCase().includes(q)
+        || String(item.question_type || '').toLowerCase().includes(q)
       );
     });
   }, [questions, searchQuery]);
+
+  const questionNavigatorOptions = useMemo(() => {
+    const query = questionNavigatorSearch.trim().toLowerCase();
+    const sortedQuestions = questions.slice().sort((left, right) => left.question_no - right.question_no);
+    if (!query) return sortedQuestions;
+
+    return sortedQuestions.filter((question) => [
+      String(question.question_no),
+      `question ${question.question_no}`,
+      question.prompt,
+      question.prompt_tl
+    ].some((value) => String(value || '').toLowerCase().includes(query)));
+  }, [questions, questionNavigatorSearch]);
 
   useEffect(() => {
     if (!isDirty) return undefined;
@@ -253,6 +334,24 @@ export default function AssessmentQuestions() {
     }
 
     setSelectedAssessmentId(nextAssessmentId);
+  };
+
+  const handleQuestionJump = (event) => {
+    const questionId = event.target.value;
+    if (!questionId) return;
+
+    const questionElement = document.getElementById(`assessment-question-${questionId}`);
+    if (!questionElement) return;
+
+    setFocusedQuestionId(questionId);
+    questionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    if (questionHighlightTimeoutRef.current) {
+      window.clearTimeout(questionHighlightTimeoutRef.current);
+    }
+    questionHighlightTimeoutRef.current = window.setTimeout(() => {
+      setFocusedQuestionId('');
+    }, 1800);
   };
 
   const handleHeaderNavigationRequest = (navigation) => {
@@ -740,6 +839,42 @@ export default function AssessmentQuestions() {
           onNavigationRequest={handleHeaderNavigationRequest}
         />
 
+        <section className="assessment-module-context">
+          <div className="assessment-module-heading">
+            <span>{selectedAssessmentLabel || 'Select an assessment'}</span>
+            <h2>{selectedModuleTitle}</h2>
+            <p>Review and update the questions for this learning module.</p>
+          </div>
+
+          <div className="assessment-question-navigator">
+            <label htmlFor="assessment-question-search">Quick question access</label>
+            <div className="assessment-question-navigator-controls">
+              <input
+                id="assessment-question-search"
+                type="search"
+                value={questionNavigatorSearch}
+                onChange={(event) => setQuestionNavigatorSearch(event.target.value)}
+                placeholder="Search number or question text"
+              />
+              <select
+                value=""
+                onChange={handleQuestionJump}
+                disabled={isLoadingQuestions || questionNavigatorOptions.length === 0}
+                aria-label="Jump to a question"
+              >
+                <option value="">
+                  {questionNavigatorOptions.length === 0 ? 'No matching questions' : 'Choose a question...'}
+                </option>
+                {questionNavigatorOptions.map((question) => (
+                  <option key={question.id} value={question.id}>
+                    {`Question ${question.question_no} — ${String(question.prompt || '').slice(0, 80)}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
+
         <div className="assessment-questions-toolbar">
           <div className="assessment-filter">
             <label>Select Assessment</label>
@@ -820,7 +955,8 @@ export default function AssessmentQuestions() {
             return (
               <article
                 key={question.id}
-                className={`assessment-question-card${isQuestionDirty ? ' is-dirty' : ''}`}
+                id={`assessment-question-${question.id}`}
+                className={`assessment-question-card${isQuestionDirty ? ' is-dirty' : ''}${focusedQuestionId === question.id ? ' is-focused' : ''}`}
               >
                 <header className="assessment-question-header">
                   <div className="assessment-question-meta">

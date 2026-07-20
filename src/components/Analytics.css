@@ -3,10 +3,13 @@
   min-height: 100vh;
   background-color: #f5f5f5;
   font-family: 'Poppins', sans-serif;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 .analytics-main {
   flex: 1;
+  min-width: 0;
   margin-left: 250px;
   padding: 2rem;
 }
@@ -731,9 +734,242 @@
   .analytics-charts-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .activity-trends,
   .training-progress {
     grid-column: 1;
+  }
+
+  .circular-progress-card {
+    grid-column: 1;
+  }
+}
+
+/* ---------------------------------------------------------- */
+/* Mobile responsiveness (matches Sidebar off-canvas breakpoint) */
+/* ---------------------------------------------------------- */
+@media (max-width: 900px) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
+
+  .analytics-main {
+    margin-left: 0;
+    padding: 1rem;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  /* Filters: full-width, evenly spaced, easy to tap */
+  .analytics-filters {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .filter-pill {
+    width: 100%;
+    box-sizing: border-box;
+    justify-content: space-between;
+    padding: 0.65rem 1rem;
+    min-height: 46px;
+  }
+
+  .filter-pill select {
+    flex: 1;
+    min-height: 32px;
+    text-align: right;
+  }
+
+  /* Summary cards: stacked, consistent width/height/padding/spacing */
+  .analytics-stats-row {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .analytics-stat-card {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 1.1rem 1.25rem;
+    min-height: 92px;
+    justify-content: center;
+  }
+
+  .main-value {
+    font-size: 1.5rem;
+  }
+
+  /* Knowledge Progress + Knowledge Gain */
+  .knowledge-section {
+    gap: 0.85rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .knowledge-compare-card,
+  .knowledge-gain-card,
+  .analytics-overview,
+  .analytics-chart-card,
+  .module-recommendations {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 1.1rem;
+  }
+
+  .knowledge-compare-header {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .gain-meter-scale {
+    font-size: 0.62rem;
+  }
+
+  /* AI Recommendations */
+  .module-recommendations-header h2 {
+    font-size: 1.15rem;
+  }
+
+  .module-recommendations-container {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .recommendation-card {
+    padding: 0.9rem;
+  }
+
+  .recommendation-card-title {
+    min-width: 0;
+  }
+
+  .recommendation-module-info h3 {
+    font-size: 0.95rem;
+    word-break: break-word;
+  }
+
+  .recommendation-stats {
+    font-size: 0.75rem;
+  }
+
+  /* Charts grid: one column, consistent spacing */
+  .analytics-charts-grid {
+    gap: 0.85rem;
+    margin-top: 0.85rem;
+  }
+
+  .analytics-chart-card h3 {
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+
+  .overview-header,
+  .chart-header {
+    width: 100%;
+  }
+
+  .overview-header select,
+  .chart-timeframe-select,
+  .time-select {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Chart wrappers: keep charts within card bounds, prevent cut-off */
+  .analytics-overview .overview-chart > div,
+  .analytics-chart-card > div[style*='height'] {
+    padding: 0.75rem 0 !important;
+  }
+
+  /* Circular progress card */
+  .circular-progress-card {
+    padding: 1.25rem 1rem;
+  }
+
+  .year-navigation {
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .circular-progress-wrapper {
+    width: 140px;
+    height: 140px;
+  }
+
+  .circular-progress-wrapper svg {
+    width: 140px;
+    height: 140px;
+  }
+
+  .circular-legend {
+    gap: 0.5rem 1rem;
+  }
+
+  .legend-item {
+    max-width: 100%;
+    font-size: 0.75rem;
+  }
+
+  /* Training / completion legends wrap cleanly, no overlap */
+  .training-legend,
+  .performance-legend {
+    gap: 0.75rem 1rem;
+  }
+
+  .performance-bars,
+  .performance-labels {
+    gap: 1.5rem;
+    padding: 0.5rem 0.5rem;
+  }
+
+  .performance-bar-group,
+  .performance-label {
+    max-width: 80px;
+  }
+
+  .training-bars {
+    gap: 1rem;
+    padding: 0.5rem 0.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .analytics-main {
+    padding: 0.75rem;
+  }
+
+  .analytics-stat-card {
+    padding: 1rem;
+  }
+
+  .knowledge-compare-card,
+  .knowledge-gain-card,
+  .analytics-overview,
+  .analytics-chart-card,
+  .module-recommendations {
+    padding: 0.9rem;
+  }
+
+  .gain-value {
+    font-size: 1.5rem;
+  }
+
+  .circular-progress-wrapper {
+    width: 120px;
+    height: 120px;
+  }
+
+  .circular-progress-wrapper svg {
+    width: 120px;
+    height: 120px;
+  }
+
+  .progress-value {
+    font-size: 1.25rem;
   }
 }

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useBlocker, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingContentEditor from './LandingContentEditor';
@@ -41,6 +41,36 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   'text/plain'
 ]);
+
+const ANNOUNCEMENT_DRAFT_STORAGE_KEY = 'ignis-safe:announcement-draft';
+
+const isBrowserStorageAvailable = () => typeof window !== 'undefined' && typeof sessionStorage !== 'undefined';
+
+const readAnnouncementDraft = () => {
+  if (!isBrowserStorageAvailable()) return null;
+
+  try {
+    const raw = sessionStorage.getItem(ANNOUNCEMENT_DRAFT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeAnnouncementDraft = (draft) => {
+  if (!isBrowserStorageAvailable()) return;
+
+  try {
+    sessionStorage.setItem(ANNOUNCEMENT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // Ignore storage write failures (e.g. quota exceeded, private browsing).
+  }
+};
+
+const clearAnnouncementDraft = () => {
+  if (!isBrowserStorageAvailable()) return;
+  sessionStorage.removeItem(ANNOUNCEMENT_DRAFT_STORAGE_KEY);
+};
 
 const formatAttachmentSize = (sizeBytes) => {
   const size = Number(sizeBytes || 0);
@@ -89,12 +119,22 @@ export default function Announcements() {
   const [archivedLoading, setArchivedLoading] = useState(false);
   const [restoringId, setRestoringId] = useState('');
   const ITEMS_PER_PAGE = 3;
-  const [formData, setFormData] = useState({
-    title: '',
-    content: '',
-    audience_type: 'public',
-    target_personnel_id: ''
+  const [formData, setFormData] = useState(() => {
+    const draft = readAnnouncementDraft();
+    return {
+      title: draft?.title || '',
+      content: draft?.content || '',
+      audience_type: draft?.audience_type || 'public',
+      target_personnel_id: draft?.target_personnel_id || ''
+    };
   });
+  const [draftAttachmentMeta, setDraftAttachmentMeta] = useState(() => {
+    const draft = readAnnouncementDraft();
+    return Array.isArray(draft?.attachments) ? draft.attachments : [];
+  });
+  const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
+  const pendingNavigationRef = useRef(null);
+  const bypassNavigationRef = useRef(false);
 
   const role = String(currentUser?.role || '').toLowerCase();
   // The route, not the account's underlying role, decides which workspace
@@ -112,6 +152,143 @@ export default function Announcements() {
     ? { ...currentUser, role: 'personnel' }
     : currentUser;
   const isAnnouncementTab = !isAdmin || activeTab === 'announcements';
+
+  const isAnnouncementFormDirty = isAdmin && Boolean(
+    formData.title.trim() ||
+    formData.content.trim() ||
+    formData.audience_type !== 'public' ||
+    formData.target_personnel_id ||
+    attachmentFiles.length > 0 ||
+    draftAttachmentMeta.length > 0
+  );
+
+  const shouldBlockAnnouncementNavigation = useCallback(({ currentLocation, nextLocation }) => {
+    if (bypassNavigationRef.current) {
+      bypassNavigationRef.current = false;
+      return false;
+    }
+
+    const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
+    const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
+    return isAnnouncementFormDirty && currentPath !== nextPath;
+  }, [isAnnouncementFormDirty]);
+  const announcementBlocker = useBlocker(shouldBlockAnnouncementNavigation);
+  const hasPendingAnnouncementExit = isExitConfirmOpen || announcementBlocker.state === 'blocked';
+
+  useEffect(() => {
+    if (!isAnnouncementFormDirty) {
+      clearAnnouncementDraft();
+      return;
+    }
+
+    writeAnnouncementDraft({
+      title: formData.title,
+      content: formData.content,
+      audience_type: formData.audience_type,
+      target_personnel_id: formData.target_personnel_id,
+      attachments: attachmentFiles.length > 0
+        ? attachmentFiles.map((file) => ({ name: file.name, size: file.size, type: file.type }))
+        : draftAttachmentMeta
+    });
+  }, [isAnnouncementFormDirty, formData, attachmentFiles, draftAttachmentMeta]);
+
+  useEffect(() => {
+    if (!isAnnouncementFormDirty) return undefined;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isAnnouncementFormDirty]);
+
+  const resetAnnouncementForm = () => {
+    setFormData({
+      title: '',
+      content: '',
+      audience_type: 'public',
+      target_personnel_id: ''
+    });
+    setAttachmentFiles([]);
+    setDraftAttachmentMeta([]);
+  };
+
+  const runAnnouncementManualNavigation = (navigation) => {
+    bypassNavigationRef.current = true;
+
+    try {
+      const actionResult = navigation.action();
+      Promise.resolve(actionResult).finally(() => {
+        bypassNavigationRef.current = false;
+      });
+    } catch (error) {
+      bypassNavigationRef.current = false;
+      throw error;
+    }
+  };
+
+  const handleAnnouncementHeaderNavigationRequest = (navigation) => {
+    if (!isAnnouncementFormDirty) {
+      navigation.action();
+      return;
+    }
+
+    pendingNavigationRef.current = { type: 'manual', navigation };
+    setIsExitConfirmOpen(true);
+  };
+
+  const handleContentTabClick = (tabId) => {
+    if (tabId === activeTab) return;
+
+    if (!isAnnouncementFormDirty) {
+      setActiveTab(tabId);
+      return;
+    }
+
+    pendingNavigationRef.current = { type: 'tab', tab: tabId };
+    setIsExitConfirmOpen(true);
+  };
+
+  const handleKeepEditingAnnouncement = () => {
+    pendingNavigationRef.current = null;
+    setIsExitConfirmOpen(false);
+
+    if (announcementBlocker.state === 'blocked') {
+      announcementBlocker.reset();
+    }
+  };
+
+  const proceedPendingAnnouncementNavigation = () => {
+    const pending = pendingNavigationRef.current;
+    pendingNavigationRef.current = null;
+    setIsExitConfirmOpen(false);
+
+    if (pending?.type === 'tab') {
+      setActiveTab(pending.tab);
+    } else if (pending?.type === 'manual') {
+      runAnnouncementManualNavigation(pending.navigation);
+    }
+
+    if (announcementBlocker.state === 'blocked') {
+      announcementBlocker.proceed();
+    }
+  };
+
+  const handleSaveAnnouncementDraftAndContinue = () => {
+    proceedPendingAnnouncementNavigation();
+  };
+
+  const handleLeaveAnnouncementWithoutSaving = () => {
+    clearAnnouncementDraft();
+    resetAnnouncementForm();
+    proceedPendingAnnouncementNavigation();
+  };
+
+  const handleRemoveDraftAttachmentMeta = (indexToRemove) => {
+    setDraftAttachmentMeta((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
 
   const loadAnnouncements = async () => {
     const { data, error } = await getAnnouncementsForUser(effectiveUser);
@@ -240,13 +417,8 @@ export default function Announcements() {
         return;
       }
 
-      setFormData({
-        title: '',
-        content: '',
-        audience_type: 'public',
-        target_personnel_id: ''
-      });
-      setAttachmentFiles([]);
+      clearAnnouncementDraft();
+      resetAnnouncementForm();
       setMessage({ type: 'success', text: 'Announcement sent successfully.' });
       await loadAnnouncements();
     } finally {
@@ -436,6 +608,7 @@ export default function Announcements() {
           onSearchChange={setSearchQuery}
           variant={sidebarVariant}
           showSearch={isAnnouncementTab}
+          onNavigationRequest={handleAnnouncementHeaderNavigationRequest}
         />
 
         {isAdmin && (
@@ -443,7 +616,7 @@ export default function Announcements() {
             <button
               type="button"
               className={`content-tab ${activeTab === 'announcements' ? 'active' : ''}`}
-              onClick={() => setActiveTab('announcements')}
+              onClick={() => handleContentTabClick('announcements')}
               role="tab"
               aria-selected={activeTab === 'announcements'}
             >
@@ -452,7 +625,7 @@ export default function Announcements() {
             <button
               type="button"
               className={`content-tab ${activeTab === 'landing' ? 'active' : ''}`}
-              onClick={() => setActiveTab('landing')}
+              onClick={() => handleContentTabClick('landing')}
               role="tab"
               aria-selected={activeTab === 'landing'}
             >
@@ -574,6 +747,28 @@ export default function Announcements() {
                         </li>
                       ))}
                     </ul>
+                  )}
+
+                  {attachmentFiles.length === 0 && draftAttachmentMeta.length > 0 && (
+                    <div className="attachment-draft-notice">
+                      <small className="form-help-text">
+                        Restored from your last draft — please re-attach these files to include them:
+                      </small>
+                      <ul className="attachment-selection-list">
+                        {draftAttachmentMeta.map((file, index) => (
+                          <li key={`draft-${file.name}-${index}`} className="attachment-selection-item">
+                            <span>{file.name} ({formatAttachmentSize(file.size)})</span>
+                            <button
+                              type="button"
+                              className="attachment-remove-button"
+                              onClick={() => handleRemoveDraftAttachmentMeta(index)}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
               </div>
@@ -830,6 +1025,46 @@ export default function Announcements() {
                 disabled={archiving}
               >
                 {archiving ? 'Archiving...' : 'Archive'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasPendingAnnouncementExit && (
+        <div
+          className="announcement-confirm-modal-overlay"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="announcementUnsavedTitle"
+          aria-describedby="announcementUnsavedDescription"
+        >
+          <div className="announcement-confirm-modal-card">
+            <h3 id="announcementUnsavedTitle">Unsaved Announcement</h3>
+            <p id="announcementUnsavedDescription">
+              You have an unfinished announcement. What would you like to do?
+            </p>
+            <div className="announcement-confirm-modal-actions announcement-unsaved-actions">
+              <button
+                type="button"
+                className="announcement-confirm-modal-cancel"
+                onClick={handleKeepEditingAnnouncement}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="announcement-unsaved-leave"
+                onClick={handleLeaveAnnouncementWithoutSaving}
+              >
+                Leave Without Saving
+              </button>
+              <button
+                type="button"
+                className="announcement-unsaved-save"
+                onClick={handleSaveAnnouncementDraftAndContinue}
+              >
+                Save Draft and Continue
               </button>
             </div>
           </div>

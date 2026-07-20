@@ -502,6 +502,36 @@
   cursor: not-allowed;
 }
 
+.announcement-unsaved-actions {
+  flex-wrap: wrap;
+}
+
+.announcement-unsaved-leave {
+  border: 1px solid #dc2626;
+  background: #fff;
+  color: #dc2626;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.announcement-unsaved-save {
+  border: none;
+  background: #b91c1c;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.attachment-draft-notice {
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed #cbd5e1;
+}
+
 .archived-card {
   margin-top: 1rem;
 }

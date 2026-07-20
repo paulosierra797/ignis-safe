@@ -278,12 +278,11 @@
   }
 }
 
-@media (max-width:768px){
+@media (max-width:900px){
 
   .audit-logs-main {
     margin-left:0;
     padding:1rem;
-    padding-top:70px;
   }
 
 

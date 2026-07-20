@@ -220,6 +220,167 @@
   color: #92400e;
 }
 
+.device-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(4px);
+  animation: deviceDialogBackdropIn 0.18s ease-out;
+}
+
+.device-dialog {
+  width: min(430px, 100%);
+  padding: 2rem;
+  border: 1px solid rgba(185, 28, 28, 0.12);
+  border-top: 4px solid #b91c1c;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  color: #1f2937;
+  text-align: center;
+  animation: deviceDialogIn 0.2s ease-out;
+}
+
+.device-dialog-icon {
+  display: inline-grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  margin-bottom: 1rem;
+  border: 1px solid #fecaca;
+  border-radius: 16px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.device-dialog--success {
+  border-top-color: #15803d;
+}
+
+.device-dialog--success .device-dialog-icon {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.device-dialog--error .device-dialog-icon {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #b91c1c;
+}
+
+.device-dialog h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.45rem;
+  line-height: 1.25;
+}
+
+.device-dialog p {
+  margin: 0.75rem auto 0;
+  color: #64748b;
+  font-size: 0.96rem;
+  line-height: 1.6;
+}
+
+.device-dialog-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.device-dialog-button {
+  min-width: 128px;
+  min-height: 44px;
+  padding: 0.7rem 1.2rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.device-dialog-button:hover {
+  transform: translateY(-1px);
+}
+
+.device-dialog-button--secondary {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+
+.device-dialog-button--secondary:hover {
+  background: #f8fafc;
+}
+
+.device-dialog-button--danger {
+  background: #b91c1c;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(185, 28, 28, 0.2);
+}
+
+.device-dialog-button--danger:hover {
+  background: #991b1b;
+}
+
+.device-dialog-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  min-height: 44px;
+  margin-top: 1.5rem;
+  color: #475569;
+  font-weight: 700;
+}
+
+.device-dialog-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #fecaca;
+  border-top-color: #b91c1c;
+  border-radius: 50%;
+  animation: deviceDialogSpin 0.75s linear infinite;
+}
+
+@keyframes deviceDialogBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes deviceDialogIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes deviceDialogSpin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 480px) {
+  .device-dialog {
+    padding: 1.5rem;
+    border-radius: 16px;
+  }
+
+  .device-dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .device-dialog-button {
+    width: 100%;
+  }
+}
+
 .dropdown-item--security:hover {
   background-color: #fffbeb;
 }

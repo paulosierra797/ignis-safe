@@ -386,13 +386,9 @@ const handleVerify = async (e) => {
         }
       } catch (trustError) {
         console.error('Could not save Remember me:', trustError);
-        await supabase.auth.signOut({ scope: 'local' });
-        const { error: resendError } = await sendLoginOtp(resetEmail.trim());
-        setResetCode('');
-        setError(resendError
-          ? 'OTP was verified, but Remember me could not be saved. Return to login and try again.'
-          : 'OTP was verified, but Remember me could not be saved. A new OTP was sent so you can retry.');
-        return;
+        // The submitted OTP already authenticated this session. Do not send a
+        // second code or force another verification attempt if browser trust
+        // could not be stored; this login can still continue safely.
       }
     }
 
@@ -417,21 +413,6 @@ const handleVerify = async (e) => {
   }
 };
 
-const handleResendLoginOtp = async () => {
-  setLoading(true);
-  setError('');
-
-  try {
-    const { error: otpError } = await sendLoginOtp(resetEmail.trim());
-    if (otpError) throw otpError;
-    setResetCode('');
-    setError('A new OTP was sent to your email.');
-  } catch (otpError) {
-    setError(otpError?.message || 'Could not resend the OTP. Please try again.');
-  } finally {
-    setLoading(false);
-  }
-};
 useEffect(() => {
   if (authStep !== "authenticated") return;
 
@@ -511,15 +492,6 @@ useEffect(() => {
             disabled={loading || resetCode.length !== OTP_LENGTH}
           >
             {loading ? 'Verifying...' : 'Verify & Login'}
-          </button>
-
-          <button
-            type="button"
-            className="resend-otp-button"
-            onClick={handleResendLoginOtp}
-            disabled={loading}
-          >
-            Send a new code
           </button>
 
           <button type="button" onClick={handleBackToLogin} className="back-button-verify" disabled={loading}>

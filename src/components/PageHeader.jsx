@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { FaBars } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
@@ -40,6 +41,11 @@ const PageHeader = ({
   onNavigationRequest
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [forgetDialog, setForgetDialog] = useState({
+    isOpen: false,
+    status: 'confirm',
+    message: ''
+  });
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const { currentUser, forgetThisDevice, logout } = useUser();
@@ -88,21 +94,30 @@ const PageHeader = ({
     });
   };
 
-  const handleForgetThisDevice = async () => {
+  const handleForgetThisDevice = () => {
     setIsDropdownOpen(false);
+    setForgetDialog({ isOpen: true, status: 'confirm', message: '' });
+  };
 
-    const confirmed = window.confirm(
-      'Forget this device? You will need an email OTP the next time you log in on this browser.'
-    );
-    if (!confirmed) return;
+  const closeForgetDialog = () => {
+    if (forgetDialog.status === 'loading') return;
+    setForgetDialog({ isOpen: false, status: 'confirm', message: '' });
+  };
+
+  const confirmForgetThisDevice = async () => {
+    setForgetDialog({ isOpen: true, status: 'loading', message: '' });
 
     const { error } = await forgetThisDevice();
     if (error) {
-      window.alert(`This device could not be forgotten: ${error}`);
+      setForgetDialog({
+        isOpen: true,
+        status: 'error',
+        message: error
+      });
       return;
     }
 
-    window.alert('This device has been forgotten. Your current session will stay signed in.');
+    setForgetDialog({ isOpen: true, status: 'success', message: '' });
   };
 
   const profilePath = variant === 'personnel' ? '/personnel/profile' : '/dashboard/profile';
@@ -185,6 +200,69 @@ const PageHeader = ({
           )}
         </div>
       </div>
+
+      {forgetDialog.isOpen && createPortal(
+        <div className="device-dialog-backdrop" role="presentation" onMouseDown={closeForgetDialog}>
+          <section
+            className={`device-dialog device-dialog--${forgetDialog.status}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="device-dialog-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="device-dialog-icon" aria-hidden="true">
+              {forgetDialog.status === 'success' ? '✓' : forgetDialog.status === 'error' ? '!' : '?'}
+            </div>
+
+            <h2 id="device-dialog-title">
+              {forgetDialog.status === 'success'
+                ? 'Device forgotten'
+                : forgetDialog.status === 'error'
+                  ? 'Unable to forget device'
+                  : 'Forget this device?'}
+            </h2>
+
+            <p>
+              {forgetDialog.status === 'success'
+                ? 'You will need an email OTP the next time you log in on this browser. Your current session remains active.'
+                : forgetDialog.status === 'error'
+                  ? forgetDialog.message || 'Please try again.'
+                  : 'This browser will no longer skip email OTP on your next login.'}
+            </p>
+
+            {forgetDialog.status === 'loading' ? (
+              <div className="device-dialog-loading" role="status">
+                <span className="device-dialog-spinner" aria-hidden="true" />
+                Forgetting device...
+              </div>
+            ) : (
+              <div className="device-dialog-actions">
+                {forgetDialog.status === 'confirm' && (
+                  <button type="button" className="device-dialog-button device-dialog-button--secondary" onClick={closeForgetDialog}>
+                    Cancel
+                  </button>
+                )}
+                {forgetDialog.status === 'confirm' && (
+                  <button type="button" className="device-dialog-button device-dialog-button--danger" onClick={confirmForgetThisDevice}>
+                    Forget Device
+                  </button>
+                )}
+                {forgetDialog.status === 'error' && (
+                  <button type="button" className="device-dialog-button device-dialog-button--danger" onClick={confirmForgetThisDevice}>
+                    Try Again
+                  </button>
+                )}
+                {(forgetDialog.status === 'success' || forgetDialog.status === 'error') && (
+                  <button type="button" className="device-dialog-button device-dialog-button--secondary" onClick={closeForgetDialog}>
+                    {forgetDialog.status === 'success' ? 'Done' : 'Close'}
+                  </button>
+                )}
+              </div>
+            )}
+          </section>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

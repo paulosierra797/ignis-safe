@@ -404,24 +404,9 @@
 }
 
 .login-button-verify:disabled,
-.back-button-verify:disabled,
-.resend-otp-button:disabled {
+.back-button-verify:disabled {
   cursor: not-allowed;
   opacity: 0.58;
-}
-
-.resend-otp-button {
-  align-self: center;
-  border: none;
-  background: transparent;
-  color: #b91c1c;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.resend-otp-button:hover:not(:disabled) {
-  text-decoration: underline;
 }
 
 .back-button-verify {

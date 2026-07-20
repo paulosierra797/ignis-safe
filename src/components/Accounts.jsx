@@ -3520,13 +3520,19 @@ const permissions = getDefaultPermissions(formData.role);
                         <label key={account.admin_id} className="shift-personnel-checkbox-item">
                           <input
                             type="checkbox"
+                            className="shift-personnel-checkbox-input"
                             checked={selectedShiftPersonnelIds.includes(account.admin_id)}
                             onChange={(event) => {
                               handleTogglePersonnelForShift(account, event.target.checked);
                             }}
                           />
-                          <span>
-                            {account.first_name} {account.last_name} ({account.rank || 'N/A'})
+                          <span className="shift-personnel-checkbox-info">
+                            <span className="shift-personnel-checkbox-name">
+                              {account.first_name} {account.last_name}
+                            </span>
+                            <span className="shift-personnel-checkbox-rank">
+                              {account.rank || 'N/A'}
+                            </span>
                           </span>
                         </label>
                       ))}

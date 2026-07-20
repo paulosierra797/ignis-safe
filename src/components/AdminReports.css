@@ -198,7 +198,7 @@
 
 .admin-reports-table {
   width: 100%;
-  min-width: 960px;
+  min-width: 1080px;
   table-layout: fixed;
   border-collapse: collapse;
 }
@@ -234,11 +234,11 @@
 }
 
 .admin-reports-table .col-title {
-  width: 26%;
+  width: 22%;
 }
 
 .admin-reports-table .col-submitted-by {
-  width: 14%;
+  width: 12%;
 }
 
 .admin-reports-table .col-submitted-at {
@@ -250,7 +250,7 @@
 }
 
 .admin-reports-table .col-status {
-  width: 11%;
+  width: 13%;
 }
 
 .admin-reports-table .col-file {
@@ -258,7 +258,7 @@
 }
 
 .admin-reports-table .col-actions {
-  width: 15%;
+  width: 20%;
 }
 
 .admin-reports-cell-content {
@@ -320,14 +320,16 @@
 .report-status-pill {
   display: inline-flex;
   align-items: center;
-  max-width: 100%;
-  padding: 0.2rem 0.55rem;
+  justify-content: center;
+  width: fit-content;
+  min-height: 1.7rem;
+  padding: 0.32rem 0.75rem;
   border-radius: 999px;
   font-size: 0.73rem;
   font-weight: 700;
+  line-height: 1.2;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 .status-submitted {
@@ -353,18 +355,26 @@
 .admin-reports-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  align-items: stretch;
+  gap: 0.5rem;
   max-width: 100%;
 }
 
 .admin-reports-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #d1d5db;
   border-radius: 7px;
   background: #fff;
-  padding: 0.35rem 0.55rem;
+  min-height: 2rem;
+  padding: 0.4rem 0.7rem;
   cursor: pointer;
+  font-size: 0.82rem;
   font-weight: 600;
+  line-height: 1.2;
   white-space: nowrap;
+  box-sizing: border-box;
   flex: 0 0 auto;
 }
 
@@ -574,15 +584,15 @@
 
 @media (max-width: 1100px) {
   .admin-reports-table {
-    min-width: 900px;
+    min-width: 1020px;
   }
 
   .admin-reports-table .col-title {
-    width: 24%;
+    width: 20%;
   }
 
   .admin-reports-table .col-actions {
-    width: 16%;
+    width: 20%;
   }
 }
 

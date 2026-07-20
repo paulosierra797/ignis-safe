@@ -437,7 +437,7 @@ export default function Announcements() {
                     value={formData.content}
                     onChange={(event) => setFormData((prev) => ({ ...prev, content: event.target.value }))}
                     placeholder="Write the full announcement..."
-                    rows={5}
+                    rows={8}
                     maxLength={2000}
                     required
                   />

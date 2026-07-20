@@ -9,8 +9,6 @@
   flex: 1;
   margin-left: 250px;
   padding: 2rem;
-
-  gap: 1.2rem;
 }
 
 /* Match Shift Schedule page header sizing (desktop only; mobile uses the
@@ -31,7 +29,12 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
-  padding: 1.2rem 1.3rem;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.announcement-card:last-child {
+  margin-bottom: 0;
 }
 
 .content-tabs {
@@ -41,6 +44,7 @@
   background: #e2e8f0;
   border-radius: 999px;
   width: fit-content;
+  margin-bottom: 1.5rem;
 }
 
 .content-tab {
@@ -71,12 +75,12 @@
 
 .announcement-form {
   display: grid;
-  gap: 0.9rem;
+  gap: 1.1rem;
 }
 
 .form-row {
   display: grid;
-  gap: 0.8rem;
+  gap: 1.1rem;
 }
 
 .form-row.two-col {
@@ -87,6 +91,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  min-width: 0;
 }
 
 .form-field label {
@@ -98,16 +103,34 @@
 .form-field input,
 .form-field select,
 .form-field textarea {
+  box-sizing: border-box;
+  width: 100%;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 0.7rem 0.8rem;
   font-size: 0.9rem;
   color: #334155;
   background: #ffffff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.form-field input,
+.form-field select {
+  min-height: 44px;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
 }
 
 .form-field textarea {
   resize: vertical;
+  min-height: 200px;
+  line-height: 1.5;
 }
 
 .form-help-text {
@@ -150,16 +173,23 @@
 .form-actions {
   display: flex;
   justify-content: flex-end;
+  margin-top: 0.25rem;
 }
 
 .form-actions button {
   border: none;
   border-radius: 8px;
-  padding: 0.68rem 1.15rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
   font-weight: 700;
   background: #b91c1c;
   color: #ffffff;
   cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.form-actions button:hover:not(:disabled) {
+  background: #991b1b;
 }
 
 .form-actions button:disabled {
@@ -171,6 +201,7 @@
   border-radius: 10px;
   padding: 0.75rem 1rem;
   font-weight: 600;
+  margin-bottom: 1.5rem;
 }
 
 .announcement-message.success {
@@ -424,8 +455,18 @@
     grid-template-columns: 1fr;
   }
 
+  .announcement-card {
+    padding: 1.1rem;
+    margin-bottom: 1.1rem;
+  }
+
   .content-tabs {
     width: 100%;
+    margin-bottom: 1.1rem;
+  }
+
+  .form-field textarea {
+    min-height: 140px;
   }
 
   .content-tab {

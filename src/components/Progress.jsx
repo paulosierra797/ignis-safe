@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import './Progress.css';
@@ -11,16 +11,31 @@ const formatDate = (value) => {
   return date.toLocaleDateString('en-US');
 };
 
-const COMPLETION_OPTIONS = ['All', '100%', '75%', '50%', '25%'];
+const COMPLETION_RANGES = [
+  { label: 'All', min: null, max: null },
+  { label: '0%', min: 0, max: 0 },
+  { label: '1%–10%', min: 1, max: 10 },
+  { label: '11%–20%', min: 11, max: 20 },
+  { label: '21%–30%', min: 21, max: 30 },
+  { label: '31%–40%', min: 31, max: 40 },
+  { label: '41%–50%', min: 41, max: 50 },
+  { label: '51%–60%', min: 51, max: 60 },
+  { label: '61%–70%', min: 61, max: 70 },
+  { label: '71%–80%', min: 71, max: 80 },
+  { label: '81%–90%', min: 81, max: 90 },
+  { label: '91%–99%', min: 91, max: 99 },
+  { label: '100%', min: 100, max: 100 },
+];
+
+const COMPLETION_OPTIONS = COMPLETION_RANGES.map((range) => range.label);
 
 const matchesCompletionFilter = (overallPercent, filterValue) => {
   if (filterValue === 'All') return true;
 
-  const threshold = Number(String(filterValue).replace('%', ''));
-  if (!Number.isFinite(threshold)) return true;
+  const range = COMPLETION_RANGES.find((option) => option.label === filterValue);
+  if (!range) return true;
 
-  if (threshold === 100) return overallPercent >= 100;
-  return overallPercent >= threshold;
+  return overallPercent >= range.min && overallPercent <= range.max;
 };
 
 export default function Progress() {
@@ -31,9 +46,12 @@ export default function Progress() {
   const [searchQuery, setSearchQuery] = useState('');
   const [moduleFilter, setModuleFilter] = useState('All');
   const [completionFilter, setCompletionFilter] = useState('All');
+  const [completionSearchText, setCompletionSearchText] = useState('All');
+  const [isCompletionDropdownOpen, setIsCompletionDropdownOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [expandedTests, setExpandedTests] = useState({});
+  const completionBlurTimeoutRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -72,7 +90,47 @@ export default function Progress() {
   const handleClearFilters = () => {
     setModuleFilter('All');
     setCompletionFilter('All');
+    setCompletionSearchText('All');
     setSearchQuery('');
+  };
+
+  const completionDropdownOptions = useMemo(() => {
+    const normalizedQuery = completionSearchText.trim().toLowerCase();
+    if (!normalizedQuery || normalizedQuery === completionFilter.toLowerCase()) {
+      return COMPLETION_OPTIONS;
+    }
+    return COMPLETION_OPTIONS.filter((option) =>
+      option.toLowerCase().includes(normalizedQuery)
+    );
+  }, [completionSearchText, completionFilter]);
+
+  const handleCompletionInputFocus = () => {
+    if (completionBlurTimeoutRef.current) {
+      clearTimeout(completionBlurTimeoutRef.current);
+    }
+    setCompletionSearchText('');
+    setIsCompletionDropdownOpen(true);
+  };
+
+  const handleCompletionInputChange = (event) => {
+    setCompletionSearchText(event.target.value);
+    setIsCompletionDropdownOpen(true);
+  };
+
+  const handleCompletionInputBlur = () => {
+    completionBlurTimeoutRef.current = setTimeout(() => {
+      setCompletionSearchText(completionFilter);
+      setIsCompletionDropdownOpen(false);
+    }, 150);
+  };
+
+  const handleSelectCompletionOption = (option) => {
+    if (completionBlurTimeoutRef.current) {
+      clearTimeout(completionBlurTimeoutRef.current);
+    }
+    setCompletionFilter(option);
+    setCompletionSearchText(option);
+    setIsCompletionDropdownOpen(false);
   };
 
   const handleViewUser = (user) => {
@@ -149,18 +207,37 @@ export default function Progress() {
               </select>
             </div>
 
-            <div className="progress-filter">
+            <div className="progress-filter progress-filter-searchable">
               <label>Filter by Completion</label>
-              <select
-                value={completionFilter}
-                onChange={(event) => setCompletionFilter(event.target.value)}
-              >
-                {COMPLETION_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
+              <div className="progress-searchable-select">
+                <input
+                  type="text"
+                  className="progress-searchable-input"
+                  value={isCompletionDropdownOpen ? completionSearchText : completionFilter}
+                  onFocus={handleCompletionInputFocus}
+                  onChange={handleCompletionInputChange}
+                  onBlur={handleCompletionInputBlur}
+                  placeholder="Search completion..."
+                  autoComplete="off"
+                />
+                {isCompletionDropdownOpen && (
+                  <ul className="progress-searchable-options">
+                    {completionDropdownOptions.length === 0 ? (
+                      <li className="progress-searchable-option-empty">No matches</li>
+                    ) : (
+                      completionDropdownOptions.map((option) => (
+                        <li
+                          key={option}
+                          className={`progress-searchable-option ${option === completionFilter ? 'selected' : ''}`}
+                          onMouseDown={() => handleSelectCompletionOption(option)}
+                        >
+                          {option}
+                        </li>
+                      ))
+                    )}
+                  </ul>
+                )}
+              </div>
             </div>
 
             <button className="progress-clear" onClick={handleClearFilters}>

@@ -174,6 +174,11 @@ const formatModuleLabel = (moduleNo) => {
   return value ? `Module ${value}` : 'Module -';
 };
 
+const getModuleDisplayTitle = (moduleRow) => {
+  const title = String(moduleRow?.title || '').trim();
+  return title || formatModuleLabel(moduleRow?.module_no);
+};
+
 const normalizeSimulationSessionRow = (row = {}) => ({
   admin_id: row.admin_id || row.user_id || row.profile_id || null,
   module_id: row.module_id || null,
@@ -943,6 +948,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       if (!learningByModuleAccumulator[moduleData.id]) {
         learningByModuleAccumulator[moduleData.id] = {
           moduleNo: moduleData.module_no,
+          moduleTitle: getModuleDisplayTitle(moduleData),
           preTotal: 0,
           preCount: 0,
           postTotal: 0,
@@ -977,7 +983,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
     );
 
     const learningByModule = {
-      labels: sortedModules.map((row) => formatModuleLabel(row.moduleNo)),
+      labels: sortedModules.map((row) => row.moduleTitle),
       preTest: sortedModules.map((row) => (row.preCount > 0 ? round(row.preTotal / row.preCount, 2) : 0)),
       postTest: sortedModules.map((row) => (row.postCount > 0 ? round(row.postTotal / row.postCount, 2) : 0)),
     };
@@ -1021,7 +1027,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
     });
 
     const completionByModule = {
-      labels: modulesForCompletion.map((row) => formatModuleLabel(row.module_no)),
+      labels: modulesForCompletion.map((row) => getModuleDisplayTitle(row)),
       completionRate: modulesForCompletion.map((row) => {
         const bucket = completionAccumulator[row.id];
         if (!bucket || bucket.count === 0) return 0;
@@ -1056,7 +1062,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
     });
 
     const attemptsByModule = {
-      labels: modulesForAttempts.map((row) => formatModuleLabel(row.module_no)),
+      labels: modulesForAttempts.map((row) => getModuleDisplayTitle(row)),
       attempts: modulesForAttempts.map((row) => attemptsAccumulator[row.id] || 0),
     };
 
@@ -1089,7 +1095,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
     const byYear = availableYears.reduce((accumulator, year) => {
       const moduleCounts = attemptsByModuleYearAccumulator[year];
       accumulator[year] = {
-        labels: modulesForAttempts.map((row) => formatModuleLabel(row.module_no)),
+        labels: modulesForAttempts.map((row) => getModuleDisplayTitle(row)),
         attempts: modulesForAttempts.map((row) => moduleCounts[row.id] || 0),
       };
       return accumulator;

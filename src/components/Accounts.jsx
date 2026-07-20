@@ -2211,7 +2211,7 @@ const permissions = getDefaultPermissions(formData.role);
                 return (
                   <div
                     key={isoDate}
-                    className={`shift-summary-day ${isPastDate ? 'is-past-date' : ''} ${isToday ? 'today' : ''}`}
+                    className={`shift-summary-day ${shiftClass} ${isPastDate ? 'is-past-date' : ''} ${isToday ? 'today' : ''}`}
                     aria-disabled={isPastDate || undefined}
                     aria-label={`${row?.displayDate || isoDate}: ${shiftLabel}, On Duty ${onDutyCount}, On Leave ${onLeaveCount}${isPastDate ? ', past date' : ''}`}
                     role="button"

@@ -158,8 +158,8 @@
 
 .org-avatar {
   position: static;
-  width: 230px;
-  height: 230px;
+  width: 200px;
+  height: 200px;
   margin: 0 auto 0.2rem;
   flex: 0 0 auto;
   border-radius: 50%;
@@ -181,14 +181,14 @@
   align-self: stretch;
   margin: 0;
   width: auto;
-  max-width: min(238px, calc(100vw - 5rem));
+  max-width: min(240px, calc(100vw - 5rem));
   min-width: 150px;
   padding: 0.42rem 0.75rem;
   border-radius: 7px;
   background: linear-gradient(160deg, #fb923c 0%, #f97316 100%);
   color: #ffffff;
   box-shadow: 0 5px 12px rgba(249, 115, 22, 0.2);
-  font-size: 0.76rem;
+  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.15px;
   line-height: 1.25;

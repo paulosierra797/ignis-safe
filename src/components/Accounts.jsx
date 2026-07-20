@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { supabase } from "../utils/supabaseClient";
@@ -39,6 +40,16 @@ const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{
 const contactNumberRegex = /^09\d{9}$/;
 const ADD_PERSONNEL_TIMEOUT_MS = 60000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const EMPTY_PERSONNEL_FORM = {
+  first_name: '',
+  last_name: '',
+  email: '',
+  role: '',
+  rank: '',
+  rank_custom: '',
+  contact_number: '',
+  password: ''
+};
 
 const toIsoDate = (date) => {
   const year = date.getFullYear();
@@ -190,6 +201,7 @@ export default function Accounts() {
   const [rankFilter, setRankFilter] = useState('All Ranks');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddExitConfirmOpen, setIsAddExitConfirmOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [isPersonnelShiftModalOpen, setIsPersonnelShiftModalOpen] = useState(false);
@@ -229,6 +241,7 @@ export default function Accounts() {
   const [isConfirmActionModalOpen, setIsConfirmActionModalOpen] = useState(false);
   const [isConfirmActionProcessing, setIsConfirmActionProcessing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [formErrors, setFormErrors] = useState({});
   const [leaveMessage, setLeaveMessage] = useState({ type: '', text: '' });
   const [shiftMessage, setShiftMessage] = useState({ type: '', text: '' });
   const [selectedAccount, setSelectedAccount] = useState(null);
@@ -255,22 +268,44 @@ export default function Accounts() {
   });
 
   // Form state
-  const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    role: '',
-    rank: '',
-    rank_custom: '',
-    contact_number: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ ...EMPTY_PERSONNEL_FORM });
+  const pendingAddNavigationRef = useRef(null);
+  const bypassAddNavigationRef = useRef(false);
+  const isAddFormDirty = isAddModalOpen && Object.values(formData).some(
+    (value) => String(value || '').trim() !== ''
+  );
+  const shouldBlockAddNavigation = useCallback(({ currentLocation, nextLocation }) => {
+    if (bypassAddNavigationRef.current) {
+      bypassAddNavigationRef.current = false;
+      return false;
+    }
+
+    const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
+    const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
+    return isAddFormDirty && currentPath !== nextPath;
+  }, [isAddFormDirty]);
+  const addPersonnelBlocker = useBlocker(shouldBlockAddNavigation);
+  const hasPendingAddExit = isAddExitConfirmOpen || addPersonnelBlocker.state === 'blocked';
   const [leaveFormData, setLeaveFormData] = useState({
     start_date: '',
     end_date: ''
   });
   const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
   const isOnLeave = (account) => String(account?.status || '').toLowerCase() === 'on leave';
+
+  useEffect(() => {
+    if (!isAddFormDirty) {
+      return undefined;
+    }
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isAddFormDirty]);
 
   const fromIsoDate = (dateValue) => {
     const parts = String(dateValue || '').split('-');
@@ -931,6 +966,19 @@ export default function Accounts() {
       ...prev,
       [fieldName]: nextValue
     }));
+
+    setFormErrors((prev) => {
+      if (!prev[fieldName] && !(fieldName === 'rank' && prev.rank_custom)) {
+        return prev;
+      }
+
+      const nextErrors = { ...prev };
+      delete nextErrors[fieldName];
+      if (fieldName === 'rank') {
+        delete nextErrors.rank_custom;
+      }
+      return nextErrors;
+    });
   };
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -1029,7 +1077,19 @@ console.log("AUTH USER:", authData);
     const contactNumber = String(formData.contact_number || '').trim();
     const password = String(formData.password || '');
 
-    if (!firstName || !lastName || !formData.email || !formData.role || !finalRank || !password) {
+    const requiredErrors = {};
+    if (!firstName) requiredErrors.first_name = 'First name is required.';
+    if (!lastName) requiredErrors.last_name = 'Last name is required.';
+    if (!String(formData.email || '').trim()) requiredErrors.email = 'Email address is required.';
+    if (!formData.role) requiredErrors.role = 'Role is required.';
+    if (!selectedRank) requiredErrors.rank = 'Rank designation is required.';
+    if (selectedRank === 'OTHER' && !customRank) requiredErrors.rank_custom = 'Custom rank is required.';
+    if (!contactNumber) requiredErrors.contact_number = 'Contact number is required.';
+    if (!password) requiredErrors.password = 'Temporary password is required.';
+
+    setFormErrors(requiredErrors);
+
+    if (Object.keys(requiredErrors).length > 0) {
       setMessage({ type: 'error', text: 'Please fill in all required fields.' });
       return;
     }
@@ -1044,7 +1104,7 @@ console.log("AUTH USER:", authData);
       return;
     }
 
-    if (contactNumber && !contactNumberRegex.test(contactNumber)) {
+    if (!contactNumberRegex.test(contactNumber)) {
       setMessage({ type: 'error', text: 'Contact number must start with 09 and be exactly 11 digits.' });
       return;
     }
@@ -1147,16 +1207,8 @@ const permissions = getDefaultPermissions(formData.role);
             console.warn('Unable to write admin activity log:', logError);
           });
 
-          setFormData({
-            first_name: '',
-            last_name: '',
-            email: '',
-            role: '',
-            rank: '',
-            rank_custom: '',
-            contact_number: '',
-            password: ''
-          });
+          setFormData({ ...EMPTY_PERSONNEL_FORM });
+          setFormErrors({});
 
           setTimeout(() => {
             setIsAddModalOpen(false);
@@ -1212,16 +1264,8 @@ const permissions = getDefaultPermissions(formData.role);
       fetchAccounts();
       
       // Reset form
-      setFormData({
-        first_name: '',
-        last_name: '',
-        email: '',
-        role: '',
-        rank: '',
-        rank_custom: '',
-        contact_number: '',
-        password: ''
-      });
+      setFormData({ ...EMPTY_PERSONNEL_FORM });
+      setFormErrors({});
 
       // Close modal after success
       setTimeout(() => {
@@ -1236,19 +1280,82 @@ const permissions = getDefaultPermissions(formData.role);
     }
   };
 
-  const handleCloseModal = () => {
-    setIsAddModalOpen(false);
-    setFormData({
-      first_name: '',
-      last_name: '',
-      email: '',
-      role: '',
-      rank: '',
-      rank_custom: '',
-      contact_number: '',
-      password: ''
-    });
+  const resetAddPersonnelForm = () => {
+    setFormData({ ...EMPTY_PERSONNEL_FORM });
+    setFormErrors({});
     setMessage({ type: '', text: '' });
+  };
+
+  const closeAddPersonnelModal = () => {
+    setIsAddModalOpen(false);
+    resetAddPersonnelForm();
+  };
+
+  const handleOpenAddModal = () => {
+    resetAddPersonnelForm();
+    setIsAddModalOpen(true);
+  };
+
+  const runAddManualNavigation = (navigation) => {
+    bypassAddNavigationRef.current = true;
+
+    try {
+      const actionResult = navigation.action();
+      Promise.resolve(actionResult).finally(() => {
+        bypassAddNavigationRef.current = false;
+      });
+    } catch (error) {
+      bypassAddNavigationRef.current = false;
+      throw error;
+    }
+  };
+
+  const handleCloseModal = () => {
+    if (!isAddFormDirty) {
+      closeAddPersonnelModal();
+      return;
+    }
+
+    pendingAddNavigationRef.current = { type: 'close' };
+    setIsAddExitConfirmOpen(true);
+  };
+
+  const handleAccountsHeaderNavigationRequest = (navigation) => {
+    if (!isAddFormDirty) {
+      navigation.action();
+      return;
+    }
+
+    pendingAddNavigationRef.current = { type: 'manual', navigation };
+    setIsAddExitConfirmOpen(true);
+  };
+
+  const handleKeepEditingAddPersonnel = () => {
+    pendingAddNavigationRef.current = null;
+    setIsAddExitConfirmOpen(false);
+
+    if (addPersonnelBlocker.state === 'blocked') {
+      addPersonnelBlocker.reset();
+    }
+  };
+
+  const handleDiscardAddPersonnel = () => {
+    const pendingExit = pendingAddNavigationRef.current;
+    pendingAddNavigationRef.current = null;
+    setIsAddExitConfirmOpen(false);
+    closeAddPersonnelModal();
+
+    if (pendingExit?.type === 'manual') {
+      if (addPersonnelBlocker.state === 'blocked') {
+        addPersonnelBlocker.reset();
+      }
+      runAddManualNavigation(pendingExit.navigation);
+      return;
+    }
+
+    if (addPersonnelBlocker.state === 'blocked') {
+      addPersonnelBlocker.proceed();
+    }
   };
 
   const handleAssignPersonnelToShift = async () => {
@@ -1870,6 +1977,7 @@ const permissions = getDefaultPermissions(formData.role);
           title="Personnel"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          onNavigationRequest={handleAccountsHeaderNavigationRequest}
         />
 
         <div className="accounts-header">
@@ -1881,7 +1989,7 @@ const permissions = getDefaultPermissions(formData.role);
             <button className="shift-schedule-btn" onClick={openPersonnelShiftModal}>
               Assign Personnel
             </button>
-            <button className="add-personnel-btn" onClick={() => setIsAddModalOpen(true)}>
+            <button className="add-personnel-btn" onClick={handleOpenAddModal}>
               Add Personnel
             </button>
           </div>
@@ -2856,10 +2964,11 @@ const permissions = getDefaultPermissions(formData.role);
 
         {isAddModalOpen && (
           <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
-            <div className="accounts-modal">
+            <div className="accounts-modal accounts-add-personnel-modal">
               <div className="accounts-modal-header">
                 <h3>Add New Personnel Account</h3>
                 <button
+                  type="button"
                   className="accounts-modal-close"
                   onClick={handleCloseModal}
                   aria-label="Close modal"
@@ -2873,62 +2982,111 @@ const permissions = getDefaultPermissions(formData.role);
                 
                 <div className="accounts-modal-grid">
                   <div className="accounts-modal-field">
-                    <label htmlFor="personnel-first-name">First Name</label>
+                    <label htmlFor="personnel-first-name">
+                      First Name <span className="accounts-required-mark" aria-hidden="true">*</span>
+                    </label>
                     <input
                       id="personnel-first-name"
                       type="text"
                       placeholder="First name"
                       value={formData.first_name}
                       onChange={handleInputChange}
+                      className={formErrors.first_name ? 'accounts-input-error' : ''}
+                      required
+                      aria-invalid={Boolean(formErrors.first_name)}
+                      aria-describedby={formErrors.first_name ? 'personnel-first-name-error' : undefined}
                       pattern="[A-Za-z]+"
                       title="Use letters only"
                     />
+                    {formErrors.first_name && (
+                      <span id="personnel-first-name-error" className="accounts-field-error" role="alert">
+                        {formErrors.first_name}
+                      </span>
+                    )}
                   </div>
 
                   <div className="accounts-modal-field">
-                    <label htmlFor="personnel-last-name">Last Name</label>
+                    <label htmlFor="personnel-last-name">
+                      Last Name <span className="accounts-required-mark" aria-hidden="true">*</span>
+                    </label>
                     <input
                       id="personnel-last-name"
                       type="text"
                       placeholder="Last name"
                       value={formData.last_name}
                       onChange={handleInputChange}
+                      className={formErrors.last_name ? 'accounts-input-error' : ''}
+                      required
+                      aria-invalid={Boolean(formErrors.last_name)}
+                      aria-describedby={formErrors.last_name ? 'personnel-last-name-error' : undefined}
                       pattern="[A-Za-z]+"
                       title="Use letters only"
                     />
+                    {formErrors.last_name && (
+                      <span id="personnel-last-name-error" className="accounts-field-error" role="alert">
+                        {formErrors.last_name}
+                      </span>
+                    )}
                   </div>
 
                   <div className="accounts-modal-field">
-                    <label htmlFor="personnel-email">Email Address</label>
+                    <label htmlFor="personnel-email">
+                      Email Address <span className="accounts-required-mark" aria-hidden="true">*</span>
+                    </label>
                     <input
                       id="personnel-email"
                       type="email"
                       placeholder="youremail@gmail.com"
                       value={formData.email}
                       onChange={handleInputChange}
+                      className={formErrors.email ? 'accounts-input-error' : ''}
+                      required
+                      aria-invalid={Boolean(formErrors.email)}
+                      aria-describedby={formErrors.email ? 'personnel-email-error' : undefined}
                     />
+                    {formErrors.email && (
+                      <span id="personnel-email-error" className="accounts-field-error" role="alert">
+                        {formErrors.email}
+                      </span>
+                    )}
                   </div>
 
                   <div className="accounts-modal-field">
-                    <label htmlFor="personnel-role">Role</label>
+                    <label htmlFor="personnel-role">
+                      Role <span className="accounts-required-mark" aria-hidden="true">*</span>
+                    </label>
                     <select 
                       id="personnel-role" 
                       value={formData.role}
                       onChange={handleInputChange}
+                      className={formErrors.role ? 'accounts-input-error' : ''}
+                      required
+                      aria-invalid={Boolean(formErrors.role)}
+                      aria-describedby={formErrors.role ? 'personnel-role-error' : undefined}
                     >
                       <option value="">Select a role...</option>
                       <option value="admin">Admin</option>
                       <option value="personnel">Personnel</option>
-                     
                     </select>
+                    {formErrors.role && (
+                      <span id="personnel-role-error" className="accounts-field-error" role="alert">
+                        {formErrors.role}
+                      </span>
+                    )}
                   </div>
 
                   <div className="accounts-modal-field">
-                    <label htmlFor="personnel-rank">Rank Designation</label>
+                    <label htmlFor="personnel-rank">
+                      Rank Designation <span className="accounts-required-mark" aria-hidden="true">*</span>
+                    </label>
                     <select 
                       id="personnel-rank"
                       value={formData.rank}
                       onChange={handleInputChange}
+                      className={formErrors.rank ? 'accounts-input-error' : ''}
+                      required
+                      aria-invalid={Boolean(formErrors.rank)}
+                      aria-describedby={formErrors.rank ? 'personnel-rank-error' : undefined}
                     >
                       <option value="">Select a rank...</option>
                       <option value="FDIR">FDIR - Fire Director</option>
@@ -2947,21 +3105,39 @@ const permissions = getDefaultPermissions(formData.role);
                       <option value="FO1">FO1 - Fire Officer I</option>
                       <option value="OTHER">Other (Specify)</option>
                     </select>
+                    {formErrors.rank && (
+                      <span id="personnel-rank-error" className="accounts-field-error" role="alert">
+                        {formErrors.rank}
+                      </span>
+                    )}
                   </div>
                   {formData.rank === 'OTHER' && (
                     <div className="accounts-modal-field">
-                      <label htmlFor="personnel-rank-custom">Custom Rank</label>
+                      <label htmlFor="personnel-rank-custom">
+                        Custom Rank <span className="accounts-required-mark" aria-hidden="true">*</span>
+                      </label>
                       <input
                         id="personnel-rank-custom"
                         type="text"
                         placeholder="Enter custom rank"
                         value={formData.rank_custom}
                         onChange={handleInputChange}
+                        className={formErrors.rank_custom ? 'accounts-input-error' : ''}
+                        required
+                        aria-invalid={Boolean(formErrors.rank_custom)}
+                        aria-describedby={formErrors.rank_custom ? 'personnel-rank-custom-error' : undefined}
                       />
+                      {formErrors.rank_custom && (
+                        <span id="personnel-rank-custom-error" className="accounts-field-error" role="alert">
+                          {formErrors.rank_custom}
+                        </span>
+                      )}
                     </div>
                   )}
                    <div className="accounts-modal-field">
-                    <label htmlFor="personnel-contact-number">Contact number</label>
+                    <label htmlFor="personnel-contact-number">
+                      Contact Number <span className="accounts-required-mark" aria-hidden="true">*</span>
+                    </label>
                     <input
                       id="personnel-contact-number"
                       type="text"
@@ -2970,21 +3146,41 @@ const permissions = getDefaultPermissions(formData.role);
                       placeholder="09XXXXXXXXX"
                       value={formData.contact_number}
                       onChange={handleInputChange}
+                      className={formErrors.contact_number ? 'accounts-input-error' : ''}
+                      required
+                      aria-invalid={Boolean(formErrors.contact_number)}
+                      aria-describedby={formErrors.contact_number ? 'personnel-contact-number-error' : undefined}
                       maxLength={11}
                       pattern="^09[0-9]{9}$"
                       title="Must start with 09 and be exactly 11 digits"
                     />
+                    {formErrors.contact_number && (
+                      <span id="personnel-contact-number-error" className="accounts-field-error" role="alert">
+                        {formErrors.contact_number}
+                      </span>
+                    )}
                   </div>
 
                   <div className="accounts-modal-field">
-                    <label htmlFor="personnel-password">Temporary Password</label>
+                    <label htmlFor="personnel-password">
+                      Temporary Password <span className="accounts-required-mark" aria-hidden="true">*</span>
+                    </label>
                     <input
                       id="personnel-password"
                       type="password"
                       placeholder="Set initial password"
                       value={formData.password}
                       onChange={handleInputChange}
+                      className={formErrors.password ? 'accounts-input-error' : ''}
+                      required
+                      aria-invalid={Boolean(formErrors.password)}
+                      aria-describedby={formErrors.password ? 'personnel-password-error' : undefined}
                     />
+                    {formErrors.password && (
+                      <span id="personnel-password-error" className="accounts-field-error" role="alert">
+                        {formErrors.password}
+                      </span>
+                    )}
                   </div>
 
                 </div>
@@ -2997,15 +3193,63 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
 
               <div className="accounts-modal-footer">
-                <button className="accounts-modal-draft" onClick={handleCloseModal}>
+                <button type="button" className="accounts-modal-draft" onClick={handleCloseModal}>
                   Cancel
                 </button>
                 <button 
+                  type="button"
                   className="accounts-modal-add"
                   onClick={handleAddPersonnel}
                   disabled={isLoading}
                 >
                   {isLoading ? 'Adding...' : 'Add'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasPendingAddExit && (
+          <div
+            className="accounts-modal-overlay accounts-unsaved-overlay"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="accountsUnsavedTitle"
+            aria-describedby="accountsUnsavedDescription"
+          >
+            <div className="accounts-modal accounts-unsaved-modal">
+              <div className="accounts-modal-header">
+                <h3 id="accountsUnsavedTitle">Discard unsaved personnel details?</h3>
+                <button
+                  type="button"
+                  className="accounts-modal-close"
+                  onClick={handleKeepEditingAddPersonnel}
+                  aria-label="Keep editing personnel details"
+                >
+                  x
+                </button>
+              </div>
+
+              <div className="accounts-modal-body">
+                <p id="accountsUnsavedDescription" className="accounts-unsaved-message">
+                  You have unsaved changes in the new personnel account form. Are you sure you want to discard them and leave?
+                </p>
+              </div>
+
+              <div className="accounts-modal-footer">
+                <button
+                  type="button"
+                  className="accounts-modal-draft"
+                  onClick={handleKeepEditingAddPersonnel}
+                >
+                  Keep Editing
+                </button>
+                <button
+                  type="button"
+                  className="accounts-modal-discard"
+                  onClick={handleDiscardAddPersonnel}
+                >
+                  Discard Changes
                 </button>
               </div>
             </div>

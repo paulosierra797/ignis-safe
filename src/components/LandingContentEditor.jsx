@@ -145,6 +145,7 @@ export default function LandingContentEditor({ embedded = false }) {
   const [saveMessage, setSaveMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ open: false, changes: [], onConfirm: null });
+  const [resetModalOpen, setResetModalOpen] = useState(false);
 
   React.useEffect(() => {
     setDraft(deepClone(content));
@@ -300,13 +301,15 @@ export default function LandingContentEditor({ embedded = false }) {
     setDraft(deepClone(content));
   };
 
-  const handleResetDefaults = async () => {
+  const handleResetDefaults = () => {
     if (saving) {
       return;
     }
+    setResetModalOpen(true);
+  };
 
-    const confirmed = window.confirm('Reset the entire landing page back to the default content? This will overwrite everything currently saved and cannot be undone.');
-    if (!confirmed) {
+  const confirmResetDefaults = async () => {
+    if (saving) {
       return;
     }
 
@@ -322,6 +325,7 @@ export default function LandingContentEditor({ embedded = false }) {
       window.setTimeout(() => setSaveMessage(''), 3000);
     } finally {
       setSaving(false);
+      setResetModalOpen(false);
     }
   };
 
@@ -643,6 +647,36 @@ export default function LandingContentEditor({ embedded = false }) {
                 }}
               >
                 Confirm Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resetModalOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="resetDefaultsTitle" aria-describedby="resetDefaultsMessage">
+          <div className="modal reset-defaults-modal">
+            <div className="reset-defaults-icon" aria-hidden="true">!</div>
+            <h3 id="resetDefaultsTitle" className="reset-defaults-title">Reset Landing Page to Defaults?</h3>
+            <p id="resetDefaultsMessage" className="reset-defaults-message">
+              This will replace all currently saved landing-page content with the default values. This action cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setResetModalOpen(false)}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="save-btn"
+                onClick={confirmResetDefaults}
+                disabled={saving}
+              >
+                {saving ? 'Working...' : 'Reset Defaults'}
               </button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useBlocker } from 'react-router-dom';
+import { FaCheck, FaEye, FaEyeSlash } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { supabase } from "../utils/supabaseClient";
@@ -50,6 +51,33 @@ const EMPTY_PERSONNEL_FORM = {
   contact_number: '',
   password: ''
 };
+const PASSWORD_REQUIREMENTS = [
+  {
+    key: 'length',
+    label: 'At least 8 characters',
+    test: (password) => password.length >= 8
+  },
+  {
+    key: 'uppercase',
+    label: 'At least one uppercase letter',
+    test: (password) => /[A-Z]/.test(password)
+  },
+  {
+    key: 'lowercase',
+    label: 'At least one lowercase letter',
+    test: (password) => /[a-z]/.test(password)
+  },
+  {
+    key: 'number',
+    label: 'At least one number',
+    test: (password) => /\d/.test(password)
+  },
+  {
+    key: 'special',
+    label: 'At least one special character',
+    test: (password) => /[^A-Za-z0-9]/.test(password)
+  }
+];
 
 const toIsoDate = (date) => {
   const year = date.getFullYear();
@@ -243,6 +271,7 @@ export default function Accounts() {
   const [isConfirmActionProcessing, setIsConfirmActionProcessing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formErrors, setFormErrors] = useState({});
+  const [showTemporaryPassword, setShowTemporaryPassword] = useState(false);
   const [leaveMessage, setLeaveMessage] = useState({ type: '', text: '' });
   const [shiftMessage, setShiftMessage] = useState({ type: '', text: '' });
   const [selectedAccount, setSelectedAccount] = useState(null);
@@ -272,6 +301,34 @@ export default function Accounts() {
   const [formData, setFormData] = useState({ ...EMPTY_PERSONNEL_FORM });
   const pendingAddNavigationRef = useRef(null);
   const bypassAddNavigationRef = useRef(false);
+  const passwordRequirementStatus = useMemo(() => {
+    const password = String(formData.password || '');
+    return PASSWORD_REQUIREMENTS.map((requirement) => ({
+      ...requirement,
+      isMet: requirement.test(password)
+    }));
+  }, [formData.password]);
+  const isTemporaryPasswordValid = passwordRequirementStatus.every((requirement) => requirement.isMet);
+  const isAddPersonnelFormValid = useMemo(() => {
+    const firstName = String(formData.first_name || '').trim();
+    const lastName = String(formData.last_name || '').trim();
+    const selectedRank = String(formData.rank || '').trim();
+    const customRank = String(formData.rank_custom || '').trim();
+    const contactNumber = String(formData.contact_number || '').trim();
+
+    return Boolean(
+      firstName &&
+      lastName &&
+      String(formData.email || '').trim() &&
+      formData.role &&
+      selectedRank &&
+      (selectedRank !== 'OTHER' || customRank) &&
+      contactNumberRegex.test(contactNumber) &&
+      validPersonnelNamePattern.test(firstName) &&
+      validPersonnelNamePattern.test(lastName) &&
+      isTemporaryPasswordValid
+    );
+  }, [formData, isTemporaryPasswordValid]);
   const isAddFormDirty = isAddModalOpen && Object.values(formData).some(
     (value) => String(value || '').trim() !== ''
   );
@@ -1101,7 +1158,10 @@ console.log("AUTH USER:", authData);
     }
 
     if (!strongPasswordRegex.test(password)) {
-      setMessage({ type: 'error', text: 'Password must be at least 8 characters with uppercase, lowercase, number, and symbol.' });
+      setFormErrors((prev) => ({
+        ...prev,
+        password: 'Temporary password must meet all requirements.'
+      }));
       return;
     }
 
@@ -1210,6 +1270,7 @@ const permissions = getDefaultPermissions(formData.role);
 
           setFormData({ ...EMPTY_PERSONNEL_FORM });
           setFormErrors({});
+          setShowTemporaryPassword(false);
 
           setTimeout(() => {
             setIsAddModalOpen(false);
@@ -1267,6 +1328,7 @@ const permissions = getDefaultPermissions(formData.role);
       // Reset form
       setFormData({ ...EMPTY_PERSONNEL_FORM });
       setFormErrors({});
+      setShowTemporaryPassword(false);
 
       // Close modal after success
       setTimeout(() => {
@@ -1284,6 +1346,7 @@ const permissions = getDefaultPermissions(formData.role);
   const resetAddPersonnelForm = () => {
     setFormData({ ...EMPTY_PERSONNEL_FORM });
     setFormErrors({});
+    setShowTemporaryPassword(false);
     setMessage({ type: '', text: '' });
   };
 
@@ -3249,22 +3312,40 @@ const permissions = getDefaultPermissions(formData.role);
                     <label htmlFor="personnel-password">
                       Temporary Password <span className="accounts-required-mark" aria-hidden="true">*</span>
                     </label>
-                    <input
-                      id="personnel-password"
-                      type="password"
-                      placeholder="Set initial password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      className={formErrors.password ? 'accounts-input-error' : ''}
-                      required
-                      aria-invalid={Boolean(formErrors.password)}
-                      aria-describedby={formErrors.password ? 'personnel-password-error' : undefined}
-                    />
-                    {formErrors.password && (
-                      <span id="personnel-password-error" className="accounts-field-error" role="alert">
-                        {formErrors.password}
-                      </span>
-                    )}
+                    <div className={`accounts-password-input-wrap${formErrors.password ? ' accounts-input-error' : ''}`}>
+                      <input
+                        id="personnel-password"
+                        type={showTemporaryPassword ? 'text' : 'password'}
+                        placeholder="Set initial password"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        required
+                        aria-invalid={Boolean(formErrors.password)}
+                        aria-describedby="personnel-password-requirements"
+                      />
+                      <button
+                        type="button"
+                        className="accounts-password-toggle"
+                        onClick={() => setShowTemporaryPassword((isVisible) => !isVisible)}
+                        aria-label={showTemporaryPassword ? 'Hide temporary password' : 'Show temporary password'}
+                        aria-pressed={showTemporaryPassword}
+                      >
+                        {showTemporaryPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+                      </button>
+                    </div>
+                    <ul id="personnel-password-requirements" className="accounts-password-requirements" aria-live="polite">
+                      {passwordRequirementStatus.map((requirement) => (
+                        <li
+                          key={requirement.key}
+                          className={requirement.isMet ? 'is-met' : 'is-unmet'}
+                        >
+                          <span className="accounts-password-requirement-icon" aria-hidden="true">
+                            {requirement.isMet ? <FaCheck /> : '-'}
+                          </span>
+                          <span>{requirement.label}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
 
                 </div>
@@ -3284,7 +3365,7 @@ const permissions = getDefaultPermissions(formData.role);
                   type="button"
                   className="accounts-modal-add"
                   onClick={handleAddPersonnel}
-                  disabled={isLoading}
+                  disabled={isLoading || !isAddPersonnelFormValid}
                 >
                   {isLoading ? 'Adding...' : 'Add'}
                 </button>

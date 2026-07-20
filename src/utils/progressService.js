@@ -5,6 +5,17 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const MODULE_DISPLAY_TITLES = {
+  1: 'Module 1 - Fire Extinguisher: Basics, Types, and How to Use',
+  2: 'Module 2 - House Fire: How to Get Out Safely During a Fire',
+  3: 'Module 3 - Electrical Fire: Causes, Safe Actions, and Prevention',
+  4: 'Module 4 - Kitchen Fire: What It Is, Common Types, and What To Do',
+  5: 'Module 5 - Tenement Fire: What It Is, Common Causes, and What To Do',
+};
+
+const getModuleDisplayTitle = (module = {}) =>
+  MODULE_DISPLAY_TITLES[toNumber(module.module_no, -1)] || module.title || `Module ${module.module_no ?? '-'}`;
+
 const round = (value, decimals = 0) => {
   const factor = 10 ** decimals;
   return Math.round((value + Number.EPSILON) * factor) / factor;
@@ -77,7 +88,7 @@ const buildModuleProgress = ({ profileId, module, moduleProgressRow, attemptsFor
   return {
     id: `${profileId}-${module.id}`,
     moduleId: module.id,
-    name: module.title,
+    name: getModuleDisplayTitle(module),
     status,
     progress,
     tests,
@@ -206,7 +217,7 @@ export const getProgressPageData = async () => {
     return {
       data: {
         users: rows,
-        modules: safeModules.map((module) => module.title),
+        modules: safeModules.map((module) => getModuleDisplayTitle(module)),
       },
       error: null,
     };

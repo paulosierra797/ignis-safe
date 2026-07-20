@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import './AssessmentQuestions.css';
@@ -9,7 +10,6 @@ import {
   getQuestionsByAssessment,
   createAssessmentQuestion,
   updateAssessmentQuestion,
- resetAssessmentQuestions,
  deactivateAssessmentQuestions,
   getAssessmentOptionsByQuestionIds,
   syncAssessmentQuestionOptions,
@@ -19,6 +19,28 @@ import {
 import { getLearningMaterialsAdminView } from '../utils/learningMaterialsService';
 
 const AI_OPTION_KEYS = ['A', 'B', 'C', 'D'];
+
+const AutoResizeTextarea = ({ value, onChange, className = '', ...props }) => {
+  const textareaRef = useRef(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={textareaRef}
+      className={`assessment-auto-textarea ${className}`.trim()}
+      value={value || ''}
+      onChange={onChange}
+      {...props}
+    />
+  );
+};
 
 const mergeQuestionsWithOptions = (questionRows = [], optionRows = []) => {
   const optionsByQuestionId = optionRows.reduce((accumulator, option) => {
@@ -92,8 +114,39 @@ export default function AssessmentQuestions() {
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [savingRowIds, setSavingRowIds] = useState({});
+  const [dirtyQuestionIds, setDirtyQuestionIds] = useState(() => new Set());
+  const [isSavingAll, setIsSavingAll] = useState(false);
+  const [pendingManualNavigation, setPendingManualNavigation] = useState(null);
+  const [pendingAssessmentId, setPendingAssessmentId] = useState('');
   const [pendingDeleteQuestion, setPendingDeleteQuestion] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const bypassNavigationRef = useRef(false);
+
+  const isDirty = dirtyQuestionIds.size > 0;
+  const shouldBlockNavigation = useCallback(({ currentLocation, nextLocation }) => {
+    if (bypassNavigationRef.current) {
+      bypassNavigationRef.current = false;
+      return false;
+    }
+
+    const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
+    const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
+    return isDirty && currentPath !== nextPath;
+  }, [isDirty]);
+  const blocker = useBlocker(shouldBlockNavigation);
+  const hasPendingExit = Boolean(
+    pendingManualNavigation
+    || pendingAssessmentId
+    || blocker.state === 'blocked'
+  );
+
+  const markQuestionDirty = useCallback((questionId) => {
+    setDirtyQuestionIds((current) => {
+      const next = new Set(current);
+      next.add(questionId);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     const loadAssessments = async () => {
@@ -122,6 +175,7 @@ export default function AssessmentQuestions() {
     const loadQuestions = async () => {
       if (!selectedAssessmentId) {
         setQuestions([]);
+        setDirtyQuestionIds(new Set());
         return;
       }
 
@@ -144,6 +198,7 @@ export default function AssessmentQuestions() {
 
       setIsLoadingQuestions(false);
       setQuestions(mergeQuestionsWithOptions(data || [], optionRows || []));
+      setDirtyQuestionIds(new Set());
     };
 
     loadQuestions();
@@ -176,13 +231,49 @@ export default function AssessmentQuestions() {
     });
   }, [questions, searchQuery]);
 
+  useEffect(() => {
+    if (!isDirty) return undefined;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  const handleAssessmentChange = (event) => {
+    const nextAssessmentId = event.target.value;
+    if (!nextAssessmentId || nextAssessmentId === selectedAssessmentId) return;
+
+    if (isDirty) {
+      setPendingAssessmentId(nextAssessmentId);
+      return;
+    }
+
+    setSelectedAssessmentId(nextAssessmentId);
+  };
+
+  const handleHeaderNavigationRequest = (navigation) => {
+    if (!isDirty) {
+      navigation.action();
+      return;
+    }
+
+    if (hasPendingExit) return;
+    setPendingManualNavigation(navigation);
+  };
+
   const setRowValue = (id, field, value) => {
+    markQuestionDirty(id);
     setQuestions((prev) => prev.map((item) => (
       item.id === id ? { ...item, [field]: value } : item
     )));
   };
 
   const setOptionValue = (questionId, optionKey, field, value) => {
+    markQuestionDirty(questionId);
     setQuestions((prev) => prev.map((question) => {
       if (question.id !== questionId) {
         return question;
@@ -198,6 +289,7 @@ export default function AssessmentQuestions() {
   };
 
   const setCorrectOption = (questionId, optionKey) => {
+    markQuestionDirty(questionId);
     setQuestions((prev) => prev.map((question) => {
       if (question.id !== questionId) {
         return question;
@@ -385,6 +477,7 @@ export default function AssessmentQuestions() {
       }
 
       setQuestions(createdQuestions.sort((a, b) => a.question_no - b.question_no));
+      setDirtyQuestionIds(new Set());
       setMessage({
         type: 'success',
         text: `Generated ${createdQuestions.length} question${createdQuestions.length === 1 ? '' : 's'} from Module ${moduleNo}. Review and save the generated rows.`,
@@ -407,11 +500,11 @@ export default function AssessmentQuestions() {
     }
   };
 
-  const handleSaveQuestion = async (question) => {
-    if (!question?.id) return;
+  const handleSaveQuestion = async (question, { showSuccessMessage = true } = {}) => {
+    if (!question?.id) return false;
     if (!question.prompt.trim()) {
       setMessage({ type: 'error', text: `Question ${question.question_no}: prompt is required.` });
-      return;
+      return false;
     }
 
     const normalizedOptions = (question.options || [])
@@ -429,12 +522,12 @@ export default function AssessmentQuestions() {
 
     if (filledOptions.length < 2) {
       setMessage({ type: 'error', text: `Question ${question.question_no}: add at least two choices.` });
-      return;
+      return false;
     }
 
     if (correctOptions.length !== 1) {
       setMessage({ type: 'error', text: `Question ${question.question_no}: select exactly one correct answer.` });
-      return;
+      return false;
     }
 
     setRowSaving(question.id, true);
@@ -454,6 +547,8 @@ export default function AssessmentQuestions() {
 
     if (error) {
       setMessage({ type: 'error', text: `Unable to save question ${question.question_no}: ${error}` });
+      setRowSaving(question.id, false);
+      return false;
     } else {
       const { error: optionsError, data: savedOptions } = await syncAssessmentQuestionOptions(data.id, normalizedOptions);
 
@@ -463,13 +558,20 @@ export default function AssessmentQuestions() {
           .map((item) => (item.id === data.id ? { ...data, question_type: 'multiple_choice', options: normalizedOptions } : item))
           .sort((a, b) => a.question_no - b.question_no));
         setRowSaving(question.id, false);
-        return;
+        return false;
       }
 
       setQuestions((prev) => prev
         .map((item) => (item.id === data.id ? { ...data, question_type: 'multiple_choice', options: savedOptions || normalizedOptions } : item))
         .sort((a, b) => a.question_no - b.question_no));
-      setMessage({ type: 'success', text: `Question ${data.question_no} saved.` });
+      setDirtyQuestionIds((current) => {
+        const next = new Set(current);
+        next.delete(question.id);
+        return next;
+      });
+      if (showSuccessMessage) {
+        setMessage({ type: 'success', text: `Question ${data.question_no} saved.` });
+      }
 
       await logAdminActivity({
         actorId: currentUser?.admin_id || null,
@@ -486,6 +588,87 @@ export default function AssessmentQuestions() {
     }
 
     setRowSaving(question.id, false);
+    return true;
+  };
+
+  const handleSaveAllQuestions = async ({ continueAfterSave = false } = {}) => {
+    if (isSavingAll) return false;
+
+    const questionsToSave = questions.filter((question) => dirtyQuestionIds.has(question.id));
+    if (questionsToSave.length === 0) return true;
+
+    setIsSavingAll(true);
+    setMessage({ type: '', text: '' });
+
+    for (const question of questionsToSave) {
+      const saved = await handleSaveQuestion(question, { showSuccessMessage: false });
+      if (!saved) {
+        setIsSavingAll(false);
+        return false;
+      }
+    }
+
+    setIsSavingAll(false);
+    if (!continueAfterSave) {
+      setMessage({
+        type: 'success',
+        text: `${questionsToSave.length} question${questionsToSave.length === 1 ? '' : 's'} saved successfully.`
+      });
+    }
+    return true;
+  };
+
+  const runManualNavigation = (navigation) => {
+    bypassNavigationRef.current = true;
+
+    try {
+      const navigationResult = navigation.action();
+      Promise.resolve(navigationResult).finally(() => {
+        bypassNavigationRef.current = false;
+      });
+    } catch (navigationError) {
+      bypassNavigationRef.current = false;
+      throw navigationError;
+    }
+  };
+
+  const resumePendingExit = () => {
+    const manualNavigation = pendingManualNavigation;
+    const nextAssessmentId = pendingAssessmentId;
+    setPendingManualNavigation(null);
+    setPendingAssessmentId('');
+
+    if (nextAssessmentId) {
+      if (blocker.state === 'blocked') blocker.reset();
+      setSelectedAssessmentId(nextAssessmentId);
+      return;
+    }
+
+    if (manualNavigation) {
+      if (blocker.state === 'blocked') blocker.reset();
+      runManualNavigation(manualNavigation);
+      return;
+    }
+
+    if (blocker.state === 'blocked') blocker.proceed();
+  };
+
+  const handleCancelExit = () => {
+    if (isSavingAll) return;
+    setPendingManualNavigation(null);
+    setPendingAssessmentId('');
+    if (blocker.state === 'blocked') blocker.reset();
+  };
+
+  const handleLeaveWithoutSaving = () => {
+    if (isSavingAll) return;
+    setDirtyQuestionIds(new Set());
+    resumePendingExit();
+  };
+
+  const handleSaveAndContinue = async () => {
+    const saved = await handleSaveAllQuestions({ continueAfterSave: true });
+    if (saved) resumePendingExit();
   };
 
   const handleDeleteQuestion = async (question) => {
@@ -510,9 +693,9 @@ export default function AssessmentQuestions() {
     setRowSaving(question.id, true);
     setMessage({ type: '', text: '' });
 
-   await updateAssessmentQuestion(question.id, {
-  is_active: false
-});
+    const { error } = await updateAssessmentQuestion(question.id, {
+      is_active: false
+    });
 
     if (error) {
       setMessage({ type: 'error', text: `Unable to delete question ${question.question_no}: ${error}` });
@@ -521,6 +704,11 @@ export default function AssessmentQuestions() {
     }
 
     setQuestions((prev) => prev.filter((item) => item.id !== question.id));
+    setDirtyQuestionIds((current) => {
+      const next = new Set(current);
+      next.delete(question.id);
+      return next;
+    });
     setMessage({ type: 'success', text: `Question ${question.question_no} deleted.` });
 
     await logAdminActivity({
@@ -549,6 +737,7 @@ export default function AssessmentQuestions() {
           title="Assessment Questions"
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
+          onNavigationRequest={handleHeaderNavigationRequest}
         />
 
         <div className="assessment-questions-toolbar">
@@ -556,7 +745,7 @@ export default function AssessmentQuestions() {
             <label>Select Assessment</label>
             <select
               value={selectedAssessmentId}
-              onChange={(event) => setSelectedAssessmentId(event.target.value)}
+              onChange={handleAssessmentChange}
               disabled={isLoadingAssessments || displayAssessments.length === 0}
             >
               {isLoadingAssessments ? (
@@ -598,63 +787,129 @@ export default function AssessmentQuestions() {
           </div>
         )}
 
-        <div className="assessment-table-card">
-          <table className="assessment-table">
-            <colgroup>
-              <col style={{ width: '64px' }} />
-              <col style={{ width: '130px' }} />
-              <col style={{ width: '320px' }} />
-              <col style={{ width: '190px' }} />
-              <col style={{ width: '190px' }} />
-              <col style={{ width: '190px' }} />
-              <col style={{ width: '190px' }} />
-              <col style={{ width: '70px' }} />
-              <col style={{ width: '110px' }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th>No.</th>
-                <th>Question Type</th>
-                <th>Choices / Correct Answer</th>
-                <th>Prompt (EN)</th>
-                <th>Prompt (TL)</th>
-                <th>Explanation (EN)</th>
-                <th>Explanation (TL)</th>
-                <th>Active</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoadingQuestions ? (
-                <tr>
-                  <td colSpan="9" className="assessment-empty-row">Loading questions...</td>
-                </tr>
-              ) : filteredQuestions.length === 0 ? (
-                <tr>
-                  <td colSpan="9" className="assessment-empty-row">No questions found for this assessment.</td>
-                </tr>
-              ) : filteredQuestions.map((question) => {
-                const isSaving = Boolean(savingRowIds[question.id]);
-                const questionOptions = question.options || [];
+        <div className="assessment-editor-bar">
+          <div className="assessment-editor-summary">
+            <strong>{filteredQuestions.length}</strong>
+            <span>{filteredQuestions.length === 1 ? 'question' : 'questions'} in this view</span>
+            {isDirty && (
+              <span className="assessment-unsaved-count">
+                {dirtyQuestionIds.size} unsaved
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            className="assessment-save-all"
+            onClick={() => handleSaveAllQuestions()}
+            disabled={!isDirty || isSavingAll}
+          >
+            {isSavingAll ? 'Saving all...' : 'Save all changes'}
+          </button>
+        </div>
 
-                return (
-                  <tr key={question.id}>
-                    <td>
+        <div className="assessment-question-list">
+          {isLoadingQuestions ? (
+            <div className="assessment-empty-state">Loading questions...</div>
+          ) : filteredQuestions.length === 0 ? (
+            <div className="assessment-empty-state">No questions found for this assessment.</div>
+          ) : filteredQuestions.map((question) => {
+            const isSaving = Boolean(savingRowIds[question.id]);
+            const isQuestionDirty = dirtyQuestionIds.has(question.id);
+            const questionOptions = question.options || [];
+
+            return (
+              <article
+                key={question.id}
+                className={`assessment-question-card${isQuestionDirty ? ' is-dirty' : ''}`}
+              >
+                <header className="assessment-question-header">
+                  <div className="assessment-question-meta">
+                    <label className="assessment-number-field">
+                      <span>Question</span>
                       <input
                         type="number"
                         min="1"
                         className="assessment-no-input"
                         value={question.question_no}
                         onChange={(event) => setRowValue(question.id, 'question_no', Number(event.target.value || 0))}
+                        aria-label="Question number"
                       />
-                    </td>
-                    <td>
-                      <span className="assessment-question-type-label">Multiple Choice</span>
-                    </td>
-                    <td>
-                      <div className="assessment-options-grid">
-                        {questionOptions.map((option) => (
-                          <div key={option.option_key} className="assessment-option-row">
+                    </label>
+                    <span className="assessment-question-type-label">Multiple Choice</span>
+                    <label className="assessment-active-status">
+                      <input type="checkbox" checked={Boolean(question.is_active)} disabled />
+                      <span>{question.is_active ? 'Active' : 'Inactive'}</span>
+                    </label>
+                    {isQuestionDirty && <span className="assessment-dirty-badge">Unsaved changes</span>}
+                  </div>
+
+                  <div className="assessment-actions">
+                    <button
+                      type="button"
+                      className="assessment-save"
+                      onClick={() => handleSaveQuestion(question)}
+                      disabled={isSaving || !isQuestionDirty}
+                    >
+                      {isSaving ? 'Saving...' : 'Save question'}
+                    </button>
+                    <button
+                      type="button"
+                      className="assessment-delete"
+                      onClick={() => handleDeleteQuestion(question)}
+                      disabled={isSaving}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </header>
+
+                <div className="assessment-question-body">
+                  <section className="assessment-edit-section">
+                    <div className="assessment-section-heading">
+                      <span className="assessment-section-number">1</span>
+                      <div>
+                        <h3>Question prompt</h3>
+                        <p>The question shown to personnel during the assessment.</p>
+                      </div>
+                    </div>
+                    <div className="assessment-language-grid">
+                      <label className="assessment-field">
+                        <span>English</span>
+                        <AutoResizeTextarea
+                          value={question.prompt}
+                          onChange={(event) => setRowValue(question.id, 'prompt', event.target.value)}
+                          rows={3}
+                          aria-label={`Question ${question.question_no} prompt in English`}
+                        />
+                      </label>
+                      <label className="assessment-field">
+                        <span>Tagalog</span>
+                        <AutoResizeTextarea
+                          value={question.prompt_tl}
+                          onChange={(event) => setRowValue(question.id, 'prompt_tl', event.target.value)}
+                          rows={3}
+                          aria-label={`Question ${question.question_no} prompt in Tagalog`}
+                        />
+                      </label>
+                    </div>
+                  </section>
+
+                  <section className="assessment-edit-section">
+                    <div className="assessment-section-heading">
+                      <span className="assessment-section-number">2</span>
+                      <div>
+                        <h3>Choices and correct answer</h3>
+                        <p>Select one correct answer and review both language versions.</p>
+                      </div>
+                    </div>
+                    <div className="assessment-options-grid">
+                      {questionOptions.map((option) => (
+                        <div
+                          key={option.option_key}
+                          className={`assessment-option-row${option.is_correct ? ' is-correct' : ''}`}
+                        >
+                          <div className="assessment-option-heading">
+                            <span className="assessment-option-key">{option.option_key}</span>
                             <label className="assessment-option-correct">
                               <input
                                 type="radio"
@@ -662,87 +917,69 @@ export default function AssessmentQuestions() {
                                 checked={Boolean(option.is_correct)}
                                 onChange={() => setCorrectOption(question.id, option.option_key)}
                               />
-                              Correct
+                              Correct answer
                             </label>
-                            <div className="assessment-option-fields">
-                              <div className="assessment-option-key">{option.option_key}</div>
-                              <input
-                                type="text"
+                          </div>
+                          <div className="assessment-language-grid assessment-option-language-grid">
+                            <label className="assessment-field">
+                              <span>English</span>
+                              <AutoResizeTextarea
                                 value={option.option_text}
                                 onChange={(event) => setOptionValue(question.id, option.option_key, 'option_text', event.target.value)}
+                                rows={1}
                                 placeholder={`Option ${option.option_key}`}
+                                aria-label={`Option ${option.option_key} in English`}
                               />
-                              <input
-                                type="text"
+                            </label>
+                            <label className="assessment-field">
+                              <span>Tagalog</span>
+                              <AutoResizeTextarea
                                 value={option.option_text_tl}
                                 onChange={(event) => setOptionValue(question.id, option.option_key, 'option_text_tl', event.target.value)}
-                                placeholder={`Option ${option.option_key} (TL)`}
+                                rows={1}
+                                placeholder={`Option ${option.option_key} in Tagalog`}
+                                aria-label={`Option ${option.option_key} in Tagalog`}
                               />
-                            </div>
+                            </label>
                           </div>
-                        ))}
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="assessment-edit-section">
+                    <div className="assessment-section-heading">
+                      <span className="assessment-section-number">3</span>
+                      <div>
+                        <h3>Answer explanation</h3>
+                        <p>The explanation displayed after answering the question.</p>
                       </div>
-                    </td>
-                    <td>
-                      <textarea
-                        value={question.prompt}
-                        onChange={(event) => setRowValue(question.id, 'prompt', event.target.value)}
-                        rows={3}
-                      />
-                    </td>
-                    <td>
-                      <textarea
-                        value={question.prompt_tl}
-                        onChange={(event) => setRowValue(question.id, 'prompt_tl', event.target.value)}
-                        rows={3}
-                      />
-                    </td>
-                    <td>
-                      <textarea
-                        value={question.explanation}
-                        onChange={(event) => setRowValue(question.id, 'explanation', event.target.value)}
-                        rows={3}
-                      />
-                    </td>
-                    <td>
-                      <textarea
-                        value={question.explanation_tl}
-                        onChange={(event) => setRowValue(question.id, 'explanation_tl', event.target.value)}
-                        rows={3}
-                      />
-                    </td>
-                    <td className="assessment-active-cell">
-                      <input
-                        type="checkbox"
-                        checked={question.is_active}
-                        onChange={(event) => setRowValue(question.id, 'is_active', event.target.checked)}
-                      disabled/>
-                    </td>
-                    <td>
-                      <div className="assessment-actions">
-                        <button
-                          type="button"
-                          className="assessment-save"
-                          onClick={() => handleSaveQuestion(question)}
-                          disabled={isSaving}
-                        >
-                          {isSaving ? 'Saving...' : 'Save'}
-                        </button>
-                        <button
-                          type="button"
-                          className="assessment-delete"
-                          onClick={() => handleDeleteQuestion(question)}
-                          disabled={isSaving}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </div>
+                    <div className="assessment-language-grid">
+                      <label className="assessment-field">
+                        <span>English</span>
+                        <AutoResizeTextarea
+                          value={question.explanation}
+                          onChange={(event) => setRowValue(question.id, 'explanation', event.target.value)}
+                          rows={3}
+                          aria-label={`Question ${question.question_no} explanation in English`}
+                        />
+                      </label>
+                      <label className="assessment-field">
+                        <span>Tagalog</span>
+                        <AutoResizeTextarea
+                          value={question.explanation_tl}
+                          onChange={(event) => setRowValue(question.id, 'explanation_tl', event.target.value)}
+                          rows={3}
+                          aria-label={`Question ${question.question_no} explanation in Tagalog`}
+                        />
+                      </label>
+                    </div>
+                  </section>
+                </div>
+              </article>
+            );
+          })}
         </div>
 
         {pendingDeleteQuestion && (
@@ -766,6 +1003,51 @@ export default function AssessmentQuestions() {
                   disabled={Boolean(savingRowIds[pendingDeleteQuestion.id])}
                 >
                   {savingRowIds[pendingDeleteQuestion.id] ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasPendingExit && !pendingDeleteQuestion && (
+          <div
+            className="assessment-modal-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="assessment-unsaved-title"
+            aria-describedby="assessment-unsaved-description"
+          >
+            <div className="assessment-modal-box assessment-unsaved-modal">
+              <div className="assessment-unsaved-icon" aria-hidden="true">!</div>
+              <h3 id="assessment-unsaved-title">Unsaved assessment changes</h3>
+              <p id="assessment-unsaved-description">
+                You have {dirtyQuestionIds.size} unsaved question{dirtyQuestionIds.size === 1 ? '' : 's'}.
+                Save your changes before leaving, or discard them and continue.
+              </p>
+              <div className="assessment-modal-actions assessment-unsaved-actions">
+                <button
+                  type="button"
+                  className="assessment-modal-save"
+                  onClick={handleSaveAndContinue}
+                  disabled={isSavingAll}
+                >
+                  {isSavingAll ? 'Saving...' : 'Save and continue'}
+                </button>
+                <button
+                  type="button"
+                  className="assessment-modal-discard"
+                  onClick={handleLeaveWithoutSaving}
+                  disabled={isSavingAll}
+                >
+                  Leave without saving
+                </button>
+                <button
+                  type="button"
+                  className="assessment-modal-cancel"
+                  onClick={handleCancelExit}
+                  disabled={isSavingAll}
+                >
+                  Cancel
                 </button>
               </div>
             </div>

@@ -1,8 +1,43 @@
-import React, { useMemo, useState } from 'react';
+import React, { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { useLandingContent } from '../context/LandingContentContext';
 import './LandingContentEditor.css';
+
+const LANDING_DRAFT_STORAGE_KEY = 'ignis-safe:landing-draft';
+
+const isBrowserStorageAvailable = () => typeof window !== 'undefined' && typeof sessionStorage !== 'undefined';
+
+const readLandingDraft = () => {
+  if (!isBrowserStorageAvailable()) return null;
+
+  try {
+    const raw = sessionStorage.getItem(LANDING_DRAFT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeLandingDraft = (draft) => {
+  if (!isBrowserStorageAvailable()) return;
+
+  try {
+    sessionStorage.setItem(LANDING_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  } catch {
+    // Ignore storage write failures (e.g. quota exceeded, private browsing).
+  }
+};
+
+const clearLandingDraft = () => {
+  if (!isBrowserStorageAvailable()) return;
+  sessionStorage.removeItem(LANDING_DRAFT_STORAGE_KEY);
+};
+
+const isValidLandingDraftShape = (value) => Boolean(
+  value && typeof value === 'object' &&
+  value.hero && value.about && value.contact && value.process && value.faq
+);
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
 const toPhoneHref = (value) => `tel:${String(value || '').replace(/[^\d+]/g, '')}`;
@@ -138,19 +173,48 @@ const GroupCard = ({ title, description, children }) => (
   </section>
 );
 
-export default function LandingContentEditor({ embedded = false }) {
+const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded = false, onDirtyChange }, ref) {
   const [searchQuery, setSearchQuery] = useState('');
   const { content, setContent, resetContent, defaults, loadingContent } = useLandingContent();
-  const [draft, setDraft] = useState(() => deepClone(content));
+  const [draft, setDraft] = useState(() => {
+    const storedDraft = readLandingDraft();
+    return isValidLandingDraftShape(storedDraft) ? storedDraft : deepClone(content);
+  });
   const [saveMessage, setSaveMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ open: false, changes: [], onConfirm: null });
+  const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [discardModalOpen, setDiscardModalOpen] = useState(false);
+  const isFirstContentSync = useRef(true);
 
   React.useEffect(() => {
+    if (isFirstContentSync.current) {
+      isFirstContentSync.current = false;
+      return;
+    }
     setDraft(deepClone(content));
   }, [content]);
 
   const hasChanges = useMemo(() => JSON.stringify(draft) !== JSON.stringify(content), [draft, content]);
+
+  React.useEffect(() => {
+    if (hasChanges) {
+      writeLandingDraft(draft);
+    } else {
+      clearLandingDraft();
+    }
+  }, [hasChanges, draft]);
+
+  React.useEffect(() => {
+    onDirtyChange?.(hasChanges);
+  }, [hasChanges, onDirtyChange]);
+
+  useImperativeHandle(ref, () => ({
+    discardUnsavedChanges: () => {
+      clearLandingDraft();
+      setDraft(deepClone(content));
+    }
+  }), [content]);
 
   const updateField = (section, field, value) => {
     setDraft((prev) => ({
@@ -293,20 +357,23 @@ export default function LandingContentEditor({ embedded = false }) {
     if (!hasChanges) {
       return;
     }
-    const confirmed = window.confirm('Discard your unsaved changes? This cannot be undone.');
-    if (!confirmed) {
-      return;
-    }
-    setDraft(deepClone(content));
+    setDiscardModalOpen(true);
   };
 
-  const handleResetDefaults = async () => {
+  const confirmDiscard = () => {
+    setDraft(deepClone(content));
+    setDiscardModalOpen(false);
+  };
+
+  const handleResetDefaults = () => {
     if (saving) {
       return;
     }
+    setResetModalOpen(true);
+  };
 
-    const confirmed = window.confirm('Reset the entire landing page back to the default content? This will overwrite everything currently saved and cannot be undone.');
-    if (!confirmed) {
+  const confirmResetDefaults = async () => {
+    if (saving) {
       return;
     }
 
@@ -322,6 +389,7 @@ export default function LandingContentEditor({ embedded = false }) {
       window.setTimeout(() => setSaveMessage(''), 3000);
     } finally {
       setSaving(false);
+      setResetModalOpen(false);
     }
   };
 
@@ -648,6 +716,64 @@ export default function LandingContentEditor({ embedded = false }) {
           </div>
         </div>
       )}
+
+      {resetModalOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="resetDefaultsTitle" aria-describedby="resetDefaultsMessage">
+          <div className="modal reset-defaults-modal">
+            <div className="reset-defaults-icon" aria-hidden="true">!</div>
+            <h3 id="resetDefaultsTitle" className="reset-defaults-title">Reset Landing Page to Defaults?</h3>
+            <p id="resetDefaultsMessage" className="reset-defaults-message">
+              This will replace all currently saved landing-page content with the default values. This action cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setResetModalOpen(false)}
+                disabled={saving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="save-btn"
+                onClick={confirmResetDefaults}
+                disabled={saving}
+              >
+                {saving ? 'Working...' : 'Reset Defaults'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {discardModalOpen && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="discardChangesTitle" aria-describedby="discardChangesMessage">
+          <div className="modal reset-defaults-modal">
+            <div className="reset-defaults-icon" aria-hidden="true">!</div>
+            <h3 id="discardChangesTitle" className="reset-defaults-title">Discard Unsaved Changes?</h3>
+            <p id="discardChangesMessage" className="reset-defaults-message">
+              Your unsaved landing-page changes will be removed and the last saved content will be restored. This action cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setDiscardModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="save-btn"
+                onClick={confirmDiscard}
+              >
+                Discard Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -664,4 +790,6 @@ export default function LandingContentEditor({ embedded = false }) {
       </div>
     </div>
   );
-}
+});
+
+export default LandingContentEditor;

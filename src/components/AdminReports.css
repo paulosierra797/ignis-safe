@@ -19,6 +19,7 @@
 
 @media (max-width: 900px) {
   .admin-reports-main {
+    margin-left: 0;
     padding: 1rem;
   }
 

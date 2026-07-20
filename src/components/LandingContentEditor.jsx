@@ -10,6 +10,109 @@ const toLines = (value) => (Array.isArray(value) ? value : [String(value || '')]
 const fromLines = (value) => String(value || '').split('\n').map((line) => line.trim()).filter(Boolean);
 const mobileNumberRegex = /^09\d{9}$/;
 
+const displayValue = (value) => {
+  const text = Array.isArray(value) ? value.join(' | ') : String(value ?? '').trim();
+  return text || '—';
+};
+
+const stepsText = (steps) => (steps || []).map((step) => step.text).join(' | ');
+
+const LANDING_FIELD_MAP = [
+  { label: 'Main Page Title', get: (c) => c.hero.title },
+  { label: 'Welcome Message', get: (c) => c.hero.lead },
+  { label: 'Supporting Description', get: (c) => c.hero.description },
+  { label: 'About Us Section Heading', get: (c) => c.about.title },
+  { label: 'About Us Description', get: (c) => c.about.intro },
+  { label: 'Mission Title', get: (c) => c.about.missionTitle },
+  { label: 'Mission Description', get: (c) => c.about.missionText },
+  { label: 'Vision Title', get: (c) => c.about.visionTitle },
+  { label: 'Vision Description', get: (c) => c.about.visionText },
+  { label: 'Contact Section Heading', get: (c) => c.contact.title },
+  { label: 'Emergency Hotline Title', get: (c) => c.contact.emergencyTitle },
+  { label: 'Landline Number 1', get: (c) => c.contact.landlinePrimary },
+  { label: 'Landline Number 2', get: (c) => c.contact.landlineSecondary },
+  { label: 'Mobile Number', get: (c) => c.contact.mobile },
+  { label: 'Email Address', get: (c) => c.contact.email },
+  { label: 'Facebook Page Name', get: (c) => c.contact.facebookLabel },
+  { label: 'Facebook Page Link', get: (c) => c.contact.facebookUrl },
+];
+
+const getChangedFields = (oldContent, newContent) => {
+  const changes = [];
+
+  LANDING_FIELD_MAP.forEach(({ label, get }) => {
+    const oldValue = get(oldContent);
+    const newValue = get(newContent);
+    if (String(oldValue ?? '') !== String(newValue ?? '')) {
+      changes.push({ label, oldValue: displayValue(oldValue), newValue: displayValue(newValue) });
+    }
+  });
+
+  ['english', 'tagalog'].forEach((locale) => {
+    const localeLabel = locale === 'english' ? 'English' : 'Tagalog';
+
+    const oldTitle = oldContent.process[locale].title;
+    const newTitle = newContent.process[locale].title;
+    if (String(oldTitle ?? '') !== String(newTitle ?? '')) {
+      changes.push({ label: `Process Section (${localeLabel}) Title`, oldValue: displayValue(oldTitle), newValue: displayValue(newTitle) });
+    }
+
+    const oldSections = oldContent.process[locale].processSteps || [];
+    const newSections = newContent.process[locale].processSteps || [];
+    newSections.forEach((section, index) => {
+      const oldSection = oldSections[index];
+      if (!oldSection) return;
+      if (String(oldSection.title ?? '') !== String(section.title ?? '')) {
+        changes.push({
+          label: `Process Section (${localeLabel}) – Column ${index + 1} Title`,
+          oldValue: displayValue(oldSection.title),
+          newValue: displayValue(section.title),
+        });
+      }
+      const oldSteps = stepsText(oldSection.steps);
+      const newSteps = stepsText(section.steps);
+      if (oldSteps !== newSteps) {
+        changes.push({
+          label: `Process Section (${localeLabel}) – Column ${index + 1} Steps`,
+          oldValue: displayValue(oldSteps),
+          newValue: displayValue(newSteps),
+        });
+      }
+    });
+
+    const oldFaqTitle = oldContent.faq[locale].title;
+    const newFaqTitle = newContent.faq[locale].title;
+    if (String(oldFaqTitle ?? '') !== String(newFaqTitle ?? '')) {
+      changes.push({ label: `FAQ Section (${localeLabel}) Title`, oldValue: displayValue(oldFaqTitle), newValue: displayValue(newFaqTitle) });
+    }
+
+    const oldFaqs = oldContent.faq[locale].faqs || [];
+    const newFaqs = newContent.faq[locale].faqs || [];
+    newFaqs.forEach((faqItem, index) => {
+      const oldFaqItem = oldFaqs[index];
+      if (!oldFaqItem) return;
+      if (String(oldFaqItem.question ?? '') !== String(faqItem.question ?? '')) {
+        changes.push({
+          label: `FAQ (${localeLabel}) – Question ${index + 1}`,
+          oldValue: displayValue(oldFaqItem.question),
+          newValue: displayValue(faqItem.question),
+        });
+      }
+      const oldAnswer = displayValue(oldFaqItem.answer);
+      const newAnswer = displayValue(faqItem.answer);
+      if (oldAnswer !== newAnswer) {
+        changes.push({
+          label: `FAQ (${localeLabel}) – Answer ${index + 1}`,
+          oldValue: oldAnswer,
+          newValue: newAnswer,
+        });
+      }
+    });
+  });
+
+  return changes;
+};
+
 const Field = ({ label, helper, children }) => (
   <label className="editor-field">
     <span className="editor-field-label">{label}</span>
@@ -41,6 +144,7 @@ export default function LandingContentEditor({ embedded = false }) {
   const [draft, setDraft] = useState(() => deepClone(content));
   const [saveMessage, setSaveMessage] = useState('');
   const [saving, setSaving] = useState(false);
+  const [confirmModal, setConfirmModal] = useState({ open: false, changes: [], onConfirm: null });
 
   React.useEffect(() => {
     setDraft(deepClone(content));
@@ -158,6 +262,19 @@ export default function LandingContentEditor({ embedded = false }) {
       },
     };
 
+    const changes = getChangedFields(content, nextDraft);
+    if (changes.length === 0) {
+      return;
+    }
+
+    setConfirmModal({
+      open: true,
+      changes,
+      onConfirm: () => performSave(nextDraft),
+    });
+  };
+
+  const performSave = async (nextDraft) => {
     setSaving(true);
     try {
       const { error } = await setContent(nextDraft);
@@ -495,6 +612,42 @@ export default function LandingContentEditor({ embedded = false }) {
         <p><strong>{draft.faq.english.title}</strong></p>
         <p>{draft.faq.english.faqs[0]?.question}</p>
       </section>
+
+      {confirmModal.open && (
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal confirm-changes-modal">
+            <h3>Confirm Changes</h3>
+            <p>Are you sure you want to save these changes?</p>
+            <ul className="confirm-changes-list">
+              {confirmModal.changes.map((change) => (
+                <li key={change.label}>
+                  <strong>{change.label}:</strong> {change.oldValue} → {change.newValue}
+                </li>
+              ))}
+            </ul>
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setConfirmModal({ open: false, changes: [], onConfirm: null })}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="save-btn"
+                onClick={() => {
+                  const { onConfirm } = confirmModal;
+                  setConfirmModal({ open: false, changes: [], onConfirm: null });
+                  onConfirm?.();
+                }}
+              >
+                Confirm Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 

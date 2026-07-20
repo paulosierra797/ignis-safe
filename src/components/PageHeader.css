@@ -224,9 +224,11 @@
 }
 
 /*
-  Mobile header: hamburger + page title + avatar-only, always on one row.
-  900px matches the Sidebar's off-canvas breakpoint (see Dashboard.css) so
-  the fixed hamburger button appears at the same point the drawer takes over.
+  Mobile header: hamburger + page title + avatar-only, always on one row,
+  all three sitting inside the same white header card. 900px matches the
+  Sidebar's off-canvas breakpoint (see Dashboard.css). The hamburger keeps
+  an elevated z-index (in-flow, not fixed) so it stays clickable above the
+  open drawer for toggling it closed again.
 */
 @media (max-width: 900px) {
   .page-header {
@@ -236,7 +238,9 @@
     flex-wrap: nowrap;
     gap: 0.6rem;
     margin: 0 0 1.25rem 0;
-    padding: 0.85rem 0;
+    padding: 0.85rem 1rem;
+    border-radius: 1rem;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
   }
 
   .page-header--compact {
@@ -248,7 +252,6 @@
     flex: 1 1 auto;
     min-width: 0;
     gap: 0.75rem;
-    padding-left: 3.25rem;
   }
 
   .page-title,
@@ -261,9 +264,8 @@
 
   .sidebar-toggle-btn {
     display: inline-flex;
-    position: fixed;
-    top: 0.85rem;
-    left: 0.85rem;
+    flex: 0 0 auto;
+    position: relative;
     z-index: 1700;
   }
 
@@ -312,6 +314,20 @@
   .page-user-avatar {
     width: 38px;
     height: 38px;
+    box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.28), 0 2px 6px rgba(15, 23, 42, 0.14);
+    transition: box-shadow 0.2s ease;
+  }
+
+  .page-user:active .page-user-avatar {
+    box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.4), 0 2px 6px rgba(15, 23, 42, 0.18);
+  }
+
+  .page-header--personnel .page-user-avatar {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.22), 0 2px 6px rgba(15, 23, 42, 0.14);
+  }
+
+  .page-header--personnel .page-user:active .page-user-avatar {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35), 0 2px 6px rgba(15, 23, 42, 0.18);
   }
 
   .page-user-dropdown {

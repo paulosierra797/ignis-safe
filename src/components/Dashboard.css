@@ -714,6 +714,9 @@ body.sidebar-collapsed .nav-section {
     height: 100vh;
     z-index: 1600;
     width: 250px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .sidebar--mobile-open {
@@ -726,17 +729,42 @@ body.sidebar-collapsed .nav-section {
     background: rgba(15, 23, 42, 0.45);
     z-index: 1550;
     border: none;
-  }
-
-  body.sidebar-mobile-open {
-    overflow: hidden;
-  }
-
-  /* When mobile drawer open, keep main content behind the overlay */
-  body.sidebar-mobile-open .dashboard-main,
-  body.sidebar-mobile-open .accounts-main {
-    filter: blur(0.2px);
     touch-action: none;
+  }
+
+  /* Lock the page and its main content container behind the mobile
+     drawer while it's open (body position/overflow is also handled in
+     JS by LayoutContext so scroll position can be preserved/restored). */
+  body.sidebar-mobile-open {
+    overflow: hidden !important;
+    touch-action: none;
+    overscroll-behavior: none;
+  }
+
+  body.sidebar-mobile-open .dashboard-main,
+  body.sidebar-mobile-open .accounts-main,
+  body.sidebar-mobile-open .admin-reports-main,
+  body.sidebar-mobile-open .analytics-main,
+  body.sidebar-mobile-open .assessment-questions-main,
+  body.sidebar-mobile-open .attendance-admin-content,
+  body.sidebar-mobile-open .attendance-personnel-content,
+  body.sidebar-mobile-open .audit-logs-main,
+  body.sidebar-mobile-open .chart-main,
+  body.sidebar-mobile-open .content-management-main,
+  body.sidebar-mobile-open .history-content,
+  body.sidebar-mobile-open .investigation-main,
+  body.sidebar-mobile-open .landing-editor-main,
+  body.sidebar-mobile-open .learning-materials-main,
+  body.sidebar-mobile-open .personnel-ops-content,
+  body.sidebar-mobile-open .personnel-profile-content,
+  body.sidebar-mobile-open .progress-main,
+  body.sidebar-mobile-open .reports-main,
+  body.sidebar-mobile-open .user-announcements-main,
+  body.sidebar-mobile-open .announcements-main {
+    overflow: hidden !important;
+    touch-action: none;
+    overscroll-behavior: none;
+    pointer-events: none;
   }
 }
 

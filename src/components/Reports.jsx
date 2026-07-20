@@ -406,7 +406,17 @@ export default function Reports() {
                       {String(report.status || '').replace('_', ' ')}
                     </span>
                   </div>
-                  <p><strong>File:</strong> {report.pdf_file_name || '-'}{report.pdf_file_name ? ` (${getFileType(report.pdf_file_name)})` : ''}</p>
+                  <div className="report-history-card-row">
+                    <strong>File:</strong>
+                    {report.pdf_file_name ? (
+                      <ClampedText>
+                        {report.pdf_file_name}
+                        <span className="report-history-file-type"> ({getFileType(report.pdf_file_name)})</span>
+                      </ClampedText>
+                    ) : (
+                      <span> -</span>
+                    )}
+                  </div>
                   <p><strong>Date Submitted:</strong> {formatDateTime(report.submitted_at || report.created_at)}</p>
                   <p><strong>Admin Remarks:</strong> {report.internal_notes || '-'}</p>
                   {report.pdf_url && (

@@ -94,6 +94,15 @@ export default function Sidebar({ variant = 'admin' }) {
     };
   }, [variant, currentUser?.admin_id, currentUser?.role]);
 
+  useEffect(() => {
+    if (isMobileSidebarOpen) {
+      closeMobileSidebar();
+    }
+    // Only re-run when the route actually changes so this closes the
+    // drawer on navigation without fighting the open/toggle handlers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
   const handleNavItemClick = (event, item) => {
     if (variant !== 'personnel' || !hasPendingAnnouncementAck) return;
     if (item.path === PERSONNEL_ANNOUNCEMENTS_PATH) return;

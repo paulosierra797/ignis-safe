@@ -27,14 +27,17 @@
   color: var(--ash);
 }
 
-/* Match Announcements page header sizing */
-.attendance-personnel-content .page-header {
-  padding: 1.5rem 2rem;
-  margin: -2rem -2rem 2rem -2rem;
-}
+/* Match Announcements/Shift Schedule page header sizing (desktop only;
+   mobile uses the shared PageHeader.css layout like every other Personnel page) */
+@media (min-width: 901px) {
+  .attendance-personnel-content .page-header {
+    padding: 1.5rem 2rem;
+    margin: -2rem -2rem 2rem -2rem;
+  }
 
-.attendance-personnel-content .page-title {
-  font-size: 2rem;
+  .attendance-personnel-content .page-title {
+    font-size: 2rem;
+  }
 }
 
 .attendance-personnel-qr {
@@ -445,14 +448,8 @@
     padding: 1rem;
   }
 
-  .attendance-personnel-content .page-header {
-    margin: 0 0 1.25rem 0;
-    padding: 0.85rem 0;
-  }
-
-  .attendance-personnel-content .page-title {
-    font-size: 1.2rem;
-  }
+  /* Mobile header layout/spacing comes entirely from the shared
+     PageHeader.css rules, like every other Personnel page. */
 
   .qr-hero,
   .attendance-panel-grid {
@@ -474,6 +471,23 @@
 
   .qr-link {
     flex-wrap: wrap;
+  }
+
+  /* Mobile-only: the expiry timer was absolutely positioned over the QR
+     square, overlapping the code. Stack it above the QR square instead,
+     with its own reserved space and a gap, so it never overlaps. */
+  .qr-code {
+    aspect-ratio: auto;
+    padding: 18px 10px 10px;
+    gap: 10px;
+  }
+
+  .qr-expiry {
+    position: static;
+  }
+
+  .qr-expiry-text {
+    color: #c7cad0;
   }
 }
 

@@ -498,12 +498,15 @@
   border: 1px solid #e5e7eb;
   box-shadow: 0 6px 20px rgba(0, 0, 0, .06);
   margin-bottom: 16px;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .report-history-card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 12px;
   gap: 0.5rem;
 }
@@ -512,12 +515,27 @@
   margin: 0;
   font-size: 1rem;
   color: #111827;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
-.report-history-card p {
+.report-history-card-header .status-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.report-history-card p,
+.report-history-card-row {
   margin: 6px 0;
   font-size: .88rem;
   color: #475569;
+  min-width: 0;
+}
+
+.report-history-card-row .report-history-cell-content {
+  margin-top: 2px;
 }
 
 .report-history-card .view-btn {
@@ -531,5 +549,16 @@
 
   .report-history-mobile-list {
     display: block;
+    max-width: 100%;
+  }
+
+  .report-history-search-bar,
+  .report-history-search-wrapper,
+  .report-history-search-input,
+  .report-history-search-clear,
+  .report-history-card,
+  .report-history-card .view-btn {
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }

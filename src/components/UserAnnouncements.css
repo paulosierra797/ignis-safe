@@ -16,10 +16,6 @@
     padding: 1rem;
   }
 
-  .user-announcements-main .page-header {
-    margin: -1rem -1rem 1rem -1rem !important;
-  }
-
   .list-card-header,
   .announcement-item-header,
   .announcement-meta {
@@ -28,14 +24,17 @@
   }
 }
 
-/* Compact PageHeader specifically for user announcements */
-.user-announcements-main .page-header {
-  padding: 0.6rem 1.5rem !important;
-  margin: -2rem -3rem 1rem -3rem !important;
-}
+/* Compact PageHeader specifically for user announcements (desktop only;
+   mobile uses the shared PageHeader.css layout like every other Personnel page) */
+@media (min-width: 901px) {
+  .user-announcements-main .page-header {
+    padding: 0.6rem 1.5rem !important;
+    margin: -2rem -3rem 1rem -3rem !important;
+  }
 
-.user-announcements-main .page-title {
-  font-size: 1.4rem;
+  .user-announcements-main .page-title {
+    font-size: 1.4rem;
+  }
 }
 
 .announcement-card {

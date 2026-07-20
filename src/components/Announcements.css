@@ -13,14 +13,17 @@
   gap: 1.2rem;
 }
 
-/* Match Shift Schedule page header sizing */
-.announcements-main .page-header {
-  padding: 1.5rem 2rem;
-  margin: -2rem -2rem 2rem -2rem;
-}
+/* Match Shift Schedule page header sizing (desktop only; mobile uses the
+   shared PageHeader.css layout like every other Personnel page) */
+@media (min-width: 901px) {
+  .announcements-main .page-header {
+    padding: 1.5rem 2rem;
+    margin: -2rem -2rem 2rem -2rem;
+  }
 
-.announcements-main .page-title {
-  font-size: 2rem;
+  .announcements-main .page-title {
+    font-size: 2rem;
+  }
 }
 
 .announcement-card {
@@ -403,19 +406,19 @@
    so content reclaims the full width at the same point the fixed sidebar
    disappears behind the mobile drawer toggle. */
 @media (max-width: 900px) {
+  .announcements-container {
+    overflow-x: hidden;
+  }
+
   .announcements-main {
     margin-left: 0;
     padding: 1rem;
+    min-width: 0;
+    overflow-x: hidden;
   }
 
-  .announcements-main .page-header {
-    margin: 0 0 1.25rem 0;
-    padding: 0.85rem 0;
-  }
-
-  .announcements-main .page-title {
-    font-size: 1.2rem;
-  }
+  /* Mobile header layout/spacing comes entirely from the shared
+     PageHeader.css rules, like every other Personnel page. */
 
   .form-row.two-col {
     grid-template-columns: 1fr;
@@ -429,6 +432,23 @@
     flex: 1;
   }
 
+  .announcement-card {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .announcement-list {
+    min-width: 0;
+  }
+
+  .announcement-item {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+
   .announcement-item-header,
   .announcement-meta,
   .list-card-header {
@@ -436,8 +456,63 @@
     align-items: flex-start;
   }
 
+  .announcement-item-header {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .announcement-item-header h3 {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .announcement-audience {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .announcement-meta {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .announcement-meta span {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .announcement-attachments {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+  }
+
   .announcement-image-link {
     width: 100px;
     height: 76px;
+  }
+
+  .announcement-file-link {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .announcement-ack-action {
+    width: 100%;
+  }
+
+  .announcement-ack-action button {
+    width: 100%;
   }
 }

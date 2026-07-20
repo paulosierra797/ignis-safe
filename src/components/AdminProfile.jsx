@@ -36,6 +36,7 @@ export default function AdminProfile() {
   const [savingSecurity, setSavingSecurity] = useState(false);
 
   const [modal, setModal] = useState({ open: false, type: 'info', message: '' });
+  const [confirmModal, setConfirmModal] = useState({ open: false, changes: [], onConfirm: null });
 
   const displayName = `${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'Admin';
   const displayRole = formatRoleLabel(currentUser?.role);
@@ -94,6 +95,7 @@ export default function AdminProfile() {
 
     const normalizedFirst = normalizeSpaces(firstName);
     const normalizedLast = normalizeSpaces(lastName);
+    const normalizedPosition = position.trim();
 
     if (!normalizedFirst || !NAME_PATTERN.test(normalizedFirst)) {
       showModal('error', 'First name may only contain letters and spaces.');
@@ -104,11 +106,32 @@ export default function AdminProfile() {
       return;
     }
 
+    const changes = [];
+    if (normalizedFirst !== (currentUser.first_name || '')) {
+      changes.push({ label: 'First Name', oldValue: currentUser.first_name || '—', newValue: normalizedFirst });
+    }
+    if (normalizedLast !== (currentUser.last_name || '')) {
+      changes.push({ label: 'Last Name', oldValue: currentUser.last_name || '—', newValue: normalizedLast });
+    }
+    if (normalizedPosition !== (currentUser.rank || '')) {
+      changes.push({ label: 'Position', oldValue: currentUser.rank || '—', newValue: normalizedPosition || '—' });
+    }
+
+    if (changes.length === 0) return;
+
+    setConfirmModal({
+      open: true,
+      changes,
+      onConfirm: () => saveGeneral(normalizedFirst, normalizedLast, normalizedPosition)
+    });
+  };
+
+  const saveGeneral = async (normalizedFirst, normalizedLast, normalizedPosition) => {
     setSavingGeneral(true);
     const { error } = await updateUser(currentUser.admin_id, {
       first_name: normalizedFirst,
       last_name: normalizedLast,
-      rank: position.trim()
+      rank: normalizedPosition
     });
     setSavingGeneral(false);
 
@@ -119,8 +142,9 @@ export default function AdminProfile() {
 
     setFirstName(normalizedFirst);
     setLastName(normalizedLast);
+    setPosition(normalizedPosition);
     if (setCurrentUser) {
-      setCurrentUser({ ...currentUser, first_name: normalizedFirst, last_name: normalizedLast, rank: position.trim() });
+      setCurrentUser({ ...currentUser, first_name: normalizedFirst, last_name: normalizedLast, rank: normalizedPosition });
     }
     showModal('success', 'General information updated successfully!');
 
@@ -144,6 +168,25 @@ export default function AdminProfile() {
       return;
     }
 
+    const currentPhone = currentUser.contact_number || currentUser.phone || currentUser.phone_number || '';
+    const changes = [];
+    if (normalizedEmail !== (currentUser.email || '')) {
+      changes.push({ label: 'Email', oldValue: currentUser.email || '—', newValue: normalizedEmail });
+    }
+    if (normalizedPhone !== currentPhone) {
+      changes.push({ label: 'Phone Number', oldValue: currentPhone || '—', newValue: normalizedPhone || '—' });
+    }
+
+    if (changes.length === 0) return;
+
+    setConfirmModal({
+      open: true,
+      changes,
+      onConfirm: () => saveSecurity(normalizedEmail, normalizedPhone)
+    });
+  };
+
+  const saveSecurity = async (normalizedEmail, normalizedPhone) => {
     setSavingSecurity(true);
     const { error } = await updateUser(currentUser.admin_id, {
       email: normalizedEmail,
@@ -325,6 +368,40 @@ export default function AdminProfile() {
             </div>
           </div>
         </div>
+
+        {confirmModal.open && (
+          <div className="modal-overlay" role="dialog" aria-modal="true">
+            <div className="modal confirm-changes-modal">
+              <h3>Confirm Changes</h3>
+              <p>Are you sure you want to save these changes?</p>
+              <ul className="confirm-changes-list">
+                {confirmModal.changes.map((change) => (
+                  <li key={change.label}>
+                    <strong>{change.label}:</strong> {change.oldValue} → {change.newValue}
+                  </li>
+                ))}
+              </ul>
+              <div className="modal-actions">
+                <button
+                  className="cancel-btn"
+                  onClick={() => setConfirmModal({ open: false, changes: [], onConfirm: null })}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="save-btn"
+                  onClick={() => {
+                    const { onConfirm } = confirmModal;
+                    setConfirmModal({ open: false, changes: [], onConfirm: null });
+                    onConfirm?.();
+                  }}
+                >
+                  Confirm Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {modal.open && (
           <div className="modal-overlay" role="dialog" aria-modal="true">

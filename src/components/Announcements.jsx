@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingContentEditor from './LandingContentEditor';
@@ -61,6 +62,7 @@ const formatDate = (isoDate) => {
 
 export default function Announcements() {
   const { currentUser } = useUser();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('announcements');
   const [announcements, setAnnouncements] = useState([]);
@@ -83,12 +85,24 @@ export default function Announcements() {
   });
 
   const role = String(currentUser?.role || '').toLowerCase();
-  const isAdmin = role === 'admin';
-  const sidebarVariant = role === 'personnel' ? 'personnel' : role === 'intel-unit' ? 'intel-unit' : 'admin';
+  // The route, not the account's underlying role, decides which workspace
+  // is active. An admin viewing /personnel/* is in the Personnel workspace
+  // and must see Personnel-only functions, even though their role is admin.
+  const isPersonnelWorkspace = location.pathname.startsWith('/personnel');
+  const isIntelUnitWorkspace = location.pathname.startsWith('/intel-unit');
+  const sidebarVariant = isPersonnelWorkspace ? 'personnel' : isIntelUnitWorkspace ? 'intel-unit' : 'admin';
+  const isAdmin = role === 'admin' && !isPersonnelWorkspace;
+  // Services key off currentUser.role (e.g. acknowledgeAnnouncement requires
+  // role === 'personnel'). While an admin is in the Personnel workspace we
+  // fetch/act using their own admin_id but under a personnel-shaped role so
+  // they see and can acknowledge their own announcement feed.
+  const effectiveUser = isPersonnelWorkspace && role === 'admin'
+    ? { ...currentUser, role: 'personnel' }
+    : currentUser;
   const isAnnouncementTab = !isAdmin || activeTab === 'announcements';
 
   const loadAnnouncements = async () => {
-    const { data, error } = await getAnnouncementsForUser(currentUser);
+    const { data, error } = await getAnnouncementsForUser(effectiveUser);
     if (error) {
       setMessage({ type: 'error', text: `Failed to load announcements: ${error}` });
       setAnnouncements([]);
@@ -118,7 +132,7 @@ export default function Announcements() {
     };
 
     initialize();
-  }, [isAdmin, currentUser?.admin_id]);
+  }, [isAdmin, isPersonnelWorkspace, currentUser?.admin_id]);
 
   const filteredAnnouncements = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -246,7 +260,7 @@ export default function Announcements() {
     setAcknowledgingId(announcementId);
     setMessage({ type: '', text: '' });
 
-    const { data, error } = await acknowledgeAnnouncement(currentUser, announcementId);
+    const { data, error } = await acknowledgeAnnouncement(effectiveUser, announcementId);
     if (error) {
       setMessage({ type: 'error', text: `Failed to acknowledge announcement: ${error}` });
       setAcknowledgingId('');

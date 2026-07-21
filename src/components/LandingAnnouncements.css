@@ -107,19 +107,25 @@
 }
 
 .landing-announcement-image-link {
+  width: 100%;
   min-width: 0;
-  aspect-ratio: 16 / 10;
+  min-height: 120px;
   overflow: hidden;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem;
   border: 1px solid #ead3d3;
   border-radius: 11px;
   background: #f8fafc;
+  cursor: zoom-in;
 }
 
 .landing-announcement-image-link img {
-  width: 100%;
-  height: 100%;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 320px;
   display: block;
   object-fit: contain;
 }
@@ -155,6 +161,149 @@
   font-size: 0.72rem;
   line-height: 1.4;
   overflow-wrap: anywhere;
+}
+
+.landing-announcement-expand-button {
+  width: fit-content;
+  margin-top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.58rem 0.8rem;
+  border: 1px solid #e2aaaa;
+  border-radius: 9px;
+  background: #fff7f7;
+  color: #991b1b;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+}
+
+.landing-announcement-expand-button:hover,
+.landing-announcement-expand-button:focus-visible {
+  transform: translateY(-1px);
+  border-color: #b91c1c;
+  background: #fef2f2;
+  outline: none;
+}
+
+.landing-announcement-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  overflow-y: auto;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: rgba(17, 24, 39, 0.72);
+  backdrop-filter: blur(5px);
+}
+
+.landing-announcement-modal {
+  width: min(100%, 980px);
+  max-height: calc(100dvh - 3rem);
+  overflow-y: auto;
+  padding: clamp(1.2rem, 3vw, 2rem);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-top: 5px solid #b91c1c;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
+}
+
+.landing-announcement-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.landing-announcement-modal-close {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #e5b9b9;
+  border-radius: 10px;
+  background: #fff7f7;
+  color: #991b1b;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.landing-announcement-modal > h2 {
+  margin: 1rem 0 0.75rem;
+  color: #111827;
+  font-size: clamp(1.45rem, 3vw, 2.15rem);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.landing-announcement-modal-content {
+  margin: 0;
+  color: #475569;
+  font-size: 0.96rem;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.landing-announcement-modal-attachments {
+  min-width: 0;
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+
+.landing-announcement-modal-image {
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ead3d3;
+  border-radius: 13px;
+  background: #f8fafc;
+  color: #7f1d1d;
+  text-decoration: none;
+}
+
+.landing-announcement-modal-image img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 68vh;
+  display: block;
+  object-fit: contain;
+}
+
+.landing-announcement-modal-image span {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-top: 1px solid #ead3d3;
+  background: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.landing-announcement-modal-meta {
+  margin-top: 1.35rem;
+  padding-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  border-top: 1px solid #e5e7eb;
+  color: #64748b;
+  font-size: 0.78rem;
 }
 
 .landing-announcement-pagination {
@@ -232,5 +381,23 @@
 
   .landing-announcement-card {
     padding: 1rem;
+  }
+
+  .landing-announcement-modal-overlay {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .landing-announcement-modal {
+    width: 100%;
+    max-height: 92dvh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .landing-announcement-modal-attachments {
+    grid-template-columns: 1fr;
   }
 }

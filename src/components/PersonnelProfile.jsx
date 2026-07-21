@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -15,6 +15,7 @@ import {
   submitProfileChangeRequest
 } from '../utils/profileChangeRequestsService';
 import { logPersonnelActivity } from '../utils/activityLogService';
+import UnsavedChangesPrompt, { UnsavedChangesDialog } from './UnsavedChangesPrompt';
 
 const RANK_OPTIONS = [
   'FDIR',
@@ -35,8 +36,6 @@ const RANK_OPTIONS = [
 
 export default function PersonnelProfile() {
   const { currentUser, setCurrentUser } = useUser();
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [rank, setRank] = useState('');
   const [rankCustom, setRankCustom] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,7 +48,6 @@ export default function PersonnelProfile() {
     ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)
     : 'Personnel';
   const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
-const [faceDescriptor, setFaceDescriptor] = useState(null);
 const [faceLoading, setFaceLoading] = useState(false);
 const webcamRef = React.useRef(null);
 const [faceBox, setFaceBox] = useState(null);
@@ -65,10 +63,12 @@ const [modal, setModal] = useState({
   const [requestReason, setRequestReason] = useState('');
   const [isRequestSaving, setIsRequestSaving] = useState(false);
   const [requestMessage, setRequestMessage] = useState({ type: '', text: '' });
+  const [isDiscardRequestOpen, setIsDiscardRequestOpen] = useState(false);
   const [myRequests, setMyRequests] = useState([]);
   const [loadingMyRequests, setLoadingMyRequests] = useState(false);
   const profileHeaderRef = useRef(null);
   const profileContentRef = useRef(null);
+  const hasUnsavedRequest = isRequestModalOpen && Boolean(requestValue.trim() || requestReason.trim());
 
   useLayoutEffect(() => {
     const headerEl = profileHeaderRef.current;
@@ -99,17 +99,17 @@ const [modal, setModal] = useState({
   initModels();
 }, []);
 
-  const loadMyRequests = async () => {
+  const loadMyRequests = useCallback(async () => {
     if (!currentUser?.admin_id) return;
     setLoadingMyRequests(true);
     const { data } = await getMyProfileChangeRequests(currentUser.admin_id);
     setMyRequests(data || []);
     setLoadingMyRequests(false);
-  };
+  }, [currentUser?.admin_id]);
 
   useEffect(() => {
     loadMyRequests();
-  }, [currentUser?.admin_id]);
+  }, [loadMyRequests]);
 
   useEffect(() => {
   if (!isFaceModalOpen) return;
@@ -145,13 +145,6 @@ const [modal, setModal] = useState({
 
   useEffect(() => {
     if (currentUser) {
-      // Set name fields
-      if (currentUser.first_name) {
-        setFirstName(currentUser.first_name);
-      }
-      if (currentUser.last_name) {
-        setLastName(currentUser.last_name);
-      }
       const currentRank = currentUser.rank || '';
       if (!currentRank || RANK_OPTIONS.includes(currentRank)) {
         setRank(currentRank);
@@ -277,7 +270,19 @@ const [modal, setModal] = useState({
 
   const closeRequestModal = () => {
     if (isRequestSaving) return;
+    if (hasUnsavedRequest) {
+      setIsDiscardRequestOpen(true);
+      return;
+    }
     setIsRequestModalOpen(false);
+  };
+
+  const discardRequestChanges = () => {
+    setIsDiscardRequestOpen(false);
+    setIsRequestModalOpen(false);
+    setRequestValue('');
+    setRequestReason('');
+    setRequestMessage({ type: '', text: '' });
   };
 
   const handleSubmitChangeRequest = async () => {
@@ -680,7 +685,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
             </div>
           </div>
         )}
-         {isFaceModalOpen && (
+        {isFaceModalOpen && (
   <div className="face-modal-overlay">
     <div className="face-modal">
 
@@ -733,6 +738,24 @@ const showModal = ({ type = "info", message, onConfirm }) => {
     </div>
   </div>
 )}
+
+        <UnsavedChangesPrompt
+          when={hasUnsavedRequest}
+          title="Leave without submitting?"
+          message="Your profile change request has not been submitted. Are you sure you want to leave this page?"
+          stayLabel="Keep Editing"
+        />
+
+        {isDiscardRequestOpen && (
+          <UnsavedChangesDialog
+            title="Discard this request?"
+            message="The information you entered has not been submitted. Are you sure you want to close this request?"
+            stayLabel="Keep Editing"
+            leaveLabel="Discard Changes"
+            onStay={() => setIsDiscardRequestOpen(false)}
+            onLeave={discardRequestChanges}
+          />
+        )}
       </div>
     </div>
   );

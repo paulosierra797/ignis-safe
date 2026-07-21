@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { uploadProfileImage } from '../utils/imageService';
 import { updateUser, logAdminActivity } from '../utils/usersService';
+import UnsavedChangesPrompt from './UnsavedChangesPrompt';
 import './AdminProfile.css';
 
 const NAME_PATTERN = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
@@ -37,10 +38,19 @@ export default function AdminProfile() {
 
   const [modal, setModal] = useState({ open: false, type: 'info', message: '' });
   const [confirmModal, setConfirmModal] = useState({ open: false, changes: [], onConfirm: null });
+  const [profileInitialized, setProfileInitialized] = useState(false);
 
   const displayName = `${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'Admin';
   const displayRole = formatRoleLabel(currentUser?.role);
   const displayPhone = currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || 'Not available';
+  const savedPhone = currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || '';
+  const hasUnsavedProfileChanges = profileInitialized && Boolean(currentUser) && (
+    normalizeSpaces(firstName) !== (currentUser.first_name || '')
+    || normalizeSpaces(lastName) !== (currentUser.last_name || '')
+    || position.trim() !== (currentUser.rank || '')
+    || email.trim() !== (currentUser.email || '')
+    || phone.replace(/[^0-9+ ]/g, '').trim() !== savedPhone
+  );
 
   const showModal = (type, message) => setModal({ open: true, type, message });
   const closeModal = () => setModal((prev) => ({ ...prev, open: false }));
@@ -55,6 +65,7 @@ export default function AdminProfile() {
     if (currentUser.avatar_url) {
       setProfileImage(currentUser.avatar_url);
     }
+    setProfileInitialized(true);
   }, [currentUser]);
 
   const handleImageUpload = async (event) => {
@@ -416,6 +427,13 @@ export default function AdminProfile() {
             </div>
           </div>
         )}
+
+        <UnsavedChangesPrompt
+          when={hasUnsavedProfileChanges}
+          title="Leave without saving?"
+          message="Your profile changes have not been saved. Are you sure you want to leave this page?"
+          stayLabel="Keep Editing"
+        />
       </div>
     </div>
   );

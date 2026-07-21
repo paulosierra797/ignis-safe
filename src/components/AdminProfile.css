@@ -8,9 +8,27 @@
 .admin-profile-content {
   flex: 1;
   margin-left: 250px;
-  padding: 2rem 3rem;
+  padding: 0 3rem 2rem;
   height: 100vh;
   overflow-y: auto;
+}
+
+/*
+  The shared PageHeader relies on a negative top margin to cancel this
+  wrapper's top padding so it sits flush with the top of the content area.
+  That cancellation is fragile (depends on the two values staying in sync),
+  so pin it directly here instead: no top padding on the wrapper, no top
+  margin on the header. Left as a page-specific override rather than editing
+  PageHeader.css, which other pages still depend on.
+
+  The header's left/right cancellation is still variable-driven though
+  (--page-header-gutter-x), so it must match this wrapper's own horizontal
+  padding (3rem here vs. Dashboard's 2rem) or the header falls short of full
+  width. Kept in sync with the 1024px breakpoint below.
+*/
+.admin-profile-content > .page-header {
+  --page-header-gutter-x: 3rem;
+  margin-top: 0;
 }
 
 .modal-overlay {
@@ -424,7 +442,11 @@
 */
 @media (max-width: 1024px) {
   .admin-profile-content {
-    padding: 1.5rem;
+    padding: 0 1.5rem 1.5rem;
+  }
+
+  .admin-profile-content > .page-header {
+    --page-header-gutter-x: 1.5rem;
   }
 
   .profile-layout {

@@ -3,6 +3,7 @@ import './Reports.css';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { FaSearch, FaTimes } from 'react-icons/fa';
+import { useBlocker } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { submitInvestigationReport, getPersonnelReportHistory } from '../utils/reportsService';
 import { logPersonnelActivity } from '../utils/activityLogService';
@@ -85,6 +86,20 @@ export default function Reports() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [historyMessage, setHistoryMessage] = useState('');
   const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const hasUnsavedReport = Boolean(reportTitle.trim() || selectedFile);
+  const navigationBlocker = useBlocker(hasUnsavedReport);
+
+  useEffect(() => {
+    if (!hasUnsavedReport) return undefined;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedReport]);
 
   const loadReportHistory = useCallback(async () => {
     if (!currentUser?.admin_id) {
@@ -133,6 +148,14 @@ export default function Reports() {
   }, [reportHistory, historySearchQuery]);
 
   const handleClearHistorySearch = () => setHistorySearchQuery('');
+
+  const stayOnReports = () => {
+    navigationBlocker.reset?.();
+  };
+
+  const leaveReports = () => {
+    navigationBlocker.proceed?.();
+  };
 
   const isPdfFile = (file) => {
     if (!file) return false;
@@ -434,6 +457,32 @@ export default function Reports() {
           </div>
         </div>
       </div>
+
+      {navigationBlocker.state === 'blocked' && (
+        <div
+          className="report-unsaved-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reportUnsavedTitle"
+          aria-describedby="reportUnsavedDescription"
+        >
+          <div className="report-unsaved-modal">
+            <div className="report-unsaved-icon" aria-hidden="true">!</div>
+            <h2 id="reportUnsavedTitle">Leave without submitting?</h2>
+            <p id="reportUnsavedDescription">
+              Your report title or attached PDF has not been submitted. Are you sure you want to leave this page?
+            </p>
+            <div className="report-unsaved-actions">
+              <button type="button" className="report-unsaved-stay" onClick={stayOnReports}>
+                Stay on Reports
+              </button>
+              <button type="button" className="report-unsaved-leave" onClick={leaveReports}>
+                Leave Page
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

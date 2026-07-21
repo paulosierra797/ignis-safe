@@ -250,6 +250,72 @@ function RequestSectionToggle({ expanded, itemCount, label, onToggle }) {
   );
 }
 
+function AccountDirectoryGroup({
+  title,
+  description,
+  accounts,
+  totalCount,
+  startIndex = 1,
+  emptyMessage,
+  getAccountActions,
+  isOnLeave,
+  formatLeaveDate,
+  variant,
+}) {
+  return (
+    <section className={`account-directory-group account-directory-group-${variant}`}>
+      <div className="account-directory-group-header">
+        <div>
+          <h4>{title}</h4>
+          <p>{description}</p>
+        </div>
+        <span>{totalCount}</span>
+      </div>
+
+      {accounts.length === 0 ? (
+        <div className="account-directory-group-empty">{emptyMessage}</div>
+      ) : (
+        <div className="account-directory-entries">
+          {accounts.map((account, index) => {
+            const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim()
+              || (variant === 'admin' ? 'Admin' : 'Personnel');
+            const normalizedStatus = String(account.status || 'inactive').toLowerCase().replace(/\s+/g, '-');
+
+            return (
+              <article className="account-directory-entry" key={account.admin_id || account.id}>
+                <span className="account-directory-entry-number">{startIndex + index}</span>
+                <div className="account-directory-entry-content">
+                  <div className="account-directory-entry-heading">
+                    <div className="account-directory-entry-identity">
+                      <strong title={accountName}>{accountName}</strong>
+                      <span title={account.email || ''}>{account.email || '—'}</span>
+                    </div>
+                    <span className={`status-pill ${normalizedStatus}`}>
+                      {String(account.status || 'Inactive')}
+                    </span>
+                  </div>
+
+                  <div className="account-directory-entry-meta">
+                    <span><b>Rank:</b> {account.rank || '—'}</span>
+                    <span><b>Role:</b> {account.role || '—'}</span>
+                    {isOnLeave(account) && (
+                      <span>
+                        <b>Leave:</b> {formatLeaveDate(account.leave_start_date)} – {formatLeaveDate(account.leave_end_date)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <AccountActionsMenu account={account} actions={getAccountActions(account)} />
+              </article>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function Accounts() {
   const { currentUser } = useUser();
   const [accounts, setAccounts] = useState([]);
@@ -2173,16 +2239,18 @@ const permissions = getDefaultPermissions(formData.role);
     const matchStatus = statusFilter === 'All Status' || account.status === statusFilter;
     return matchSearch && matchRank && matchStatus;
   });
-  const personnelTotalPages = Math.max(1, Math.ceil(filteredAccounts.length / PERSONNEL_PAGE_SIZE));
+  const filteredPersonnelAccounts = filteredAccounts.filter(isPersonnelAccount);
+  const filteredAdminAccounts = filteredAccounts.filter((account) => !isPersonnelAccount(account));
+  const personnelTotalPages = Math.max(1, Math.ceil(filteredPersonnelAccounts.length / PERSONNEL_PAGE_SIZE));
   const safePersonnelPage = Math.min(personnelPage, personnelTotalPages);
-  const paginatedAccounts = filteredAccounts.slice(
+  const paginatedPersonnelAccounts = filteredPersonnelAccounts.slice(
     (safePersonnelPage - 1) * PERSONNEL_PAGE_SIZE,
     safePersonnelPage * PERSONNEL_PAGE_SIZE
   );
-  const personnelRangeStart = filteredAccounts.length === 0
+  const personnelRangeStart = filteredPersonnelAccounts.length === 0
     ? 0
     : (safePersonnelPage - 1) * PERSONNEL_PAGE_SIZE + 1;
-  const personnelRangeEnd = Math.min(safePersonnelPage * PERSONNEL_PAGE_SIZE, filteredAccounts.length);
+  const personnelRangeEnd = Math.min(safePersonnelPage * PERSONNEL_PAGE_SIZE, filteredPersonnelAccounts.length);
 
   const getAccountActions = (account) => [
     ...(isPersonnelAccount(account)
@@ -2935,7 +3003,7 @@ const permissions = getDefaultPermissions(formData.role);
               <h3 id="personnel-directory-title">Personnel List</h3>
             </div>
             <span className="accounts-directory-count">
-              {filteredAccounts.length} {filteredAccounts.length === 1 ? 'person' : 'people'}
+              {filteredAccounts.length} {filteredAccounts.length === 1 ? 'account' : 'accounts'}
             </span>
           </div>
 
@@ -3005,140 +3073,40 @@ const permissions = getDefaultPermissions(formData.role);
           </button>
         </div>
 
-        <div className="accounts-table-card">
-          {loadingAccounts ? (
-            <div style={{ padding: '2rem', textAlign: 'center' }}>
-              <p>Loading accounts...</p>
-            </div>
-          ) : filteredAccounts.length === 0 ? (
-            <div style={{ padding: '2rem', textAlign: 'center' }}>
-              <p>No accounts found.</p>
-            </div>
-          ) : (
-            <div className="accounts-table-scroll">
-              <table className="accounts-table">
-                <colgroup>
-                  <col className="accounts-col-number" />
-                  <col className="accounts-col-name" />
-                  <col className="accounts-col-email" />
-                  <col className="accounts-col-rank" />
-                  <col className="accounts-col-role" />
-                  <col className="accounts-col-status" />
-                  <col className="accounts-col-actions" />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>No.</th>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Rank</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th className="accounts-actions-heading">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedAccounts.map((account, index) => {
-                    const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || 'Personnel';
-                    return (
-                      <tr key={account.admin_id || account.id}>
-                        <td className="account-index-cell">{personnelRangeStart + index}.</td>
-                        <td>
-                          <span className="account-table-text" title={accountName}>{accountName}</span>
-                        </td>
-                        <td>
-                          <span className="account-table-text" title={account.email || ''}>{account.email || '—'}</span>
-                        </td>
-                        <td>
-                          <span className="account-table-text" title={account.rank || ''}>{account.rank || '—'}</span>
-                        </td>
-                        <td>
-                          <span className="account-table-text" title={account.role || ''}>{account.role || '—'}</span>
-                        </td>
-                        <td className="account-status-cell">
-                          <span
-                            className={`status-pill ${account.status
-                              .toLowerCase()
-                              .replace(/\s+/g, '-')}`}
-                          >
-                            {account.status.toUpperCase()}
-                          </span>
-                          {isOnLeave(account) && (
-                            <p className="leave-date-meta" title={`Leave: ${formatLeaveDate(account.leave_start_date)} to ${formatLeaveDate(account.leave_end_date)}`}>
-                              {`Leave: ${formatLeaveDate(account.leave_start_date)} to ${formatLeaveDate(account.leave_end_date)}`}
-                            </p>
-                          )}
-                        </td>
-                        <td className="accounts-actions-cell">
-                          <AccountActionsMenu account={account} actions={getAccountActions(account)} />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+        {loadingAccounts ? (
+          <div className="account-directory-loading">Loading accounts...</div>
+        ) : (
+          <div className="accounts-directory-groups">
+            <AccountDirectoryGroup
+              title="Personnel Accounts"
+              description="Operational personnel and their account status"
+              accounts={paginatedPersonnelAccounts}
+              totalCount={filteredPersonnelAccounts.length}
+              startIndex={personnelRangeStart}
+              emptyMessage="No personnel accounts match the selected filters."
+              getAccountActions={getAccountActions}
+              isOnLeave={isOnLeave}
+              formatLeaveDate={formatLeaveDate}
+              variant="personnel"
+            />
+            <AccountDirectoryGroup
+              title="Admin Accounts"
+              description="Administrative and management accounts"
+              accounts={filteredAdminAccounts}
+              totalCount={filteredAdminAccounts.length}
+              emptyMessage="No admin accounts match the selected filters."
+              getAccountActions={getAccountActions}
+              isOnLeave={isOnLeave}
+              formatLeaveDate={formatLeaveDate}
+              variant="admin"
+            />
+          </div>
+        )}
 
-        <div className="accounts-mobile-list">
-          {paginatedAccounts.map((account) => {
-            const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || 'Personnel';
-            return (
-              <div
-                className="account-card"
-                key={account.admin_id || account.id}
-              >
-                <div className="account-card-header">
-                  <h3 className="account-card-title" title={accountName}>{accountName}</h3>
-
-                  <span
-                    className={`status-pill ${account.status
-                      .toLowerCase()
-                      .replace(/\s+/g, '-')}`}
-                  >
-                    {account.status}
-                  </span>
-                </div>
-
-                <p>
-                  <strong>Rank</strong><br />
-                  <span className="account-card-value" title={account.rank || ''}>{account.rank || '—'}</span>
-                </p>
-
-                <p>
-                  <strong>Role</strong><br />
-                  <span className="account-card-value" title={account.role || ''}>{account.role || '—'}</span>
-                </p>
-
-                <p>
-                  <strong>Email</strong><br />
-                  <span className="account-card-value account-card-email" title={account.email || ''}>{account.email || '—'}</span>
-                </p>
-
-                {isOnLeave(account) && (
-                  <p>
-                    <strong>Leave</strong><br />
-                    <span className="account-card-value">
-                      {formatLeaveDate(account.leave_start_date)}
-                      {' - '}
-                      {formatLeaveDate(account.leave_end_date)}
-                    </span>
-                  </p>
-                )}
-
-                <div className="account-card-actions">
-                  <AccountActionsMenu account={account} actions={getAccountActions(account)} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {filteredAccounts.length > 0 && (
+        {filteredPersonnelAccounts.length > 0 && (
           <div className="accounts-directory-pagination" aria-label="Personnel list pagination">
             <p>
-              Showing {personnelRangeStart}–{personnelRangeEnd} of {filteredAccounts.length}
+              Showing {personnelRangeStart}–{personnelRangeEnd} of {filteredPersonnelAccounts.length} personnel accounts
             </p>
             <div className="accounts-directory-page-controls">
               <button

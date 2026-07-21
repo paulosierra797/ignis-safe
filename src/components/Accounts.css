@@ -922,6 +922,180 @@
   box-shadow: none;
 }
 
+.accounts-directory-groups {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.85fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.account-directory-group {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.account-directory-group-personnel {
+  border-top: 4px solid #ea7a21;
+}
+
+.account-directory-group-admin {
+  border-top: 4px solid #b91c1c;
+}
+
+.account-directory-group-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.account-directory-group-header h4 {
+  margin: 0;
+  color: #172033;
+  font-size: 0.95rem;
+}
+
+.account-directory-group-header p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.account-directory-group-header > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  background: #fff;
+  color: #334155;
+  box-shadow: inset 0 0 0 1px #dbe3ee;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.account-directory-entries {
+  display: flex;
+  flex-direction: column;
+}
+
+.account-directory-entry {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.85rem 0.9rem;
+  border-bottom: 1px solid #edf1f5;
+}
+
+.account-directory-entry:last-child {
+  border-bottom: 0;
+}
+
+.account-directory-entry:hover {
+  background: #fffafa;
+}
+
+.account-directory-entry-number {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.account-directory-entry-content,
+.account-directory-entry-identity {
+  min-width: 0;
+}
+
+.account-directory-entry-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.account-directory-entry-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.account-directory-entry-identity strong,
+.account-directory-entry-identity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-directory-entry-identity strong {
+  color: #1e293b;
+  font-size: 0.85rem;
+}
+
+.account-directory-entry-identity span {
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.account-directory-entry-heading .status-pill {
+  flex: 0 0 auto;
+  max-width: 135px;
+  text-align: center;
+  white-space: normal;
+}
+
+.account-directory-entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.85rem;
+  margin-top: 0.45rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.account-directory-entry-meta b {
+  color: #475569;
+  font-weight: 700;
+}
+
+.account-directory-group-empty,
+.account-directory-loading {
+  padding: 2rem 1rem;
+  color: #64748b;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.account-directory-loading {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+@media (max-width: 1280px) {
+  .accounts-directory-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .accounts-directory-pagination {
   display: flex;
   align-items: center;
@@ -2510,6 +2684,21 @@
   .accounts-directory-pagination {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .account-directory-entry {
+    grid-template-columns: 28px minmax(0, 1fr) 36px;
+    gap: 0.55rem;
+    padding: 0.8rem 0.7rem;
+  }
+
+  .account-directory-entry-heading {
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .account-directory-entry-heading .status-pill {
+    align-self: flex-start;
   }
 
   .accounts-directory-page-controls {

@@ -13,6 +13,19 @@
   padding: 2rem 3rem;
 }
 
+/* Match Announcements/Attendance page header sizing (desktop only; mobile
+   uses the shared PageHeader.css layout like every other Personnel page) */
+@media (min-width: 901px) {
+  .reports-main .page-header {
+    padding: 1.5rem 2rem;
+    margin: -2rem -3rem 2rem -3rem;
+  }
+
+  .reports-main .page-title {
+    font-size: 2rem;
+  }
+}
+
 .reports-content {
   background: white;
   border-radius: 16px;

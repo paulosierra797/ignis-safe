@@ -144,7 +144,6 @@ export default function History() {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           variant="personnel"
-          compact={true}
           showSearch={false}
         />
 

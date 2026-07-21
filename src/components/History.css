@@ -17,8 +17,8 @@
    uses the shared PageHeader.css layout like every other Personnel page) */
 @media (min-width: 901px) {
   .history-content .page-header {
-    padding: 1.5rem 2rem;
-    margin: -1.5rem -3rem 2rem -3rem;
+    padding: 1rem 2rem;
+    margin: -1.5rem -3rem 1.5rem -3rem;
   }
 
   .history-content .page-title {
@@ -186,9 +186,6 @@
 }
 
 .history-table th {
-  position: sticky;
-  top: var(--audit-header-height, 88px);
-  z-index: 10;
   padding: 0.9rem 0.85rem;
   text-align: left;
   font-weight: 600;

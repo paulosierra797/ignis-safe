@@ -1,4 +1,6 @@
 ﻿.page-header {
+  --page-header-gutter-x: 2rem;
+  --page-header-gutter-y: 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -7,7 +9,8 @@
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06);
   background-color: white;
   padding: 1.5rem 2rem;
-  margin: -2rem -3rem 2rem -3rem;
+  margin: calc(0px - var(--page-header-gutter-y))
+    calc(0px - var(--page-header-gutter-x)) 2rem;
   border-radius: 0;
   position: sticky;
   top: 0;
@@ -60,7 +63,7 @@
 .page-header--compact {
   padding: 0.6rem 1.25rem;
   padding-bottom: 0.6rem;
-  margin: -1.25rem -3rem 0.8rem -3rem;
+  margin: -1.25rem calc(0px - var(--page-header-gutter-x)) 0.8rem;
   box-shadow: 0 1px 0 rgba(0,0,0,0.03);
 }
 

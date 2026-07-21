@@ -5,6 +5,8 @@
 }
 
 .attendance-admin-content {
+  --page-header-gutter-x: 40px;
+  --page-header-gutter-y: 30px;
   flex: 1;
   padding: 30px 40px;
   margin-left: 250px;

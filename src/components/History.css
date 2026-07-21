@@ -8,7 +8,7 @@
 .history-content {
   flex: 1;
   margin-left: 250px;
-  padding: 2rem 3rem;
+  padding: 1.5rem 3rem 2rem;
   height: 100vh;
   overflow-y: auto;
 }
@@ -16,7 +16,7 @@
 .history-main {
   background: white;
   border-radius: 16px;
-  padding: 2rem;
+  padding: 1.5rem 1.75rem 1.75rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
@@ -24,7 +24,7 @@
   font-size: 2rem;
   font-weight: 700;
   color: #1f2937;
-  margin: 0 0 2rem 0;
+  margin: 0 0 1.5rem 0;
 }
 
 .history-filters {
@@ -163,6 +163,7 @@
 
 .history-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   background: white;
 }
@@ -175,21 +176,25 @@
   position: sticky;
   top: var(--audit-header-height, 88px);
   z-index: 10;
-  padding: 1rem;
+  padding: 0.9rem 0.85rem;
   text-align: left;
   font-weight: 600;
   color: #1f2937;
   font-size: 0.95rem;
   background: #FDB914;
   border-bottom: 2px solid #e5e7eb;
+  line-height: 1.2;
+  vertical-align: top;
 }
 
 .history-table td {
-  padding: 1rem;
+  padding: 0.95rem 0.85rem;
   border-bottom: 1px solid #f3f4f6;
   color: #1f2937;
   font-size: 0.9rem;
   overflow-wrap: anywhere;
+  vertical-align: top;
+  line-height: 1.4;
 }
 
 .history-table tbody tr {
@@ -208,6 +213,40 @@
 .history-table td.status-column {
   white-space: nowrap;
   width: 1%;
+}
+
+.history-table th:nth-child(1),
+.history-table td:nth-child(1) {
+  width: 6%;
+  white-space: nowrap;
+}
+
+.history-table th:nth-child(2),
+.history-table td:nth-child(2) {
+  width: 18%;
+}
+
+.history-table th:nth-child(3),
+.history-table td:nth-child(3) {
+  width: 22%;
+}
+
+.history-table th:nth-child(4),
+.history-table td:nth-child(4) {
+  width: 12%;
+}
+
+.history-table th:nth-child(5),
+.history-table td:nth-child(5) {
+  width: 42%;
+  overflow-wrap: anywhere;
+}
+
+.history-table th:nth-child(3),
+.history-table td:nth-child(3),
+.history-table th:nth-child(4),
+.history-table td:nth-child(4) {
+  white-space: nowrap;
 }
 
 .status-badge {

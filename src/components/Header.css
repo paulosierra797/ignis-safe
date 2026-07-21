@@ -1,141 +1,196 @@
 .header {
-  background: linear-gradient(180deg, #b11217 0%, #b11217 45%, #ffffff 100%);
-  padding: 0.75rem 0;
   position: sticky;
   top: 0;
   z-index: 1000;
- 
+  background: linear-gradient(110deg, #8f0f14 0%, #b51218 55%, #8f0f14 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 10px 30px rgba(91, 10, 14, 0.18);
 }
 
 .header-container {
-  max-width: none;
-  padding: 0 2rem;
-  margin: 0;
+  width: min(100%, 1440px);
+  min-height: 76px;
+  margin: 0 auto;
+  padding: 0.65rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 64px;
+  gap: 2rem;
 }
 
-.logo {
-  display: flex;
+.landing-brand {
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
-  cursor: pointer;
+  gap: 0.85rem;
+  min-width: 0;
+  color: #ffffff;
+  text-decoration: none;
 }
 
-.logo-icon {
-  width: 100px;
-  height: auto;
+.landing-brand-logo {
+  width: 62px;
+  height: 62px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.2));
 }
 
-.logo-text h4 {
+.landing-brand-text {
+  min-width: 0;
+}
+
+.landing-brand-text h4 {
   margin: 0;
-  font-size: 0.98rem;
-  font-weight: 700;
-  color: white;
-  line-height: 1.1;
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0.025em;
   text-transform: uppercase;
-}
-
-.logo-text p {
-  margin: 0;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.9);
 }
 
 .nav {
   display: flex;
-  gap: 1.5rem;
   align-items: center;
+  gap: 0.25rem;
 }
 
-.nav a {
-  color: white;
+.nav > a:not(.landing-login-link) {
+  position: relative;
+  padding: 0.65rem 0.75rem;
+  border-radius: 9px;
+  color: rgba(255, 255, 255, 0.9);
   text-decoration: none;
-  font-weight: 600;
-  font-size: 0.85rem;
-  transition: opacity 0.3s;
+  font-size: 0.82rem;
+  font-weight: 650;
+  white-space: nowrap;
+  transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
 
-.nav a:hover {
-  opacity: 0.8;
+.nav > a:not(.landing-login-link):hover,
+.nav > a:not(.landing-login-link):focus-visible {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.13);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.landing-login-link {
+  margin-left: 0.45rem;
+  text-decoration: none;
 }
 
 .login-btn {
-  background: white;
-  color: #8B0000;
-  border: none;
-  padding: 0.5rem 1.25rem;
-  border-radius: 0.4rem;
-  font-weight: 600;
+  min-height: 42px;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 11px;
+  background: #ffffff;
+  color: #991b1b;
+  font-weight: 800;
   cursor: pointer;
-  transition: background 0.3s;
+  box-shadow: 0 8px 20px rgba(69, 10, 10, 0.18);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.login-btn:hover {
-  background: rgba(255, 255, 255, 0.9);
+.login-btn:hover,
+.login-btn:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(69, 10, 10, 0.24);
+  outline: none;
 }
+
 .menu-btn {
   display: none;
-  font-size: 28px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #fff;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-size: 1.45rem;
 }
 
-@media (max-width: 768px) {
-
+@media (max-width: 920px) {
   .header-container {
-    position: relative;
+    min-height: 68px;
+    padding: 0.5rem 1rem;
+  }
+
+  .landing-brand-logo {
+    width: 54px;
+    height: 54px;
+  }
+
+  .landing-brand-text h4 {
+    font-size: 0.75rem;
   }
 
   .menu-btn {
-    display: block;
+    position: relative;
+    z-index: 10002;
+    display: inline-flex;
   }
 
-    .nav {
+  .nav {
     position: fixed;
-    top: 0;
-    right: -100%;
-    width: 100%;
-    height: 100vh;
-
-    background: white;
-
+    inset: 0 0 0 auto;
+    z-index: 10001;
+    width: min(360px, 100%);
+    min-height: 100dvh;
+    padding: 6.5rem 1.5rem 2rem;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-
-    gap: 35px;
-
-    transition: right .35s ease;
-
-    z-index: 9999;
+    align-items: stretch;
+    gap: 0.45rem;
+    background: linear-gradient(155deg, #7f1014 0%, #b51218 65%, #951319 100%);
+    box-shadow: -20px 0 40px rgba(31, 10, 10, 0.3);
+    transform: translateX(105%);
+    visibility: hidden;
+    pointer-events: none;
+    transition: transform 0.28s ease, visibility 0.28s ease;
   }
 
   .nav.active {
-    right: 0;
-  }
-  .nav.active {
-    display: flex;
-  }
-
-  .nav a {
-    color: #333;
-    padding: 12px 0;
-    text-decoration: none;
-    border-bottom: 1px solid #eee;
+    transform: translateX(0);
+    visibility: visible;
+    pointer-events: auto;
   }
 
-  .nav a:last-child {
-    border-bottom: none;
+  .nav > a:not(.landing-login-link) {
+    padding: 0.9rem 1rem;
+    border: 1px solid transparent;
+    border-bottom-color: rgba(255, 255, 255, 0.14);
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 0.98rem;
+  }
+
+  .landing-login-link {
+    margin: 0.75rem 0 0;
   }
 
   .login-btn {
-    margin-top: 15px;
     width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-brand {
+    gap: 0.6rem;
+  }
+
+  .landing-brand-logo {
+    width: 48px;
+    height: 48px;
+  }
+
+  .landing-brand-text h4 {
+    max-width: 220px;
+    font-size: 0.67rem;
+    line-height: 1.2;
   }
 }

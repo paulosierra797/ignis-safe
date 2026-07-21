@@ -11,17 +11,26 @@ export default function ProcessSection() {
   return (
     <section className="process">
       <div className="process-container">
-        <h2>{currentContent.title}</h2>
-        <button 
-          className="tagalog-btn"
-          onClick={() => setIsTagalog(!isTagalog)}
-        >
-          {isTagalog ? 'ENGLISH' : 'TAGALOG'}
-        </button>
+        <div className="process-heading-row">
+          <div>
+            <p className="landing-section-eyebrow">Online application guide</p>
+            <h2>{currentContent.title}</h2>
+          </div>
+          <button
+            type="button"
+            className="language-toggle process-language-toggle"
+            onClick={() => setIsTagalog(!isTagalog)}
+            aria-label={`Show process guide in ${isTagalog ? 'English' : 'Tagalog'}`}
+          >
+            <span aria-hidden="true">文</span>
+            {isTagalog ? 'English' : 'Tagalog'}
+          </button>
+        </div>
         
         <div className="process-grid">
           {currentContent.processSteps.map((section, idx) => (
-            <div key={idx} className="process-column">
+            <article key={idx} className="process-column">
+              <span className="process-column-number">{String(idx + 1).padStart(2, '0')}</span>
               <h3>{section.title}</h3>
               <ol className="steps-list">
                 {section.steps.map((step) => (
@@ -31,7 +40,7 @@ export default function ProcessSection() {
                   </li>
                 ))}
               </ol>
-            </div>
+            </article>
           ))}
         </div>
       </div>

@@ -7,7 +7,7 @@ export default function Footer() {
     <footer className="footer">
       <div className="footer-container">
         <div className="footer-logo">
-          <img src={logo} alt="Logo" className="logo-icon" />
+          <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="footer-logo-image" />
           <h3>BUREAU OF FIRE PROTECTION DASMARIÑAS CITY FIRE STATION</h3>
         </div>
         <div className="footer-links">

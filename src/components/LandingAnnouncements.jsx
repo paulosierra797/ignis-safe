@@ -17,7 +17,6 @@ export default function LandingAnnouncements() {
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const ITEMS_PER_PAGE = 3;
 
   const getItemsPerPage = () => {
   if (window.innerWidth < 768) return 1;
@@ -42,10 +41,13 @@ const [itemsPerPage, setItemsPerPage] = useState(getItemsPerPage());
     setItemsPerPage(getItemsPerPage());
   };
 
-  window.addEventListener("resize", handleResize);
+window.addEventListener("resize", handleResize);
 
   return () => window.removeEventListener("resize", handleResize);
 }, []);
+
+  const totalPages = Math.max(1, Math.ceil(announcements.length / itemsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
   return (
     <section className="landing-announcements" id="announcements">
@@ -68,13 +70,13 @@ const [itemsPerPage, setItemsPerPage] = useState(getItemsPerPage());
           <>
           <div className="landing-announcements-grid">
             {announcements.slice(
-  (currentPage - 1) * itemsPerPage,
-  (currentPage - 1) * itemsPerPage + itemsPerPage
+  (safeCurrentPage - 1) * itemsPerPage,
+  (safeCurrentPage - 1) * itemsPerPage + itemsPerPage
 ).map((announcement) => (
               <article key={announcement.announcement_id} className="landing-announcement-card">
                 <span className="landing-announcement-tag">Public</span>
                 <h3>{announcement.title}</h3>
-                <p>{announcement.content}</p>
+                <p className="landing-announcement-content">{announcement.content}</p>
                 {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
                   <div className="landing-announcement-attachments">
                     {announcement.attachments.map((attachment, index) => (
@@ -109,24 +111,24 @@ const [itemsPerPage, setItemsPerPage] = useState(getItemsPerPage());
               </article>
             ))}
           </div>
-          {Math.ceil(announcements.length / itemsPerPage) > 1 && (
+          {totalPages > 1 && (
             <div className="landing-announcement-pagination">
               <button
-                className="pagination-button"
+                className="landing-pagination-button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                disabled={safeCurrentPage === 1}
                 aria-label="Previous page"
               >
-                ◀
+                &larr;
               </button>
-              <span className="pagination-info">Page {currentPage} of {Math.ceil(announcements.length /itemsPerPage)}</span>
+              <span className="landing-pagination-info">Page {safeCurrentPage} of {totalPages}</span>
               <button
-                className="pagination-button"
-                onClick={() => setCurrentPage((p) => Math.min(Math.ceil(announcements.length / itemsPerPage), p + 1))}
-                disabled={currentPage === Math.ceil(announcements.length / itemsPerPage)}
+                className="landing-pagination-button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safeCurrentPage === totalPages}
                 aria-label="Next page"
               >
-                ▶
+                &rarr;
               </button>
             </div>
           )}

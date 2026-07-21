@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import './History.css';
@@ -17,6 +17,33 @@ export default function History() {
   const [activities, setActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [tableMessage, setTableMessage] = useState('');
+  const contentRef = useRef(null);
+
+  // The table header sticks just below the page header, so it needs the
+  // page header's real rendered height (which changes with breakpoints and
+  // content) rather than a guessed pixel value.
+  useLayoutEffect(() => {
+    const contentEl = contentRef.current;
+    if (!contentEl) return undefined;
+
+    const headerEl = contentEl.querySelector('.page-header');
+    if (!headerEl) return undefined;
+
+    const applyHeaderHeight = () => {
+      contentEl.style.setProperty('--audit-header-height', `${headerEl.offsetHeight}px`);
+    };
+
+    applyHeaderHeight();
+
+    const resizeObserver = new ResizeObserver(applyHeaderHeight);
+    resizeObserver.observe(headerEl);
+    window.addEventListener('resize', applyHeaderHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', applyHeaderHeight);
+    };
+  }, []);
 
   const loadActivities = useCallback(async () => {
     if (!currentUser?.admin_id) {
@@ -111,7 +138,7 @@ export default function History() {
     <div className="history-container">
       <Sidebar variant="personnel" />
 
-      <div className="history-content">
+      <div className="history-content" ref={contentRef}>
         <PageHeader
           title="Audit Logs"
           searchQuery={searchQuery}

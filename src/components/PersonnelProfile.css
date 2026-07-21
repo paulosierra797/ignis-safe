@@ -186,8 +186,40 @@
   flex: 1;
   margin-left: 250px;
   padding: 2rem 3rem;
+  padding-top: calc(var(--profile-header-height, 96px) + 2rem);
   height: 100vh;
   overflow-y: auto;
+  position: relative;
+}
+
+/*
+  The shared PageHeader component normally uses position: sticky with
+  negative margins to bleed into its container's padding. That approach
+  breaks down on this page (header overlapping the summary card / form
+  fields on scroll), so here it's pinned with position: fixed instead and
+  the content area gets a top offset equal to the header's real rendered
+  height (measured in PersonnelProfile.jsx and written to
+  --profile-header-height), so nothing can render above or behind it.
+*/
+.personnel-profile-header-fixed {
+  position: fixed;
+  top: 0;
+  left: 250px;
+  right: 0;
+  z-index: 900;
+  background-color: #ffffff;
+}
+
+.personnel-profile-header-fixed .page-header {
+  position: static;
+  top: auto;
+  margin: 0;
+  transform: none;
+  background-color: #ffffff;
+}
+
+body.sidebar-collapsed .personnel-profile-header-fixed {
+  left: 72px;
 }
 
 .profile-content {
@@ -718,6 +750,7 @@
 @media (max-width: 1024px) {
   .personnel-profile-content {
     padding: 1.5rem;
+    padding-top: calc(var(--profile-header-height, 96px) + 1.5rem);
   }
 
   .profile-layout {
@@ -729,7 +762,16 @@
   .personnel-profile-content {
     margin-left: 0;
     padding: 1.25rem;
+    padding-top: calc(var(--profile-header-height, 72px) + 1.25rem);
     height: auto;
+  }
+
+  .personnel-profile-header-fixed {
+    left: 0;
+  }
+
+  body.sidebar-collapsed .personnel-profile-header-fixed {
+    left: 0;
   }
 
   .profile-layout {
@@ -745,6 +787,7 @@
 @media (max-width: 768px) {
   .personnel-profile-content {
     padding: 1.25rem;
+    padding-top: calc(var(--profile-header-height, 72px) + 1.25rem);
   }
 
   .security-grid {
@@ -778,6 +821,7 @@
 @media (max-width: 480px) {
   .personnel-profile-content {
     padding: 1rem;
+    padding-top: calc(var(--profile-header-height, 64px) + 1rem);
   }
 
   .profile-summary-card {

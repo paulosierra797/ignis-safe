@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -67,6 +67,30 @@ const [modal, setModal] = useState({
   const [requestMessage, setRequestMessage] = useState({ type: '', text: '' });
   const [myRequests, setMyRequests] = useState([]);
   const [loadingMyRequests, setLoadingMyRequests] = useState(false);
+  const profileHeaderRef = useRef(null);
+  const profileContentRef = useRef(null);
+
+  useLayoutEffect(() => {
+    const headerEl = profileHeaderRef.current;
+    const contentEl = profileContentRef.current;
+    if (!headerEl || !contentEl) return;
+
+    const syncHeaderOffset = () => {
+      contentEl.style.setProperty('--profile-header-height', `${headerEl.offsetHeight}px`);
+    };
+
+    syncHeaderOffset();
+
+    const resizeObserver = new ResizeObserver(syncHeaderOffset);
+    resizeObserver.observe(headerEl);
+    window.addEventListener('resize', syncHeaderOffset);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', syncHeaderOffset);
+    };
+  }, []);
+
   useEffect(() => {
   const initModels = async () => {
     await loadFaceModels();
@@ -370,17 +394,19 @@ const showModal = ({ type = "info", message, onConfirm }) => {
     <div className="personnel-profile-container">
       <Sidebar variant="personnel" />
 
-      <div className="personnel-profile-content">
-        <PageHeader
-          title="Profile"
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          userName={displayName}
-          userRole={displayRole}
-          userAvatar={profileImage}
-          variant="personnel"
-          showSearch={false}
-        />
+      <div className="personnel-profile-content" ref={profileContentRef}>
+        <div className="personnel-profile-header-fixed" ref={profileHeaderRef}>
+          <PageHeader
+            title="Profile"
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            userName={displayName}
+            userRole={displayRole}
+            userAvatar={profileImage}
+            variant="personnel"
+            showSearch={false}
+          />
+        </div>
 
         <div className="profile-content">
           <div className="profile-layout">

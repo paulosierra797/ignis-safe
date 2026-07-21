@@ -172,11 +172,15 @@
 }
 
 .history-table th {
+  position: sticky;
+  top: var(--audit-header-height, 88px);
+  z-index: 10;
   padding: 1rem;
   text-align: left;
   font-weight: 600;
   color: #1f2937;
   font-size: 0.95rem;
+  background: #FDB914;
   border-bottom: 2px solid #e5e7eb;
 }
 

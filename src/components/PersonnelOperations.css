@@ -12,6 +12,19 @@
   padding: 2rem 3rem;
 }
 
+/* Match Announcements/Attendance page header sizing (desktop only; mobile
+   uses the shared PageHeader.css layout like every other Personnel page) */
+@media (min-width: 901px) {
+  .personnel-ops-content .page-header {
+    padding: 1.5rem 2rem;
+    margin: -2rem -3rem 2rem -3rem;
+  }
+
+  .personnel-ops-content .page-title {
+    font-size: 2rem;
+  }
+}
+
 /* 900px matches the Sidebar's off-canvas breakpoint (see Dashboard.css),
    so content reclaims the full width at the same point the fixed sidebar
    disappears behind the mobile drawer toggle. */

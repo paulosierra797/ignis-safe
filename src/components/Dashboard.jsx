@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import AIRecommendationsDialog from './AIRecommendationsDialog';
 import { getPersonnelOverviewStats, getUsersFromProfiles } from '../utils/usersService';
 import { getAnalyticsDashboardStats, getAnalyticsChartsData } from '../utils/knowledgeAnalyticsService';
 import { getPersonnelForDate, getShiftAssignmentSummaryForDate } from '../utils/personnelOperationsService';
@@ -847,6 +848,8 @@ if (currentKnowledge < 40) {
             </div>
           </div>
         </div>
+
+        <AIRecommendationsDialog />
 
         {isOnDutyModalOpen && (
           <div className="dashboard-modal-overlay" role="dialog" aria-modal="true">

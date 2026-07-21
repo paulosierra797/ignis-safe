@@ -1,0 +1,137 @@
+/* Compact, on-demand AI recommendation experience shared by Analytics and Dashboard. */
+.ai-recommendations-fab {
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 52px;
+  padding: 0.75rem 1.15rem;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(185, 28, 28, 0.3);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ai-recommendations-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(185, 28, 28, 0.38);
+}
+
+.ai-recommendations-fab:focus-visible,
+.ai-recommendations-close:focus-visible {
+  outline: 3px solid rgba(239, 68, 68, 0.3);
+  outline-offset: 3px;
+}
+
+.ai-recommendations-fab-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-size: 1rem;
+}
+
+.ai-recommendations-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(3px);
+}
+
+.ai-recommendations-dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, 100%);
+  max-height: calc(100vh - 2.5rem);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 20px;
+  background: #f8fafc;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.ai-recommendations-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.2rem 1.35rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.ai-recommendations-dialog-header h2 {
+  margin: 0.15rem 0 0;
+  color: #111827;
+  font-size: 1.25rem;
+}
+
+.ai-recommendations-eyebrow {
+  color: #dc2626;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ai-recommendations-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  width: 42px;
+  height: 42px;
+  border: 1px solid #fecaca;
+  border-radius: 50%;
+  background: #fff5f5;
+  color: #b91c1c;
+  font: inherit;
+  font-size: 1.55rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ai-recommendations-dialog-body {
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.ai-recommendations-dialog-body .module-recommendations {
+  margin: 0;
+  box-shadow: none;
+}
+
+.ai-recommendations-dialog-body .module-recommendations-header {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .ai-recommendations-fab {
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  .ai-recommendations-overlay {
+    padding: 0;
+  }
+
+  .ai-recommendations-dialog {
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+}

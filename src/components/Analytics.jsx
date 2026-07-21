@@ -9,7 +9,7 @@ import CompletionSimulationChart from './CompletionSimulationChart';
 import UserOverviewChart from './UserOverviewChart';
 import KnowledgeGainTrendChart from './KnowledgeGainTrendChart';
 import RiskDistributionChart from './RiskDistributionChart';
-import ModuleRecommendations from './ModuleRecommendations';
+import AIRecommendationsDialog from './AIRecommendationsDialog';
 import {
   getAnalyticsDashboardStats,
   getAnalyticsFilterOptions,
@@ -48,7 +48,6 @@ export default function Analytics() {
   const [stats, setStats] = useState(DEFAULT_STATS);
   const [charts, setCharts] = useState(DEFAULT_CHARTS);
   const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [isRecommendationsOpen, setIsRecommendationsOpen] = useState(false);
 // Starting Knowledge
 let startingColor = "#22c55e";
 if (stats.startingKnowledge < 30) {
@@ -131,17 +130,6 @@ const { data: chartsData } =
       isMounted = false;
     };
   }, [timeframe, people, topic, activityTrendsView, userOverviewRange]);
-
-  useEffect(() => {
-    if (!isRecommendationsOpen) return undefined;
-
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') setIsRecommendationsOpen(false);
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isRecommendationsOpen]);
 
   return (
     <div className="analytics-container">
@@ -400,51 +388,7 @@ const { data: chartsData } =
           </div>
         </div>
 
-        <button
-          type="button"
-          className="ai-recommendations-fab"
-          onClick={() => setIsRecommendationsOpen(true)}
-          aria-haspopup="dialog"
-          aria-expanded={isRecommendationsOpen}
-        >
-          <span className="ai-recommendations-fab-icon" aria-hidden="true">✦</span>
-          <span>AI Recommendations</span>
-        </button>
-
-        {isRecommendationsOpen && (
-          <div
-            className="ai-recommendations-overlay"
-            role="presentation"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) setIsRecommendationsOpen(false);
-            }}
-          >
-            <section
-              className="ai-recommendations-dialog"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="ai-recommendations-title"
-            >
-              <div className="ai-recommendations-dialog-header">
-                <div>
-                  <span className="ai-recommendations-eyebrow">AI insights</span>
-                  <h2 id="ai-recommendations-title">Module Recommendations</h2>
-                </div>
-                <button
-                  type="button"
-                  className="ai-recommendations-close"
-                  onClick={() => setIsRecommendationsOpen(false)}
-                  aria-label="Close AI recommendations"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="ai-recommendations-dialog-body">
-                <ModuleRecommendations />
-              </div>
-            </section>
-          </div>
-        )}
+        <AIRecommendationsDialog />
       </div>
     </div>
   );

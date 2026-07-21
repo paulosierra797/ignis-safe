@@ -5,8 +5,8 @@
   padding: 2rem;
   min-height: 100vh;
   background: url('../assets/BG.png');
-  background-size: contain;
-  background-position: left 100%;
+  background-size: cover;
+  background-position: center;
   background-attachment: fixed;
   background-repeat: no-repeat;
   position: relative;
@@ -19,7 +19,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.05);
+  background: linear-gradient(110deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
   z-index: 0;
 }
 
@@ -49,17 +49,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   z-index: 5;
 }
 
 .login-form-container {
   width: 100%;
-  max-width: 500px;
-  border: none;
+  max-width: 520px;
+  border: 1px solid rgba(185, 28, 28, 0.1);
+  border-top: 4px solid #b91c1c;
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  padding: 2.5rem;
+  border-radius: 20px;
+  padding: clamp(2rem, 4vw, 2.75rem);
   backdrop-filter: blur(10px);
   animation: slideInRight 0.5s ease-out;
   position: relative;
@@ -139,7 +141,7 @@
 .password-input-wrapper input {
   padding: 0.875rem 1rem;
   width: 100%;
-  padding-right: 2.5rem;
+  padding-right: 3.5rem;
   border: 1.5px solid #E2E8F0;
   border-radius: 8px;
   font-size: 0.95rem;
@@ -159,19 +161,35 @@
 
 .toggle-password {
   position: absolute;
-  right: 0.75rem;
-  background: none;
-  border: none;
+  top: 50%;
+  right: 0.45rem;
+  width: 40px;
+  height: 40px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #64748b;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.25rem;
+  padding: 0;
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.toggle-password:hover {
-  opacity: 0.7;
+.toggle-password:hover,
+.toggle-password:focus-visible {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  outline: none;
+}
+
+.toggle-password:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 
@@ -430,6 +448,91 @@
   text-align: center;
   color: black;
   font-size: 0.8rem;
+}
+
+/* Main authentication card refinements. Keeping these rules under
+   .login-page prevents the generic form class names from affecting other
+   screens such as the attendance sign-in. */
+.login-page .login-form-container:not(.login-form-container-verify) h1 {
+  margin: 0 0 0.65rem;
+  color: #111827;
+  font-size: clamp(1.9rem, 4vw, 2.3rem);
+  line-height: 1.15;
+}
+
+.login-page .login-description {
+  margin-bottom: 1.6rem;
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.login-page .login-form {
+  gap: 1.1rem;
+}
+
+.login-page .login-form .form-group {
+  margin: 0;
+}
+
+.login-page .form-group label {
+  margin-bottom: 0.55rem;
+  color: #b91c1c;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.login-page .form-group input,
+.login-page .password-input-wrapper input {
+  box-sizing: border-box;
+  min-height: 54px;
+  border-color: #dbe2ea;
+  border-radius: 10px;
+  color: #172033;
+}
+
+.login-page .form-group input::placeholder,
+.login-page .password-input-wrapper input::placeholder {
+  color: #94a3b8;
+}
+
+.login-page .login-options {
+  gap: 1rem;
+  margin-top: 0.15rem;
+  padding: 0.15rem 0;
+}
+
+.login-page .remember-me {
+  color: #334155;
+}
+
+.login-page .forgot-password {
+  font-weight: 600;
+}
+
+.login-page .login-button {
+  min-height: 52px;
+  margin-top: 0.25rem;
+  border-radius: 10px;
+  box-shadow: 0 9px 22px rgba(185, 28, 28, 0.2);
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-page .login-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(185, 28, 28, 0.26);
+}
+
+.login-page .login-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.login-page .login-footer {
+  margin: 1.2rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid #e5e7eb;
+  color: #7c8594;
 }
 
 .form-group select {

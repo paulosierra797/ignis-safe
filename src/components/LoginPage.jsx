@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { supabase } from '../utils/supabaseClient';
 import {
 sendPasswordResetEmail,
@@ -563,8 +564,11 @@ useEffect(() => {
                     type="button"
                     className="toggle-password"
                     onClick={toggleNewPasswordVisibility}
+                    aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                    aria-pressed={showNewPassword}
+                    title={showNewPassword ? 'Hide new password' : 'Show new password'}
                   >
-                    {showNewPassword ? '👁️' : '👁️‍🗨️'}
+                    {showNewPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                   </button>
                 </div>
               </div>
@@ -583,8 +587,11 @@ useEffect(() => {
                     type="button"
                     className="toggle-password"
                     onClick={toggleConfirmPasswordVisibility}
+                    aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
+                    aria-pressed={showConfirmPassword}
+                    title={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
                   >
-                    {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                    {showConfirmPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                   </button>
                 </div>
               </div>
@@ -725,8 +732,12 @@ useEffect(() => {
                       type="button"
                       className="toggle-password"
                       onClick={togglePasswordVisibility}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-pressed={showPassword}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                      disabled={loading}
                     >
-                      {showPassword ? '👁️' : '👁️‍🗨️'}
+                      {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                     </button>
                   </div>
                 </div>

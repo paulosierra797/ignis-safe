@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 import { authenticatePersonnel, saveAuthToken } from '../utils/attendanceService';
-import { useLocation } from 'react-router-dom';
 import { validateQRSession } from '../utils/attendanceService';
 
 import './AttendanceLogin.css';
@@ -9,15 +9,14 @@ import './AttendanceLogin.css';
 
 const AttendanceLogin = () => {
   const navigate = useNavigate();
-  const location = useLocation();
 const [searchParams] = useSearchParams();
 const sessionId = searchParams.get("station");
  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const redirectTarget = searchParams.get('redirect');
   const [qrValid, setQrValid] = useState(false);
 
   const handleLogin = async (e) => {
@@ -111,16 +110,29 @@ const sessionId = searchParams.get("station");
             <label htmlFor="pin-input" className="form-label">
               Account Password
             </label>
-            <input
-              id="pin-input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your account password"
-              autoComplete="current-password"
-              className="form-input"
-              disabled={isLoading}
-            />
+            <div className="attendance-password-wrapper">
+              <input
+                id="pin-input"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your account password"
+                autoComplete="current-password"
+                className="form-input"
+                disabled={isLoading}
+              />
+              <button
+                type="button"
+                className="attendance-password-toggle"
+                onClick={() => setShowPassword((visible) => !visible)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                title={showPassword ? 'Hide password' : 'Show password'}
+                disabled={isLoading}
+              >
+                {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+              </button>
+            </div>
             <div className="pin-hint">Use the same password as your IGNIS SAFE account login.</div>
           </div>
 

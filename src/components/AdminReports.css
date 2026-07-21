@@ -12,15 +12,23 @@
   min-width: 0;
   max-width: 100%;
   margin-left: 250px;
-  padding: 2rem;
+  padding: 0 2rem 2rem;
   overflow-x: hidden;
   box-sizing: border-box;
+}
+
+.admin-reports-main > .page-header {
+  margin: 0 -2rem 2rem;
 }
 
 @media (max-width: 900px) {
   .admin-reports-main {
     margin-left: 0;
-    padding: 1rem;
+    padding: 0 1rem 1rem;
+  }
+
+  .admin-reports-main > .page-header {
+    margin: 0 -1rem 1.25rem;
   }
 
   .admin-reports-toolbar,
@@ -600,7 +608,7 @@
 @media (max-width: 768px) {
   .admin-reports-main {
     margin-left: 0;
-    padding: 1rem;
+    padding: 0 1rem 1rem;
   }
 
   .admin-reports-toolbar {
@@ -629,7 +637,11 @@
 
 @media (max-width: 480px) {
   .admin-reports-main {
-    padding: 0.75rem;
+    padding: 0 0.75rem 0.75rem;
+  }
+
+  .admin-reports-main > .page-header {
+    margin: 0 -0.75rem 1rem;
   }
 
   .admin-reports-card {

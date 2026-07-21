@@ -9,6 +9,25 @@
   flex: 1;
   margin-left: 250px;
   padding: 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.accounts-main > .accounts-header {
+  order: 1;
+}
+
+.accounts-main > .shift-summary-card {
+  order: 2;
+}
+
+.accounts-main > .accounts-directory-section {
+  order: 3;
+}
+
+.accounts-main > .leave-approval-card,
+.accounts-main > .profile-request-card {
+  order: 4;
 }
 .leave-approval-mobile-list,
 .profile-request-mobile-list,
@@ -799,6 +818,164 @@
 
 .request-history-search::placeholder {
   color: #94a3b8;
+}
+
+.request-section-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  margin-top: 0.85rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.request-section-toggle {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  background: #fff7f7;
+  color: #991b1b;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.request-section-toggle:hover,
+.request-section-toggle:focus-visible {
+  border-color: #dc2626;
+  background: #fef2f2;
+  outline: none;
+}
+
+.request-section-toggle-icon {
+  display: inline-block;
+  font-size: 1rem;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.request-section-toggle-icon.is-expanded {
+  transform: rotate(180deg);
+}
+
+.request-section-preview-note {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.accounts-directory-section {
+  min-width: 0;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
+}
+
+.accounts-directory-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.accounts-directory-eyebrow {
+  margin: 0 0 0.2rem;
+  color: #b91c1c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.accounts-directory-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.1rem;
+}
+
+.accounts-directory-count {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.accounts-directory-section .accounts-filters {
+  margin-bottom: 1rem;
+  padding: 0.9rem;
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+.accounts-directory-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.accounts-directory-pagination p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.accounts-directory-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.accounts-directory-page-controls span {
+  min-width: 92px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.accounts-directory-page-controls button {
+  min-height: 36px;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid #d8a4a4;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #991b1b;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.accounts-directory-page-controls button:hover:not(:disabled),
+.accounts-directory-page-controls button:focus-visible:not(:disabled) {
+  border-color: #b91c1c;
+  background: #fef2f2;
+  outline: none;
+}
+
+.accounts-directory-page-controls button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
 }
 
 .leave-history-card .leave-approval-table {
@@ -2323,6 +2500,33 @@
 
   .account-card-title {
     flex: 1 1 auto;
+  }
+
+  .accounts-directory-section {
+    padding: 0.85rem;
+  }
+
+  .accounts-directory-header,
+  .accounts-directory-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .accounts-directory-page-controls {
+    width: 100%;
+  }
+
+  .accounts-directory-page-controls button {
+    flex: 1 1 0;
+  }
+
+  .request-section-toggle-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .request-section-toggle {
+    width: 100%;
   }
 }
 .account-action-menu {

@@ -41,6 +41,8 @@ const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{
 const contactNumberRegex = /^09\d{9}$/;
 const ADD_PERSONNEL_TIMEOUT_MS = 60000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const REQUEST_PREVIEW_LIMIT = 3;
+const PERSONNEL_PAGE_SIZE = 10;
 const EMPTY_PERSONNEL_FORM = {
   first_name: '',
   last_name: '',
@@ -220,6 +222,34 @@ function AccountActionsMenu({ account, actions }) {
     </>
   );
 }
+
+function RequestSectionToggle({ expanded, itemCount, label, onToggle }) {
+  if (itemCount <= REQUEST_PREVIEW_LIMIT) {
+    return null;
+  }
+
+  return (
+    <div className="request-section-toggle-row">
+      <button
+        type="button"
+        className="request-section-toggle"
+        aria-expanded={expanded}
+        onClick={onToggle}
+      >
+        <span>{expanded ? 'Show fewer' : `Show all ${itemCount}`}</span>
+        <span className={`request-section-toggle-icon${expanded ? ' is-expanded' : ''}`} aria-hidden="true">
+          ⌄
+        </span>
+      </button>
+      {!expanded && (
+        <span className="request-section-preview-note">
+          Showing the latest {REQUEST_PREVIEW_LIMIT} {label}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function Accounts() {
   const { currentUser } = useUser();
   const [accounts, setAccounts] = useState([]);
@@ -228,6 +258,13 @@ export default function Accounts() {
   const [personnelSearch, setPersonnelSearch] = useState('');
   const [rankFilter, setRankFilter] = useState('All Ranks');
   const [statusFilter, setStatusFilter] = useState('All Status');
+  const [personnelPage, setPersonnelPage] = useState(1);
+  const [expandedRequestSections, setExpandedRequestSections] = useState({
+    pendingLeave: false,
+    leaveHistory: false,
+    pendingProfile: false,
+    profileHistory: false
+  });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddExitConfirmOpen, setIsAddExitConfirmOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
@@ -409,6 +446,7 @@ export default function Accounts() {
     setPersonnelSearch('');
     setRankFilter('All Ranks');
     setStatusFilter('All Status');
+    setPersonnelPage(1);
   };
 
   // Fetch accounts on component mount
@@ -871,6 +909,23 @@ export default function Accounts() {
     if (!matchesStatus) return false;
     return matchesProfileHistorySearch(request, profileHistorySearch.trim().toLowerCase());
   });
+
+  const getVisibleRequestItems = (items, sectionKey) => (
+    expandedRequestSections[sectionKey]
+      ? items
+      : items.slice(0, REQUEST_PREVIEW_LIMIT)
+  );
+  const visiblePendingLeaveRequests = getVisibleRequestItems(pendingLeaveRequests, 'pendingLeave');
+  const visibleLeaveRequestHistory = getVisibleRequestItems(filteredLeaveRequestHistory, 'leaveHistory');
+  const visiblePendingProfileChangeRequests = getVisibleRequestItems(pendingProfileChangeRequests, 'pendingProfile');
+  const visibleProfileChangeHistory = getVisibleRequestItems(filteredProfileChangeHistory, 'profileHistory');
+
+  const toggleRequestSection = (sectionKey) => {
+    setExpandedRequestSections((current) => ({
+      ...current,
+      [sectionKey]: !current[sectionKey]
+    }));
+  };
 
   const handleApproveProfileChangeRequest = async (request) => {
     if (!request?.request_id || processingProfileRequestId) {
@@ -2118,6 +2173,16 @@ const permissions = getDefaultPermissions(formData.role);
     const matchStatus = statusFilter === 'All Status' || account.status === statusFilter;
     return matchSearch && matchRank && matchStatus;
   });
+  const personnelTotalPages = Math.max(1, Math.ceil(filteredAccounts.length / PERSONNEL_PAGE_SIZE));
+  const safePersonnelPage = Math.min(personnelPage, personnelTotalPages);
+  const paginatedAccounts = filteredAccounts.slice(
+    (safePersonnelPage - 1) * PERSONNEL_PAGE_SIZE,
+    safePersonnelPage * PERSONNEL_PAGE_SIZE
+  );
+  const personnelRangeStart = filteredAccounts.length === 0
+    ? 0
+    : (safePersonnelPage - 1) * PERSONNEL_PAGE_SIZE + 1;
+  const personnelRangeEnd = Math.min(safePersonnelPage * PERSONNEL_PAGE_SIZE, filteredAccounts.length);
 
   const getAccountActions = (account) => [
     ...(isPersonnelAccount(account)
@@ -2331,7 +2396,7 @@ const permissions = getDefaultPermissions(formData.role);
                   </tr>
                 </thead>
                 <tbody>
-                  {pendingLeaveRequests.map((request) => {
+                  {visiblePendingLeaveRequests.map((request) => {
                     const target = accounts.find((account) => account.admin_id === request.personnel_id);
                     const isProcessing = processingRequestId === request.request_id;
 
@@ -2369,7 +2434,7 @@ const permissions = getDefaultPermissions(formData.role);
             
           )}
           <div className="leave-approval-mobile-list">
-  {pendingLeaveRequests.map((request) => {
+  {visiblePendingLeaveRequests.map((request) => {
     const target = accounts.find(
       (a) => a.admin_id === request.personnel_id
     );
@@ -2430,12 +2495,20 @@ const permissions = getDefaultPermissions(formData.role);
     );
   })}
 </div>
+          <RequestSectionToggle
+            expanded={expandedRequestSections.pendingLeave}
+            itemCount={pendingLeaveRequests.length}
+            label="leave requests"
+            onToggle={() => toggleRequestSection('pendingLeave')}
+          />
         </div>
 
         <div className="leave-approval-card leave-history-card">
           <div className="leave-approval-header">
             <h3>Leave Request History</h3>
-            <span>{filteredLeaveRequestHistory.length} shown</span>
+            <span>
+              {visibleLeaveRequestHistory.length} of {filteredLeaveRequestHistory.length} shown
+            </span>
           </div>
 
           <div className="request-history-toolbar">
@@ -2486,7 +2559,7 @@ const permissions = getDefaultPermissions(formData.role);
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLeaveRequestHistory.map((request) => (
+                  {visibleLeaveRequestHistory.map((request) => (
                     <tr key={request.request_id}>
                       <td>{request.personnel_name || request.personnel_id}</td>
                       <td>{request.personnel_rank || '—'}</td>
@@ -2522,7 +2595,7 @@ const permissions = getDefaultPermissions(formData.role);
           )}
 
           <div className="leave-history-mobile-list">
-            {filteredLeaveRequestHistory.map((request) => (
+            {visibleLeaveRequestHistory.map((request) => (
               <div className="leave-request-card" key={request.request_id}>
                 <h3>{request.personnel_name || request.personnel_id}</h3>
 
@@ -2578,6 +2651,12 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
             ))}
           </div>
+          <RequestSectionToggle
+            expanded={expandedRequestSections.leaveHistory}
+            itemCount={filteredLeaveRequestHistory.length}
+            label="history entries"
+            onToggle={() => toggleRequestSection('leaveHistory')}
+          />
         </div>
 
         <div className="profile-request-card">
@@ -2609,7 +2688,7 @@ const permissions = getDefaultPermissions(formData.role);
                   </tr>
                 </thead>
                 <tbody>
-                  {pendingProfileChangeRequests.map((request) => {
+                  {visiblePendingProfileChangeRequests.map((request) => {
                     const isProcessing = processingProfileRequestId === request.request_id;
 
                     return (
@@ -2652,7 +2731,7 @@ const permissions = getDefaultPermissions(formData.role);
           )}
 
           <div className="profile-request-mobile-list">
-            {pendingProfileChangeRequests.map((request) => {
+            {visiblePendingProfileChangeRequests.map((request) => {
               const isProcessing = processingProfileRequestId === request.request_id;
 
               return (
@@ -2701,12 +2780,20 @@ const permissions = getDefaultPermissions(formData.role);
               );
             })}
           </div>
+          <RequestSectionToggle
+            expanded={expandedRequestSections.pendingProfile}
+            itemCount={pendingProfileChangeRequests.length}
+            label="profile requests"
+            onToggle={() => toggleRequestSection('pendingProfile')}
+          />
         </div>
 
         <div className="profile-request-card profile-history-card">
           <div className="leave-approval-header">
             <h3>Profile Change Request History</h3>
-            <span>{filteredProfileChangeHistory.length} shown</span>
+            <span>
+              {visibleProfileChangeHistory.length} of {filteredProfileChangeHistory.length} shown
+            </span>
           </div>
 
           <div className="request-history-toolbar">
@@ -2752,7 +2839,7 @@ const permissions = getDefaultPermissions(formData.role);
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProfileChangeHistory.map((request) => (
+                  {visibleProfileChangeHistory.map((request) => (
                     <tr key={request.request_id}>
                       <td className="profile-request-personnel-cell">
                         <div className="profile-request-personnel">{request.personnel_name}</div>
@@ -2786,7 +2873,7 @@ const permissions = getDefaultPermissions(formData.role);
           )}
 
           <div className="profile-history-mobile-list">
-            {filteredProfileChangeHistory.map((request) => (
+            {visibleProfileChangeHistory.map((request) => (
               <div className="leave-request-card" key={request.request_id}>
                 <h3>{request.personnel_name}</h3>
 
@@ -2833,7 +2920,24 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
             ))}
           </div>
+          <RequestSectionToggle
+            expanded={expandedRequestSections.profileHistory}
+            itemCount={filteredProfileChangeHistory.length}
+            label="history entries"
+            onToggle={() => toggleRequestSection('profileHistory')}
+          />
         </div>
+
+        <section className="accounts-directory-section" aria-labelledby="personnel-directory-title">
+          <div className="accounts-directory-header">
+            <div>
+              <p className="accounts-directory-eyebrow">Personnel directory</p>
+              <h3 id="personnel-directory-title">Personnel List</h3>
+            </div>
+            <span className="accounts-directory-count">
+              {filteredAccounts.length} {filteredAccounts.length === 1 ? 'person' : 'people'}
+            </span>
+          </div>
 
         <div className="accounts-filters">
           <div className="accounts-filter-item">
@@ -2842,7 +2946,10 @@ const permissions = getDefaultPermissions(formData.role);
               type="text"
               placeholder="Type a user name"
               value={personnelSearch}
-              onChange={(event) => setPersonnelSearch(event.target.value)}
+              onChange={(event) => {
+                setPersonnelSearch(event.target.value);
+                setPersonnelPage(1);
+              }}
             />
           </div>
 
@@ -2850,7 +2957,10 @@ const permissions = getDefaultPermissions(formData.role);
             <label>Filter by Rank</label>
             <select
               value={rankFilter}
-              onChange={(event) => setRankFilter(event.target.value)}
+              onChange={(event) => {
+                setRankFilter(event.target.value);
+                setPersonnelPage(1);
+              }}
             >
               <option>All Ranks</option>
               <option>FDIR</option>
@@ -2874,7 +2984,10 @@ const permissions = getDefaultPermissions(formData.role);
             <label>Filter by Status</label>
             <select
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
+              onChange={(event) => {
+                setStatusFilter(event.target.value);
+                setPersonnelPage(1);
+              }}
             >
               <option>All Status</option>
               <option>Active</option>
@@ -2925,11 +3038,11 @@ const permissions = getDefaultPermissions(formData.role);
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAccounts.map((account, index) => {
+                  {paginatedAccounts.map((account, index) => {
                     const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || 'Personnel';
                     return (
                       <tr key={account.admin_id || account.id}>
-                        <td className="account-index-cell">{index + 1}.</td>
+                        <td className="account-index-cell">{personnelRangeStart + index}.</td>
                         <td>
                           <span className="account-table-text" title={accountName}>{accountName}</span>
                         </td>
@@ -2969,7 +3082,7 @@ const permissions = getDefaultPermissions(formData.role);
         </div>
 
         <div className="accounts-mobile-list">
-          {filteredAccounts.map((account) => {
+          {paginatedAccounts.map((account) => {
             const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || 'Personnel';
             return (
               <div
@@ -3021,6 +3134,32 @@ const permissions = getDefaultPermissions(formData.role);
             );
           })}
         </div>
+
+        {filteredAccounts.length > 0 && (
+          <div className="accounts-directory-pagination" aria-label="Personnel list pagination">
+            <p>
+              Showing {personnelRangeStart}–{personnelRangeEnd} of {filteredAccounts.length}
+            </p>
+            <div className="accounts-directory-page-controls">
+              <button
+                type="button"
+                onClick={() => setPersonnelPage((page) => Math.max(1, page - 1))}
+                disabled={safePersonnelPage === 1}
+              >
+                Previous
+              </button>
+              <span>Page {safePersonnelPage} of {personnelTotalPages}</span>
+              <button
+                type="button"
+                onClick={() => setPersonnelPage((page) => Math.min(personnelTotalPages, page + 1))}
+                disabled={safePersonnelPage === personnelTotalPages}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+        </section>
 
         {isEditModalOpen && (
   <div className="accounts-modal-overlay" role="dialog">

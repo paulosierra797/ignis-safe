@@ -1,5 +1,20 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  FaBell,
+  FaBookOpen,
+  FaBullhorn,
+  FaCalendarCheck,
+  FaChartLine,
+  FaClipboardList,
+  FaFileAlt,
+  FaHistory,
+  FaQuestionCircle,
+  FaSitemap,
+  FaTachometerAlt,
+  FaUserCog,
+  FaUsers
+} from 'react-icons/fa';
 import inlogo from '../assets/inLOGO.png';
 import './Dashboard.css';
 import { useUser } from '../context/UserContext';
@@ -21,18 +36,17 @@ export default function Sidebar({ variant = 'admin' }) {
   const { currentUser, hasPermission } = useUser();
   const sidebarRef = useRef(null);
   const { isSidebarCollapsed, isMobileSidebarOpen, closeMobileSidebar } = useLayout();
-  const isAdminAccount = String(currentUser?.role || '').toLowerCase() === 'admin';
   const [pendingProfileChangeRequests, setPendingProfileChangeRequests] = useState(0);
   const [hasPendingAnnouncementAck, setHasPendingAnnouncementAck] = useState(false);
   const [showAckRequiredModal, setShowAckRequiredModal] = useState(false);
 
   const menuItems = [
-    { id: 'dashboard', icon: '📊', label: 'Dashboard', path: '/dashboard', permission: 'view_dashboard' },
-    { id: 'chart', icon: '🗂️', label: 'Organization Chart', path: '/dashboard/chart', permission: 'view_charts' },
-    { id: 'reports', icon: '📋', label: 'Reports', path: '/dashboard/reports', permission: 'view_dashboard' },
-    { id: 'attendance-admin', icon: '📅', label: 'Attendance', path: '/attendance-admin', permission: 'view_attendance' },
-    { id: 'accounts', icon: '👥', label: 'Personnel', path: '/dashboard/accounts', permission: 'view_accounts', badge: pendingProfileChangeRequests },
-      { id: 'announcements', icon: '🔔', label: 'Content Management', path: '/dashboard/announcements', permission: 'manage_users' },
+    { id: 'dashboard', icon: FaTachometerAlt, label: 'Dashboard', path: '/dashboard', permission: 'view_dashboard' },
+    { id: 'reports', icon: FaFileAlt, label: 'Reports', path: '/dashboard/reports', permission: 'view_dashboard' },
+    { id: 'accounts', icon: FaUsers, label: 'Personnel', path: '/dashboard/accounts', permission: 'view_accounts', badge: pendingProfileChangeRequests },
+    { id: 'announcements', icon: FaBullhorn, label: 'Content Management', path: '/dashboard/announcements', permission: 'manage_users' },
+    { id: 'attendance-admin', icon: FaCalendarCheck, label: 'Attendance', path: '/attendance-admin', permission: 'view_attendance' },
+    { id: 'chart', icon: FaSitemap, label: 'Organizational Chart', path: '/dashboard/chart', permission: 'view_charts' },
   ];
 
   useEffect(() => {
@@ -99,7 +113,7 @@ export default function Sidebar({ variant = 'admin' }) {
       isMounted = false;
       window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
     };
-  }, [variant, currentUser?.admin_id, currentUser?.role]);
+  }, [variant, currentUser]);
 
   useEffect(() => {
     if (isMobileSidebarOpen) {
@@ -138,31 +152,26 @@ export default function Sidebar({ variant = 'admin' }) {
   };
 
   const appManagementItems = [
-    { id: 'users', icon: '👤', label: 'Users', path: '/dashboard/users', permission: 'manage_users' },
-    { id: 'assessment-questions', icon: '❓', label: 'Questions', path: '/dashboard/assessment-questions', permission: 'manage_users' },
-    { id: 'learning-materials', icon: '📚', label: 'Learning Materials', path: '/dashboard/learning-materials', permission: 'manage_users'},
-
-
-    { id: 'analytics', icon: '📊', label: 'Analytics', path: '/dashboard/analytics', permission: 'view_analytics' },
-
-    { id: 'audit-logs', icon: '📋', label: 'Audit Logs', path: '/dashboard/audit-logs', permission: 'view_audit_logs' },
+    { id: 'analytics', icon: FaChartLine, label: 'Analytics', path: '/dashboard/analytics', permission: 'view_analytics' },
+    { id: 'users', icon: FaUserCog, label: 'Users', path: '/dashboard/users', permission: 'manage_users' },
+    { id: 'learning-materials', icon: FaBookOpen, label: 'Learning Materials', path: '/dashboard/learning-materials', permission: 'manage_users' },
+    { id: 'assessment-questions', icon: FaQuestionCircle, label: 'Assessment Questions', path: '/dashboard/assessment-questions', permission: 'manage_users' },
+    { id: 'audit-logs', icon: FaClipboardList, label: 'Audit Logs', path: '/dashboard/audit-logs', permission: 'view_audit_logs' },
   ];
 
   const personnelMenuItems = [
-    { id: 'operations', icon: '🗂️', label: 'Shift Schedule', path: '/personnel/operations' },
-    { id: 'announcements', icon: '🔔', label: 'Announcements', path: '/personnel/announcements' },
-    { id: 'attendance-personnel', icon: '🕐', label: 'Attendance', path: '/attendance-personnel' },
-    { id: 'reports', icon: '📋', label: 'Reports', path: '/reports' },
-    { id: 'history', icon: '📊', label: 'Audit Logs', path: '/personnel/history' }
+    { id: 'operations', icon: FaCalendarCheck, label: 'Shift Schedule', path: '/personnel/operations' },
+    { id: 'announcements', icon: FaBell, label: 'Announcements', path: '/personnel/announcements' },
+    { id: 'attendance-personnel', icon: FaCalendarCheck, label: 'Attendance', path: '/attendance-personnel' },
+    { id: 'reports', icon: FaFileAlt, label: 'Reports', path: '/reports' },
+    { id: 'history', icon: FaHistory, label: 'Audit Logs', path: '/personnel/history' }
   ];
 
   // Filter menu items based on user permissions
   const visibleMenuItems = variant === 'personnel'
     ? personnelMenuItems
-    : variant === 'intel-unit'
-    ? intelUnitMenuItems
     : menuItems.filter(item => hasPermission(item.permission));
-  const visibleAppManagementItems = variant === 'personnel' || variant === 'intel-unit'
+  const visibleAppManagementItems = variant === 'personnel'
     ? []
     : appManagementItems.filter(item => hasPermission(item.permission));
 
@@ -201,7 +210,7 @@ export default function Sidebar({ variant = 'admin' }) {
                 className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
                 onClick={(event) => handleNavItemClick(event, item)}
               >
-                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-icon">{React.createElement(item.icon, { 'aria-hidden': true })}</span>
                 <span className="nav-label">{item.label}</span>
                 {Boolean(item.badge) && (
                   <span className="nav-badge">{item.badge > 99 ? '99+' : item.badge}</span>
@@ -221,7 +230,7 @@ export default function Sidebar({ variant = 'admin' }) {
                     to={item.path}
                     className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
                   >
-                    <span className="nav-icon">{item.icon}</span>
+                    <span className="nav-icon">{React.createElement(item.icon, { 'aria-hidden': true })}</span>
                     <span className="nav-label">{item.label}</span>
                   </Link>
                 </li>

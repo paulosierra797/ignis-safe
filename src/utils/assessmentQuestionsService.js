@@ -32,14 +32,59 @@ const getStatusCode = (error) => (
 
 const normalizeFunctionError = (error, data = null) => {
   const status = getStatusCode(error) || data?.status || null;
-  const message = data?.error || error?.message || 'Edge function failed';
+  const retryAfterSeconds = parseRetryAfterSeconds(
+    data?.retryAfterSeconds
+    ?? data?.retry_after_seconds
+    ?? error?.retryAfterSeconds
+  );
+  const technicalMessage = data?.error || error?.message || 'Edge function failed';
+  let message = technicalMessage;
+
+  if (Number(status) === 429) {
+    message = formatQuotaMessage(retryAfterSeconds);
+  } else if ([502, 503, 504].includes(Number(status))) {
+    message = 'The AI question service is temporarily unavailable. Please try again.';
+  }
 
   return {
     message,
     status,
-    retryAfterSeconds: parseRetryAfterSeconds(data?.retryAfterSeconds ?? error?.retryAfterSeconds),
+    retryAfterSeconds,
+    technicalMessage,
   };
 };
+
+const readFunctionErrorPayload = async (error) => {
+  const response = error?.context;
+
+  if (!response || typeof response.clone !== 'function') {
+    return null;
+  }
+
+  try {
+    return await response.clone().json();
+  } catch {
+    try {
+      const text = await response.clone().text();
+      return text ? { error: text } : null;
+    } catch {
+      return null;
+    }
+  }
+};
+
+const isRetryableFunctionError = (error) => {
+  const status = Number(error?.status || 0);
+  if ([502, 503, 504].includes(status)) return true;
+
+  return status === 0 && /network|failed to fetch|temporarily unavailable/i.test(
+    String(error?.technicalMessage || error?.message || '')
+  );
+};
+
+const wait = (milliseconds) => new Promise((resolve) => {
+  window.setTimeout(resolve, milliseconds);
+});
 
 const mapQuestion = (row = {}) => ({
   id: row.id,
@@ -351,34 +396,49 @@ export const deactivateAssessmentQuestions = async (assessmentId) => {
 };
 
 export const generateAssessmentQuestions = async (payload) => {
-  try {
-    const { data, error } = await supabase.functions.invoke(
-      'generate-assessment-questions',
-      { body: payload }
-    );
+  const maximumAttempts = 2;
 
-    if (error) {
-      console.error('Edge function error:', error);
+  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        'generate-assessment-questions',
+        { body: payload }
+      );
 
-      return {
-        data: null,
-        error: normalizeFunctionError(error),
-      };
+      if (!error) {
+        return {
+          data: data?.data ?? data ?? null,
+          error: data?.error ? normalizeFunctionError(null, data) : null,
+        };
+      }
+
+      const errorPayload = await readFunctionErrorPayload(error);
+      const normalizedError = normalizeFunctionError(error, errorPayload);
+      console.error('Edge function error:', normalizedError);
+
+      if (attempt < maximumAttempts && isRetryableFunctionError(normalizedError)) {
+        await wait(900);
+        continue;
+      }
+
+      return { data: null, error: normalizedError };
+    } catch (error) {
+      const normalizedError = normalizeFunctionError(error);
+      console.error('Unexpected question generator error:', normalizedError);
+
+      if (attempt < maximumAttempts && isRetryableFunctionError(normalizedError)) {
+        await wait(900);
+        continue;
+      }
+
+      return { data: null, error: normalizedError };
     }
-
-    return {
-      data: data?.data ?? data ?? null,
-      error: data?.error ? normalizeFunctionError(null, data) : null,
-    };
-
-  } catch (error) {
-    console.error('Unexpected error:', error);
-
-    return {
-      data: null,
-      error: normalizeFunctionError(error),
-    };
   }
+
+  return {
+    data: null,
+    error: normalizeFunctionError({ message: 'The AI question service is temporarily unavailable.', status: 503 }),
+  };
 };
 export const resetAssessmentQuestions = async (assessmentId) => {
   try {

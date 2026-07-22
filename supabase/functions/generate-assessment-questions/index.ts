@@ -121,6 +121,8 @@ Deno.serve(async (request) => {
     const context = String(body?.context || '').trim();
     const assessmentTitle = String(body?.assessmentTitle || '').trim();
     const assessmentType = String(body?.assessmentType || '').trim();
+    const targetQuestionNo = Number(body?.targetQuestionNo || 0);
+    const existingPrompt = String(body?.existingPrompt || '').trim();
 
     if (!moduleNo) {
       return jsonResponse({ error: 'moduleNo is required.' }, 400);
@@ -134,6 +136,8 @@ Deno.serve(async (request) => {
       `You are generating assessment questions for Module ${moduleNo}.`,
       assessmentTitle ? `Assessment title: ${assessmentTitle}.` : '',
       assessmentType ? `Assessment type: ${assessmentType}.` : '',
+      targetQuestionNo ? `Generate a replacement draft specifically for question ${targetQuestionNo}.` : '',
+      existingPrompt ? `Use a different angle and wording from this existing question: ${existingPrompt}` : '',
       `Create exactly ${questionCount} multiple-choice questions grounded only in the source material below.`,
       'Every question must include both English and Tagalog (Filipino) content.',
       'The prompt_tl, explanation_tl, and option_text_tl fields are required and must be natural Tagalog translations.',
@@ -148,7 +152,7 @@ Deno.serve(async (request) => {
     ].filter(Boolean).join('\n\n');
 
     console.log(`Calling Gemini API with model: ${DEFAULT_MODEL}, context length: ${context.length}`);
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(DEFAULT_MODEL)}:generateContent?key=${encodeURIComponent(API_KEY)}`, {
+    const geminiRequest = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -162,17 +166,38 @@ Deno.serve(async (request) => {
         ],
         generationConfig: {
           temperature: 0.6,
-          maxOutputTokens: 4096,
+          maxOutputTokens: 8192,
+          responseMimeType: 'application/json',
         },
       }),
-    });
+    };
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(DEFAULT_MODEL)}:generateContent?key=${encodeURIComponent(API_KEY)}`;
+    let response: Response | null = null;
+
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      response = await fetch(geminiUrl, geminiRequest);
+      if (![502, 503, 504].includes(response.status) || attempt === 2) break;
+
+      console.warn(`Temporary Gemini ${response.status}; retrying once.`);
+      await new Promise((resolve) => setTimeout(resolve, 750));
+    }
+
+    if (!response) {
+      return jsonResponse({ error: 'The AI question service is temporarily unavailable.' }, 503);
+    }
 
     console.log(`Gemini API response status: ${response.status}`);
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Gemini request failed with status ${response.status}: ${errorText}`);
       const retryAfterSeconds = response.status === 429 ? extractRetryDelaySeconds(errorText) : null;
-      return jsonResponse({ error: `Gemini request failed: ${errorText}`, retryAfterSeconds }, response.status);
+      const isTemporaryFailure = [502, 503, 504].includes(response.status);
+      return jsonResponse({
+        error: isTemporaryFailure
+          ? 'The AI question service is temporarily unavailable. Please try again.'
+          : `Gemini request failed: ${errorText}`,
+        retryAfterSeconds,
+      }, response.status);
     }
 
     const result = await response.json();
@@ -185,7 +210,13 @@ Deno.serve(async (request) => {
     }
 
     console.log(`Parsing JSON from response, text length: ${text.length}`);
-    const parsed = parseJsonPayload(text);
+    let parsed;
+    try {
+      parsed = parseJsonPayload(text);
+    } catch (parseError) {
+      console.error('Gemini returned invalid JSON:', parseError);
+      return jsonResponse({ error: 'The AI returned an incomplete response. Please generate again.' }, 502);
+    }
     const questions = normalizeQuestions(parsed, questionCount);
 
     console.log(`Generated ${questions.length} questions`);

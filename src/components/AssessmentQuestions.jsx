@@ -10,7 +10,6 @@ import {
   getQuestionsByAssessment,
   createAssessmentQuestion,
   updateAssessmentQuestion,
-  deactivateAssessmentQuestions,
   getAssessmentOptionsByQuestionIds,
   syncAssessmentQuestionOptions,
   buildDefaultAssessmentOptions,
@@ -19,6 +18,7 @@ import {
 import { getLearningMaterialsAdminView } from '../utils/learningMaterialsService';
 
 const AI_OPTION_KEYS = ['A', 'B', 'C', 'D'];
+const AI_DRAFT_PREFIX = 'ai-question-draft';
 const MODULE_TITLE_FALLBACKS = {
   1: 'Fire Extinguisher: Basics, Types, and How to Use',
   2: 'House Fire: How to Get Out Safely During a Fire',
@@ -115,6 +115,10 @@ const formatGenerateQuestionsError = (error) => {
     return error;
   }
 
+  if ([502, 503, 504].includes(Number(error.status))) {
+    return error.message || 'The AI question service is temporarily unavailable. Please try again.';
+  }
+
   const parts = [];
 
   if (error.status) {
@@ -132,6 +136,44 @@ const formatGenerateQuestionsError = (error) => {
   return parts.join(' - ') || 'The AI service failed.';
 };
 
+const normalizeGeneratedOptions = (generatedQuestion = {}) => {
+  const options = Array.isArray(generatedQuestion.options)
+    ? generatedQuestion.options.map((option, optionIndex) => ({
+      option_key: String(option?.option_key || AI_OPTION_KEYS[optionIndex] || '').trim().toUpperCase(),
+      option_text: String(option?.option_text || '').trim(),
+      option_text_tl: String(option?.option_text_tl || '').trim(),
+      is_correct: Boolean(option?.is_correct),
+      display_order: Number.isFinite(Number(option?.display_order))
+        ? Number(option.display_order)
+        : optionIndex + 1,
+    })).filter((option) => option.option_key && option.option_text)
+    : [];
+
+  return options.length >= 2 ? options : buildDefaultAssessmentOptions();
+};
+
+const buildGeneratedQuestionDraft = ({
+  generatedQuestion,
+  questionNo,
+  assessmentId,
+  existingQuestion = null,
+}) => ({
+  ...(existingQuestion || {}),
+  id: existingQuestion?.id
+    || `${AI_DRAFT_PREFIX}-${Date.now()}-${questionNo}-${Math.random().toString(36).slice(2, 8)}`,
+  assessment_id: assessmentId,
+  question_no: questionNo,
+  question_type: 'multiple_choice',
+  prompt: String(generatedQuestion?.prompt || '').trim(),
+  prompt_tl: String(generatedQuestion?.prompt_tl || '').trim(),
+  explanation: String(generatedQuestion?.explanation || '').trim(),
+  explanation_tl: String(generatedQuestion?.explanation_tl || '').trim(),
+  is_active: existingQuestion?.is_active ?? true,
+  options: normalizeGeneratedOptions(generatedQuestion),
+  _isGeneratedDraft: Boolean(existingQuestion?._isGeneratedDraft) || !existingQuestion?.id,
+  _isAiGenerated: true,
+});
+
 export default function AssessmentQuestions() {
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
@@ -143,6 +185,7 @@ export default function AssessmentQuestions() {
   const [isLoadingAssessments, setIsLoadingAssessments] = useState(true);
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingRowIds, setGeneratingRowIds] = useState({});
   const [savingRowIds, setSavingRowIds] = useState({});
   const [dirtyQuestionIds, setDirtyQuestionIds] = useState(() => new Set());
   const [isSavingAll, setIsSavingAll] = useState(false);
@@ -454,6 +497,13 @@ export default function AssessmentQuestions() {
   const handleGenerateQuestions = async () => {
     if (isGenerating) return;
     if (!selectedAssessmentId) return;
+    if (isDirty) {
+      setMessage({
+        type: 'error',
+        text: 'Save or discard the current unsaved question changes before generating a new set.',
+      });
+      return;
+    }
 
     setIsGenerating(true);
     setMessage({ type: '', text: '' });
@@ -500,87 +550,50 @@ export default function AssessmentQuestions() {
         return;
       }
 
-      const { error: deactivateError } = await deactivateAssessmentQuestions(selectedAssessmentId);
-
-      if (deactivateError) {
-        setMessage({
-          type: 'error',
-          text: `Failed to deactivate old questions: ${deactivateError}`,
+      const existingQuestionsByNumber = new Map(
+        questions.map((question) => [Number(question.question_no), question])
+      );
+      const generatedDrafts = generatedPayload.questions.map((generatedQuestion, index) => {
+        const questionNo = index + 1;
+        return buildGeneratedQuestionDraft({
+          generatedQuestion,
+          questionNo,
+          assessmentId: selectedAssessmentId,
+          existingQuestion: existingQuestionsByNumber.get(questionNo) || null,
         });
-        return;
-      }
+      });
 
-      setQuestions([]);
-
-      const nextQuestionNoStart = 1;
-      const createdQuestions = [];
-
-      for (let index = 0; index < generatedPayload.questions.length; index += 1) {
-        const generatedQuestion = generatedPayload.questions[index];
-        const questionNo = nextQuestionNoStart + index;
-
-        const { data: createdQuestion, error: createError } = await createAssessmentQuestion({
-          assessment_id: selectedAssessmentId,
-          question_no: questionNo,
-          question_type: 'multiple_choice',
-          prompt: String(generatedQuestion?.prompt || '').trim(),
-          prompt_tl: String(generatedQuestion?.prompt_tl || '').trim() || null,
-          explanation: String(generatedQuestion?.explanation || '').trim() || null,
-          explanation_tl: String(generatedQuestion?.explanation_tl || '').trim() || null,
-          is_active: true,
-        });
-
-        if (createError || !createdQuestion?.id) {
-          continue;
-        }
-
-        const aiOptions = Array.isArray(generatedQuestion?.options)
-          ? generatedQuestion.options.map((option, optionIndex) => ({
-            option_key: String(option?.option_key || AI_OPTION_KEYS[optionIndex] || '').trim().toUpperCase(),
-            option_text: String(option?.option_text || '').trim(),
-            option_text_tl: String(option?.option_text_tl || '').trim(),
-            is_correct: Boolean(option?.is_correct),
-            display_order: Number.isFinite(Number(option?.display_order))
-              ? Number(option.display_order)
-              : optionIndex + 1,
-          })).filter((option) => option.option_key && option.option_text)
-          : [];
-
-        if (aiOptions.length >= 2) {
-          const { error: optionsError } = await syncAssessmentQuestionOptions(createdQuestion.id, aiOptions);
-          if (optionsError) {
-            console.warn('Failed to sync AI-generated options:', optionsError);
-          }
-        }
-
-        createdQuestions.push({
-          ...createdQuestion,
-          options: aiOptions.length >= 2 ? aiOptions : buildDefaultAssessmentOptions(),
-        });
-      }
-
-      if (createdQuestions.length === 0) {
+      if (generatedDrafts.length === 0) {
         setMessage({ type: 'error', text: 'The AI did not return any usable questions.' });
         return;
       }
 
-      setQuestions(createdQuestions.sort((a, b) => a.question_no - b.question_no));
-      setDirtyQuestionIds(new Set());
+      const generatedQuestionNumbers = new Set(
+        generatedDrafts.map((question) => Number(question.question_no))
+      );
+      const preservedQuestions = questions.filter(
+        (question) => !generatedQuestionNumbers.has(Number(question.question_no))
+      );
+      const nextQuestions = [...generatedDrafts, ...preservedQuestions]
+        .sort((a, b) => a.question_no - b.question_no);
+
+      setQuestions(nextQuestions);
+      setDirtyQuestionIds(new Set(generatedDrafts.map((question) => question.id)));
       setMessage({
         type: 'success',
-        text: `Generated ${createdQuestions.length} question${createdQuestions.length === 1 ? '' : 's'} from Module ${moduleNo}. Review and save the generated rows.`,
+        text: `Generated ${generatedDrafts.length} unsaved question draft${generatedDrafts.length === 1 ? '' : 's'} from Module ${moduleNo}. Review them, then use Save question or Save all changes.`,
       });
 
       await logAdminActivity({
         actorId: currentUser?.admin_id || null,
         actorName: currentUser?.name || currentUser?.email || 'Admin User',
-        action: 'Assessment Questions Generated',
+        action: 'AI Assessment Drafts Generated',
         actionType: 'create',
-        details: `Generated ${createdQuestions.length} questions for ${selectedAssessmentLabel || selectedAssessmentId} from Module ${moduleNo}.`,
+        details: `Generated ${generatedDrafts.length} unsaved question drafts for ${selectedAssessmentLabel || selectedAssessmentId} from Module ${moduleNo}.`,
         metadata: {
           assessment_id: selectedAssessmentId,
           module_no: moduleNo,
-          generated_count: createdQuestions.length,
+          generated_count: generatedDrafts.length,
         },
       });
     } finally {
@@ -588,9 +601,82 @@ export default function AssessmentQuestions() {
     }
   };
 
+  const handleGenerateSingleQuestion = async (question) => {
+    if (!question?.id || isGenerating || generatingRowIds[question.id]) return;
+    if (dirtyQuestionIds.has(question.id) && !question._isAiGenerated) {
+      setMessage({
+        type: 'error',
+        text: `Save or discard the current edits to question ${question.question_no} before generating a replacement.`,
+      });
+      return;
+    }
+
+    setGeneratingRowIds((current) => ({ ...current, [question.id]: true }));
+    setMessage({ type: '', text: '' });
+
+    try {
+      const moduleNo = Number(selectedAssessment?.module_no || 0);
+      if (!moduleNo) {
+        setMessage({ type: 'error', text: 'The selected assessment is not linked to a module.' });
+        return;
+      }
+
+      const { data: materialRows, error: materialError } = await getLearningMaterialsAdminView();
+      if (materialError) {
+        setMessage({ type: 'error', text: `Unable to load learning materials: ${materialError}` });
+        return;
+      }
+
+      const learningContext = buildModuleContext(materialRows || [], moduleNo);
+      if (!learningContext) {
+        setMessage({ type: 'error', text: `No active learning material content found for Module ${moduleNo}.` });
+        return;
+      }
+
+      const { data: generatedPayload, error: generateError } = await generateAssessmentQuestions({
+        assessmentId: selectedAssessmentId,
+        assessmentTitle: selectedAssessment?.title || selectedAssessmentLabel || `Module ${moduleNo}`,
+        assessmentType: selectedAssessment?.type_label || selectedAssessment?.type || '',
+        moduleNo,
+        questionCount: 1,
+        targetQuestionNo: Number(question.question_no),
+        existingPrompt: String(question.prompt || '').trim(),
+        context: learningContext,
+      });
+
+      const generatedQuestion = generatedPayload?.questions?.[0];
+      if (generateError || !generatedQuestion) {
+        setMessage({ type: 'error', text: formatGenerateQuestionsError(generateError) });
+        return;
+      }
+
+      const generatedDraft = buildGeneratedQuestionDraft({
+        generatedQuestion,
+        questionNo: Number(question.question_no),
+        assessmentId: selectedAssessmentId,
+        existingQuestion: question,
+      });
+
+      setQuestions((current) => current.map((item) => (
+        item.id === question.id ? generatedDraft : item
+      )));
+      markQuestionDirty(question.id);
+      setMessage({
+        type: 'success',
+        text: `AI generated an unsaved draft for question ${question.question_no}. Review it, then save the question.`,
+      });
+    } finally {
+      setGeneratingRowIds((current) => {
+        const next = { ...current };
+        delete next[question.id];
+        return next;
+      });
+    }
+  };
+
   const handleSaveQuestion = async (question, { showSuccessMessage = true } = {}) => {
     if (!question?.id) return false;
-    if (!question.prompt.trim()) {
+    if (!String(question.prompt || '').trim()) {
       setMessage({ type: 'error', text: `Question ${question.question_no}: prompt is required.` });
       return false;
     }
@@ -621,17 +707,24 @@ export default function AssessmentQuestions() {
     setRowSaving(question.id, true);
     setMessage({ type: '', text: '' });
 
+    const originalQuestionId = question.id;
+    const isNewGeneratedDraft = Boolean(question._isGeneratedDraft);
     const payload = {
       question_no: Number(question.question_no),
-      prompt: question.prompt.trim(),
-      prompt_tl: question.prompt_tl.trim() || null,
-      explanation: question.explanation.trim() || null,
-      explanation_tl: question.explanation_tl.trim() || null,
+      prompt: String(question.prompt || '').trim(),
+      prompt_tl: String(question.prompt_tl || '').trim() || null,
+      explanation: String(question.explanation || '').trim() || null,
+      explanation_tl: String(question.explanation_tl || '').trim() || null,
       question_type: 'multiple_choice',
       is_active: Boolean(question.is_active),
     };
 
-    const { data, error } = await updateAssessmentQuestion(question.id, payload);
+    const { data, error } = isNewGeneratedDraft
+      ? await createAssessmentQuestion({
+        ...payload,
+        assessment_id: selectedAssessmentId,
+      })
+      : await updateAssessmentQuestion(question.id, payload);
 
     if (error) {
       setMessage({ type: 'error', text: `Unable to save question ${question.question_no}: ${error}` });
@@ -643,18 +736,29 @@ export default function AssessmentQuestions() {
       if (optionsError) {
         setMessage({ type: 'error', text: `Question ${data.question_no} saved, but choices failed: ${optionsError}` });
         setQuestions((prev) => prev
-          .map((item) => (item.id === data.id ? { ...data, question_type: 'multiple_choice', options: normalizedOptions } : item))
+          .map((item) => (item.id === originalQuestionId
+            ? { ...data, question_type: 'multiple_choice', options: normalizedOptions, _isAiGenerated: true }
+            : item))
           .sort((a, b) => a.question_no - b.question_no));
+        setDirtyQuestionIds((current) => {
+          const next = new Set(current);
+          next.delete(originalQuestionId);
+          next.add(data.id);
+          return next;
+        });
         setRowSaving(question.id, false);
         return false;
       }
 
       setQuestions((prev) => prev
-        .map((item) => (item.id === data.id ? { ...data, question_type: 'multiple_choice', options: savedOptions || normalizedOptions } : item))
+        .map((item) => (item.id === originalQuestionId
+          ? { ...data, question_type: 'multiple_choice', options: savedOptions || normalizedOptions }
+          : item))
         .sort((a, b) => a.question_no - b.question_no));
       setDirtyQuestionIds((current) => {
         const next = new Set(current);
-        next.delete(question.id);
+        next.delete(originalQuestionId);
+        next.delete(data.id);
         return next;
       });
       if (showSuccessMessage) {
@@ -664,9 +768,9 @@ export default function AssessmentQuestions() {
       await logAdminActivity({
         actorId: currentUser?.admin_id || null,
         actorName: currentUser?.name || currentUser?.email || 'Admin User',
-        action: 'Assessment Question Updated',
-        actionType: 'edit',
-        details: `Updated question ${data.question_no} in ${selectedAssessmentLabel || selectedAssessmentId}.`,
+        action: isNewGeneratedDraft ? 'Assessment Question Created' : 'Assessment Question Updated',
+        actionType: isNewGeneratedDraft ? 'create' : 'edit',
+        details: `${isNewGeneratedDraft ? 'Created' : 'Updated'} question ${data.question_no} in ${selectedAssessmentLabel || selectedAssessmentId}.`,
         metadata: {
           assessment_id: selectedAssessmentId,
           question_id: data.id,
@@ -761,6 +865,17 @@ export default function AssessmentQuestions() {
 
   const handleDeleteQuestion = async (question) => {
     if (!question?.id) return;
+
+    if (question._isGeneratedDraft) {
+      setQuestions((current) => current.filter((item) => item.id !== question.id));
+      setDirtyQuestionIds((current) => {
+        const next = new Set(current);
+        next.delete(question.id);
+        return next;
+      });
+      setMessage({ type: 'success', text: `Unsaved question ${question.question_no} draft removed.` });
+      return;
+    }
 
     setPendingDeleteQuestion(question);
   };
@@ -894,7 +1009,7 @@ export default function AssessmentQuestions() {
               </button>
             </div>
             <p className="assessment-generator-hint">
-              Uses the selected module’s learning materials and saves the generated questions for review.
+              Uses the selected module’s learning materials to create unsaved drafts for review. Nothing is stored until you save.
             </p>
           </div>
         </div>
@@ -932,6 +1047,7 @@ export default function AssessmentQuestions() {
             <div className="assessment-empty-state">No questions found for this assessment.</div>
           ) : filteredQuestions.map((question) => {
             const isSaving = Boolean(savingRowIds[question.id]);
+            const isGeneratingRow = Boolean(generatingRowIds[question.id]);
             const isQuestionDirty = dirtyQuestionIds.has(question.id);
             const questionOptions = question.options || [];
 
@@ -960,14 +1076,27 @@ export default function AssessmentQuestions() {
                       <span>{question.is_active ? 'Active' : 'Inactive'}</span>
                     </label>
                     {isQuestionDirty && <span className="assessment-dirty-badge">Unsaved changes</span>}
+                    {question._isAiGenerated && <span className="assessment-ai-draft-badge">AI draft</span>}
                   </div>
 
                   <div className="assessment-actions">
                     <button
                       type="button"
+                      className="assessment-generate-one"
+                      onClick={() => handleGenerateSingleQuestion(question)}
+                      disabled={isSaving || isGenerating || isGeneratingRow}
+                    >
+                      {isGeneratingRow
+                        ? 'Generating...'
+                        : question._isAiGenerated
+                          ? 'Regenerate with AI'
+                          : 'Generate with AI'}
+                    </button>
+                    <button
+                      type="button"
                       className="assessment-save"
                       onClick={() => handleSaveQuestion(question)}
-                      disabled={isSaving || !isQuestionDirty}
+                      disabled={isSaving || isGeneratingRow || !isQuestionDirty}
                     >
                       {isSaving ? 'Saving...' : 'Save question'}
                     </button>
@@ -975,7 +1104,7 @@ export default function AssessmentQuestions() {
                       type="button"
                       className="assessment-delete"
                       onClick={() => handleDeleteQuestion(question)}
-                      disabled={isSaving}
+                      disabled={isSaving || isGeneratingRow}
                     >
                       Delete
                     </button>
@@ -1153,7 +1282,7 @@ export default function AssessmentQuestions() {
                   onClick={handleSaveAndContinue}
                   disabled={isSavingAll}
                 >
-                  {isSavingAll ? 'Saving...' : 'Save Draft and Continue'}
+                  {isSavingAll ? 'Saving...' : 'Save All and Continue'}
                 </button>
                 <button
                   type="button"

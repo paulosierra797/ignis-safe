@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaArrowLeft, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { supabase } from '../utils/supabaseClient';
 import {
 sendPasswordResetEmail,
@@ -18,6 +18,30 @@ import { logPersonnelActivity } from '../utils/activityLogService';
 
 import './LoginPage.css';
 import ignissafe from '../assets/Logo1.png'
+import bfpDasmaLogo from '../assets/bfp_dasma.png';
+
+const LoginBrandPanel = () => (
+  <aside className="login-left" aria-label="IGNIS SAFE welcome">
+    <div className="logo-section">
+      <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
+    </div>
+
+    <div className="login-brand-content">
+      <img
+        src={bfpDasmaLogo}
+        alt="Bureau of Fire Protection Dasmariñas City Fire Station logo"
+        className="login-bfp-logo"
+      />
+      <div className="login-brand-rule" aria-hidden="true" />
+      <h1>Welcome, Admins!</h1>
+      <p>
+        This platform is exclusively designed for the Bureau of Fire Protection (BFP) Dasmariñas.
+      </p>
+    </div>
+
+    <div className="login-brand-decoration" aria-hidden="true" />
+  </aside>
+);
 
 const REMEMBER_ME_KEY = 'remember_me';
 const REMEMBERED_EMAIL_KEY = 'remembered_email';
@@ -436,13 +460,13 @@ useEffect(() => {
 
   return (
     <div className="login-page">
+      <button type="button" className="login-landing-back" onClick={() => navigate('/')}>
+        <FaArrowLeft aria-hidden="true" />
+        <span>Back to landing page</span>
+      </button>
       {authStep === "otp"? (
   <>
-    <div className="login-left">
-      <div className="logo-section">
-        <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
-      </div>
-    </div>
+    <LoginBrandPanel />
 
     <div className="login-right">
       <div className="login-form-container-verify">
@@ -505,11 +529,7 @@ useEffect(() => {
 ) : 
       forgotPasswordStep === 'request' ? (
         <>
-          <div className="login-left">
-            <div className="logo-section">
-              <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
-            </div>
-          </div>
+    <LoginBrandPanel />
           <div className="login-right">
             <div className="login-form-container">
               <h1>Forgot your password?</h1>
@@ -537,11 +557,7 @@ useEffect(() => {
       </>
       ) : forgotPasswordStep === 'setPassword' ? (
         <>
-          <div className="login-left">
-            <div className="logo-section">
-              <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
-            </div>
-          </div>
+    <LoginBrandPanel />
           <div className="login-right">
             <div className="login-form-container">
               <h1>Set a password</h1>
@@ -606,11 +622,7 @@ useEffect(() => {
       </>
       ) : forgotPasswordStep === 'verifyCode' ? (
         <>
-          <div className="login-left">
-            <div className="logo-section">
-              <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
-            </div>
-          </div>
+    <LoginBrandPanel />
           <div className="login-right">
             <div className="login-form-container">
               <h1>Verify reset code</h1>
@@ -654,11 +666,7 @@ useEffect(() => {
         </>
       ) : forgotPasswordStep === 'emailSent' ? (
         <>
-          <div className="login-left">
-            <div className="logo-section">
-              <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
-            </div>
-          </div>
+    <LoginBrandPanel />
           <div className="login-right">
             <div className="login-form-container confirmation-container">
               <div className="confirmation-icon">✓</div>
@@ -673,11 +681,7 @@ useEffect(() => {
         </>
       ) : forgotPasswordStep === 'resetDone' ? (
         <>
-          <div className="login-left">
-            <div className="logo-section">
-              <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
-            </div>
-          </div>
+    <LoginBrandPanel />
           <div className="login-right">
             <div className="login-form-container confirmation-container">
               <div className="confirmation-icon">✓</div>
@@ -691,17 +695,9 @@ useEffect(() => {
         </>
       ) : (
         <>
-          <div className="login-left">
-            <div className="logo-section">
-              <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
-            </div>
-          </div>
+    <LoginBrandPanel />
           <div className="login-right">
             <div className="login-form-container">
-              <h1>Welcome, Admins!</h1>
-              <p className="login-description">
-                This platform is exclusively designed for the Bureau of Fire Protection (BFP) Dasmariñas.
-              </p>
               <form onSubmit={handleLogin} className="login-form">
                 <div className="form-group">
                   <label htmlFor="email">Email</label>

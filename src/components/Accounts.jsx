@@ -2406,13 +2406,12 @@ const permissions = getDefaultPermissions(formData.role);
                   <div
                     key={isoDate}
                     className={`shift-summary-day ${shiftClass} ${isPastDate ? 'is-past-date' : ''} ${isToday ? 'today' : ''}`}
-                    aria-disabled={isPastDate || undefined}
-                    aria-label={`${row?.displayDate || isoDate}: ${shiftLabel}, On Duty ${onDutyCount}, On Leave ${onLeaveCount}${isPastDate ? ', past date' : ''}`}
+                    aria-label={`${row?.displayDate || isoDate}: ${shiftLabel}, On Duty ${onDutyCount}, On Leave ${onLeaveCount}${isPastDate ? ', past date, view details only' : ''}`}
                     role="button"
-                    tabIndex={isPastDate ? -1 : 0}
-                    onClick={() => !isPastDate && openDayDetailModal(isoDate)}
+                    tabIndex={0}
+                    onClick={() => openDayDetailModal(isoDate)}
                     onKeyDown={(event) => {
-                      if (!isPastDate && (event.key === 'Enter' || event.key === ' ')) {
+                      if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         openDayDetailModal(isoDate);
                       }
@@ -3671,37 +3670,51 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
 
               <div className="accounts-modal-body">
-                <h4>Select a shift, then click calendar dates to toggle duty days.</h4>
+                <div className="shift-picker-setup">
+                  <h4>Select a shift, then click calendar dates to toggle duty days.</h4>
 
-                <div className="shift-picker-controls">
-                  <div className="shift-picker-tabs" role="tablist" aria-label="Shift selector">
+                  <div className="shift-picker-controls">
+                    <div className="shift-picker-tabs" role="tablist" aria-label="Shift selector">
+                      <button
+                        className={`shift-picker-tab shift-picker-tab-a ${activeShift === 'A' ? 'active' : ''}`}
+                        onClick={() => setActiveShift('A')}
+                        type="button"
+                      >
+                        Shift A
+                      </button>
+                      <button
+                        className={`shift-picker-tab shift-picker-tab-b ${activeShift === 'B' ? 'active' : ''}`}
+                        onClick={() => setActiveShift('B')}
+                        type="button"
+                      >
+                        Shift B
+                      </button>
+                    </div>
+
                     <button
-                      className={`shift-picker-tab ${activeShift === 'A' ? 'active' : ''}`}
-                      onClick={() => setActiveShift('A')}
+                      className="shift-picker-clear"
                       type="button"
+                      onClick={resetActiveShiftDates}
+                      title="Clear today and future dates; historical dates are preserved"
                     >
-                      Shift A
-                    </button>
-                    <button
-                      className={`shift-picker-tab ${activeShift === 'B' ? 'active' : ''}`}
-                      onClick={() => setActiveShift('B')}
-                      type="button"
-                    >
-                      Shift B
+                      Clear {activeShift}
                     </button>
                   </div>
 
-                  <button
-                    className="shift-picker-clear"
-                    type="button"
-                    onClick={resetActiveShiftDates}
-                    title="Clear today and future dates; historical dates are preserved"
-                  >
-                    Clear {activeShift}
-                  </button>
+                  <div className="shift-selection-summary">
+                    <p className="shift-selection-summary-a"><strong>Shift A:</strong> {formatShiftDateList(shiftSelection.shift_a_dates)}</p>
+                    <p className="shift-selection-summary-b"><strong>Shift B:</strong> {formatShiftDateList(shiftSelection.shift_b_dates)}</p>
+                  </div>
+
+                  <div className="shift-selection-legend">
+                    <span><i className="legend-dot legend-shift-a" /> Shift A date</span>
+                    <span><i className="legend-dot legend-shift-b" /> Shift B date</span>
+                    <span><i className="legend-dot legend-active" /> Active shift selection</span>
+                  </div>
                 </div>
 
-                <div className="shift-calendar-header">
+                <div className="shift-calendar-editor">
+                  <div className="shift-calendar-header">
                   <button
                     className="shift-calendar-nav"
                     type="button"
@@ -3755,52 +3768,42 @@ const permissions = getDefaultPermissions(formData.role);
                   >
                     {'>'}
                   </button>
-                </div>
+                  </div>
 
-                <div className="shift-calendar-grid shift-calendar-weekdays">
-                  {CALENDAR_WEEKDAYS.map((weekday) => (
-                    <span key={weekday}>{weekday}</span>
-                  ))}
-                </div>
+                  <div className="shift-calendar-grid shift-calendar-weekdays">
+                    {CALENDAR_WEEKDAYS.map((weekday) => (
+                      <span key={weekday}>{weekday}</span>
+                    ))}
+                  </div>
 
-                <div className="shift-calendar-grid shift-calendar-days">
-                  {getCalendarCells(calendarMonth).map((dayDate, index) => {
-                    if (!dayDate) {
-                      return <span key={`empty-${index}`} className="shift-calendar-empty" />;
-                    }
+                  <div className="shift-calendar-grid shift-calendar-days">
+                    {getCalendarCells(calendarMonth).map((dayDate, index) => {
+                      if (!dayDate) {
+                        return <span key={`empty-${index}`} className="shift-calendar-empty" />;
+                      }
 
-                    const isoDate = toIsoDate(dayDate);
-                    const selectedA = shiftASet.has(isoDate);
-                    const selectedB = shiftBSet.has(isoDate);
-                    const selectedActive =
-                      (activeShift === 'A' && selectedA) || (activeShift === 'B' && selectedB);
-                    const isPastDate = isoDate < shiftSummaryTodayIso;
+                      const isoDate = toIsoDate(dayDate);
+                      const selectedA = shiftASet.has(isoDate);
+                      const selectedB = shiftBSet.has(isoDate);
+                      const selectedActive =
+                        (activeShift === 'A' && selectedA) || (activeShift === 'B' && selectedB);
+                      const isPastDate = isoDate < shiftSummaryTodayIso;
 
-                    return (
-                      <button
-                        key={isoDate}
-                        type="button"
-                        className={`shift-calendar-day ${selectedA ? 'shift-a' : ''} ${selectedB ? 'shift-b' : ''} ${selectedActive ? 'active' : ''} ${isPastDate ? 'is-past-date' : ''}`}
-                        onClick={() => toggleCalendarDate(dayDate)}
-                        disabled={isPastDate}
-                        aria-label={`${isoDate}${selectedA ? ', Shift A' : ''}${selectedB ? ', Shift B' : ''}${isPastDate ? ', past date, editing disabled' : ''}`}
-                        title={`${isoDate}${selectedA ? ' - Shift A' : ''}${selectedB ? ' - Shift B' : ''}${isPastDate ? ' - Past date (editing disabled)' : ''}`}
-                      >
-                        {dayDate.getDate()}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="shift-selection-summary">
-                  <p><strong>Shift A:</strong> {formatShiftDateList(shiftSelection.shift_a_dates)}</p>
-                  <p><strong>Shift B:</strong> {formatShiftDateList(shiftSelection.shift_b_dates)}</p>
-                </div>
-
-                <div className="shift-selection-legend">
-                  <span><i className="legend-dot legend-shift-a" /> Shift A date</span>
-                  <span><i className="legend-dot legend-shift-b" /> Shift B date</span>
-                  <span><i className="legend-dot legend-active" /> Active shift selection</span>
+                      return (
+                        <button
+                          key={isoDate}
+                          type="button"
+                          className={`shift-calendar-day ${selectedA ? 'shift-a' : ''} ${selectedB ? 'shift-b' : ''} ${selectedActive ? 'active' : ''} ${isPastDate ? 'is-past-date' : ''}`}
+                          onClick={() => toggleCalendarDate(dayDate)}
+                          disabled={isPastDate}
+                          aria-label={`${isoDate}${selectedA ? ', Shift A' : ''}${selectedB ? ', Shift B' : ''}${isPastDate ? ', past date, editing disabled' : ''}`}
+                          title={`${isoDate}${selectedA ? ' - Shift A' : ''}${selectedB ? ' - Shift B' : ''}${isPastDate ? ' - Past date (editing disabled)' : ''}`}
+                        >
+                          {dayDate.getDate()}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {shiftMessage.text && (

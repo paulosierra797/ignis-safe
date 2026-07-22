@@ -315,13 +315,21 @@ export const getPersonnelShiftSchedule = async ({
 
     const totalDays =
       Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    const [configResult, personnelResult, assignmentResult] = await Promise.all([
+    const scheduleStartDate = toIsoDate(start);
+    const scheduleEndDate = toIsoDate(end);
+    const [configResult, personnelResult, assignmentResult, leaveRequestResult] = await Promise.all([
       getShiftScheduleConfig(),
       getAllUsers(),
       getShiftAssignmentsForPeriod({
-       startDate: toIsoDate(start),
-endDate: toIsoDate(end)
-      })
+        startDate: scheduleStartDate,
+        endDate: scheduleEndDate
+      }),
+      supabase
+        .from(LEAVE_REQUESTS_TABLE)
+        .select('personnel_id, start_date, end_date, status')
+        .lte('start_date', scheduleEndDate)
+        .gte('end_date', scheduleStartDate)
+        .eq('status', 'approved')
     ]);
 
     if (configResult.error) {
@@ -336,18 +344,23 @@ endDate: toIsoDate(end)
       return { data: null, error: assignmentResult.error };
     }
 
+    if (leaveRequestResult.error) {
+      return { data: null, error: leaveRequestResult.error.message };
+    }
+
     const config = configResult.data;
     const personnelRows = (Array.isArray(personnelResult.data) ? personnelResult.data : [])
       .filter((personnel) => String(personnel.role || '').toLowerCase() === 'personnel');
     const assignments = Array.isArray(assignmentResult.data) ? assignmentResult.data : [];
+    const approvedLeaveRequests = Array.isArray(leaveRequestResult.data) ? leaveRequestResult.data : [];
     const personnelById = new Map(personnelRows.map((personnel) => [personnel.admin_id, personnel]));
 
     const shiftA = new Set(config?.shift_a_dates || []);
     const shiftB = new Set(config?.shift_b_dates || []);
 
     const rows = [];
-   for (let offset = 0; offset < totalDays; offset += 1){
-     const targetDate = new Date(start);
+    for (let offset = 0; offset < totalDays; offset += 1) {
+      const targetDate = new Date(start);
       targetDate.setDate(start.getDate() + offset);
 
       const isoDate = toIsoDate(targetDate);
@@ -355,15 +368,26 @@ endDate: toIsoDate(end)
       const hasB = shiftB.has(isoDate);
       const shiftTypes = [hasA ? 'A' : null, hasB ? 'B' : null].filter(Boolean);
 
-     
+      const approvedLeavePersonnel = approvedLeaveRequests
+        .filter((request) => isDateWithinInclusiveRange(isoDate, request.start_date, request.end_date))
+        .map((request) => personnelById.get(request.personnel_id) || null)
+        .filter(Boolean)
+        .map((personnel) => ({
+          admin_id: personnel.admin_id,
+          name: formatPersonnelName(personnel)
+        }));
 
-      const onLeavePersonnel = personnelRows
+      const approvedLeaveIds = new Set(approvedLeavePersonnel.map((personnel) => personnel.admin_id));
+      const legacyCurrentLeavePersonnel = personnelRows
+        .filter((personnel) => !approvedLeaveIds.has(personnel.admin_id))
         .filter((personnel) => String(personnel.status || '').toLowerCase() === 'on leave')
         .filter((personnel) => isDateWithinInclusiveRange(isoDate, personnel.leave_start_date, personnel.leave_end_date))
         .map((personnel) => ({
           admin_id: personnel.admin_id,
           name: formatPersonnelName(personnel)
         }));
+
+      const onLeavePersonnel = [...approvedLeavePersonnel, ...legacyCurrentLeavePersonnel];
 
       const leavePersonnelIds = new Set(onLeavePersonnel.map((personnel) => personnel.admin_id));
 
@@ -447,6 +471,7 @@ export const getPersonnelForDate = async (dateIso) => {
         .select('personnel_id, start_date, end_date, status')
         .lte('start_date', dateIso)
         .gte('end_date', dateIso)
+        .eq('status', 'approved')
         .order('created_at', { ascending: false })
     ]);
 
@@ -479,21 +504,39 @@ export const getPersonnelForDate = async (dateIso) => {
     const hasB = shiftB.has(dateIso);
     const shiftTypes = [hasA ? 'A' : null, hasB ? 'B' : null].filter(Boolean);
 
-    const onLeave = personnelRows
-      .filter((personnel) => String(personnel.status || '').toLowerCase() === 'on leave')
-      .filter((personnel) => isDateWithinInclusiveRange(dateIso, personnel.leave_start_date, personnel.leave_end_date))
-      .map((personnel) => {
-        const request = leaveRequestByPersonnelId.get(personnel.admin_id);
-        const status = request?.status || 'approved';
+    const approvedLeavePersonnel = Array.from(leaveRequestByPersonnelId.entries())
+      .map(([personnelId, request]) => {
+        const personnel = personnelById.get(personnelId);
+        if (!personnel) return null;
+
         return {
           admin_id: personnel.admin_id,
           name: formatPersonnelName(personnel),
           rank: personnel.rank || '-',
-          leave_start_date: personnel.leave_start_date,
-          leave_end_date: personnel.leave_end_date,
-          approval_status: status.charAt(0).toUpperCase() + status.slice(1)
+          leave_start_date: request.start_date,
+          leave_end_date: request.end_date,
+          approval_status: 'Approved'
         };
-      });
+      })
+      .filter(Boolean);
+
+    // Keep compatibility with leave dates created before leave request history
+    // was introduced, while prioritizing approved historical request records.
+    const approvedLeaveIds = new Set(approvedLeavePersonnel.map((personnel) => personnel.admin_id));
+    const legacyCurrentLeavePersonnel = personnelRows
+      .filter((personnel) => !approvedLeaveIds.has(personnel.admin_id))
+      .filter((personnel) => String(personnel.status || '').toLowerCase() === 'on leave')
+      .filter((personnel) => isDateWithinInclusiveRange(dateIso, personnel.leave_start_date, personnel.leave_end_date))
+      .map((personnel) => ({
+        admin_id: personnel.admin_id,
+        name: formatPersonnelName(personnel),
+        rank: personnel.rank || '-',
+        leave_start_date: personnel.leave_start_date,
+        leave_end_date: personnel.leave_end_date,
+        approval_status: 'Approved'
+      }));
+
+    const onLeave = [...approvedLeavePersonnel, ...legacyCurrentLeavePersonnel];
 
     const onLeaveIds = new Set(onLeave.map((personnel) => personnel.admin_id));
 

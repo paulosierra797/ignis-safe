@@ -30,10 +30,14 @@
     gap: 2.75rem;
   }
 
-  .org-column,
-  .org-card {
+  .org-column {
     width: 100%;
     min-width: 0;
+  }
+
+  .org-card {
+    width: max-content;
+    min-width: 150px;
   }
 }
 
@@ -69,6 +73,9 @@
 }
 
 .org-chart {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   background: white;
   border-radius: 16px;
   padding: 2.5rem 2rem 3rem;
@@ -310,26 +317,143 @@
   }
 
   .org-chart {
-    padding: 2rem 1.5rem;
+    padding: 1.5rem 1rem 2rem;
+    gap: 1.35rem;
+  }
+
+  .org-columns {
+    gap: 2.25rem;
+    margin-top: 0.75rem;
+  }
+
+  .org-column {
+    width: 100%;
+    min-width: 0;
+    gap: 1rem;
+  }
+
+  .org-subunits {
+    gap: 1.65rem;
+  }
+
+  .org-avatar {
+    width: 144px;
+    height: 144px;
+  }
+
+  .org-name {
+    max-width: min(230px, calc(100vw - 4rem));
+    font-size: 0.86rem;
+  }
+
+  .org-title {
+    max-width: min(225px, calc(100vw - 4rem));
+    font-size: 0.74rem;
+  }
+
+  .org-card.org-card-editing {
+    width: min(220px, calc(100vw - 4rem));
+    min-width: min(220px, calc(100vw - 4rem));
+    max-width: min(220px, calc(100vw - 4rem));
   }
 }
 
 @media (max-width: 600px) {
+  .chart-header {
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .chart-edit-btn {
+    width: 100%;
+  }
+
+  .org-chart {
+    padding: 1rem 0.75rem 1.5rem;
+    gap: 1rem;
+    border-radius: 12px;
+  }
+
   .org-card {
     width: max-content;
     min-width: 150px;
-    max-width: min(270px, calc(100vw - 3rem));
+    max-width: min(250px, calc(100vw - 3.5rem));
     height: auto;
     padding: 0;
   }
 
   .org-card.org-card-editing {
-    width: 220px;
-    min-width: min(220px, calc(100vw - 3rem));
-    max-width: min(220px, calc(100vw - 3rem));
+    width: min(220px, calc(100vw - 3.5rem));
+    min-width: min(220px, calc(100vw - 3.5rem));
+    max-width: min(220px, calc(100vw - 3.5rem));
     height: auto;
     min-height: 0;
-    padding: 0.85rem 1rem 0.9rem;
+    padding: 0.75rem 0.8rem 0.85rem;
+  }
+
+  .org-avatar {
+    width: 112px;
+    height: 112px;
+    border-width: 3px;
+    box-shadow: 0 0 0 2px #f97316, 0 4px 10px rgba(15, 23, 42, 0.2);
+  }
+
+  .org-card.org-card-editing .org-avatar {
+    width: 64px;
+    height: 64px;
+  }
+
+  .org-name {
+    min-width: 140px;
+    max-width: min(220px, calc(100vw - 4rem));
+    padding: 0.4rem 0.65rem;
+    font-size: 0.82rem;
+  }
+
+  .org-title {
+    max-width: min(215px, calc(100vw - 4rem));
+    font-size: 0.72rem;
+  }
+
+  .org-columns {
+    gap: 1.75rem;
+  }
+
+  .org-subunits {
+    gap: 1.35rem;
+  }
+
+  .org-connector.vertical {
+    height: 22px;
+  }
+
+  .org-connector.vertical.short {
+    height: 16px;
+  }
+
+  .org-connector.horizontal {
+    height: 30px;
+  }
+
+  .org-input {
+    max-width: 100%;
+    font-size: 0.72rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .org-avatar {
+    width: 96px;
+    height: 96px;
+  }
+
+  .org-name {
+    min-width: 130px;
+    max-width: calc(100vw - 4rem);
+  }
+
+  .org-title {
+    max-width: calc(100vw - 4rem);
   }
 }
 

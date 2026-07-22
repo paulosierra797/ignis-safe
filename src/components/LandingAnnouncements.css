@@ -1,6 +1,12 @@
 .landing-announcements {
+  position: relative;
+  overflow: hidden;
   padding: clamp(2.5rem, 4vw, 4rem) 0;
-  background: linear-gradient(180deg, #fff7f7 0%, #ffffff 100%);
+  background:
+    radial-gradient(circle at 88% 12%, rgba(245, 158, 11, 0.075), transparent 25%),
+    radial-gradient(circle at 5% 88%, rgba(185, 28, 28, 0.06), transparent 26%),
+    radial-gradient(circle, rgba(185, 28, 28, 0.045) 0 1px, transparent 1.4px) 0 0 / 30px 30px,
+    linear-gradient(180deg, #fff7f7 0%, #ffffff 100%);
   scroll-margin-top: 88px;
 }
 

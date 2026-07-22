@@ -1,8 +1,10 @@
 .faq {
   padding: clamp(3rem, 5vw, 4.75rem) 0;
   background:
-    radial-gradient(circle at 10% 15%, rgba(185, 28, 28, 0.06), transparent 26%),
-    #f8fafc;
+    radial-gradient(circle at 10% 15%, rgba(185, 28, 28, 0.085), transparent 26%),
+    radial-gradient(circle at 92% 82%, rgba(245, 158, 11, 0.055), transparent 24%),
+    repeating-linear-gradient(45deg, rgba(127, 29, 29, 0.014) 0 1px, transparent 1px 30px),
+    linear-gradient(180deg, #f8fafc 0%, #f6f7f9 100%);
   scroll-margin-top: 88px;
 }
 

@@ -1,6 +1,10 @@
 .about {
   padding: clamp(3rem, 5vw, 5rem) 0;
-  background: #ffffff;
+  background:
+    radial-gradient(circle at 8% 24%, rgba(185, 28, 28, 0.065), transparent 24%),
+    radial-gradient(circle at 94% 86%, rgba(245, 158, 11, 0.055), transparent 25%),
+    repeating-linear-gradient(45deg, rgba(127, 29, 29, 0.014) 0 1px, transparent 1px 28px),
+    #ffffff;
   scroll-margin-top: 88px;
 }
 

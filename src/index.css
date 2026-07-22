@@ -89,6 +89,13 @@ h1, h2, h3, h4, h5, h6 {
     min-width: 0;
     max-width: 100%;
   }
+
+  /* `hidden` creates a non-scrolling overflow ancestor that can stop a
+     sticky PageHeader from following the viewport. `clip` still prevents
+     sideways page overflow without changing the header's scroll context. */
+  :is(.accounts-container, .accounts-main, .admin-reports-container, .admin-reports-main, .analytics-container, .analytics-main, .assessment-questions-container, .assessment-questions-main, .announcements-container, .announcements-main, .audit-logs-container, .audit-logs-main, .landing-editor-container, .landing-editor-main, .learning-materials-container, .learning-materials-main) {
+    overflow-x: clip !important;
+  }
 }
 
 @media (max-width: 600px) {

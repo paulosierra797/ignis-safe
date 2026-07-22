@@ -19,6 +19,7 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 90px;
+  -webkit-text-size-adjust: 100%;
 }
 
 html, body, #root {
@@ -31,6 +32,20 @@ body {
   background-color: #ffffff;
   color: #333;
   overflow-x: hidden;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
 }
 
 body.sidebar-collapsed {
@@ -60,7 +75,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 @media (max-width: 900px) {
-  :is(.dashboard-main, .accounts-main, .admin-reports-main, .analytics-main, .assessment-questions-main, .attendance-admin-content, .attendance-personnel-main, .chart-main, .content-management-main, .history-main, .investigation-main, .landing-editor-main, .progress-main, .reports-main, .users-main, .user-announcements-main, .personnel-operations-main, .personnel-profile-main, .audit-logs-main, .announcements-main) {
+  :is(.dashboard-main, .accounts-main, .admin-reports-main, .admin-profile-content, .analytics-main, .assessment-questions-main, .attendance-admin-content, .attendance-personnel-content, .chart-main, .content-management-main, .history-content, .investigation-main, .landing-editor-main, .learning-materials-main, .progress-main, .reports-main, .users-main, .user-announcements-main, .personnel-ops-content, .personnel-profile-content, .audit-logs-main, .announcements-main) {
     margin-left: 0 !important;
     padding-left: 1rem !important;
     padding-right: 1rem !important;
@@ -69,7 +84,22 @@ h1, h2, h3, h4, h5, h6 {
     max-width: 100%;
   }
 
-  :is(.dashboard-container, .accounts-container, .admin-reports-container, .analytics-container, .assessment-questions-container, .attendance-admin-container, .attendance-personnel-container, .chart-container, .content-management-container, .history-container, .investigation-container, .landing-editor-container, .progress-container, .reports-page-container, .users-container, .user-announcements-container, .personnel-operations-container, .personnel-profile-container, .audit-logs-container, .announcements-container) {
+  :is(.dashboard-container, .accounts-container, .admin-reports-container, .admin-profile-container, .analytics-container, .assessment-questions-container, .attendance-admin-container, .attendance-personnel-container, .chart-container, .content-management-container, .history-container, .learning-materials-container, .progress-container, .reports-page-container, .user-announcements-container, .personnel-ops-container, .personnel-profile-container, .audit-logs-container, .announcements-container) {
     width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  :is(.dashboard-main, .accounts-main, .admin-reports-main, .admin-profile-content, .analytics-main, .assessment-questions-main, .attendance-admin-content, .attendance-personnel-content, .chart-main, .content-management-main, .history-content, .investigation-main, .landing-editor-main, .learning-materials-main, .progress-main, .reports-main, .users-main, .user-announcements-main, .personnel-ops-content, .personnel-profile-content, .audit-logs-main, .announcements-main) {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
   }
 }

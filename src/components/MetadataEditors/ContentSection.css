@@ -179,14 +179,16 @@
 }
 
 .url {
-  width: 700px;
+  width: 100%;
+  max-width: 700px;
   height: 40px;
   padding: 10px;
   font-size: 16px;
   resize: vertical;
 }
 .org {
-  width: 200px;
+  width: 100%;
+  max-width: 200px;
   height: 40px;
   padding: 10px;
   font-size: 16px;
@@ -267,4 +269,19 @@
 /* Optional: make URL look more suitable for links */
 .metadata-section .url {
   color: #2563eb;
+}
+
+@media (max-width: 600px) {
+  .headline-section,
+  .pill-card,
+  .part-lines,
+  .title-section,
+  .metadata-section {
+    padding: 12px;
+  }
+
+  .url,
+  .org {
+    max-width: 100%;
+  }
 }

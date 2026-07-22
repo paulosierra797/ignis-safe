@@ -517,4 +517,25 @@
   }
 }
 
+@media (max-width: 480px) {
+  .page-header {
+    gap: 0.45rem;
+    padding: 0.7rem 0.75rem;
+  }
+
+  .page-header-left {
+    gap: 0.5rem;
+  }
+
+  .page-title,
+  .page-header--compact .page-title {
+    font-size: 1.05rem;
+  }
+
+  .page-user-avatar {
+    width: 34px;
+    height: 34px;
+  }
+}
+
 

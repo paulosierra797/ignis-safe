@@ -1,6 +1,6 @@
 .module-card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
     gap: 24px;
     margin-top: 30px;
 }
@@ -83,4 +83,20 @@
 .module-stat span {
     color: #64748b;
     font-size: .85rem;
+}
+
+@media (max-width: 480px) {
+    .module-card-grid {
+        gap: 14px;
+        margin-top: 18px;
+    }
+
+    .module-card {
+        padding: 18px;
+    }
+
+    .module-card-footer {
+        gap: 12px;
+        margin-top: 20px;
+    }
 }

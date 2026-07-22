@@ -6,7 +6,7 @@ const STORAGE_KEY = 'ignis_landing_content_v1';
 
 export const DEFAULT_LANDING_CONTENT = {
   hero: {
-    title: 'Protecting lives, property, and community.',
+    title: 'Protecting lives, property and community',
     lead: 'Welcome to our Dasmarinas Fire Station portal.',
     description:
       'Learn about our services, contact details and FSIC & FSEC organization for safety, preparedness, and community support.'

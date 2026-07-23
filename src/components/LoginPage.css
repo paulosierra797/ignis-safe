@@ -1094,3 +1094,224 @@
     margin-left: auto;
   }
 }
+
+/* Shared admin/personnel portal selector. Authentication remains one flow;
+   these styles only communicate which account type is currently selected. */
+.login-portal-selector {
+  margin-bottom: 1.35rem;
+}
+
+.login-portal-label {
+  display: block;
+  margin-bottom: 0.55rem;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-portal-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  padding: 0.38rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 13px;
+  background: #f1f5f9;
+}
+
+.login-portal-option {
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: color 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.login-portal-option:hover:not(:disabled) {
+  color: #1f2937;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.login-portal-option:focus-visible {
+  outline: 3px solid rgba(185, 28, 28, 0.18);
+  outline-offset: 2px;
+}
+
+.login-portal-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.login-portal-option--admin.is-active {
+  border-color: rgba(153, 27, 27, 0.22);
+  background: linear-gradient(135deg, #991b1b, #c81e1e);
+  color: #ffffff;
+  box-shadow: 0 7px 18px rgba(153, 27, 27, 0.23);
+}
+
+.login-portal-option--personnel.is-active {
+  border-color: rgba(180, 83, 9, 0.28);
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #422006;
+  box-shadow: 0 7px 18px rgba(217, 119, 6, 0.24);
+}
+
+/* Personnel portal: warm BFP yellow with deeper amber contrast. */
+.login-page--personnel {
+  background:
+    linear-gradient(106deg, rgba(45, 27, 3, 0.16) 0%, rgba(61, 34, 3, 0.05) 46%, rgba(42, 24, 3, 0.4) 100%),
+    url('../assets/login-fire-station-bg.webp') center / cover no-repeat,
+    #3b2507;
+}
+
+.login-page--personnel::before {
+  background:
+    linear-gradient(90deg, rgba(45, 24, 3, 0.03) 0%, rgba(45, 24, 3, 0.08) 54%, rgba(45, 24, 3, 0.22) 100%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 30px),
+    radial-gradient(circle, rgba(251, 191, 36, 0.09) 0 1px, transparent 1.5px) 0 0 / 38px 38px;
+}
+
+.login-page--personnel::after {
+  background: radial-gradient(
+    circle,
+    rgba(245, 158, 11, 0.22) 0%,
+    rgba(251, 191, 36, 0.1) 38%,
+    transparent 72%
+  );
+}
+
+.login-page--personnel .login-left {
+  border-color: rgba(254, 243, 199, 0.2);
+  background:
+    radial-gradient(circle at 18% 82%, rgba(251, 191, 36, 0.26), transparent 31%),
+    radial-gradient(circle at 88% 12%, rgba(255, 255, 255, 0.12), transparent 25%),
+    linear-gradient(145deg, rgba(66, 32, 3, 0.8) 0%, rgba(146, 72, 5, 0.65) 58%, rgba(55, 27, 3, 0.82) 100%);
+  box-shadow:
+    -18px 24px 55px rgba(36, 20, 2, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.login-page--personnel .logo-section {
+  border-color: rgba(251, 191, 36, 0.36);
+  box-shadow:
+    0 12px 32px rgba(36, 20, 2, 0.3),
+    0 0 0 1px rgba(254, 243, 199, 0.3);
+}
+
+.login-page--personnel .login-brand-rule {
+  background: linear-gradient(90deg, #fde047, #f59e0b);
+}
+
+.login-page--personnel .login-right {
+  border-color: rgba(217, 119, 6, 0.2);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.985), rgba(255, 251, 235, 0.96));
+  box-shadow:
+    24px 28px 70px rgba(36, 20, 2, 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.28),
+    0 0 70px rgba(245, 158, 11, 0.15);
+}
+
+.login-page--personnel .login-right::before {
+  background: linear-gradient(90deg, transparent, #f59e0b 24%, #fde047 76%, transparent);
+}
+
+.login-page--personnel .login-form-container,
+.login-page--personnel .login-form-container-verify {
+  border-color: rgba(217, 119, 6, 0.18);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.99), rgba(255, 251, 235, 0.94));
+  box-shadow:
+    0 20px 52px rgba(120, 68, 8, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+.login-page--personnel .form-group label,
+.login-page--personnel .verify-input-label,
+.login-page--personnel .verify-kicker {
+  color: #a16207;
+}
+
+.login-page--personnel .form-group input:hover,
+.login-page--personnel .password-input-wrapper input:hover,
+.login-page--personnel .verify-input:hover {
+  border-color: #f59e0b;
+}
+
+.login-page--personnel .form-group input:focus,
+.login-page--personnel .password-input-wrapper input:focus,
+.login-page--personnel .verify-input:focus {
+  border-color: #d97706;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+}
+
+.login-page--personnel .remember-me input[type="checkbox"] {
+  accent-color: #d97706;
+}
+
+.login-page--personnel .forgot-password,
+.login-page--personnel .toggle-password {
+  color: #b45309;
+}
+
+.login-page--personnel .login-button,
+.login-page--personnel .verify-button,
+.login-page--personnel .login-button-verify {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b 72%, #d97706);
+  color: #422006;
+  box-shadow:
+    0 12px 28px rgba(217, 119, 6, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.login-page--personnel .login-button:hover:not(:disabled),
+.login-page--personnel .verify-button:hover:not(:disabled),
+.login-page--personnel .login-button-verify:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f59e0b, #d97706 72%, #b45309);
+  color: #ffffff;
+  box-shadow: 0 15px 34px rgba(146, 64, 14, 0.3);
+}
+
+.login-page--personnel .back-button,
+.login-page--personnel .back-button-verify {
+  border-color: #d97706;
+  color: #a16207;
+}
+
+.login-page--personnel .verify-security-icon,
+.login-page--personnel .confirmation-icon {
+  border-color: #fbbf24;
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.login-page--personnel .verify-remember-summary.is-enabled {
+  border-color: rgba(245, 158, 11, 0.34);
+  background: #fffbeb;
+}
+
+.login-page--personnel .verify-remember-summary.is-enabled .verify-remember-dot {
+  background: #f59e0b;
+  box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.14);
+}
+
+.login-page--personnel .login-landing-back {
+  border-color: rgba(217, 119, 6, 0.3);
+  color: #92400e;
+}
+
+@media (max-width: 640px) {
+  .login-portal-selector {
+    margin-bottom: 1.1rem;
+  }
+
+  .login-portal-option {
+    min-height: 42px;
+    font-size: 0.84rem;
+  }
+}

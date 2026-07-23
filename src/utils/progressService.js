@@ -133,10 +133,7 @@ export const getProgressPageData = async () => {
     if (moduleProgressError) throw moduleProgressError;
     if (attemptsError) throw attemptsError;
     if (assessmentsError) throw assessmentsError;
-
-    if (adminError) {
-      console.warn('Could not load admin status while building progress page data:', adminError);
-    }
+    if (adminError) throw adminError;
 
     const safeProfiles = profiles || [];
     const safeModules = modules || [];
@@ -144,6 +141,14 @@ export const getProgressPageData = async () => {
     const safeAttempts = attempts || [];
     const safeAssessments = assessments || [];
     const safeAdminRows = adminRows || [];
+    const internalAccountIds = new Set(
+      safeAdminRows
+        .map((row) => String(row.admin_id || '').trim())
+        .filter(Boolean)
+    );
+    const appUserProfiles = safeProfiles.filter(
+      (profile) => !internalAccountIds.has(String(profile.id || '').trim())
+    );
 
     const progressByUserModule = safeModuleProgressRows.reduce((accumulator, row) => {
       accumulator[`${row.user_id}-${row.module_id}`] = row;
@@ -161,12 +166,7 @@ export const getProgressPageData = async () => {
       return accumulator;
     }, {});
 
-    const adminStatusById = safeAdminRows.reduce((accumulator, row) => {
-      accumulator[row.admin_id] = row.status;
-      return accumulator;
-    }, {});
-
-    const rows = safeProfiles.map((profile) => {
+    const rows = appUserProfiles.map((profile) => {
       const attemptsForUser = attemptsByUser[profile.id] || [];
 
       const userModules = safeModules.map((module) => {
@@ -207,7 +207,7 @@ export const getProgressPageData = async () => {
         overallPercent,
         lastActivityAt: lastActivityAt ? lastActivityAt.toISOString() : null,
         lastAccessedModule: latestModule?.name || 'N/A',
-        accessStatus: String(adminStatusById[profile.id] || 'Active').toUpperCase(),
+        accessStatus: 'ACTIVE',
         dateCreated: profile.created_at || null,
         modulesCompleted: completedModules,
         modules: userModules,

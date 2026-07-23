@@ -14,6 +14,76 @@ import './Chart.css';
 const LEGACY_AVATAR_PLACEHOLDER_PATH = '/user-avatar.png';
 const AVATAR_MAX_SIZE = 5 * 1024 * 1024;
 const AVATAR_ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+const AVATAR_OUTPUT_SIZE = 512;
+
+const loadLocalImage = (sourceUrl) => new Promise((resolve, reject) => {
+  const image = new Image();
+  image.onload = () => resolve(image);
+  image.onerror = () => reject(new Error('The selected image could not be opened.'));
+  image.src = sourceUrl;
+});
+
+const getCropPreviewStyle = ({ imageWidth, imageHeight, zoom, positionX, positionY }) => {
+  const aspectRatio = imageWidth / imageHeight;
+  const baseWidth = aspectRatio >= 1 ? aspectRatio * 100 : 100;
+  const baseHeight = aspectRatio >= 1 ? 100 : (1 / aspectRatio) * 100;
+  const renderedWidth = baseWidth * zoom;
+  const renderedHeight = baseHeight * zoom;
+  const maxShiftX = Math.max(0, (renderedWidth - 100) / 2);
+  const maxShiftY = Math.max(0, (renderedHeight - 100) / 2);
+
+  return {
+    width: `${renderedWidth}%`,
+    height: `${renderedHeight}%`,
+    left: `${50 + (positionX / 100) * maxShiftX}%`,
+    top: `${50 + (positionY / 100) * maxShiftY}%`
+  };
+};
+
+const createCroppedAvatarFile = async (crop) => {
+  const image = await loadLocalImage(crop.sourceUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = AVATAR_OUTPUT_SIZE;
+  canvas.height = AVATAR_OUTPUT_SIZE;
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Image cropping is not supported by this browser.');
+  }
+
+  context.fillStyle = '#ffffff';
+  context.fillRect(0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE);
+
+  const baseScale = Math.max(
+    AVATAR_OUTPUT_SIZE / image.naturalWidth,
+    AVATAR_OUTPUT_SIZE / image.naturalHeight
+  );
+  const scale = baseScale * crop.zoom;
+  const renderedWidth = image.naturalWidth * scale;
+  const renderedHeight = image.naturalHeight * scale;
+  const maxShiftX = Math.max(0, (renderedWidth - AVATAR_OUTPUT_SIZE) / 2);
+  const maxShiftY = Math.max(0, (renderedHeight - AVATAR_OUTPUT_SIZE) / 2);
+  const drawX = (AVATAR_OUTPUT_SIZE - renderedWidth) / 2 + (crop.positionX / 100) * maxShiftX;
+  const drawY = (AVATAR_OUTPUT_SIZE - renderedHeight) / 2 + (crop.positionY / 100) * maxShiftY;
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = 'high';
+  context.drawImage(image, drawX, drawY, renderedWidth, renderedHeight);
+
+  const blob = await new Promise((resolve) => {
+    canvas.toBlob(resolve, 'image/jpeg', 0.9);
+  });
+
+  if (!blob) {
+    throw new Error('The cropped image could not be created.');
+  }
+
+  const originalName = crop.file.name.replace(/\.[^.]+$/, '') || 'avatar';
+  return new File([blob], `${originalName}-cropped.jpg`, {
+    type: 'image/jpeg',
+    lastModified: Date.now()
+  });
+};
 
 const buildAvatarPlaceholder = (name = '') => {
   const safeName = String(name || '').trim();
@@ -278,19 +348,14 @@ const buildSuccessSummary = (changes) =>
 const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
   const fallbackAvatar = useMemo(() => buildAvatarPlaceholder(node.name), [node.name]);
   const fileInputRef = useRef(null);
-  const [avatarSrc, setAvatarSrc] = useState(
+  const [failedAvatarSrc, setFailedAvatarSrc] = useState(null);
+  const preferredAvatarSrc =
     node.avatar_url && node.avatar_url !== LEGACY_AVATAR_PLACEHOLDER_PATH
       ? node.avatar_url
-      : fallbackAvatar
-  );
-
-  useEffect(() => {
-    setAvatarSrc(
-      node.avatar_url && node.avatar_url !== LEGACY_AVATAR_PLACEHOLDER_PATH
-        ? node.avatar_url
-        : fallbackAvatar
-    );
-  }, [node.avatar_url, fallbackAvatar]);
+      : fallbackAvatar;
+  const avatarSrc = failedAvatarSrc === preferredAvatarSrc
+    ? fallbackAvatar
+    : preferredAvatarSrc;
 
   return (
     <div className={`org-card${editMode ? ' org-card-editing' : ''}`}>
@@ -299,25 +364,35 @@ const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
         alt={node.name}
         className="org-avatar"
         onError={() => {
-          setAvatarSrc((current) => (current === fallbackAvatar ? current : fallbackAvatar));
+          if (preferredAvatarSrc !== fallbackAvatar) {
+            setFailedAvatarSrc(preferredAvatarSrc);
+          }
         }}
       />
       {editMode ? (
         <>
-          <input
-            className="org-input"
-            type="text"
-            value={node.name}
-            disabled={!canEdit}
-            onChange={(event) => onChange(node.id, 'name', event.target.value)}
-          />
-          <input
-            className="org-input"
-            type="text"
-            value={node.title}
-            disabled={!canEdit}
-            onChange={(event) => onChange(node.id, 'title', event.target.value)}
-          />
+          <div className="org-edit-fields">
+            <label className="org-edit-field">
+              <span>Full name</span>
+              <input
+                className="org-input"
+                type="text"
+                value={node.name}
+                disabled={!canEdit}
+                onChange={(event) => onChange(node.id, 'name', event.target.value)}
+              />
+            </label>
+            <label className="org-edit-field">
+              <span>Position</span>
+              <input
+                className="org-input"
+                type="text"
+                value={node.title}
+                disabled={!canEdit}
+                onChange={(event) => onChange(node.id, 'title', event.target.value)}
+              />
+            </label>
+          </div>
           {canEdit && (
             <>
               <button
@@ -325,7 +400,10 @@ const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
                 className="org-avatar-upload"
                 onClick={() => fileInputRef.current?.click()}
               >
-                Add avatar
+                <span className="org-avatar-upload-icon" aria-hidden="true">+</span>
+                {node.avatar_url && node.avatar_url !== LEGACY_AVATAR_PLACEHOLDER_PATH
+                  ? 'Change photo'
+                  : 'Add photo'}
               </button>
               <input
                 ref={fileInputRef}
@@ -372,12 +450,15 @@ export default function Chart() {
   const [lastEditedAt, setLastEditedAt] = useState(null);
   const [pendingAvatarFiles, setPendingAvatarFiles] = useState({});
   const [avatarPreviewUrls, setAvatarPreviewUrls] = useState({});
+  const [avatarCrop, setAvatarCrop] = useState(null);
+  const [isApplyingCrop, setIsApplyingCrop] = useState(false);
   const [pendingChanges, setPendingChanges] = useState([]);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [successSummary, setSuccessSummary] = useState(null);
   const [errorInfo, setErrorInfo] = useState(null);
   const [hasPendingManualNavigation, setHasPendingManualNavigation] = useState(false);
   const editSnapshotRef = useRef(null);
+  const activeCropUrlRef = useRef(null);
   const pendingManualNavigationRef = useRef(null);
   const bypassNavigationRef = useRef(false);
   const { currentUser } = useUser();
@@ -467,9 +548,30 @@ export default function Chart() {
   useEffect(() => {
     return () => {
       Object.values(avatarPreviewUrls).forEach((url) => URL.revokeObjectURL(url));
+      if (activeCropUrlRef.current) {
+        URL.revokeObjectURL(activeCropUrlRef.current);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!avatarCrop) {
+      return undefined;
+    }
+
+    const handleCropEscape = (event) => {
+      if (event.key !== 'Escape' || isApplyingCrop) return;
+      if (activeCropUrlRef.current) {
+        URL.revokeObjectURL(activeCropUrlRef.current);
+        activeCropUrlRef.current = null;
+      }
+      setAvatarCrop(null);
+    };
+
+    window.addEventListener('keydown', handleCropEscape);
+    return () => window.removeEventListener('keydown', handleCropEscape);
+  }, [avatarCrop, isApplyingCrop]);
 
   const clearPendingAvatars = () => {
     Object.values(avatarPreviewUrls).forEach((url) => URL.revokeObjectURL(url));
@@ -690,7 +792,16 @@ export default function Chart() {
     }
   };
 
-  const handleAvatarSelect = (id, event) => {
+  const closeAvatarCrop = () => {
+    if (isApplyingCrop) return;
+    if (activeCropUrlRef.current) {
+      URL.revokeObjectURL(activeCropUrlRef.current);
+      activeCropUrlRef.current = null;
+    }
+    setAvatarCrop(null);
+  };
+
+  const handleAvatarSelect = async (id, event) => {
     if (!isAdmin) {
       return;
     }
@@ -711,16 +822,70 @@ export default function Chart() {
       return;
     }
 
-    const previewUrl = URL.createObjectURL(file);
+    const sourceUrl = URL.createObjectURL(file);
 
-    setAvatarPreviewUrls((prev) => {
-      if (prev[id]) {
-        URL.revokeObjectURL(prev[id]);
+    try {
+      const image = await loadLocalImage(sourceUrl);
+      activeCropUrlRef.current = sourceUrl;
+      setAvatarCrop({
+        nodeId: id,
+        file,
+        sourceUrl,
+        imageWidth: image.naturalWidth,
+        imageHeight: image.naturalHeight,
+        zoom: 1,
+        positionX: 0,
+        positionY: 0
+      });
+    } catch (imageError) {
+      URL.revokeObjectURL(sourceUrl);
+      setErrorInfo({ message: imageError?.message || 'The selected image could not be opened.' });
+    }
+  };
+
+  const updateAvatarCrop = (field, value) => {
+    setAvatarCrop((current) => current ? { ...current, [field]: Number(value) } : current);
+  };
+
+  const resetAvatarCrop = () => {
+    setAvatarCrop((current) => current ? {
+      ...current,
+      zoom: 1,
+      positionX: 0,
+      positionY: 0
+    } : current);
+  };
+
+  const handleApplyAvatarCrop = async () => {
+    if (!avatarCrop || isApplyingCrop) return;
+    setIsApplyingCrop(true);
+
+    try {
+      const croppedFile = await createCroppedAvatarFile(avatarCrop);
+      const previewUrl = URL.createObjectURL(croppedFile);
+
+      setAvatarPreviewUrls((prev) => {
+        if (prev[avatarCrop.nodeId]) {
+          URL.revokeObjectURL(prev[avatarCrop.nodeId]);
+        }
+        return { ...prev, [avatarCrop.nodeId]: previewUrl };
+      });
+
+      setPendingAvatarFiles((prev) => ({
+        ...prev,
+        [avatarCrop.nodeId]: croppedFile
+      }));
+
+      if (activeCropUrlRef.current) {
+        URL.revokeObjectURL(activeCropUrlRef.current);
+        activeCropUrlRef.current = null;
       }
-      return { ...prev, [id]: previewUrl };
-    });
-
-    setPendingAvatarFiles((prev) => ({ ...prev, [id]: file }));
+      setAvatarCrop(null);
+    } catch (cropError) {
+      setErrorInfo({ message: cropError?.message || 'The avatar could not be cropped.' });
+    } finally {
+      setIsApplyingCrop(false);
+    }
   };
 
   const withPreview = (node) =>
@@ -807,6 +972,121 @@ export default function Chart() {
           </div>
         </div>
       </div>
+
+      {avatarCrop && !errorInfo && (
+        <div
+          className="org-modal-overlay org-crop-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="orgCropTitle"
+          aria-describedby="orgCropDescription"
+        >
+          <div className="org-modal org-crop-modal">
+            <div className="org-crop-heading">
+              <div>
+                <p className="org-crop-kicker">Profile photo</p>
+                <h3 id="orgCropTitle" className="org-modal-title">Crop and resize</h3>
+              </div>
+              <span className="org-crop-output">512 × 512</span>
+            </div>
+
+            <p id="orgCropDescription" className="org-modal-message org-crop-message">
+              Adjust the zoom and position so the face fits naturally inside the circular guide.
+            </p>
+
+            <div className="org-crop-workspace">
+              <div className="org-crop-preview" aria-label="Circular avatar crop preview">
+                <img
+                  src={avatarCrop.sourceUrl}
+                  alt="Selected profile crop preview"
+                  className="org-crop-image"
+                  style={getCropPreviewStyle(avatarCrop)}
+                  draggable="false"
+                />
+                <div className="org-crop-guide" aria-hidden="true" />
+              </div>
+
+              <div className="org-crop-controls">
+                <label className="org-crop-control">
+                  <span>
+                    <strong>Zoom</strong>
+                    <output>{Math.round(avatarCrop.zoom * 100)}%</output>
+                  </span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="0.05"
+                    value={avatarCrop.zoom}
+                    onChange={(event) => updateAvatarCrop('zoom', event.target.value)}
+                    disabled={isApplyingCrop}
+                  />
+                </label>
+
+                <label className="org-crop-control">
+                  <span>
+                    <strong>Horizontal position</strong>
+                    <output>{Math.round(avatarCrop.positionX)}</output>
+                  </span>
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    step="1"
+                    value={avatarCrop.positionX}
+                    onChange={(event) => updateAvatarCrop('positionX', event.target.value)}
+                    disabled={isApplyingCrop}
+                  />
+                </label>
+
+                <label className="org-crop-control">
+                  <span>
+                    <strong>Vertical position</strong>
+                    <output>{Math.round(avatarCrop.positionY)}</output>
+                  </span>
+                  <input
+                    type="range"
+                    min="-100"
+                    max="100"
+                    step="1"
+                    value={avatarCrop.positionY}
+                    onChange={(event) => updateAvatarCrop('positionY', event.target.value)}
+                    disabled={isApplyingCrop}
+                  />
+                </label>
+
+                <button
+                  type="button"
+                  className="org-crop-reset"
+                  onClick={resetAvatarCrop}
+                  disabled={isApplyingCrop}
+                >
+                  Reset crop
+                </button>
+              </div>
+            </div>
+
+            <div className="org-modal-actions org-crop-actions">
+              <button
+                type="button"
+                className="org-modal-btn org-modal-btn-cancel"
+                onClick={closeAvatarCrop}
+                disabled={isApplyingCrop}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="org-modal-btn org-modal-btn-save"
+                onClick={handleApplyAvatarCrop}
+                disabled={isApplyingCrop}
+              >
+                {isApplyingCrop ? 'Applying...' : 'Use Photo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {hasPendingNavigation && !errorInfo && (
         <div

@@ -12,7 +12,9 @@ import {
   getPersonnelRecipients,
   archiveAnnouncement,
   restoreAnnouncement,
-  getArchivedAnnouncements
+  getArchivedAnnouncements,
+  MAX_ANNOUNCEMENT_WORDS,
+  countAnnouncementWords
 } from '../utils/announcementsService';
 import './Announcements.css';
 
@@ -43,6 +45,13 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
 ]);
 
 const ANNOUNCEMENT_DRAFT_STORAGE_KEY = 'ignis-safe:announcement-draft';
+
+const truncateAnnouncementWords = (value) => {
+  const text = String(value || '');
+  const words = [...text.matchAll(/\S+/gu)];
+  if (words.length <= MAX_ANNOUNCEMENT_WORDS) return text;
+  return text.slice(0, words[MAX_ANNOUNCEMENT_WORDS].index).trimEnd();
+};
 
 const isBrowserStorageAvailable = () => typeof window !== 'undefined' && typeof sessionStorage !== 'undefined';
 
@@ -154,6 +163,10 @@ export default function Announcements() {
     ? { ...currentUser, role: 'personnel' }
     : currentUser;
   const isAnnouncementTab = !isAdmin || activeTab === 'announcements';
+  const announcementWordCount = useMemo(
+    () => countAnnouncementWords(formData.content),
+    [formData.content]
+  );
 
   const isAnnouncementFormDirty = isAdmin && Boolean(
     formData.title.trim() ||
@@ -413,6 +426,14 @@ export default function Announcements() {
       return;
     }
 
+    if (announcementWordCount > MAX_ANNOUNCEMENT_WORDS) {
+      setMessage({
+        type: 'error',
+        text: `Announcement messages cannot exceed ${MAX_ANNOUNCEMENT_WORDS} words.`
+      });
+      return;
+    }
+
     setSubmitting(true);
     setMessage({ type: '', text: '' });
 
@@ -485,6 +506,20 @@ export default function Announcements() {
 
   const handleRemoveAttachment = (indexToRemove) => {
     setAttachmentFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  const handleAnnouncementContentChange = (event) => {
+    const value = event.target.value;
+    const limitedValue = truncateAnnouncementWords(value);
+
+    if (limitedValue !== value) {
+      setMessage({
+        type: 'error',
+        text: `The message is limited to ${MAX_ANNOUNCEMENT_WORDS} words.`
+      });
+    }
+
+    setFormData((prev) => ({ ...prev, content: limitedValue }));
   };
 
   const handleAcknowledgeAnnouncement = async (announcementId) => {
@@ -626,25 +661,42 @@ export default function Announcements() {
         />
 
         {isAdmin && (
-          <div className="content-tabs" role="tablist" aria-label="Content management tabs">
-            <button
-              type="button"
-              className={`content-tab ${activeTab === 'announcements' ? 'active' : ''}`}
-              onClick={() => handleContentTabClick('announcements')}
-              role="tab"
-              aria-selected={activeTab === 'announcements'}
-            >
-              Announcements
-            </button>
-            <button
-              type="button"
-              className={`content-tab ${activeTab === 'landing' ? 'active' : ''}`}
-              onClick={() => handleContentTabClick('landing')}
-              role="tab"
-              aria-selected={activeTab === 'landing'}
-            >
-              Landing Page
-            </button>
+          <div className="content-management-toolbar">
+            <div className="content-tabs" role="tablist" aria-label="Content management tabs">
+              <button
+                type="button"
+                className={`content-tab ${activeTab === 'announcements' ? 'active' : ''}`}
+                onClick={() => handleContentTabClick('announcements')}
+                role="tab"
+                aria-selected={activeTab === 'announcements'}
+              >
+                Announcements
+              </button>
+              <button
+                type="button"
+                className={`content-tab ${activeTab === 'landing' ? 'active' : ''}`}
+                onClick={() => handleContentTabClick('landing')}
+                role="tab"
+                aria-selected={activeTab === 'landing'}
+              >
+                Landing Page
+              </button>
+            </div>
+
+            {isAnnouncementTab && (
+              <button
+                type="button"
+                className={`archive-list-button${archivedOpen ? ' is-open' : ''}`}
+                onClick={toggleArchivedPanel}
+                aria-expanded={archivedOpen}
+                aria-controls="announcementArchiveList"
+              >
+                Archive List
+                {archivedLoaded && (
+                  <span className="archive-list-count">{archivedAnnouncements.length}</span>
+                )}
+              </button>
+            )}
           </div>
         )}
 
@@ -723,12 +775,19 @@ export default function Announcements() {
                     id="announcementContent"
                     ref={messageTextareaRef}
                     value={formData.content}
-                    onChange={(event) => setFormData((prev) => ({ ...prev, content: event.target.value }))}
+                    onChange={handleAnnouncementContentChange}
                     placeholder="Write the full announcement..."
                     rows={8}
-                    maxLength={2000}
+                    aria-describedby="announcementWordLimit"
                     required
                   />
+                  <div
+                    id="announcementWordLimit"
+                    className={`announcement-word-limit${announcementWordCount >= MAX_ANNOUNCEMENT_WORDS ? ' is-full' : ''}`}
+                  >
+                    <span>Maximum {MAX_ANNOUNCEMENT_WORDS} words</span>
+                    <strong>{announcementWordCount} / {MAX_ANNOUNCEMENT_WORDS}</strong>
+                  </div>
                 </div>
               </div>
 
@@ -944,19 +1003,17 @@ export default function Announcements() {
           </div>
         )}
 
-        {isAdmin && isAnnouncementTab && (
-          <div className="announcement-card archived-card">
-            <button
-              type="button"
-              className="archived-toggle-button"
-              onClick={toggleArchivedPanel}
-              aria-expanded={archivedOpen}
-            >
-              {archivedOpen ? '▾' : '▸'} Archived Announcements{archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}
-            </button>
+        {isAdmin && isAnnouncementTab && archivedOpen && (
+          <div id="announcementArchiveList" className="announcement-card archived-card">
+            <div className="archived-panel-header">
+              <div>
+                <span>Announcement records</span>
+                <h2>Archive List{archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}</h2>
+              </div>
+              <button type="button" onClick={toggleArchivedPanel}>Close</button>
+            </div>
 
-            {archivedOpen && (
-              <div className="archived-panel">
+            <div className="archived-panel">
                 {archivedLoading ? (
                   <div className="announcement-empty">Loading archived announcements...</div>
                 ) : archivedAnnouncements.length === 0 ? (
@@ -1012,8 +1069,7 @@ export default function Announcements() {
                     </article>
                   ))
                 )}
-              </div>
-            )}
+            </div>
           </div>
         )}
       </div>

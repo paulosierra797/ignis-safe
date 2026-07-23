@@ -182,19 +182,27 @@ const Field = ({ label, helper, children }) => (
   </label>
 );
 
-const SectionBlock = ({ title, children }) => (
+const EditorSectionHeading = ({ number, title, description }) => (
+  <div className="editor-section-heading">
+    <span className="editor-section-number" aria-hidden="true">{number}</span>
+    <div>
+      <p className="editor-section-kicker">Landing page section</p>
+      <h3>{title}</h3>
+      {description && <p className="editor-group-description">{description}</p>}
+    </div>
+  </div>
+);
+
+const SectionBlock = ({ number, title, children }) => (
   <section className="editor-card editor-card--wide">
-    <h3>{title}</h3>
+    <EditorSectionHeading number={number} title={title} />
     {children}
   </section>
 );
 
-const GroupCard = ({ title, description, children }) => (
+const GroupCard = ({ number, title, description, children }) => (
   <section className="editor-card editor-group-card">
-    <div className="editor-group-heading">
-      <h3>{title}</h3>
-      {description && <p className="editor-group-description">{description}</p>}
-    </div>
+    <EditorSectionHeading number={number} title={title} description={description} />
     <div className="editor-group-fields">{children}</div>
   </section>
 );
@@ -497,6 +505,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
 
       <div className="landing-editor-groups">
         <GroupCard
+          number="01"
           title="Main Banner"
           description="The large banner visitors see first at the top of the landing page."
         >
@@ -521,6 +530,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         </GroupCard>
 
         <GroupCard
+          number="02"
           title="About Us"
           description="Tells visitors who you are and what your organization does."
         >
@@ -539,6 +549,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         </GroupCard>
 
         <GroupCard
+          number="03"
           title="Mission"
           description="The Mission and Vision cards shown on the landing page."
         >
@@ -569,6 +580,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         </GroupCard>
 
         <GroupCard
+          number="04"
           title="Contact Information"
           description="How visitors can reach or find your station, shown in the Contact section."
         >
@@ -633,7 +645,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       </div>
 
       <div className="landing-editor-grid">
-        <SectionBlock title="Process Section (English)">
+        <SectionBlock number="05" title="Process Section (English)">
           <Field label="Section title">
             <input type="text" value={draft.process.english.title} onChange={(e) => updateNested('process', 'english', 'title', e.target.value)} />
           </Field>
@@ -658,7 +670,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           ))}
         </SectionBlock>
 
-        <SectionBlock title="Process Section (Tagalog)">
+        <SectionBlock number="06" title="Process Section (Tagalog)">
           <Field label="Section title">
             <input type="text" value={draft.process.tagalog.title} onChange={(e) => updateNested('process', 'tagalog', 'title', e.target.value)} />
           </Field>
@@ -683,7 +695,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           ))}
         </SectionBlock>
 
-        <SectionBlock title="FAQ Section (English)">
+        <SectionBlock number="07" title="FAQ Section (English)">
           <Field label="Section title">
             <input type="text" value={draft.faq.english.title} onChange={(e) => updateNested('faq', 'english', 'title', e.target.value)} />
           </Field>
@@ -699,7 +711,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           ))}
         </SectionBlock>
 
-        <SectionBlock title="FAQ Section (Tagalog)">
+        <SectionBlock number="08" title="FAQ Section (Tagalog)">
           <Field label="Section title">
             <input type="text" value={draft.faq.tagalog.title} onChange={(e) => updateNested('faq', 'tagalog', 'title', e.target.value)} />
           </Field>

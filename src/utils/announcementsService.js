@@ -9,6 +9,12 @@ const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 const ATTACHMENT_UPLOAD_TIMEOUT_MS = 120000;
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
+export const MAX_ANNOUNCEMENT_WORDS = 500;
+
+export const countAnnouncementWords = (value = '') => {
+  const normalizedValue = String(value || '').trim();
+  return normalizedValue ? normalizedValue.split(/\s+/u).length : 0;
+};
 
 const emitDataChanged = (scope, detail = {}) => {
   if (typeof window === 'undefined') return;
@@ -481,6 +487,10 @@ export const createAnnouncement = async (currentUser, payload) => {
 
     if (!payload?.content?.trim()) {
       throw new Error('Content is required.');
+    }
+
+    if (countAnnouncementWords(payload.content) > MAX_ANNOUNCEMENT_WORDS) {
+      throw new Error(`Announcement messages cannot exceed ${MAX_ANNOUNCEMENT_WORDS} words.`);
     }
 
     if (!['public', 'all_personnel', 'specific_personnel'].includes(audienceType)) {

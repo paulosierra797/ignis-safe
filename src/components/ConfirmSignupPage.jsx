@@ -25,7 +25,9 @@ export default function ConfirmSignupPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { setCurrentUser } = useUser();
-  const isInviteActivation = new URLSearchParams(location.search).get('mode') === 'invite';
+  const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const isInviteActivation = new URLSearchParams(location.search).get('mode') === 'invite'
+    || hashParams.get('type') === 'invite';
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [password, setPassword] = useState('');

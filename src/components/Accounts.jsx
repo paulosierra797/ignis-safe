@@ -38,7 +38,7 @@ import { getManilaToday } from '../utils/dateUtils';
 
 const validPersonnelNamePattern = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
 const contactNumberRegex = /^09\d{9}$/;
-const ADD_PERSONNEL_TIMEOUT_MS = 60000;
+const ADD_PERSONNEL_TIMEOUT_MS = 30000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const REQUEST_PREVIEW_LIMIT = 3;
 const PERSONNEL_PAGE_SIZE = 10;
@@ -1259,23 +1259,8 @@ console.log("AUTH USER:", authData);
       return;
     }
 
-    // Check if email already exists
-    try {
-      const { data: existingUsers, error: fetchError } = await getAllUsers();
-      if (!fetchError && (existingUsers || []).some((user) =>
-        String(user.email || '').toLowerCase() === String(formData.email || '').toLowerCase()
-      )) {
-        setMessage({ type: 'error', text: 'This email address is already in use. Please use a different email.' });
-        return;
-      }
-    } catch (error) {
-      console.error('Error checking email uniqueness:', error);
-      setMessage({ type: 'error', text: 'Error verifying email. Please try again.' });
-      return;
-    }
-
     setIsLoading(true);
-    setMessage({ type: '', text: '' });
+    setMessage({ type: 'info', text: 'Sending the activation invitation...' });
 
     const submittedForm = {
       first_name: firstName,
@@ -1310,8 +1295,6 @@ console.log("AUTH USER:", authData);
 const permissions = getDefaultPermissions(formData.role);
 
     try {
-      console.log('Attempting to add personnel...');
-
       const signupAttempt = invitePersonnel(formData.email, {
         first_name: firstName,
         last_name: lastName,
@@ -1362,7 +1345,7 @@ const permissions = getDefaultPermissions(formData.role);
           setTimeout(() => {
             setIsAddModalOpen(false);
             setMessage({ type: '', text: '' });
-          }, 2500);
+          }, 1200);
           return;
         }
 
@@ -1375,10 +1358,7 @@ const permissions = getDefaultPermissions(formData.role);
 
       const result = signupResponse;
       
-      console.log('Sign up result:', result);
-
       if (result.error) {
-        console.error('Error from signup:', result.error);
         if (String(result.error).toLowerCase().includes('already registered')) {
           setMessage({ type: 'error', text: 'This email is already registered in authentication. Use a different email or remove the existing auth user first.' });
           setIsLoading(false);
@@ -1409,8 +1389,17 @@ const permissions = getDefaultPermissions(formData.role);
         console.warn('Unable to write admin activity log:', logError);
       });
       
-      // Refresh accounts list
-      fetchAccounts();
+      const createdAccount = result.data?.user;
+      if (createdAccount) {
+        setAccounts((previousAccounts) => [
+          createdAccount,
+          ...previousAccounts.filter((account) =>
+            String(account.admin_id || account.id) !== String(createdAccount.admin_id)
+          )
+        ]);
+      } else {
+        void fetchAccounts();
+      }
       
       // Reset form
       setFormData({ ...EMPTY_PERSONNEL_FORM });
@@ -1420,7 +1409,7 @@ const permissions = getDefaultPermissions(formData.role);
       setTimeout(() => {
         setIsAddModalOpen(false);
         setMessage({ type: '', text: '' });
-      }, 2500);
+      }, 1200);
     } catch (err) {
       console.error('Error adding personnel:', err);
       setMessage({ type: 'error', text: err.message || 'Failed to add personnel. Please check console for details.' });
@@ -3456,7 +3445,7 @@ const permissions = getDefaultPermissions(formData.role);
                   onClick={handleAddPersonnel}
                   disabled={isLoading || !isAddPersonnelFormValid}
                 >
-                  {isLoading ? 'Adding...' : 'Add'}
+                  {isLoading ? 'Sending Invite...' : 'Add'}
                 </button>
               </div>
             </div>

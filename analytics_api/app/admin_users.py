@@ -52,6 +52,7 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
                     "role": role,
                     "rank": rank,
                     "contact_number": contact_number,
+                    "activation_required": True,
                 },
             }
         )

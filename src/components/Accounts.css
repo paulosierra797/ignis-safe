@@ -2201,6 +2201,12 @@
   border: 1px solid #86efac;
 }
 
+.accounts-modal-message-info {
+  background-color: #eff6ff;
+  color: #1e3a8a;
+  border: 1px solid #bfdbfe;
+}
+
 .accounts-modal-message-error {
   background-color: #fee2e2;
   color: #991b1b;

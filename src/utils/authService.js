@@ -89,8 +89,11 @@ const syncAdminStatusIfVerified = async (authUser, adminData) => {
 
   const emailVerified = !!authUser.email_confirmed_at || !!authUser.confirmed_at;
   const isPending = adminData.status === 'Pending Activation' || adminData.status === 'Pending Verification';
+  const activationFlag = authUser.user_metadata?.activation_required;
+  const requiresInviteActivation = activationFlag === true
+    || (activationFlag !== false && Boolean(authUser.invited_at));
 
-  if (!emailVerified || !isPending) return adminData;
+  if (!emailVerified || !isPending || requiresInviteActivation) return adminData;
 
   const { data: updatedAdmin, error: updateError } = await supabase
     .from('admin')
@@ -594,7 +597,13 @@ export const activateInvitedAccount = async (newPassword) => {
       throw new Error('This activation link is invalid or has expired. Ask an administrator to send a new invitation.');
     }
 
-    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword,
+      data: {
+        ...(invitedUser.user_metadata || {}),
+        activation_required: false
+      }
+    });
     if (error) throw error;
 
     const { error: statusError } = await supabase

@@ -7,10 +7,11 @@ import { updateUser, logAdminActivity } from '../utils/usersService';
 import UnsavedChangesPrompt from './UnsavedChangesPrompt';
 import './AdminProfile.css';
 
-const NAME_PATTERN = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_PATTERN = /^\p{L}+(?:[ '-]\p{L}+)*$/u;
 
 const normalizeSpaces = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+const sanitizeName = (value) => String(value || '').replace(/[^\p{L}\s'-]/gu, '');
+const digitsOnly = (value) => String(value || '').replace(/\D/g, '');
 
 const formatRoleLabel = (role) => {
   if (!role) return 'Admin';
@@ -43,13 +44,12 @@ export default function AdminProfile() {
   const displayName = `${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'Admin';
   const displayRole = formatRoleLabel(currentUser?.role);
   const displayPhone = currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || 'Not available';
-  const savedPhone = currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || '';
+  const savedPhone = digitsOnly(currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || '');
   const hasUnsavedProfileChanges = profileInitialized && Boolean(currentUser) && (
     normalizeSpaces(firstName) !== (currentUser.first_name || '')
     || normalizeSpaces(lastName) !== (currentUser.last_name || '')
     || position.trim() !== (currentUser.rank || '')
-    || email.trim() !== (currentUser.email || '')
-    || phone.replace(/[^0-9+ ]/g, '').trim() !== savedPhone
+    || digitsOnly(phone) !== savedPhone
   );
 
   const showModal = (type, message) => setModal({ open: true, type, message });
@@ -61,7 +61,7 @@ export default function AdminProfile() {
     setLastName(currentUser.last_name || '');
     setPosition(currentUser.rank || '');
     setEmail(currentUser.email || '');
-    setPhone(currentUser.contact_number || currentUser.phone || currentUser.phone_number || '');
+    setPhone(digitsOnly(currentUser.contact_number || currentUser.phone || currentUser.phone_number || '').slice(0, 11));
     if (currentUser.avatar_url) {
       setProfileImage(currentUser.avatar_url);
     }
@@ -109,11 +109,11 @@ export default function AdminProfile() {
     const normalizedPosition = position.trim();
 
     if (!normalizedFirst || !NAME_PATTERN.test(normalizedFirst)) {
-      showModal('error', 'First name may only contain letters and spaces.');
+      showModal('error', 'First name may only contain letters, spaces, hyphens, and apostrophes.');
       return;
     }
     if (!normalizedLast || !NAME_PATTERN.test(normalizedLast)) {
-      showModal('error', 'Last name may only contain letters and spaces.');
+      showModal('error', 'Last name may only contain letters, spaces, hyphens, and apostrophes.');
       return;
     }
 
@@ -171,19 +171,15 @@ export default function AdminProfile() {
   const handleSaveSecurity = async () => {
     if (savingSecurity) return;
 
-    const normalizedEmail = String(email || '').trim();
-    const normalizedPhone = String(phone || '').replace(/[^0-9+ ]/g, '').trim();
+    const normalizedPhone = digitsOnly(phone);
 
-    if (!normalizedEmail || !EMAIL_PATTERN.test(normalizedEmail)) {
-      showModal('error', 'Please enter a valid email address.');
+    if (normalizedPhone.length !== 11) {
+      showModal('error', 'Phone number must contain exactly 11 digits.');
       return;
     }
 
-    const currentPhone = currentUser.contact_number || currentUser.phone || currentUser.phone_number || '';
+    const currentPhone = digitsOnly(currentUser.contact_number || currentUser.phone || currentUser.phone_number || '');
     const changes = [];
-    if (normalizedEmail !== (currentUser.email || '')) {
-      changes.push({ label: 'Email', oldValue: currentUser.email || '—', newValue: normalizedEmail });
-    }
     if (normalizedPhone !== currentPhone) {
       changes.push({ label: 'Phone Number', oldValue: currentPhone || '—', newValue: normalizedPhone || '—' });
     }
@@ -193,14 +189,13 @@ export default function AdminProfile() {
     setConfirmModal({
       open: true,
       changes,
-      onConfirm: () => saveSecurity(normalizedEmail, normalizedPhone)
+      onConfirm: () => saveSecurity(normalizedPhone)
     });
   };
 
-  const saveSecurity = async (normalizedEmail, normalizedPhone) => {
+  const saveSecurity = async (normalizedPhone) => {
     setSavingSecurity(true);
     const { error } = await updateUser(currentUser.admin_id, {
-      email: normalizedEmail,
       contact_number: normalizedPhone
     });
     setSavingSecurity(false);
@@ -210,19 +205,18 @@ export default function AdminProfile() {
       return;
     }
 
-    setEmail(normalizedEmail);
     setPhone(normalizedPhone);
     if (setCurrentUser) {
-      setCurrentUser({ ...currentUser, email: normalizedEmail, contact_number: normalizedPhone });
+      setCurrentUser({ ...currentUser, contact_number: normalizedPhone });
     }
-    showModal('success', 'Security details updated successfully!');
+    showModal('success', 'Phone number updated successfully!');
 
     void logAdminActivity({
       actorId: currentUser.admin_id,
       actorName: displayName,
       action: 'Security Details Updated',
       actionType: 'edit',
-      details: 'Updated admin email/phone number.'
+      details: 'Updated admin phone number.'
     });
   };
 
@@ -289,7 +283,8 @@ export default function AdminProfile() {
                       id="adminFirstName"
                       type="text"
                       value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
+                      autoComplete="given-name"
+                      onChange={(e) => setFirstName(sanitizeName(e.target.value))}
                     />
                   </div>
 
@@ -299,7 +294,8 @@ export default function AdminProfile() {
                       id="adminLastName"
                       type="text"
                       value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
+                      autoComplete="family-name"
+                      onChange={(e) => setLastName(sanitizeName(e.target.value))}
                     />
                   </div>
                 </div>
@@ -338,7 +334,7 @@ export default function AdminProfile() {
                 <div className="profile-card-header">
                   <div>
                     <h3>Security</h3>
-                    <p>Review and update the account details tied to your login.</p>
+                    <p>Review your assigned login email and update your phone number.</p>
                   </div>
                 </div>
 
@@ -349,7 +345,9 @@ export default function AdminProfile() {
                       id="adminEmail"
                       type="email"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      disabled
+                      aria-disabled="true"
+                      title="The assigned administrator email cannot be changed."
                     />
                   </div>
 
@@ -357,10 +355,14 @@ export default function AdminProfile() {
                     <label htmlFor="adminPhone">Phone Number</label>
                     <input
                       id="adminPhone"
-                      type="text"
+                      type="tel"
                       value={phone}
                       placeholder="e.g. 09171234567"
-                      onChange={(e) => setPhone(e.target.value)}
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      maxLength={11}
+                      pattern="[0-9]{11}"
+                      onChange={(e) => setPhone(digitsOnly(e.target.value).slice(0, 11))}
                     />
                   </div>
                 </div>

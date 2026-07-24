@@ -41,7 +41,7 @@ const contactNumberRegex = /^09\d{9}$/;
 const ADD_PERSONNEL_TIMEOUT_MS = 30000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const REQUEST_PREVIEW_LIMIT = 3;
-const PERSONNEL_PAGE_SIZE = 10;
+const ACCOUNT_PAGE_SIZE = 10;
 const EMPTY_PERSONNEL_FORM = {
   first_name: '',
   last_name: '',
@@ -233,7 +233,12 @@ function AccountDirectoryGroup({
   isOnLeave,
   formatLeaveDate,
   variant,
+  page,
+  totalPages,
+  onPageChange,
 }) {
+  const rangeEnd = accounts.length > 0 ? startIndex + accounts.length - 1 : 0;
+
   return (
     <section className={`account-directory-group account-directory-group-${variant}`}>
       <div className="account-directory-group-header">
@@ -284,6 +289,31 @@ function AccountDirectoryGroup({
           })}
         </div>
       )}
+
+      {totalCount > 0 && (
+        <div className="accounts-directory-pagination" aria-label={`${title} pagination`}>
+          <p>
+            Showing {startIndex}-{rangeEnd} of {totalCount} {title.toLowerCase()}
+          </p>
+          <div className="accounts-directory-page-controls">
+            <button
+              type="button"
+              onClick={() => onPageChange(Math.max(1, page - 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </button>
+            <span>Page {page} of {totalPages}</span>
+            <button
+              type="button"
+              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+              disabled={page === totalPages}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -297,6 +327,7 @@ export default function Accounts() {
   const [rankFilter, setRankFilter] = useState('All Ranks');
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [personnelPage, setPersonnelPage] = useState(1);
+  const [adminPage, setAdminPage] = useState(1);
   const [expandedRequestSections, setExpandedRequestSections] = useState({
     pendingLeave: false,
     leaveHistory: false,
@@ -475,6 +506,7 @@ export default function Accounts() {
     setRankFilter('All Ranks');
     setStatusFilter('All Status');
     setPersonnelPage(1);
+    setAdminPage(1);
   };
 
   // Fetch accounts on component mount
@@ -2186,16 +2218,24 @@ const permissions = getDefaultPermissions(formData.role);
   });
   const filteredPersonnelAccounts = filteredAccounts.filter(isPersonnelAccount);
   const filteredAdminAccounts = filteredAccounts.filter((account) => !isPersonnelAccount(account));
-  const personnelTotalPages = Math.max(1, Math.ceil(filteredPersonnelAccounts.length / PERSONNEL_PAGE_SIZE));
+  const personnelTotalPages = Math.max(1, Math.ceil(filteredPersonnelAccounts.length / ACCOUNT_PAGE_SIZE));
   const safePersonnelPage = Math.min(personnelPage, personnelTotalPages);
   const paginatedPersonnelAccounts = filteredPersonnelAccounts.slice(
-    (safePersonnelPage - 1) * PERSONNEL_PAGE_SIZE,
-    safePersonnelPage * PERSONNEL_PAGE_SIZE
+    (safePersonnelPage - 1) * ACCOUNT_PAGE_SIZE,
+    safePersonnelPage * ACCOUNT_PAGE_SIZE
   );
   const personnelRangeStart = filteredPersonnelAccounts.length === 0
     ? 0
-    : (safePersonnelPage - 1) * PERSONNEL_PAGE_SIZE + 1;
-  const personnelRangeEnd = Math.min(safePersonnelPage * PERSONNEL_PAGE_SIZE, filteredPersonnelAccounts.length);
+    : (safePersonnelPage - 1) * ACCOUNT_PAGE_SIZE + 1;
+  const adminTotalPages = Math.max(1, Math.ceil(filteredAdminAccounts.length / ACCOUNT_PAGE_SIZE));
+  const safeAdminPage = Math.min(adminPage, adminTotalPages);
+  const paginatedAdminAccounts = filteredAdminAccounts.slice(
+    (safeAdminPage - 1) * ACCOUNT_PAGE_SIZE,
+    safeAdminPage * ACCOUNT_PAGE_SIZE
+  );
+  const adminRangeStart = filteredAdminAccounts.length === 0
+    ? 0
+    : (safeAdminPage - 1) * ACCOUNT_PAGE_SIZE + 1;
 
   const getAccountActions = (account) => [
     ...(isPersonnelAccount(account)
@@ -2963,6 +3003,7 @@ const permissions = getDefaultPermissions(formData.role);
               onChange={(event) => {
                 setPersonnelSearch(event.target.value);
                 setPersonnelPage(1);
+                setAdminPage(1);
               }}
             />
           </div>
@@ -2974,6 +3015,7 @@ const permissions = getDefaultPermissions(formData.role);
               onChange={(event) => {
                 setRankFilter(event.target.value);
                 setPersonnelPage(1);
+                setAdminPage(1);
               }}
             >
               <option>All Ranks</option>
@@ -3001,6 +3043,7 @@ const permissions = getDefaultPermissions(formData.role);
               onChange={(event) => {
                 setStatusFilter(event.target.value);
                 setPersonnelPage(1);
+                setAdminPage(1);
               }}
             >
               <option>All Status</option>
@@ -3034,43 +3077,25 @@ const permissions = getDefaultPermissions(formData.role);
               isOnLeave={isOnLeave}
               formatLeaveDate={formatLeaveDate}
               variant="personnel"
+              page={safePersonnelPage}
+              totalPages={personnelTotalPages}
+              onPageChange={setPersonnelPage}
             />
             <AccountDirectoryGroup
               title="Admin Accounts"
               description="Administrative and management accounts"
-              accounts={filteredAdminAccounts}
+              accounts={paginatedAdminAccounts}
               totalCount={filteredAdminAccounts.length}
+              startIndex={adminRangeStart}
               emptyMessage="No admin accounts match the selected filters."
               getAccountActions={getAccountActions}
               isOnLeave={isOnLeave}
               formatLeaveDate={formatLeaveDate}
               variant="admin"
+              page={safeAdminPage}
+              totalPages={adminTotalPages}
+              onPageChange={setAdminPage}
             />
-          </div>
-        )}
-
-        {filteredPersonnelAccounts.length > 0 && (
-          <div className="accounts-directory-pagination" aria-label="Personnel list pagination">
-            <p>
-              Showing {personnelRangeStart}–{personnelRangeEnd} of {filteredPersonnelAccounts.length} personnel accounts
-            </p>
-            <div className="accounts-directory-page-controls">
-              <button
-                type="button"
-                onClick={() => setPersonnelPage((page) => Math.max(1, page - 1))}
-                disabled={safePersonnelPage === 1}
-              >
-                Previous
-              </button>
-              <span>Page {safePersonnelPage} of {personnelTotalPages}</span>
-              <button
-                type="button"
-                onClick={() => setPersonnelPage((page) => Math.min(personnelTotalPages, page + 1))}
-                disabled={safePersonnelPage === personnelTotalPages}
-              >
-                Next
-              </button>
-            </div>
           </div>
         )}
         </section>

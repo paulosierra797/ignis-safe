@@ -11,6 +11,7 @@ import {
   getAllUsers,
   deleteUser,
   logAdminActivity,
+  updatePersonnelWorkspaceProfile,
   updateUser,
   getShiftScheduleConfig,
   saveShiftScheduleConfig
@@ -51,6 +52,7 @@ const EMPTY_PERSONNEL_FORM = {
   rank_custom: '',
   contact_number: ''
 };
+const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
 
 const toIsoDate = (date) => {
   const year = date.getFullYear();
@@ -452,8 +454,10 @@ export default function Accounts() {
     start_date: '',
     end_date: ''
   });
-  const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
   const isOnLeave = (account) => String(account?.status || '').toLowerCase() === 'on leave';
+  const findPersonnelAccount = useCallback((personnelId) => accounts.find((account) =>
+    account.admin_id === personnelId && isPersonnelAccount(account)
+  ), [accounts]);
 
   useEffect(() => {
     if (!isAddFormDirty && !isPersonnelShiftDirty) {
@@ -553,7 +557,7 @@ export default function Accounts() {
   };
 
   const getPersonnelNameById = (personnelId) => {
-    const match = accounts.find((account) => account.admin_id === personnelId);
+    const match = findPersonnelAccount(personnelId);
     return formatPersonnelName(match);
   };
 
@@ -693,7 +697,7 @@ export default function Accounts() {
   const fetchAccounts = async () => {
     setLoadingAccounts(true);
     try {
-      const { data, error } = await getAllUsers();
+      const { data, error } = await getAllUsers({ includePersonnelWorkspaceProfiles: true });
       if (error) {
         console.error('Error fetching accounts:', error);
       } else {
@@ -799,7 +803,7 @@ export default function Accounts() {
     setPendingLeaveRequests((prev) => prev.filter((row) => row.request_id !== request.request_id));
     setAccounts((prev) =>
       prev.map((account) =>
-        account.admin_id === request.personnel_id
+        account.admin_id === request.personnel_id && isPersonnelAccount(account)
           ? {
               ...account,
               status: 'On Leave',
@@ -814,7 +818,7 @@ export default function Accounts() {
       loadLeaveRequestHistory()
     ]);
 
-    const target = accounts.find((account) => account.admin_id === request.personnel_id);
+    const target = findPersonnelAccount(request.personnel_id);
     logAdminActivity({
       actorId: currentUser?.admin_id || null,
       actorName: currentUser?.name || currentUser?.email || 'Admin User',
@@ -881,7 +885,7 @@ export default function Accounts() {
     setPendingLeaveRequests((prev) => prev.filter((row) => row.request_id !== request.request_id));
     await loadLeaveRequestHistory();
 
-    const target = accounts.find((account) => account.admin_id === request.personnel_id);
+    const target = findPersonnelAccount(request.personnel_id);
     logAdminActivity({
       actorId: currentUser?.admin_id || null,
       actorName: currentUser?.name || currentUser?.email || 'Admin User',
@@ -1214,18 +1218,13 @@ console.log("AUTH USER:", authData);
     return;
   }
 
-  const { data: existing, error: existingError } = await supabase
-    .from("admin")
-    .select("admin_id, first_name, email")
-    .eq("admin_id", selectedEditAccount.admin_id);
-
-  console.log("Existing row:", existing);
-  console.log("Select error:", existingError);
-
-  const { error } = await updateUser(
-    selectedEditAccount.admin_id,
-    updates
-  );
+  const updateResult = selectedEditAccount.is_personnel_workspace_profile
+    ? await updatePersonnelWorkspaceProfile(selectedEditAccount.admin_id, {
+      ...updates,
+      role: undefined
+    })
+    : await updateUser(selectedEditAccount.admin_id, updates);
+  const { error } = updateResult;
 
   if (error) {
     setMessage({ type: 'error', text: `Update failed: ${error}` });
@@ -1344,7 +1343,9 @@ const permissions = getDefaultPermissions(formData.role);
 
       if (signupResponse?.timedOut) {
         console.warn('Add personnel request timed out in UI. Checking current admin accounts list...');
-        const { data: latestAccounts, error: fetchError } = await getAllUsers();
+        const { data: latestAccounts, error: fetchError } = await getAllUsers({
+          includePersonnelWorkspaceProfiles: true
+        });
         const accountExists = !fetchError && (latestAccounts || []).some((account) =>
           String(account.email || '').toLowerCase() === String(formData.email || '').toLowerCase()
         );
@@ -1556,7 +1557,7 @@ const permissions = getDefaultPermissions(formData.role);
 
     const buildList = (map) =>
       Array.from(map.keys()).map((id) => {
-        const account = accounts.find((acc) => acc.admin_id === id);
+        const account = findPersonnelAccount(id);
         return {
           id,
           name: account ? `${account.first_name} ${account.last_name}` : 'Personnel',
@@ -1570,7 +1571,7 @@ const permissions = getDefaultPermissions(formData.role);
       shiftB: buildList(existingB),
       skippedCount: selectedShiftPersonnelIds.length - pendingIds.length
     };
-  }, [periodAssignments, selectedShiftPersonnelIds, selectedShiftForAssignment, accounts]);
+  }, [periodAssignments, selectedShiftPersonnelIds, selectedShiftForAssignment, findPersonnelAccount]);
 
   const openShiftConfirmModal = () => {
     if (!selectedShiftPersonnelIds.length) {
@@ -1832,7 +1833,7 @@ const permissions = getDefaultPermissions(formData.role);
 
     if (!checked && selectedShiftPersonnel?.admin_id === personnel.admin_id) {
       const nextPreviewId = nextIds[0];
-      const nextPreviewPersonnel = accounts.find((account) => account.admin_id === nextPreviewId) || null;
+      const nextPreviewPersonnel = findPersonnelAccount(nextPreviewId) || null;
 
       if (nextPreviewPersonnel) {
         await handleSelectPersonnelForShift(nextPreviewPersonnel);
@@ -2076,7 +2077,9 @@ const permissions = getDefaultPermissions(formData.role);
       leave_end_date: leaveFormData.end_date
     };
 
-    const { error } = await updateUser(selectedAccount.admin_id, updates);
+    const { error } = selectedAccount.is_personnel_workspace_profile
+      ? await updatePersonnelWorkspaceProfile(selectedAccount.admin_id, updates)
+      : await updateUser(selectedAccount.admin_id, updates);
 
     if (error) {
       if (String(error).toLowerCase().includes('leave_start_date') || String(error).toLowerCase().includes('leave_end_date')) {
@@ -2094,6 +2097,8 @@ const permissions = getDefaultPermissions(formData.role);
     setAccounts((prev) =>
       prev.map((account) =>
         account.admin_id === selectedAccount.admin_id
+          && Boolean(account.is_personnel_workspace_profile)
+            === Boolean(selectedAccount.is_personnel_workspace_profile)
           ? {
               ...account,
               ...updates
@@ -2148,7 +2153,9 @@ const permissions = getDefaultPermissions(formData.role);
       leave_end_date: null
     };
 
-    const { error } = await updateUser(account.admin_id, updates);
+    const { error } = account.is_personnel_workspace_profile
+      ? await updatePersonnelWorkspaceProfile(account.admin_id, updates)
+      : await updateUser(account.admin_id, updates);
     if (error) {
       alert(`Failed to clear leave dates: ${error}`);
       return;
@@ -2157,6 +2164,8 @@ const permissions = getDefaultPermissions(formData.role);
     setAccounts((prev) =>
       prev.map((row) =>
         row.admin_id === account.admin_id
+          && Boolean(row.is_personnel_workspace_profile)
+            === Boolean(account.is_personnel_workspace_profile)
           ? {
               ...row,
               ...updates
@@ -2246,6 +2255,7 @@ const permissions = getDefaultPermissions(formData.role);
       : []),
     { key: 'edit', label: 'Edit', onSelect: () => openEditModal(account) },
     ...(String(account.role || '').trim().toLowerCase() !== 'admin'
+      && !account.is_personnel_workspace_profile
       ? [{
         key: 'delete',
         label: 'Delete',
@@ -2451,7 +2461,7 @@ const permissions = getDefaultPermissions(formData.role);
                 </thead>
                 <tbody>
                   {visiblePendingLeaveRequests.map((request) => {
-                    const target = accounts.find((account) => account.admin_id === request.personnel_id);
+                    const target = findPersonnelAccount(request.personnel_id);
                     const isProcessing = processingRequestId === request.request_id;
 
                     return (
@@ -2489,9 +2499,7 @@ const permissions = getDefaultPermissions(formData.role);
           )}
           <div className="leave-approval-mobile-list">
   {visiblePendingLeaveRequests.map((request) => {
-    const target = accounts.find(
-      (a) => a.admin_id === request.personnel_id
-    );
+    const target = findPersonnelAccount(request.personnel_id);
 
     const isProcessing =
       processingRequestId === request.request_id;
@@ -3889,14 +3897,14 @@ const permissions = getDefaultPermissions(formData.role);
                           value={selectedShiftPersonnel?.admin_id || ''}
                           onChange={(event) => {
                             const selectedId = event.target.value;
-                            const selectedPersonnel = accounts.find((acc) => acc.admin_id === selectedId);
+                            const selectedPersonnel = findPersonnelAccount(selectedId);
                             if (selectedPersonnel) {
                               handleSelectPersonnelForShift(selectedPersonnel);
                             }
                           }}
                         >
                           {selectedShiftPersonnelIds.map((personnelId) => {
-                            const personnel = accounts.find((account) => account.admin_id === personnelId);
+                            const personnel = findPersonnelAccount(personnelId);
                             if (!personnel) {
                               return null;
                             }

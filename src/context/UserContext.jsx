@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   forgetCurrentDevice,
   getCurrentUser,
@@ -7,11 +8,24 @@ import {
 } from '../utils/authService';
 import { isAuthFlowGated } from '../utils/authFlowGate';
 import { logPersonnelActivity } from '../utils/activityLogService';
+import { getPersonnelWorkspaceProfile } from '../utils/usersService';
 
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
 
 const UserContext = createContext();
+const PERSONNEL_WORKSPACE_PATHS = [
+  '/personnel',
+  '/attendance-personnel',
+  '/attendance-login',
+  '/attendance-scan',
+  '/attendance-confirm',
+  '/reports'
+];
 
+const isPersonnelWorkspacePath = (pathname) =>
+  PERSONNEL_WORKSPACE_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+
+// eslint-disable-next-line react-refresh/only-export-components
 export const useUser = () => {
   const context = useContext(UserContext);
   if (!context) {
@@ -21,8 +35,30 @@ export const useUser = () => {
 };
 
 export const UserProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
+  const location = useLocation();
+  const [accountUser, setAccountUser] = useState(null);
+  const [personnelWorkspaceUser, setPersonnelWorkspaceUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isPersonnelWorkspace = isPersonnelWorkspacePath(location.pathname);
+  const isAdminAccount = String(accountUser?.role || '').toLowerCase() === 'admin';
+  const currentUser = isPersonnelWorkspace && isAdminAccount
+    ? (personnelWorkspaceUser || {
+      ...accountUser,
+      role: 'personnel',
+      permissions: [],
+      account_role: 'admin',
+      is_personnel_workspace_profile: true
+    })
+    : accountUser;
+
+  const setCurrentUser = (nextValue) => {
+    const nextUser = typeof nextValue === 'function' ? nextValue(currentUser) : nextValue;
+    if (isPersonnelWorkspace && isAdminAccount && nextUser?.is_personnel_workspace_profile) {
+      setPersonnelWorkspaceUser(nextUser);
+      return;
+    }
+    setAccountUser(nextUser);
+  };
 
   const syncCurrentUser = (user) => {
     if (user) {
@@ -34,12 +70,13 @@ export const UserProvider = ({ children }) => {
         console.warn('Ignoring incomplete user profile sync (missing admin_id); keeping existing profile.');
         return null;
       }
-      setCurrentUser(user);
+      setAccountUser(user);
       localStorage.setItem('user', JSON.stringify(user));
       return user;
     }
 
-    setCurrentUser(null);
+    setAccountUser(null);
+    setPersonnelWorkspaceUser(null);
     localStorage.removeItem('user');
     return null;
   };
@@ -57,7 +94,7 @@ export const UserProvider = ({ children }) => {
 
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      setCurrentUser(user);
+      setAccountUser(user);
       return user;
     }
 
@@ -70,7 +107,7 @@ export const UserProvider = ({ children }) => {
 
     if (storedUser) {
       const user = JSON.parse(storedUser);
-      setCurrentUser(user);
+      setAccountUser(user);
       return user;
     }
 
@@ -86,7 +123,7 @@ export const UserProvider = ({ children }) => {
       const storedUser = localStorage.getItem('user');
 
       if (storedUser) {
-        setCurrentUser(JSON.parse(storedUser));
+        setAccountUser(JSON.parse(storedUser));
       }
 
       await refreshCurrentUser();
@@ -126,12 +163,40 @@ export const UserProvider = ({ children }) => {
       unsubscribe();
     }
   };
+// Authentication initialization intentionally runs once per provider mount.
+// eslint-disable-next-line react-hooks/exhaustive-deps
 }, []);
 
   useEffect(() => {
+    let isCancelled = false;
+
+    const loadPersonnelWorkspaceUser = async () => {
+      if (!isPersonnelWorkspace || !isAdminAccount || !accountUser?.admin_id) {
+        setPersonnelWorkspaceUser(null);
+        return;
+      }
+
+      const { data, error } = await getPersonnelWorkspaceProfile(accountUser);
+      if (!isCancelled && data && !error) {
+        setPersonnelWorkspaceUser(data);
+      }
+    };
+
+    void loadPersonnelWorkspaceUser();
+    return () => {
+      isCancelled = true;
+    };
+  }, [accountUser, isAdminAccount, isPersonnelWorkspace]);
+
+  useEffect(() => {
     const handleDataChanged = () => {
-      if (currentUser?.admin_id) {
+      if (accountUser?.admin_id) {
         void refreshCurrentUser();
+        if (isPersonnelWorkspace && isAdminAccount) {
+          void getPersonnelWorkspaceProfile(accountUser).then(({ data }) => {
+            if (data) setPersonnelWorkspaceUser(data);
+          });
+        }
       }
     };
 
@@ -141,12 +206,14 @@ export const UserProvider = ({ children }) => {
     }
 
     return undefined;
-  }, [currentUser?.admin_id]);
+  // The listener is keyed to identity and workspace; refreshCurrentUser is intentionally not reactive.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountUser?.admin_id, isAdminAccount, isPersonnelWorkspace]);
 
   
 
   const switchRole = (role) => {
-    if (!currentUser) return;
+    if (!accountUser) return;
 
     const rolePermissions = {
       admin: ['view_dashboard', 'view_charts', 'view_attendance', 'view_accounts', 'manage_users', 'view_analytics', 'view_progress', 'view_audit_logs', 'view_reports', 'manage_reports'],
@@ -156,17 +223,17 @@ export const UserProvider = ({ children }) => {
     };
 
     const updatedUser = {
-      ...currentUser,
+      ...accountUser,
       role: role,
       permissions: rolePermissions[role] || []
     };
 
-    setCurrentUser(updatedUser);
+    setAccountUser(updatedUser);
   };
 
   const hasPermission = (permission) => {
-    if (!currentUser || !currentUser.permissions) return false;
-    return currentUser.permissions.includes(permission);
+    if (!accountUser || !accountUser.permissions) return false;
+    return accountUser.permissions.includes(permission);
   };
 
   const logout = async () => {
@@ -180,7 +247,8 @@ export const UserProvider = ({ children }) => {
     }
 
     await signOut();
-    setCurrentUser(null);
+    setAccountUser(null);
+    setPersonnelWorkspaceUser(null);
   };
 
   const forgetThisDevice = async () => {
@@ -189,6 +257,7 @@ export const UserProvider = ({ children }) => {
 
   const value = {
     currentUser,
+    accountUser,
     setCurrentUser,
     refreshCurrentUser,
     switchRole,

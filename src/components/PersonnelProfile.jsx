@@ -190,7 +190,8 @@ const [modal, setModal] = useState({
     try {
       const { data: imageUrl, error } = await uploadProfileImage(
         currentUser.admin_id,
-        file
+        file,
+        { workspaceProfile: Boolean(currentUser.is_personnel_workspace_profile) }
       );
 
       if (error) {

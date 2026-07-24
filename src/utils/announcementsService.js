@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getAllUsers } from './usersService';
 import { logAdminActivity } from './usersService';
 import { logPersonnelActivity } from './activityLogService';
 
@@ -209,17 +210,16 @@ export const getPublicAnnouncements = async () => {
 
 export const getPersonnelRecipients = async () => {
   try {
-    const { data, error } = await supabase
-      .from('admin')
-      .select('admin_id, first_name, last_name, rank, email, status')
-      .ilike('role', 'personnel')
-      .eq('status', 'Active')
-      .order('first_name', { ascending: true });
+    const { data, error } = await getAllUsers({ includePersonnelWorkspaceProfiles: true });
 
     if (error) throw error;
+    const personnel = (data || [])
+      .filter((row) => String(row.role || '').toLowerCase() === 'personnel')
+      .filter((row) => row.status === 'Active')
+      .sort((left, right) => String(left.first_name || '').localeCompare(String(right.first_name || '')));
 
     return {
-      data: (data || []).map((row) => ({
+      data: personnel.map((row) => ({
         admin_id: row.admin_id,
         name: [row.rank, row.first_name, row.last_name].filter(Boolean).join(' ').trim() || row.email || 'Personnel',
         status: row.status || 'Unknown',
@@ -303,11 +303,7 @@ export const getAnnouncementsForUser = async (currentUser) => {
 
     if (role === 'admin') {
       const [personnelResult, ackResult] = await Promise.all([
-        supabase
-          .from('admin')
-          .select('admin_id, first_name, last_name, rank, email')
-          .ilike('role', 'personnel')
-          .eq('status', 'Active'),
+        getAllUsers({ includePersonnelWorkspaceProfiles: true }),
         supabase
           .from(ANNOUNCEMENT_ACK_TABLE)
           .select('announcement_id, personnel_id')
@@ -317,7 +313,9 @@ export const getAnnouncementsForUser = async (currentUser) => {
       if (personnelResult.error) throw personnelResult.error;
       if (ackResult.error) throw ackResult.error;
 
-      const activePersonnel = personnelResult.data || [];
+      const activePersonnel = (personnelResult.data || [])
+        .filter((row) => String(row.role || '').toLowerCase() === 'personnel')
+        .filter((row) => row.status === 'Active');
       const activePersonnelIds = new Set(activePersonnel.map((row) => row.admin_id));
       const personnelNameById = new Map(
         activePersonnel.map((row) => [

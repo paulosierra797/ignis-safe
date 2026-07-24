@@ -34,6 +34,7 @@ const getStoredUserProfile = () => {
 
 const normalizeOfficerProfile = (officer) => {
   if (!officer) return officer;
+  if (officer.is_personnel_workspace_profile) return officer;
 
   const storedUser = getStoredUserProfile();
   if (!storedUser) return officer;
@@ -153,13 +154,22 @@ export const authenticatePersonnel = async (email, password) => {
   const accountEmail = authUser.email.toLowerCase();
   const fallbackOfficer = personnelDatabase.find((p) => p.email.toLowerCase() === accountEmail);
 
-  let adminProfile = null;
-  const { data: adminData } = await supabase
-    .from('admin')
-    .select('*')
-    .eq('admin_id', authUser.id)
-    .maybeSingle();
-  adminProfile = adminData || null;
+  const [adminResult, workspaceResult] = await Promise.all([
+    supabase
+      .from('admin')
+      .select('*')
+      .eq('admin_id', authUser.id)
+      .maybeSingle(),
+    supabase
+      .from('personnel_workspace_profiles')
+      .select('*')
+      .eq('admin_id', authUser.id)
+      .maybeSingle()
+  ]);
+  const adminProfile = adminResult.data || null;
+  const workspaceProfile = workspaceResult.data || null;
+  const personnelProfile = workspaceProfile || adminProfile;
+  const personnelName = `${personnelProfile?.first_name || ''} ${personnelProfile?.last_name || ''}`.trim();
 
  const derivedOfficer = {
   admin_id: authUser.id,   // ADD THIS
@@ -169,23 +179,25 @@ export const authenticatePersonnel = async (email, password) => {
   ),
 
   name:
-    adminProfile?.name ||
+    personnelName ||
+    personnelProfile?.name ||
     authUser.user_metadata?.name ||
     fallbackOfficer?.name ||
     accountEmail.split('@')[0],
 
   rank:
-    adminProfile?.rank ||
+    personnelProfile?.rank ||
     authUser.user_metadata?.rank ||
     fallbackOfficer?.rank ||
     'Personnel',
 
-  email: accountEmail,
+  email: personnelProfile?.email || accountEmail,
 
   avatarUrl:
-    adminProfile?.avatar_url ||
+    personnelProfile?.avatar_url ||
     authUser.user_metadata?.avatar_url ||
-    null
+    null,
+  is_personnel_workspace_profile: Boolean(workspaceProfile)
 };
 
   return normalizeOfficerProfile(derivedOfficer);

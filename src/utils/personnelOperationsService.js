@@ -3,6 +3,7 @@ import { getAllUsers, getShiftScheduleConfig } from './usersService';
 import { getManilaToday } from './dateUtils';
 
 const ADMIN_TABLE = 'admin';
+const PERSONNEL_WORKSPACE_TABLE = 'personnel_workspace_profiles';
 const LEAVE_REQUESTS_TABLE = 'leave_requests';
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
 
@@ -41,19 +42,50 @@ const isDateWithinInclusiveRange = (date, startDate, endDate) => {
   return date >= startDate && date <= endDate;
 };
 
+const updatePersonnelLeaveState = async (personnelId, updates) => {
+  const { data: workspaceProfile, error: workspaceError } = await supabase
+    .from(PERSONNEL_WORKSPACE_TABLE)
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('admin_id', personnelId)
+    .select('admin_id, status, leave_start_date, leave_end_date')
+    .maybeSingle();
+
+  if (workspaceError) throw workspaceError;
+  if (workspaceProfile) return workspaceProfile;
+
+  const { data: account, error: accountError } = await supabase
+    .from(ADMIN_TABLE)
+    .update(updates)
+    .eq('admin_id', personnelId)
+    .select('admin_id, status, leave_start_date, leave_end_date')
+    .maybeSingle();
+
+  if (accountError) throw accountError;
+  return account;
+};
+
 export const getPersonnelLeaveRequest = async (adminId) => {
   try {
     if (!adminId) {
       return { data: null, error: 'Missing personnel id.' };
     }
 
-    const { data: adminRow, error: adminError } = await supabase
-      .from(ADMIN_TABLE)
-      .select('admin_id, status, leave_start_date, leave_end_date')
-      .eq('admin_id', adminId)
-      .maybeSingle();
+    const [workspaceResult, adminResult] = await Promise.all([
+      supabase
+        .from(PERSONNEL_WORKSPACE_TABLE)
+        .select('admin_id, status, leave_start_date, leave_end_date')
+        .eq('admin_id', adminId)
+        .maybeSingle(),
+      supabase
+        .from(ADMIN_TABLE)
+        .select('admin_id, status, leave_start_date, leave_end_date')
+        .eq('admin_id', adminId)
+        .maybeSingle()
+    ]);
 
-    if (adminError) throw adminError;
+    if (workspaceResult.error) throw workspaceResult.error;
+    if (adminResult.error) throw adminResult.error;
+    const adminRow = workspaceResult.data || adminResult.data;
 
     const { data: latestRequestRows, error: requestError } = await supabase
       .from(LEAVE_REQUESTS_TABLE)
@@ -184,13 +216,22 @@ export const getAllLeaveRequests = async () => {
         .from(LEAVE_REQUESTS_TABLE)
         .select('request_id, personnel_id, start_date, end_date, reason, status, approved_by, approved_at, rejection_reason, created_at, updated_at')
         .order('created_at', { ascending: false }),
-      getAllUsers()
+      getAllUsers({ includePersonnelWorkspaceProfiles: true })
     ]);
 
     if (requestsRes.error) throw requestsRes.error;
     if (usersRes.error) throw new Error(usersRes.error);
 
-    const usersById = new Map((usersRes.data || []).map((user) => [user.admin_id, user]));
+    const personnelById = new Map(
+      (usersRes.data || [])
+        .filter((user) => String(user.role || '').toLowerCase() === 'personnel')
+        .map((user) => [user.admin_id, user])
+    );
+    const accountById = new Map(
+      (usersRes.data || [])
+        .filter((user) => !user.is_personnel_workspace_profile)
+        .map((user) => [user.admin_id, user])
+    );
 
     const formatUserLabel = (user) => {
       if (!user) return 'Unknown';
@@ -198,8 +239,8 @@ export const getAllLeaveRequests = async () => {
     };
 
     const rows = (requestsRes.data || []).map((row) => {
-      const personnel = usersById.get(row.personnel_id);
-      const reviewer = row.approved_by ? usersById.get(row.approved_by) : null;
+      const personnel = personnelById.get(row.personnel_id);
+      const reviewer = row.approved_by ? accountById.get(row.approved_by) : null;
 
       return {
         ...row,
@@ -225,18 +266,11 @@ export const getAllLeaveRequests = async () => {
 
 export const approveLeaveRequest = async ({ requestId, personnelId, startDate, endDate, approvedBy }) => {
   try {
-    const { data: accountUpdate, error: accountError } = await supabase
-      .from(ADMIN_TABLE)
-      .update({
-        status: 'On Leave',
-        leave_start_date: startDate,
-        leave_end_date: endDate
-      })
-      .eq('admin_id', personnelId)
-      .select('admin_id, status, leave_start_date, leave_end_date')
-      .maybeSingle();
-
-    if (accountError) throw accountError;
+    const accountUpdate = await updatePersonnelLeaveState(personnelId, {
+      status: 'On Leave',
+      leave_start_date: startDate,
+      leave_end_date: endDate
+    });
     if (!accountUpdate) {
       return {
         data: null,
@@ -319,7 +353,7 @@ export const getPersonnelShiftSchedule = async ({
     const scheduleEndDate = toIsoDate(end);
     const [configResult, personnelResult, assignmentResult, leaveRequestResult] = await Promise.all([
       getShiftScheduleConfig(),
-      getAllUsers(),
+      getAllUsers({ includePersonnelWorkspaceProfiles: true }),
       getShiftAssignmentsForPeriod({
         startDate: scheduleStartDate,
         endDate: scheduleEndDate
@@ -460,7 +494,7 @@ export const getPersonnelForDate = async (dateIso) => {
 
     const [configResult, personnelResult, assignmentResult, attendanceResult, leaveRequestResult] = await Promise.all([
       getShiftScheduleConfig(),
-      getAllUsers(),
+      getAllUsers({ includePersonnelWorkspaceProfiles: true }),
       getShiftAssignmentsForPeriod({ startDate: dateIso, endDate: dateIso }),
       supabase
         .from('attendance_records')
@@ -579,7 +613,7 @@ export const getShiftAssignmentSummaryForDate = async (dateIso) => {
     }
 
     const [personnelResult, assignmentResult] = await Promise.all([
-      getAllUsers(),
+      getAllUsers({ includePersonnelWorkspaceProfiles: true }),
       getShiftAssignmentsForPeriod({ startDate: dateIso, endDate: dateIso })
     ]);
 

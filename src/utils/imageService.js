@@ -19,7 +19,7 @@ const emitDataChanged = (scope, detail = {}) => {
  * @param {File} file - The image file to upload
  * @returns {Object} - { data: publicUrl, error }
  */
-export const uploadProfileImage = async (userId, file) => {
+export const uploadProfileImage = async (userId, file, { workspaceProfile = false } = {}) => {
   try {
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
@@ -44,7 +44,7 @@ export const uploadProfileImage = async (userId, file) => {
     const filePath = `${userId}/${fileName}`;
 
     // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('profile_pic')
       .upload(filePath, file, {
         cacheControl: '3600',
@@ -63,7 +63,7 @@ export const uploadProfileImage = async (userId, file) => {
 
     // Update user profile with image URL
     const { error: updateError } = await supabase
-      .from('admin')
+      .from(workspaceProfile ? 'personnel_workspace_profiles' : 'admin')
       .update({ avatar_url: publicUrl })
       .eq('admin_id', userId);
 
@@ -72,7 +72,11 @@ export const uploadProfileImage = async (userId, file) => {
       return { data: null, error: updateError.message };
     }
 
-    emitDataChanged('profile', { action: 'avatar-update', admin_id: userId });
+    emitDataChanged('profile', {
+      action: 'avatar-update',
+      admin_id: userId,
+      workspace: workspaceProfile ? 'personnel' : 'admin'
+    });
 
     return { data: publicUrl, error: null };
   } catch (error) {

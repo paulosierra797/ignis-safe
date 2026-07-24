@@ -170,13 +170,22 @@ export const getAllProfileChangeRequests = async () => {
         .from(TABLE)
         .select('request_id, personnel_id, field_name, current_value, requested_value, reason, status, requested_at, reviewed_at, reviewed_by')
         .order('requested_at', { ascending: false }),
-      getAllUsers()
+      getAllUsers({ includePersonnelWorkspaceProfiles: true })
     ]);
 
     if (requestsRes.error) throw requestsRes.error;
     if (usersRes.error) throw new Error(usersRes.error);
 
-    const usersById = new Map((usersRes.data || []).map((user) => [user.admin_id, user]));
+    const personnelById = new Map(
+      (usersRes.data || [])
+        .filter((user) => String(user.role || '').toLowerCase() === 'personnel')
+        .map((user) => [user.admin_id, user])
+    );
+    const accountById = new Map(
+      (usersRes.data || [])
+        .filter((user) => !user.is_personnel_workspace_profile)
+        .map((user) => [user.admin_id, user])
+    );
 
     const formatUserLabel = (user) => {
       if (!user) return 'Unknown';
@@ -184,8 +193,8 @@ export const getAllProfileChangeRequests = async () => {
     };
 
     const rows = (requestsRes.data || []).map((row) => {
-      const personnel = usersById.get(row.personnel_id);
-      const reviewer = row.reviewed_by ? usersById.get(row.reviewed_by) : null;
+      const personnel = personnelById.get(row.personnel_id);
+      const reviewer = row.reviewed_by ? accountById.get(row.reviewed_by) : null;
 
       return {
         ...row,
@@ -226,12 +235,23 @@ export const approveProfileChangeRequest = async ({ requestId, reviewedBy }) => 
       return { data: null, error: 'This request is no longer pending.' };
     }
 
-    const { error: profileUpdateError } = await supabase
-      .from('admin')
+    const { data: workspaceUpdate, error: workspaceUpdateError } = await supabase
+      .from('personnel_workspace_profiles')
       .update({ [requestRow.field_name]: requestRow.requested_value })
-      .eq('admin_id', requestRow.personnel_id);
+      .eq('admin_id', requestRow.personnel_id)
+      .select('admin_id')
+      .maybeSingle();
 
-    if (profileUpdateError) throw profileUpdateError;
+    if (workspaceUpdateError) throw workspaceUpdateError;
+
+    if (!workspaceUpdate) {
+      const { error: profileUpdateError } = await supabase
+        .from('admin')
+        .update({ [requestRow.field_name]: requestRow.requested_value })
+        .eq('admin_id', requestRow.personnel_id);
+
+      if (profileUpdateError) throw profileUpdateError;
+    }
 
     const { data, error } = await supabase
       .from(TABLE)

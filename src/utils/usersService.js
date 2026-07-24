@@ -2,6 +2,7 @@ import { supabase } from './supabaseClient';
 
 const ADMIN_ACTIVITY_TABLE = 'admin_activity_logs';
 const SHIFT_SCHEDULE_TABLE = 'shift_schedule';
+const PERSONNEL_WORKSPACE_TABLE = 'personnel_workspace_profiles';
 const SHIFT_SCHEDULE_KEY = 'main';
 const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 const ADMIN_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
@@ -16,6 +17,105 @@ const emitDataChanged = (scope, detail = {}) => {
       ...detail
     }
   }));
+};
+
+const toPersonnelWorkspaceUser = (account, profile) => {
+  if (!account || !profile) return null;
+
+  const firstName = profile.first_name || '';
+  const lastName = profile.last_name || '';
+  return {
+    ...account,
+    ...profile,
+    admin_id: account.admin_id,
+    role: 'personnel',
+    permissions: [],
+    name: `${firstName} ${lastName}`.trim() || profile.email || 'Personnel',
+    account_role: account.role,
+    is_personnel_workspace_profile: true
+  };
+};
+
+export const getPersonnelWorkspaceProfile = async (account, { createIfMissing = true } = {}) => {
+  try {
+    if (!account?.admin_id) {
+      return { data: null, error: 'Missing account ID.' };
+    }
+
+    if (String(account.role || '').toLowerCase() !== 'admin') {
+      return { data: { ...account, is_personnel_workspace_profile: false }, error: null };
+    }
+
+    const { data: existingProfile, error: selectError } = await supabase
+      .from(PERSONNEL_WORKSPACE_TABLE)
+      .select('*')
+      .eq('admin_id', account.admin_id)
+      .maybeSingle();
+
+    if (selectError) throw selectError;
+    if (existingProfile) {
+      return { data: toPersonnelWorkspaceUser(account, existingProfile), error: null };
+    }
+    if (!createIfMissing) {
+      return { data: null, error: null };
+    }
+
+    const { data: createdProfile, error: insertError } = await supabase
+      .from(PERSONNEL_WORKSPACE_TABLE)
+      .insert({
+        admin_id: account.admin_id,
+        first_name: account.first_name || '',
+        last_name: account.last_name || '',
+        email: account.email || '',
+        rank: account.rank || '',
+        contact_number: account.contact_number || null,
+        avatar_url: account.avatar_url || null
+      })
+      .select('*')
+      .single();
+
+    if (insertError) throw insertError;
+    return { data: toPersonnelWorkspaceUser(account, createdProfile), error: null };
+  } catch (error) {
+    console.error('Error loading personnel workspace profile:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const updatePersonnelWorkspaceProfile = async (adminId, updates) => {
+  try {
+    const allowedFields = [
+      'first_name',
+      'last_name',
+      'email',
+      'rank',
+      'contact_number',
+      'avatar_url',
+      'status',
+      'leave_start_date',
+      'leave_end_date'
+    ];
+    const payload = Object.fromEntries(
+      Object.entries(updates || {}).filter(([key]) => allowedFields.includes(key))
+    );
+    payload.updated_at = new Date().toISOString();
+
+    const { data, error } = await supabase
+      .from(PERSONNEL_WORKSPACE_TABLE)
+      .update(payload)
+      .eq('admin_id', adminId)
+      .select('*')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error('Personnel workspace profile was not found.');
+
+    emitDataChanged('users', { action: 'workspace_profile_update', admin_id: adminId });
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error updating personnel workspace profile:', error);
+    return { data: null, error: error.message };
+  }
 };
 
 const callAdminApi = async (endpoint, payload = null) => {
@@ -160,14 +260,29 @@ export const getUsersFromProfiles = async () => {
 };
 
 // Get all admins
-export const getAllUsers = async () => {
+export const getAllUsers = async ({ includePersonnelWorkspaceProfiles = false } = {}) => {
   try {
-    const { data, error } = await supabase
-      .from('admin')
-      .select('*');
+    const [accountsResult, profilesResult] = await Promise.all([
+      supabase.from('admin').select('*'),
+      includePersonnelWorkspaceProfiles
+        ? supabase.from(PERSONNEL_WORKSPACE_TABLE).select('*')
+        : Promise.resolve({ data: [], error: null })
+    ]);
     
-    if (error) throw error;
-    return { data, error: null };
+    if (accountsResult.error) throw accountsResult.error;
+    if (profilesResult.error) throw profilesResult.error;
+
+    const accounts = accountsResult.data || [];
+    if (!includePersonnelWorkspaceProfiles) {
+      return { data: accounts, error: null };
+    }
+
+    const accountsById = new Map(accounts.map((account) => [account.admin_id, account]));
+    const workspaceUsers = (profilesResult.data || [])
+      .map((profile) => toPersonnelWorkspaceUser(accountsById.get(profile.admin_id), profile))
+      .filter(Boolean);
+
+    return { data: [...accounts, ...workspaceUsers], error: null };
   } catch (error) {
     console.error('Error fetching admins:', error);
     return { data: null, error: error.message };
@@ -357,13 +472,13 @@ export const updateUserLastLogin = async (adminId) => {
 // Get personnel overview statistics for dashboard
 export const getPersonnelOverviewStats = async () => {
   try {
-    // Get total personnel (all active users with personnel role)
-    const { data: personnelData, error: personnelError } = await supabase
-      .from('admin')
-      .select('admin_id, status')
-      .eq('role', 'personnel');
+    const { data: allUsers, error: personnelError } = await getAllUsers({
+      includePersonnelWorkspaceProfiles: true
+    });
     
     if (personnelError) throw personnelError;
+    const personnelData = (allUsers || [])
+      .filter((user) => String(user.role || '').toLowerCase() === 'personnel');
     
     const totalPersonnel = personnelData?.length || 0;
     const activePersonnel = personnelData?.filter(p => p.status === 'Active').length || 0;

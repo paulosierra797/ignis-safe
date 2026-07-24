@@ -48,7 +48,7 @@ const PageHeader = ({
   });
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const { currentUser, forgetThisDevice, logout } = useUser();
+  const { currentUser, accountUser, forgetThisDevice, logout } = useUser();
   const { isSidebarCollapsed, toggleMobileSidebar } = useLayout();
 
   const resolvedUserName = userName ?? getDisplayName(currentUser);
@@ -56,7 +56,7 @@ const PageHeader = ({
     ? 'Personnel'
     : formatRoleLabel(currentUser?.role));
   const resolvedUserAvatar = userAvatar ?? currentUser?.avatar_url ?? '/user-avatar.svg';
-  const isAdminAccount = String(currentUser?.role || '').toLowerCase() === 'admin';
+  const isAdminAccount = String(accountUser?.role || currentUser?.role || '').toLowerCase() === 'admin';
   const workspaceSwitchPath = variant === 'personnel' ? '/dashboard' : '/personnel/operations';
   const workspaceSwitchLabel = variant === 'personnel'
     ? 'Switch to Admin Workspace'

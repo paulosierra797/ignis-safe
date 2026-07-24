@@ -94,6 +94,10 @@
   overflow-wrap: anywhere;
 }
 
+.landing-announcement-message {
+  min-width: 0;
+}
+
 .landing-announcement-content {
   margin: 0;
   color: #475569;
@@ -101,6 +105,33 @@
   line-height: 1.68;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.landing-announcement-content.is-clamped {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.landing-announcement-content-toggle {
+  margin-top: 0.45rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #991b1b;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.landing-announcement-content-toggle:hover,
+.landing-announcement-content-toggle:focus-visible {
+  color: #b91c1c;
+  text-decoration: underline;
+  outline: none;
 }
 
 .landing-announcement-attachments {

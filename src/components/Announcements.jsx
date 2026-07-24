@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
+import { FiArchive, FiX } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingContentEditor from './LandingContentEditor';
@@ -385,6 +386,23 @@ export default function Announcements() {
     });
   };
 
+  useEffect(() => {
+    if (!archivedOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setArchivedOpen(false);
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [archivedOpen]);
+
   const filteredAnnouncements = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     if (!normalizedQuery) {
@@ -510,6 +528,18 @@ export default function Announcements() {
 
   const handleAnnouncementContentChange = (event) => {
     const value = event.target.value;
+
+    if (
+      announcementWordCount >= MAX_ANNOUNCEMENT_WORDS &&
+      value.length > formData.content.length
+    ) {
+      setMessage({
+        type: 'error',
+        text: `The message is limited to ${MAX_ANNOUNCEMENT_WORDS} words.`
+      });
+      return;
+    }
+
     const limitedValue = truncateAnnouncementWords(value);
 
     if (limitedValue !== value) {
@@ -691,6 +721,7 @@ export default function Announcements() {
                 aria-expanded={archivedOpen}
                 aria-controls="announcementArchiveList"
               >
+                <FiArchive aria-hidden="true" />
                 Archive List
                 {archivedLoaded && (
                   <span className="archive-list-count">{archivedAnnouncements.length}</span>
@@ -1003,14 +1034,37 @@ export default function Announcements() {
           </div>
         )}
 
-        {isAdmin && isAnnouncementTab && archivedOpen && (
-          <div id="announcementArchiveList" className="announcement-card archived-card">
+      </div>
+
+      {isAdmin && isAnnouncementTab && archivedOpen && (
+        <div
+          className="archive-list-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setArchivedOpen(false);
+          }}
+        >
+          <section
+            id="announcementArchiveList"
+            className="archive-list-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="announcementArchiveTitle"
+          >
             <div className="archived-panel-header">
               <div>
                 <span>Announcement records</span>
-                <h2>Archive List{archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}</h2>
+                <h2 id="announcementArchiveTitle">
+                  Archive List{archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}
+                </h2>
               </div>
-              <button type="button" onClick={toggleArchivedPanel}>Close</button>
+              <button
+                type="button"
+                onClick={toggleArchivedPanel}
+                aria-label="Close archive list"
+                title="Close"
+              >
+                <FiX aria-hidden="true" />
+              </button>
             </div>
 
             <div className="archived-panel">
@@ -1070,9 +1124,9 @@ export default function Announcements() {
                   ))
                 )}
             </div>
-          </div>
-        )}
-      </div>
+          </section>
+        </div>
+      )}
 
       {archiveModalId && (
         <div className="announcement-confirm-modal-overlay">

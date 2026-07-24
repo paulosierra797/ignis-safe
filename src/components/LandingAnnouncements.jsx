@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { getPublicAnnouncements } from '../utils/announcementsService';
 import './LandingAnnouncements.css';
 
@@ -12,6 +12,56 @@ const formatDate = (isoDate) => {
     year: 'numeric'
   });
 };
+
+function ExpandableAnnouncementMessage({ content }) {
+  const [expanded, setExpanded] = useState(false);
+  const [canExpand, setCanExpand] = useState(false);
+  const contentRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (expanded) return undefined;
+
+    const element = contentRef.current;
+    if (!element) return undefined;
+
+    const measureOverflow = () => {
+      setCanExpand(element.scrollHeight > element.clientHeight + 1);
+    };
+
+    measureOverflow();
+    const observer = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(measureOverflow)
+      : null;
+    observer?.observe(element);
+    window.addEventListener('resize', measureOverflow);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measureOverflow);
+    };
+  }, [content, expanded]);
+
+  return (
+    <div className="landing-announcement-message">
+      <p
+        ref={contentRef}
+        className={`landing-announcement-content${expanded ? '' : ' is-clamped'}`}
+      >
+        {content}
+      </p>
+      {canExpand && (
+        <button
+          type="button"
+          className="landing-announcement-content-toggle"
+          onClick={() => setExpanded((current) => !current)}
+          aria-expanded={expanded}
+        >
+          {expanded ? 'See less' : 'See more'}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function LandingAnnouncements() {
   const [announcements, setAnnouncements] = useState([]);
@@ -94,7 +144,7 @@ window.addEventListener("resize", handleResize);
               <article key={announcement.announcement_id} className="landing-announcement-card">
                 <span className="landing-announcement-tag">Public</span>
                 <h3>{announcement.title}</h3>
-                <p className="landing-announcement-content">{announcement.content}</p>
+                <ExpandableAnnouncementMessage content={announcement.content} />
                 {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
                   <div className="landing-announcement-attachments">
                     {announcement.attachments.map((attachment, index) => (

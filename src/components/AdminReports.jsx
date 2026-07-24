@@ -1,4 +1,6 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { FiCheckCircle, FiEye, FiMoreHorizontal, FiXCircle } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import {
@@ -13,6 +15,14 @@ const STATUS_OPTIONS = [
   { value: 'approved', label: 'Approved' },
   { value: 'rejected', label: 'Rejected' }
 ];
+
+const REPORT_ACTIONS = [
+  { value: 'under_review', label: 'Review', icon: FiEye, tone: 'review' },
+  { value: 'approved', label: 'Approve', icon: FiCheckCircle, tone: 'approve' },
+  { value: 'rejected', label: 'Reject', icon: FiXCircle, tone: 'reject' }
+];
+
+const REPORT_ACTION_MENU_WIDTH = 190;
 
 const formatDateTime = (value) => {
   if (!value) return '-';
@@ -68,6 +78,161 @@ function ClampedText({ children }) {
         >
           {expanded ? 'See less' : 'See more'}
         </button>
+      )}
+    </div>
+  );
+}
+
+function ReportActionsMenu({ report, isBusy, onStatusChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState(null);
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const closeMenu = useCallback((restoreFocus = false) => {
+    setMenuPosition(null);
+    setIsOpen(false);
+    if (restoreFocus) {
+      triggerRef.current?.focus();
+    }
+  }, []);
+
+  const updateMenuPosition = useCallback(() => {
+    if (!triggerRef.current || !isOpen) return;
+
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const menuHeight = menuRef.current?.getBoundingClientRect().height || 144;
+    const viewportPadding = 12;
+    const gap = 8;
+    const openAbove = triggerRect.bottom + gap + menuHeight > window.innerHeight - viewportPadding;
+    const preferredTop = openAbove
+      ? triggerRect.top - menuHeight - gap
+      : triggerRect.bottom + gap;
+    const top = Math.min(
+      Math.max(preferredTop, viewportPadding),
+      Math.max(viewportPadding, window.innerHeight - menuHeight - viewportPadding)
+    );
+    const left = Math.min(
+      Math.max(triggerRect.right - REPORT_ACTION_MENU_WIDTH, viewportPadding),
+      Math.max(viewportPadding, window.innerWidth - REPORT_ACTION_MENU_WIDTH - viewportPadding)
+    );
+
+    setMenuPosition({ top, left });
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+
+    updateMenuPosition();
+
+    const handleOutsidePointer = (event) => {
+      if (
+        !triggerRef.current?.contains(event.target) &&
+        !menuRef.current?.contains(event.target)
+      ) {
+        closeMenu();
+      }
+    };
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMenu(true);
+      }
+    };
+
+    const handleViewportChange = () => updateMenuPosition();
+
+    document.addEventListener('pointerdown', handleOutsidePointer);
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('scroll', handleViewportChange, true);
+
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsidePointer);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('scroll', handleViewportChange, true);
+    };
+  }, [closeMenu, isOpen, updateMenuPosition]);
+
+  useEffect(() => {
+    if (isOpen && menuPosition) {
+      menuRef.current?.querySelector('[role="menuitem"]')?.focus();
+    }
+  }, [isOpen, menuPosition]);
+
+  const handleMenuKeyDown = (event) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+
+    const menuItems = Array.from(menuRef.current?.querySelectorAll('[role="menuitem"]') || []);
+    if (menuItems.length === 0) return;
+
+    event.preventDefault();
+    const currentIndex = menuItems.indexOf(document.activeElement);
+    let nextIndex = currentIndex;
+
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = menuItems.length - 1;
+    if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % menuItems.length;
+    if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + menuItems.length) % menuItems.length;
+
+    menuItems[nextIndex]?.focus();
+  };
+
+  return (
+    <div className="admin-reports-actions">
+      <button
+        ref={triggerRef}
+        type="button"
+        className="admin-report-action-trigger"
+        aria-label={`Open actions for ${report.title || 'report'}`}
+        aria-haspopup="menu"
+        aria-expanded={isOpen}
+        title="Report actions"
+        disabled={isBusy}
+        onClick={() => {
+          setMenuPosition(null);
+          setIsOpen((open) => !open);
+        }}
+      >
+        <FiMoreHorizontal aria-hidden="true" />
+      </button>
+
+      {isOpen && createPortal(
+        <div
+          ref={menuRef}
+          className="admin-report-action-menu"
+          role="menu"
+          aria-label={`Actions for ${report.title || 'report'}`}
+          onKeyDown={handleMenuKeyDown}
+          style={{
+            top: menuPosition?.top ?? 0,
+            left: menuPosition?.left ?? 0,
+            visibility: menuPosition ? 'visible' : 'hidden'
+          }}
+        >
+          {REPORT_ACTIONS.map((action) => {
+            const ActionIcon = action.icon;
+
+            return (
+              <button
+                key={action.value}
+                type="button"
+                role="menuitem"
+                className={`admin-report-action-menu-item action-${action.tone}`}
+                onClick={() => {
+                  closeMenu();
+                  onStatusChange(report, action.value);
+                }}
+              >
+                <ActionIcon aria-hidden="true" />
+                <span>{action.label}</span>
+              </button>
+            );
+          })}
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -189,11 +354,11 @@ export default function AdminReports() {
   const rejectedCount = reports.filter((report) => String(report.status || '').toLowerCase() === 'rejected').length;
 
   const renderReportActions = (report, isBusy) => (
-    <div className="admin-reports-actions">
-      <button type="button" className="action-review" onClick={() => handleStatusChange(report, 'under_review')} disabled={isBusy}>Review</button>
-      <button type="button" className="action-approve" onClick={() => handleStatusChange(report, 'approved')} disabled={isBusy}>Approve</button>
-      <button type="button" className="action-reject" onClick={() => handleStatusChange(report, 'rejected')} disabled={isBusy}>Reject</button>
-    </div>
+    <ReportActionsMenu
+      report={report}
+      isBusy={isBusy}
+      onStatusChange={handleStatusChange}
+    />
   );
 
   return (

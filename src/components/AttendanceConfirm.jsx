@@ -419,9 +419,6 @@ const handleVerifyFace = async () => {
               <div className={`location-status ${faceError ? 'error' : authenticatedOfficer.faceVerified && !faceStatus.includes('✗') ? 'success' : ''}`}>
                 {faceError || faceStatus}
               </div>
-              {faceScore != null && !faceError && (
-                <div className="face-score">Current match score: {Math.round(faceScore * 100)}%</div>
-              )}
               <video ref={videoRef} className="confirm-camera-preview" autoPlay muted playsInline />
               <canvas ref={canvasRef} className="confirm-camera-canvas" aria-hidden="true" />
               <div className="face-debug-panel">

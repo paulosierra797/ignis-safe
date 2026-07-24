@@ -200,15 +200,6 @@
   display: none;
 }
 
-.face-score {
-  font-size: 12px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success);
-  font-weight: 600;
-}
-
 .face-debug-panel {
   display: flex;
   flex-direction: column;

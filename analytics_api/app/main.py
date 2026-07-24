@@ -1277,6 +1277,19 @@ def delete_user(request: DeleteUserRequest) -> Dict[str, Any]:
     if not admin_id:
         raise HTTPException(status_code=400, detail="admin_id is required")
 
+    account_response = (
+        supabase.table("admin")
+        .select("admin_id, role")
+        .eq("admin_id", admin_id)
+        .maybe_single()
+        .execute()
+    )
+    account = account_response.data
+    if not account:
+        raise HTTPException(status_code=404, detail="Account was not found.")
+    if str(account.get("role") or "").strip().lower() == "admin":
+        raise HTTPException(status_code=403, detail="Administrator accounts cannot be deleted.")
+
     auth_deleted = False
     auth_error_message: Optional[str] = None
 

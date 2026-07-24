@@ -263,12 +263,20 @@
 }
 
 .admin-reports-table .col-file {
-  width: 9%;
+  width: 12%;
 }
 
 .admin-reports-table .col-actions {
   width: 8%;
   text-align: center;
+}
+
+.admin-report-file-list {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.35rem;
 }
 
 .admin-reports-cell-content {

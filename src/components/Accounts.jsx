@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useBlocker } from 'react-router-dom';
-import { FaCheck, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaChevronDown } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { supabase } from "../utils/supabaseClient";
 import './Accounts.css';
-import { signUp } from '../utils/authService';
+import { invitePersonnel } from '../utils/authService';
 import {
   getAllUsers,
   deleteUser,
@@ -37,7 +37,6 @@ import { useUser } from '../context/UserContext';
 import { getManilaToday } from '../utils/dateUtils';
 
 const validPersonnelNamePattern = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
-const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 const contactNumberRegex = /^09\d{9}$/;
 const ADD_PERSONNEL_TIMEOUT_MS = 60000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -50,36 +49,8 @@ const EMPTY_PERSONNEL_FORM = {
   role: '',
   rank: '',
   rank_custom: '',
-  contact_number: '',
-  password: ''
+  contact_number: ''
 };
-const PASSWORD_REQUIREMENTS = [
-  {
-    key: 'length',
-    label: 'At least 8 characters',
-    test: (password) => password.length >= 8
-  },
-  {
-    key: 'uppercase',
-    label: 'At least one uppercase letter',
-    test: (password) => /[A-Z]/.test(password)
-  },
-  {
-    key: 'lowercase',
-    label: 'At least one lowercase letter',
-    test: (password) => /[a-z]/.test(password)
-  },
-  {
-    key: 'number',
-    label: 'At least one number',
-    test: (password) => /\d/.test(password)
-  },
-  {
-    key: 'special',
-    label: 'At least one special character',
-    test: (password) => /[^A-Za-z0-9]/.test(password)
-  }
-];
 
 const toIsoDate = (date) => {
   const year = date.getFullYear();
@@ -234,11 +205,12 @@ function RequestSectionToggle({ expanded, itemCount, label, onToggle }) {
         type="button"
         className="request-section-toggle"
         aria-expanded={expanded}
+        aria-label={`${expanded ? 'Collapse' : 'Expand'} ${label}`}
         onClick={onToggle}
       >
-        <span>{expanded ? 'Show fewer' : `Show all ${itemCount}`}</span>
+        <span>{expanded ? 'Collapse' : 'Expand'}</span>
         <span className={`request-section-toggle-icon${expanded ? ' is-expanded' : ''}`} aria-hidden="true">
-          ⌄
+          <FaChevronDown />
         </span>
       </button>
       {!expanded && (
@@ -375,7 +347,6 @@ export default function Accounts() {
   const [isConfirmActionProcessing, setIsConfirmActionProcessing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [formErrors, setFormErrors] = useState({});
-  const [showTemporaryPassword, setShowTemporaryPassword] = useState(false);
   const [leaveMessage, setLeaveMessage] = useState({ type: '', text: '' });
   const [shiftMessage, setShiftMessage] = useState({ type: '', text: '' });
   const [selectedAccount, setSelectedAccount] = useState(null);
@@ -406,14 +377,6 @@ export default function Accounts() {
   const pendingAddNavigationRef = useRef(null);
   const pendingPersonnelShiftNavigationRef = useRef(null);
   const bypassAddNavigationRef = useRef(false);
-  const passwordRequirementStatus = useMemo(() => {
-    const password = String(formData.password || '');
-    return PASSWORD_REQUIREMENTS.map((requirement) => ({
-      ...requirement,
-      isMet: requirement.test(password)
-    }));
-  }, [formData.password]);
-  const isTemporaryPasswordValid = passwordRequirementStatus.every((requirement) => requirement.isMet);
   const isAddPersonnelFormValid = useMemo(() => {
     const firstName = String(formData.first_name || '').trim();
     const lastName = String(formData.last_name || '').trim();
@@ -430,10 +393,9 @@ export default function Accounts() {
       (selectedRank !== 'OTHER' || customRank) &&
       contactNumberRegex.test(contactNumber) &&
       validPersonnelNamePattern.test(firstName) &&
-      validPersonnelNamePattern.test(lastName) &&
-      isTemporaryPasswordValid
+      validPersonnelNamePattern.test(lastName)
     );
-  }, [formData, isTemporaryPasswordValid]);
+  }, [formData]);
   const isAddFormDirty = isAddModalOpen && Object.values(formData).some(
     (value) => String(value || '').trim() !== ''
   );
@@ -1075,6 +1037,14 @@ export default function Accounts() {
       return;
     }
 
+    const targetAccount = accounts.find((account) =>
+      String(account.admin_id || account.id) === String(adminId)
+    );
+    if (String(targetAccount?.role || '').trim().toLowerCase() === 'admin') {
+      setDeleteMessage({ type: 'error', text: 'Administrator accounts cannot be deleted.' });
+      return;
+    }
+
     setDeleteMessage({ type: '', text: '' });
     setPendingDeleteUserId(adminId);
     setIsDeleteUserModalOpen(true);
@@ -1262,7 +1232,6 @@ console.log("AUTH USER:", authData);
     const customRank = String(formData.rank_custom || '').trim();
     const finalRank = selectedRank === 'OTHER' ? customRank : selectedRank;
     const contactNumber = String(formData.contact_number || '').trim();
-    const password = String(formData.password || '');
 
     const requiredErrors = {};
     if (!firstName) requiredErrors.first_name = 'First name is required.';
@@ -1272,7 +1241,6 @@ console.log("AUTH USER:", authData);
     if (!selectedRank) requiredErrors.rank = 'Rank designation is required.';
     if (selectedRank === 'OTHER' && !customRank) requiredErrors.rank_custom = 'Custom rank is required.';
     if (!contactNumber) requiredErrors.contact_number = 'Contact number is required.';
-    if (!password) requiredErrors.password = 'Temporary password is required.';
 
     setFormErrors(requiredErrors);
 
@@ -1283,14 +1251,6 @@ console.log("AUTH USER:", authData);
 
     if (!validPersonnelNamePattern.test(firstName) || !validPersonnelNamePattern.test(lastName)) {
       setMessage({ type: 'error', text: 'First name and last name can only contain letters and spaces.' });
-      return;
-    }
-
-    if (!strongPasswordRegex.test(password)) {
-      setFormErrors((prev) => ({
-        ...prev,
-        password: 'Temporary password must meet all requirements.'
-      }));
       return;
     }
 
@@ -1352,15 +1312,14 @@ const permissions = getDefaultPermissions(formData.role);
     try {
       console.log('Attempting to add personnel...');
 
-      // Create the auth user and admin profile without requiring a signup confirmation link.
-      const signupAttempt = signUp(formData.email, password, {
-  first_name: firstName,
-  last_name: lastName,
-  role: formData.role,
-  rank: finalRank,
-  contact_number: contactNumber || null,
-  permissions
-});
+      const signupAttempt = invitePersonnel(formData.email, {
+        first_name: firstName,
+        last_name: lastName,
+        role: formData.role,
+        rank: finalRank,
+        contact_number: contactNumber || null,
+        permissions
+      });
 
       const timeoutAttempt = new Promise((resolve) => {
         setTimeout(() => resolve({ timedOut: true }), ADD_PERSONNEL_TIMEOUT_MS);
@@ -1379,7 +1338,7 @@ const permissions = getDefaultPermissions(formData.role);
           setAccounts(latestAccounts || []);
           setMessage({
             type: 'success',
-            text: 'Account was created successfully. The request took longer than expected, but the account is now in the list.'
+            text: 'Account invitation was created. The personnel must use the emailed activation link before signing in.'
           });
 
           logAdminActivity({
@@ -1399,7 +1358,6 @@ const permissions = getDefaultPermissions(formData.role);
 
           setFormData({ ...EMPTY_PERSONNEL_FORM });
           setFormErrors({});
-          setShowTemporaryPassword(false);
 
           setTimeout(() => {
             setIsAddModalOpen(false);
@@ -1433,7 +1391,7 @@ const permissions = getDefaultPermissions(formData.role);
 
       setMessage({ 
         type: 'success', 
-        text: 'Personnel added successfully! The user can now log in with their credentials and OTP verification.'
+        text: 'Invitation sent. The personnel must activate the account from the email before signing in.'
       });
 
       logAdminActivity({
@@ -1457,7 +1415,6 @@ const permissions = getDefaultPermissions(formData.role);
       // Reset form
       setFormData({ ...EMPTY_PERSONNEL_FORM });
       setFormErrors({});
-      setShowTemporaryPassword(false);
 
       // Close modal after success
       setTimeout(() => {
@@ -1475,7 +1432,6 @@ const permissions = getDefaultPermissions(formData.role);
   const resetAddPersonnelForm = () => {
     setFormData({ ...EMPTY_PERSONNEL_FORM });
     setFormErrors({});
-    setShowTemporaryPassword(false);
     setMessage({ type: '', text: '' });
   };
 
@@ -2260,12 +2216,14 @@ const permissions = getDefaultPermissions(formData.role);
       ? [{ key: 'clear-leave', label: 'Clear Leave', onSelect: () => handleClearLeaveDate(account) }]
       : []),
     { key: 'edit', label: 'Edit', onSelect: () => openEditModal(account) },
-    {
-      key: 'delete',
-      label: 'Delete',
-      destructive: true,
-      onSelect: () => handleDeleteUser(account.admin_id || account.id)
-    }
+    ...(String(account.role || '').trim().toLowerCase() !== 'admin'
+      ? [{
+        key: 'delete',
+        label: 'Delete',
+        destructive: true,
+        onSelect: () => handleDeleteUser(account.admin_id || account.id)
+      }]
+      : [])
   ];
   const shiftSummaryCalendarCells = getCalendarCells(shiftSummaryMonth);
   const shiftSummaryMonthLabel = formatCalendarMonthLabel(shiftSummaryMonth);
@@ -3475,44 +3433,8 @@ const permissions = getDefaultPermissions(formData.role);
                     )}
                   </div>
 
-                  <div className="accounts-modal-field">
-                    <label htmlFor="personnel-password">
-                      Temporary Password <span className="accounts-required-mark" aria-hidden="true">*</span>
-                    </label>
-                    <div className={`accounts-password-input-wrap${formErrors.password ? ' accounts-input-error' : ''}`}>
-                      <input
-                        id="personnel-password"
-                        type={showTemporaryPassword ? 'text' : 'password'}
-                        placeholder="Set initial password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        required
-                        aria-invalid={Boolean(formErrors.password)}
-                        aria-describedby="personnel-password-requirements"
-                      />
-                      <button
-                        type="button"
-                        className="accounts-password-toggle"
-                        onClick={() => setShowTemporaryPassword((isVisible) => !isVisible)}
-                        aria-label={showTemporaryPassword ? 'Hide temporary password' : 'Show temporary password'}
-                        aria-pressed={showTemporaryPassword}
-                      >
-                        {showTemporaryPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
-                      </button>
-                    </div>
-                    <ul id="personnel-password-requirements" className="accounts-password-requirements" aria-live="polite">
-                      {passwordRequirementStatus.map((requirement) => (
-                        <li
-                          key={requirement.key}
-                          className={requirement.isMet ? 'is-met' : 'is-unmet'}
-                        >
-                          <span className="accounts-password-requirement-icon" aria-hidden="true">
-                            {requirement.isMet ? <FaCheck /> : '-'}
-                          </span>
-                          <span>{requirement.label}</span>
-                        </li>
-                      ))}
-                    </ul>
+                  <div className="accounts-invite-notice">
+                    An activation link will be sent to this email address. The personnel must set a password from that link before signing in.
                   </div>
 
                 </div>

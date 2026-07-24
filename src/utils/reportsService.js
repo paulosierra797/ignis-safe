@@ -3,6 +3,7 @@ import { supabase } from './supabaseClient';
 const REPORTS_TABLE = 'reports';
 const STORAGE_BUCKET = 'report_files';
 const REPORT_REVIEW_TABLE = 'report_reviews';
+const MAX_REPORT_ATTACHMENTS = 5;
 
 const formatRole = (role = '') => String(role || '').toLowerCase().trim();
 
@@ -32,11 +33,38 @@ export const uploadReportPdf = async (userId, fileName, blob) => {
   }
 };
 
+export const getReportAttachments = (report = {}) => {
+  const payloadAttachments = Array.isArray(report?.report_payload?.attachments)
+    ? report.report_payload.attachments
+    : [];
+
+  const normalized = payloadAttachments
+    .map((attachment) => ({
+      file_name: String(attachment?.file_name || attachment?.name || '').trim(),
+      file_url: String(attachment?.file_url || attachment?.url || '').trim(),
+      file_path: String(attachment?.file_path || attachment?.path || '').trim()
+    }))
+    .filter((attachment) => attachment.file_name && attachment.file_url);
+
+  if (normalized.length > 0) return normalized;
+
+  if (report?.pdf_url) {
+    return [{
+      file_name: report.pdf_file_name || 'Report.pdf',
+      file_url: report.pdf_url,
+      file_path: ''
+    }];
+  }
+
+  return [];
+};
+
 export const submitInvestigationReport = async ({
   reportType,
   title,
   category,
   reportPayload,
+  pdfFiles = [],
   pdfBlob,
   pdfFileName,
   createdBy,
@@ -48,12 +76,48 @@ export const submitInvestigationReport = async ({
       return { data: null, error: 'Missing user id for report submission.' };
     }
 
-    const upload = await uploadReportPdf(createdBy, pdfFileName, pdfBlob);
-    if (upload.error) {
-      return { data: null, error: upload.error };
+    const filesToUpload = Array.isArray(pdfFiles) && pdfFiles.length > 0
+      ? pdfFiles.map((file) => ({
+        blob: file,
+        fileName: file?.name || 'uploaded-report.pdf'
+      }))
+      : pdfBlob
+        ? [{ blob: pdfBlob, fileName: pdfFileName || 'uploaded-report.pdf' }]
+        : [];
+
+    if (filesToUpload.length === 0) {
+      return { data: null, error: 'At least one PDF attachment is required.' };
+    }
+
+    if (filesToUpload.length > MAX_REPORT_ATTACHMENTS) {
+      return {
+        data: null,
+        error: `A report can include up to ${MAX_REPORT_ATTACHMENTS} PDF attachments.`
+      };
+    }
+
+    const uploadedAttachments = [];
+
+    for (const file of filesToUpload) {
+      const upload = await uploadReportPdf(createdBy, file.fileName, file.blob);
+      if (upload.error) {
+        if (uploadedAttachments.length > 0) {
+          await supabase.storage
+            .from(STORAGE_BUCKET)
+            .remove(uploadedAttachments.map((attachment) => attachment.file_path));
+        }
+        return { data: null, error: upload.error };
+      }
+
+      uploadedAttachments.push({
+        file_name: file.fileName,
+        file_url: upload.data.publicUrl,
+        file_path: upload.data.filePath
+      });
     }
 
     const nowIso = new Date().toISOString();
+    const primaryAttachment = uploadedAttachments[0];
 
     const basePayload = {
       report_type: reportType,
@@ -61,9 +125,12 @@ export const submitInvestigationReport = async ({
       category,
       status: 'submitted',
       created_by_name: createdByName,
-      report_payload: reportPayload,
-      pdf_url: upload.data.publicUrl,
-      pdf_file_name: pdfFileName,
+      report_payload: {
+        ...(reportPayload || {}),
+        attachments: uploadedAttachments
+      },
+      pdf_url: primaryAttachment.file_url,
+      pdf_file_name: primaryAttachment.file_name,
       submitted_at: nowIso
     };
 
@@ -97,7 +164,12 @@ export const submitInvestigationReport = async ({
       error = result.error;
     }
 
-    if (error) throw error;
+    if (error) {
+      await supabase.storage
+        .from(STORAGE_BUCKET)
+        .remove(uploadedAttachments.map((attachment) => attachment.file_path));
+      throw error;
+    }
 
     return { data, error: null };
   } catch (error) {
@@ -171,7 +243,7 @@ export const getIntelUnitSubmittedReports = async () => {
   try {
     const { data, error } = await supabase
       .from(REPORTS_TABLE)
-      .select('report_id, report_no, title, category, status, submitted_at, created_by_name, pdf_url')
+      .select('report_id, report_no, title, category, status, submitted_at, created_by_name, pdf_url, pdf_file_name, report_payload')
       .in('status', ['submitted', 'under_review', 'approved', 'rejected'])
       .order('submitted_at', { ascending: false, nullsFirst: false });
 

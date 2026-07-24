@@ -107,6 +107,30 @@ const syncAdminStatusIfVerified = async (authUser, adminData) => {
   return updatedAdmin || adminData;
 };
 
+export const invitePersonnel = async (email, userData = {}) => {
+  try {
+    if (!ADMIN_API_URL) {
+      throw new Error('Personnel invitations require the configured analytics API.');
+    }
+
+    const { first_name, last_name } = resolveNameFields(userData);
+    const response = await callAdminApi('/api/admin/users/create', {
+      email: normalizeEmail(email),
+      first_name,
+      last_name,
+      role: userData.role || 'personnel',
+      rank: userData.rank || '',
+      contact_number: userData.contact_number || null,
+      permissions: userData.permissions || []
+    });
+
+    return { data: response?.data || null, error: null };
+  } catch (error) {
+    console.error('Error inviting personnel:', error);
+    return { data: null, error: error.message };
+  }
+};
+
 // Sign up new admin
 export const signUp = async (email, password, userData = {}) => {
   try {
@@ -556,6 +580,36 @@ export const updatePassword = async (newPassword) => {
     return { data, error: null };
   } catch (error) {
     console.error('Error updating password:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const activateInvitedAccount = async (newPassword) => {
+  try {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+
+    const invitedUser = sessionData?.session?.user;
+    if (!invitedUser?.id) {
+      throw new Error('This activation link is invalid or has expired. Ask an administrator to send a new invitation.');
+    }
+
+    const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw error;
+
+    const { error: statusError } = await supabase
+      .from('admin')
+      .update({ status: 'Active' })
+      .eq('admin_id', invitedUser.id);
+
+    if (statusError) {
+      console.warn('Could not activate admin profile after password setup:', statusError);
+    }
+
+    await supabase.auth.signOut();
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error activating invited account:', error);
     return { data: null, error: error.message };
   }
 };

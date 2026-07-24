@@ -4,6 +4,7 @@ import { FiCheckCircle, FiEye, FiMoreHorizontal, FiXCircle } from 'react-icons/f
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import {
+  getReportAttachments,
   getIntelUnitSubmittedReports,
   updateReportStatus
 } from '../utils/reportsService';
@@ -79,6 +80,31 @@ function ClampedText({ children }) {
           {expanded ? 'See less' : 'See more'}
         </button>
       )}
+    </div>
+  );
+}
+
+function ReportFiles({ report }) {
+  const attachments = getReportAttachments(report);
+
+  if (attachments.length === 0) {
+    return <span>-</span>;
+  }
+
+  return (
+    <div className="admin-report-file-list">
+      {attachments.map((attachment, index) => (
+        <a
+          key={attachment.file_path || attachment.file_url}
+          className="action-open-file"
+          href={attachment.file_url}
+          target="_blank"
+          rel="noreferrer"
+          title={attachment.file_name}
+        >
+          Open {attachments.length > 1 ? index + 1 : 'File'}
+        </a>
+      ))}
     </div>
   );
 }
@@ -266,7 +292,8 @@ export default function AdminReports() {
   };
 
   useEffect(() => {
-    loadReports();
+    const timeoutId = window.setTimeout(loadReports, 0);
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   const handleStatusChange = async (report, nextStatus) => {
@@ -464,11 +491,7 @@ export default function AdminReports() {
                             </span>
                           </td>
                           <td className="col-file">
-                            {report.pdf_url ? (
-                              <a className="action-open-file" href={report.pdf_url} target="_blank" rel="noreferrer">Open File</a>
-                            ) : (
-                              '-'
-                            )}
+                            <ReportFiles report={report} />
                           </td>
                           <td className="col-actions">
                             {renderReportActions(report, isBusy)}
@@ -517,19 +540,8 @@ export default function AdminReports() {
                         </div>
 
                         <div className="admin-report-card-field">
-                          <strong>PDF</strong>
-                          {report.pdf_url ? (
-                            <a
-                              className="action-open-file"
-                              href={report.pdf_url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              Open File
-                            </a>
-                          ) : (
-                            <span>-</span>
-                          )}
+                          <strong>PDF Files</strong>
+                          <ReportFiles report={report} />
                         </div>
                       </div>
 

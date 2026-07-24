@@ -2,10 +2,14 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import './Reports.css';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
-import { FaSearch, FaTimes } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import UnsavedChangesPrompt from './UnsavedChangesPrompt';
 import { useUser } from '../context/UserContext';
-import { submitInvestigationReport, getPersonnelReportHistory } from '../utils/reportsService';
+import {
+  submitInvestigationReport,
+  getPersonnelReportHistory,
+  getReportAttachments
+} from '../utils/reportsService';
 import { logPersonnelActivity } from '../utils/activityLogService';
 
 const formatDateTime = (value) => {
@@ -29,6 +33,63 @@ const getFileType = (fileName) => {
 };
 
 const MAX_REPORT_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
+const MAX_REPORT_ATTACHMENTS = 5;
+const EMPTY_HISTORY_FILTERS = {
+  title: '',
+  fileName: '',
+  date: '',
+  status: 'all',
+  remarks: ''
+};
+
+const formatDateFilterValue = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+function ReportFileNames({ report }) {
+  const attachments = getReportAttachments(report);
+  if (attachments.length === 0) return '-';
+
+  return (
+    <div className="report-history-file-list">
+      {attachments.map((attachment, index) => (
+        <span key={`${attachment.file_url}-${index}`} className="report-history-file-name">
+          {attachment.file_name}
+          <span className="report-history-file-type"> ({getFileType(attachment.file_name)})</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ReportFileActions({ report }) {
+  const attachments = getReportAttachments(report);
+  if (attachments.length === 0) return '-';
+
+  return (
+    <div className="report-history-file-actions">
+      {attachments.map((attachment, index) => (
+        <a
+          key={`${attachment.file_url}-${index}`}
+          className="view-btn"
+          href={attachment.file_url}
+          target="_blank"
+          rel="noreferrer"
+          title={attachment.file_name}
+        >
+          View {attachments.length > 1 ? index + 1 : ''}
+        </a>
+      ))}
+    </div>
+  );
+}
 
 function ClampedText({ children }) {
   const [expanded, setExpanded] = useState(false);
@@ -79,14 +140,14 @@ export default function Reports() {
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [reportTitle, setReportTitle] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [reportHistory, setReportHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [historyMessage, setHistoryMessage] = useState('');
-  const [historySearchQuery, setHistorySearchQuery] = useState('');
-  const hasUnsavedReport = Boolean(reportTitle.trim() || selectedFile);
+  const [historyFilters, setHistoryFilters] = useState({ ...EMPTY_HISTORY_FILTERS });
+  const hasUnsavedReport = Boolean(reportTitle.trim() || selectedFiles.length > 0);
 
   const loadReportHistory = useCallback(async () => {
     if (!currentUser?.admin_id) {
@@ -114,27 +175,36 @@ export default function Reports() {
   }, [loadReportHistory]);
 
   const filteredReportHistory = useMemo(() => {
-    const normalizedQuery = historySearchQuery.trim().toLowerCase();
-    if (!normalizedQuery) return reportHistory;
-
     return reportHistory.filter((report) => {
-      const haystack = [
-        report.title,
-        report.pdf_file_name,
-        formatDateTime(report.submitted_at || report.created_at),
-        report.status,
-        String(report.status || '').replace('_', ' '),
-        report.internal_notes
-      ]
-        .filter(Boolean)
+      const attachmentNames = getReportAttachments(report)
+        .map((attachment) => attachment.file_name)
         .join(' ')
         .toLowerCase();
+      const reportStatus = String(report.status || '').toLowerCase();
 
-      return haystack.includes(normalizedQuery);
+      return (
+        (!historyFilters.title.trim() ||
+          String(report.title || '').toLowerCase().includes(historyFilters.title.trim().toLowerCase())) &&
+        (!historyFilters.fileName.trim() ||
+          attachmentNames.includes(historyFilters.fileName.trim().toLowerCase())) &&
+        (!historyFilters.date ||
+          formatDateFilterValue(report.submitted_at || report.created_at) === historyFilters.date) &&
+        (historyFilters.status === 'all' || reportStatus === historyFilters.status) &&
+        (!historyFilters.remarks.trim() ||
+          String(report.internal_notes || '').toLowerCase().includes(historyFilters.remarks.trim().toLowerCase()))
+      );
     });
-  }, [reportHistory, historySearchQuery]);
+  }, [reportHistory, historyFilters]);
 
-  const handleClearHistorySearch = () => setHistorySearchQuery('');
+  const hasHistoryFilters = Object.entries(historyFilters).some(([key, value]) =>
+    key === 'status' ? value !== 'all' : Boolean(value)
+  );
+
+  const updateHistoryFilter = (field, value) => {
+    setHistoryFilters((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleClearHistoryFilters = () => setHistoryFilters({ ...EMPTY_HISTORY_FILTERS });
 
   const isPdfFile = (file) => {
     if (!file) return false;
@@ -143,24 +213,40 @@ export default function Reports() {
   };
 
   const handleFileChange = (event) => {
-    const file = event.target.files?.[0] || null;
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
 
-    if (file && !isPdfFile(file)) {
-      setSelectedFile(null);
-      event.target.value = '';
-      setMessage({ type: 'error', text: 'Only PDF files are accepted. Please upload a file in PDF format.' });
+    if (files.some((file) => !isPdfFile(file))) {
+      setMessage({ type: 'error', text: 'Only PDF files are accepted. Please select files in PDF format.' });
       return;
     }
 
-    if (file && file.size > MAX_REPORT_FILE_SIZE_BYTES) {
-      setSelectedFile(null);
-      event.target.value = '';
-      setMessage({ type: 'error', text: 'File size exceeds 20MB. Please upload a smaller PDF.' });
+    if (files.some((file) => file.size > MAX_REPORT_FILE_SIZE_BYTES)) {
+      setMessage({ type: 'error', text: 'Each PDF must be 20MB or smaller.' });
       return;
     }
 
-    setSelectedFile(file);
+    const uniqueFiles = [...selectedFiles];
+    files.forEach((file) => {
+      const alreadySelected = uniqueFiles.some((selected) =>
+        selected.name === file.name &&
+        selected.size === file.size &&
+        selected.lastModified === file.lastModified
+      );
+      if (!alreadySelected) uniqueFiles.push(file);
+    });
+
+    if (uniqueFiles.length > MAX_REPORT_ATTACHMENTS) {
+      setMessage({ type: 'error', text: `You can attach up to ${MAX_REPORT_ATTACHMENTS} PDF files.` });
+      return;
+    }
+
+    setSelectedFiles(uniqueFiles);
     setMessage({ type: '', text: '' });
+  };
+
+  const handleRemoveFile = (indexToRemove) => {
+    setSelectedFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
   const handleSubmit = async () => {
@@ -175,22 +261,27 @@ export default function Reports() {
       return;
     }
 
-    if (!selectedFile) {
-      setMessage({ type: 'error', text: 'Please choose a file to upload.' });
+    if (selectedFiles.length === 0) {
+      setMessage({ type: 'error', text: 'Please choose at least one PDF file to upload.' });
       return;
     }
 
-    const fileName = selectedFile.name || 'uploaded-report.pdf';
-    if (!isPdfFile(selectedFile)) {
-      setMessage({ type: 'error', text: 'Only PDF files are accepted. Please upload a file in PDF format.' });
+    if (selectedFiles.length > MAX_REPORT_ATTACHMENTS) {
+      setMessage({ type: 'error', text: `You can attach up to ${MAX_REPORT_ATTACHMENTS} PDF files.` });
       return;
     }
 
-    if (selectedFile.size > MAX_REPORT_FILE_SIZE_BYTES) {
-      setMessage({ type: 'error', text: 'File size exceeds 20MB. Please upload a smaller PDF.' });
+    if (selectedFiles.some((file) => !isPdfFile(file))) {
+      setMessage({ type: 'error', text: 'Only PDF files are accepted.' });
       return;
     }
 
+    if (selectedFiles.some((file) => file.size > MAX_REPORT_FILE_SIZE_BYTES)) {
+      setMessage({ type: 'error', text: 'Each PDF must be 20MB or smaller.' });
+      return;
+    }
+
+    const fileName = selectedFiles[0].name || 'uploaded-report.pdf';
     setIsSubmitting(true);
 
     try {
@@ -200,10 +291,9 @@ export default function Reports() {
         category: 'Uploaded Report',
         reportPayload: {
           source: 'file_upload',
-          original_file_name: fileName
+          original_file_names: selectedFiles.map((file) => file.name)
         },
-        pdfBlob: selectedFile,
-        pdfFileName: fileName,
+        pdfFiles: selectedFiles,
         createdBy: currentUser.admin_id,
         createdByName: currentUser?.name || currentUser?.email || 'Personnel'
       });
@@ -214,8 +304,11 @@ export default function Reports() {
       }
 
       setReportTitle('');
-      setSelectedFile(null);
-      setMessage({ type: 'success', text: 'Report file submitted successfully for admin review.' });
+      setSelectedFiles([]);
+      setMessage({
+        type: 'success',
+        text: `${selectedFiles.length} report ${selectedFiles.length === 1 ? 'file was' : 'files were'} submitted successfully for admin review.`
+      });
 
       void logPersonnelActivity({
         personnelId: currentUser.admin_id,
@@ -258,30 +351,48 @@ export default function Reports() {
           <div className="report-upload-card">
             <div className="report-upload-field">
               <label htmlFor="report-title" className="report-upload-label">Report Title</label>
-              <input
+              <textarea
                 id="report-title"
-                type="text"
-                className="report-upload-input"
+                className="report-upload-input report-upload-title-input"
                 value={reportTitle}
                 onChange={(event) => setReportTitle(event.target.value)}
                 placeholder="Enter report title"
+                rows={2}
+                maxLength={200}
               />
             </div>
 
             <div className="report-upload-field">
-              <label htmlFor="report-file" className="report-upload-label">Upload PDF File</label>
+              <label htmlFor="report-file" className="report-upload-label">Upload PDF Files</label>
               <input
                 id="report-file"
                 type="file"
                 className="report-upload-input"
                 accept=".pdf,application/pdf"
+                multiple
                 onChange={handleFileChange}
               />
-              <p className="report-upload-hint">PDF format only. Maximum one file per submission.</p>
+              <p className="report-upload-hint">
+                PDF format only. Up to {MAX_REPORT_ATTACHMENTS} files, maximum 20MB each.
+              </p>
             </div>
 
-            {selectedFile && (
-              <p className="report-upload-selected">Selected: {selectedFile.name}</p>
+            {selectedFiles.length > 0 && (
+              <ul className="report-upload-selected-list">
+                {selectedFiles.map((file, index) => (
+                  <li key={`${file.name}-${file.size}-${file.lastModified}`}>
+                    <span>{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile(index)}
+                      aria-label={`Remove ${file.name}`}
+                      title="Remove file"
+                    >
+                      <FaTimes aria-hidden="true" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
 
             <div className="report-upload-actions">
@@ -314,25 +425,72 @@ export default function Reports() {
               <div className="report-upload-message report-upload-message-error">{historyMessage}</div>
             )}
 
-            <div className="report-history-search-bar">
-              <div className="report-history-search-wrapper">
-                <FaSearch className="report-history-search-icon" />
+            <div className="report-history-filters">
+              <label className="report-history-filter">
+                <span>Report Title</span>
                 <input
                   type="text"
                   className="report-history-search-input"
-                  placeholder="Search by title, file name, date, status, or admin remarks"
-                  value={historySearchQuery}
-                  onChange={(event) => setHistorySearchQuery(event.target.value)}
-                  aria-label="Search report history"
+                  placeholder="Enter title"
+                  value={historyFilters.title}
+                  onChange={(event) => updateHistoryFilter('title', event.target.value)}
                 />
-              </div>
+              </label>
+
+              <label className="report-history-filter">
+                <span>File Name</span>
+                <input
+                  type="text"
+                  className="report-history-search-input"
+                  placeholder="Example: report.pdf"
+                  value={historyFilters.fileName}
+                  onChange={(event) => updateHistoryFilter('fileName', event.target.value)}
+                />
+              </label>
+
+              <label className="report-history-filter">
+                <span>Date Submitted</span>
+                <input
+                  type="date"
+                  className="report-history-search-input"
+                  value={historyFilters.date}
+                  onChange={(event) => updateHistoryFilter('date', event.target.value)}
+                />
+              </label>
+
+              <label className="report-history-filter">
+                <span>Status</span>
+                <select
+                  className="report-history-search-input"
+                  value={historyFilters.status}
+                  onChange={(event) => updateHistoryFilter('status', event.target.value)}
+                >
+                  <option value="all">All statuses</option>
+                  <option value="submitted">Submitted</option>
+                  <option value="under_review">Under Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </label>
+
+              <label className="report-history-filter report-history-filter-remarks">
+                <span>Admin Remarks</span>
+                <input
+                  type="text"
+                  className="report-history-search-input"
+                  placeholder="Enter remark"
+                  value={historyFilters.remarks}
+                  onChange={(event) => updateHistoryFilter('remarks', event.target.value)}
+                />
+              </label>
+
               <button
                 type="button"
                 className="report-history-search-clear"
-                onClick={handleClearHistorySearch}
-                disabled={!historySearchQuery}
+                onClick={handleClearHistoryFilters}
+                disabled={!hasHistoryFilters}
               >
-                <FaTimes /> Clear Search
+                <FaTimes aria-hidden="true" /> Clear Filters
               </button>
             </div>
 
@@ -360,14 +518,7 @@ export default function Reports() {
                         {report.title ? <ClampedText>{report.title}</ClampedText> : '-'}
                       </td>
                       <td>
-                        {report.pdf_file_name ? (
-                          <ClampedText>
-                            {report.pdf_file_name}
-                            <span className="report-history-file-type"> ({getFileType(report.pdf_file_name)})</span>
-                          </ClampedText>
-                        ) : (
-                          '-'
-                        )}
+                        <ReportFileNames report={report} />
                       </td>
                       <td>{formatDateTime(report.submitted_at || report.created_at)}</td>
                       <td>
@@ -377,11 +528,7 @@ export default function Reports() {
                       </td>
                       <td>{report.internal_notes || '-'}</td>
                       <td>
-                        {report.pdf_url ? (
-                          <a className="view-btn" href={report.pdf_url} target="_blank" rel="noreferrer">View</a>
-                        ) : (
-                          '-'
-                        )}
+                        <ReportFileActions report={report} />
                       </td>
                     </tr>
                   ))}
@@ -409,21 +556,12 @@ export default function Reports() {
                     </span>
                   </div>
                   <div className="report-history-card-row">
-                    <strong>File:</strong>
-                    {report.pdf_file_name ? (
-                      <ClampedText>
-                        {report.pdf_file_name}
-                        <span className="report-history-file-type"> ({getFileType(report.pdf_file_name)})</span>
-                      </ClampedText>
-                    ) : (
-                      <span> -</span>
-                    )}
+                    <strong>Files:</strong>
+                    <ReportFileNames report={report} />
                   </div>
                   <p><strong>Date Submitted:</strong> {formatDateTime(report.submitted_at || report.created_at)}</p>
                   <p><strong>Admin Remarks:</strong> {report.internal_notes || '-'}</p>
-                  {report.pdf_url && (
-                    <a className="view-btn" href={report.pdf_url} target="_blank" rel="noreferrer">View</a>
-                  )}
+                  <ReportFileActions report={report} />
                 </div>
               ))}
               {!loadingHistory && reportHistory.length === 0 && (
@@ -440,7 +578,7 @@ export default function Reports() {
       <UnsavedChangesPrompt
         when={hasUnsavedReport}
         title="Leave without submitting?"
-        message="Your report title or attached PDF has not been submitted. Are you sure you want to leave this page?"
+        message="Your report title or attached PDF files have not been submitted. Are you sure you want to leave this page?"
         stayLabel="Stay on Reports"
       />
     </div>

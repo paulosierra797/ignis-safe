@@ -69,6 +69,13 @@
   box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
 }
 
+.confirm-signup-password-help {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 .confirm-signup-message {
   margin-top: 0.3rem;
   border-radius: 9px;

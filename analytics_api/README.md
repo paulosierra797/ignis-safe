@@ -15,10 +15,13 @@ Copy `.env.example` to `.env` and fill in values.
 Required:
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `ANALYTICS_API_KEY`
 
 Optional:
-- `ANALYTICS_API_KEY` to require requests to include `x-analytics-api-key`.
 - `FRONTEND_ORIGINS` comma-separated allowed origins.
+- `INVITE_REDIRECT_URL` for personnel activation links. Defaults to the first frontend origin plus `/confirm-signup?mode=invite`.
+
+Add the deployed invitation URL to the Supabase Auth redirect allow list. Configure custom SMTP in Supabase before production so invitations can be delivered reliably to personnel Gmail accounts.
 
 ## 2) Install and run
 

@@ -252,6 +252,20 @@ export const deleteUser = async (adminId) => {
       };
     }
 
+    const { data: targetAccount, error: lookupError } = await supabase
+      .from('admin')
+      .select('role')
+      .eq('admin_id', normalizedAdminId)
+      .maybeSingle();
+
+    if (lookupError) throw lookupError;
+    if (!targetAccount) {
+      return { data: null, deletedCount: 0, error: 'Account was not found.' };
+    }
+    if (String(targetAccount.role || '').trim().toLowerCase() === 'admin') {
+      return { data: null, deletedCount: 0, error: 'Administrator accounts cannot be deleted.' };
+    }
+
     const { data, error } = await supabase
       .from('admin')
       .delete()

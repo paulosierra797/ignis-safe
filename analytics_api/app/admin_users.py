@@ -1,3 +1,4 @@
+import os
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,7 +12,6 @@ router = APIRouter()
 
 class CreateUserRequest(BaseModel):
     email: str
-    password: str
     first_name: str
     last_name: str
     role: Optional[str] = None
@@ -23,7 +23,6 @@ class CreateUserRequest(BaseModel):
 @router.post("/api/admin/users/create", dependencies=[Depends(require_api_key)])
 def create_user(request: CreateUserRequest) -> Dict[str, Any]:
     email = str(request.email or "").strip().lower()
-    password = str(request.password or "")
     first_name = str(request.first_name or "").strip()
     last_name = str(request.last_name or "").strip()
     role = str(request.role or "personnel").strip() or "personnel"
@@ -33,20 +32,21 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
 
     if not email:
         raise HTTPException(status_code=400, detail="email is required")
-    if not password:
-        raise HTTPException(status_code=400, detail="password is required")
     if not first_name or not last_name:
         raise HTTPException(status_code=400, detail="first_name and last_name are required")
 
     auth_user_id: Optional[str] = None
+    redirect_url = str(os.getenv("INVITE_REDIRECT_URL") or "").strip()
+    if not redirect_url:
+        frontend_origin = str(os.getenv("FRONTEND_ORIGINS") or "http://localhost:5173").split(",")[0].strip()
+        redirect_url = f"{frontend_origin.rstrip('/')}/confirm-signup?mode=invite"
 
     try:
-        auth_response = supabase.auth.admin.create_user(
+        auth_response = supabase.auth.admin.invite_user_by_email(
+            email,
             {
-                "email": email,
-                "password": password,
-                "email_confirm": True,
-                "user_metadata": {
+                "redirect_to": redirect_url,
+                "data": {
                     "first_name": first_name,
                     "last_name": last_name,
                     "role": role,
@@ -69,7 +69,7 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
             "role": role,
             "rank": rank,
             "contact_number": contact_number,
-            "status": "Active",
+            "status": "Pending Activation",
             "permissions": permissions,
         }
 
@@ -103,4 +103,4 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
                 supabase.auth.admin.delete_user(auth_user_id)
             except Exception:
                 pass
-        raise HTTPException(status_code=400, detail=f"Failed to create user: {error}")
+        raise HTTPException(status_code=400, detail=f"Failed to invite user: {error}")

@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { resendSignupCode, signOut, verifySignupCode } from '../utils/authService';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  activateInvitedAccount,
+  resendSignupCode,
+  signOut,
+  verifySignupCode
+} from '../utils/authService';
 import { useUser } from '../context/UserContext';
 import ignissafe from '../assets/Logo1.png';
 import './ConfirmSignupPage.css';
 
 const OTP_REQUEST_TIMEOUT_MS = 15000;
+const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
 const withTimeout = (promise, timeoutMs, message) =>
   Promise.race([
@@ -17,9 +23,13 @@ const withTimeout = (promise, timeoutMs, message) =>
 
 export default function ConfirmSignupPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setCurrentUser } = useUser();
+  const isInviteActivation = new URLSearchParams(location.search).get('mode') === 'invite';
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -93,7 +103,98 @@ export default function ConfirmSignupPage() {
       setIsResending(false);
     }
   };
-  
+
+  const handleActivateInvite = async (event) => {
+    event.preventDefault();
+
+    if (!strongPasswordRegex.test(password)) {
+      setMessage({
+        type: 'error',
+        text: 'Use at least 8 characters with uppercase, lowercase, number, and special character.'
+      });
+      return;
+    }
+    if (password !== confirmPassword) {
+      setMessage({ type: 'error', text: 'Passwords do not match.' });
+      return;
+    }
+
+    setIsVerifying(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      const { error } = await activateInvitedAccount(password);
+      if (error) {
+        setMessage({ type: 'error', text: error });
+        return;
+      }
+
+      setCurrentUser(null);
+      localStorage.removeItem('user');
+      setMessage({ type: 'success', text: 'Account activated. You can now sign in.' });
+      setTimeout(() => {
+        navigate('/login?verified=1', { replace: true });
+      }, 1500);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Unable to activate this account.' });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  if (isInviteActivation) {
+    return (
+      <div className="confirm-signup-page">
+        <div className="confirm-signup-card" role="main" aria-labelledby="confirm-signup-title">
+          <img className="confirm-signup-logo" src={ignissafe} alt="Ignis Safe" />
+          <h1 id="confirm-signup-title">Activate Account</h1>
+          <p className="confirm-signup-description">
+            Create your password to finish activating your personnel account.
+          </p>
+
+          <form className="confirm-signup-form" onSubmit={handleActivateInvite}>
+            <label htmlFor="invite-password">Password</label>
+            <input
+              id="invite-password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="new-password"
+              required
+            />
+
+            <label htmlFor="invite-confirm-password">Confirm Password</label>
+            <input
+              id="invite-confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              autoComplete="new-password"
+              required
+            />
+
+            <p className="confirm-signup-password-help">
+              At least 8 characters with uppercase, lowercase, number, and special character.
+            </p>
+
+            {message.text && (
+              <div className={`confirm-signup-message confirm-signup-message-${message.type}`}>
+                {message.text}
+              </div>
+            )}
+
+            <button type="submit" className="confirm-signup-primary" disabled={isVerifying}>
+              {isVerifying ? 'Activating...' : 'Activate Account'}
+            </button>
+          </form>
+
+          <p className="confirm-signup-footer">
+            Already activated? <Link to="/login">Go to Login</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="confirm-signup-page">

@@ -24,6 +24,7 @@ export const PROFILE_FIELD_OPTIONS = [
 ];
 
 export const getProfileFieldLabel = (fieldName) => {
+  if (fieldName === 'multiple') return 'Multiple Details';
   const match = PROFILE_FIELD_OPTIONS.find((option) => option.value === fieldName);
   return match ? match.label : fieldName;
 };
@@ -32,6 +33,34 @@ const NAME_FIELDS = ['first_name', 'last_name'];
 const NAME_PATTERN = /^[A-Za-z]+(?: [A-Za-z]+)*$/;
 
 const normalizeSpaces = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+
+const normalizeRequestRow = (row = {}) => {
+  const storedChanges = row.changes && typeof row.changes === 'object' && !Array.isArray(row.changes)
+    ? row.changes
+    : {};
+  const changeItems = PROFILE_FIELD_OPTIONS
+    .filter((option) => storedChanges[option.value])
+    .map((option) => ({
+      field_name: option.value,
+      field_label: option.label,
+      current_value: storedChanges[option.value]?.current_value ?? '',
+      requested_value: storedChanges[option.value]?.requested_value ?? ''
+    }));
+
+  if (changeItems.length === 0 && row.field_name && row.field_name !== 'multiple') {
+    changeItems.push({
+      field_name: row.field_name,
+      field_label: getProfileFieldLabel(row.field_name),
+      current_value: row.current_value ?? '',
+      requested_value: row.requested_value ?? ''
+    });
+  }
+
+  return {
+    ...row,
+    change_items: changeItems
+  };
+};
 
 const isMissingTableError = (error) => (
   error?.code === '42P01'
@@ -46,13 +75,14 @@ export const getMyProfileChangeRequests = async (personnelId) => {
 
     const { data, error } = await supabase
       .from(TABLE)
-      .select('request_id, personnel_id, field_name, current_value, requested_value, reason, status, requested_at, reviewed_at, reviewed_by')
+      .select('request_id, personnel_id, field_name, current_value, requested_value, changes, reason, status, requested_at, reviewed_at, reviewed_by')
       .eq('personnel_id', personnelId)
+      .eq('is_archived', false)
       .order('requested_at', { ascending: false });
 
     if (error) throw error;
 
-    return { data: data || [], error: null };
+    return { data: (data || []).map(normalizeRequestRow), error: null };
   } catch (error) {
     console.error('Error fetching profile change requests:', error);
     if (isMissingTableError(error)) {
@@ -65,37 +95,56 @@ export const getMyProfileChangeRequests = async (personnelId) => {
   }
 };
 
-export const submitProfileChangeRequest = async (personnelId, { fieldName, currentValue = '', requestedValue, reason = '' }) => {
+export const submitProfileChangeRequest = async (
+  personnelId,
+  { changes = null, fieldName, currentValue = '', requestedValue, reason = '' }
+) => {
   try {
     if (!personnelId) {
       return { data: null, error: 'Missing personnel id.' };
     }
 
-    if (!PROFILE_FIELD_OPTIONS.some((option) => option.value === fieldName)) {
-      return { data: null, error: 'Please select a valid field to request a change for.' };
-    }
+    const requestedChanges = changes || {
+      [fieldName]: { currentValue, requestedValue }
+    };
+    const normalizedChanges = {};
 
-    let trimmedRequestedValue = String(requestedValue || '').trim();
-    if (!trimmedRequestedValue) {
-      return { data: null, error: 'Please provide the requested new value.' };
-    }
+    for (const option of PROFILE_FIELD_OPTIONS) {
+      const requestedChange = requestedChanges?.[option.value];
+      if (!requestedChange) continue;
 
-    if (NAME_FIELDS.includes(fieldName)) {
-      trimmedRequestedValue = normalizeSpaces(requestedValue);
-      if (!trimmedRequestedValue || !NAME_PATTERN.test(trimmedRequestedValue)) {
-        return { data: null, error: 'Only letters and spaces are allowed.' };
+      const normalizedCurrentValue = String(
+        requestedChange.currentValue ?? requestedChange.current_value ?? ''
+      ).trim();
+      let normalizedRequestedValue = String(
+        requestedChange.requestedValue ?? requestedChange.requested_value ?? ''
+      ).trim();
+      if (!normalizedRequestedValue) continue;
+
+      if (NAME_FIELDS.includes(option.value)) {
+        normalizedRequestedValue = normalizeSpaces(normalizedRequestedValue);
+        if (!NAME_PATTERN.test(normalizedRequestedValue)) {
+          return { data: null, error: `${option.label} may only contain letters and spaces.` };
+        }
       }
+
+      if (normalizedRequestedValue === normalizedCurrentValue) continue;
+
+      normalizedChanges[option.value] = {
+        current_value: normalizedCurrentValue,
+        requested_value: normalizedRequestedValue
+      };
     }
 
-    if (trimmedRequestedValue === String(currentValue || '').trim()) {
-      return { data: null, error: 'The requested value must be different from the current value.' };
+    const changeEntries = Object.entries(normalizedChanges);
+    if (changeEntries.length === 0) {
+      return { data: null, error: 'Enter at least one new value that differs from your current information.' };
     }
 
     const { data: pendingRows, error: pendingError } = await supabase
       .from(TABLE)
       .select('request_id')
       .eq('personnel_id', personnelId)
-      .eq('field_name', fieldName)
       .eq('status', 'pending')
       .limit(1);
 
@@ -104,34 +153,37 @@ export const submitProfileChangeRequest = async (personnelId, { fieldName, curre
     if (Array.isArray(pendingRows) && pendingRows.length > 0) {
       return {
         data: null,
-        error: `You already have a pending request to change ${getProfileFieldLabel(fieldName)}.`
+        error: 'You already have a pending profile change request awaiting admin review.'
       };
     }
+
+    const [primaryFieldName, primaryChange] = changeEntries[0];
 
     const { data, error } = await supabase
       .from(TABLE)
       .insert({
         personnel_id: personnelId,
-        field_name: fieldName,
-        current_value: currentValue || null,
-        requested_value: trimmedRequestedValue,
+        field_name: primaryFieldName,
+        current_value: primaryChange.current_value || null,
+        requested_value: primaryChange.requested_value,
+        changes: normalizedChanges,
         reason: reason || null,
         status: 'pending'
       })
-      .select('request_id, personnel_id, field_name, current_value, requested_value, reason, status, requested_at')
+      .select('request_id, personnel_id, field_name, current_value, requested_value, changes, reason, status, requested_at')
       .single();
 
     if (error) throw error;
 
     emitDataChanged('profile_change_requests', { action: 'create', personnel_id: personnelId });
 
-    return { data, error: null };
+    return { data: normalizeRequestRow(data), error: null };
   } catch (error) {
     console.error('Error submitting profile change request:', error);
     if (error?.code === '23505') {
       return {
         data: null,
-        error: `You already have a pending request to change ${getProfileFieldLabel(fieldName)}.`
+        error: 'You already have a pending profile change request awaiting admin review.'
       };
     }
     if (isMissingTableError(error)) {
@@ -149,7 +201,8 @@ export const getPendingProfileChangeRequestsCount = async () => {
     const { count, error } = await supabase
       .from(TABLE)
       .select('request_id', { count: 'exact', head: true })
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .eq('is_archived', false);
 
     if (error) throw error;
 
@@ -163,13 +216,14 @@ export const getPendingProfileChangeRequestsCount = async () => {
   }
 };
 
-export const getAllProfileChangeRequests = async () => {
+export const getAllProfileChangeRequests = async ({ archived = false } = {}) => {
   try {
     const [requestsRes, usersRes] = await Promise.all([
       supabase
         .from(TABLE)
-        .select('request_id, personnel_id, field_name, current_value, requested_value, reason, status, requested_at, reviewed_at, reviewed_by')
-        .order('requested_at', { ascending: false }),
+        .select('request_id, personnel_id, field_name, current_value, requested_value, changes, reason, status, requested_at, reviewed_at, reviewed_by, is_archived, archived_at, archived_by')
+        .eq('is_archived', archived)
+        .order(archived ? 'archived_at' : 'requested_at', { ascending: false }),
       getAllUsers({ includePersonnelWorkspaceProfiles: true })
     ]);
 
@@ -195,13 +249,15 @@ export const getAllProfileChangeRequests = async () => {
     const rows = (requestsRes.data || []).map((row) => {
       const personnel = personnelById.get(row.personnel_id);
       const reviewer = row.reviewed_by ? accountById.get(row.reviewed_by) : null;
+      const archiver = row.archived_by ? accountById.get(row.archived_by) : null;
 
-      return {
+      return normalizeRequestRow({
         ...row,
         personnel_name: formatUserLabel(personnel),
         personnel_email: personnel?.email || '',
-        reviewed_by_name: reviewer ? formatUserLabel(reviewer) : null
-      };
+        reviewed_by_name: reviewer ? formatUserLabel(reviewer) : null,
+        archived_by_name: archiver ? formatUserLabel(archiver) : null
+      });
     });
 
     return { data: rows, error: null };
@@ -225,7 +281,7 @@ export const approveProfileChangeRequest = async ({ requestId, reviewedBy }) => 
 
     const { data: requestRow, error: fetchError } = await supabase
       .from(TABLE)
-      .select('request_id, personnel_id, field_name, requested_value, status')
+      .select('request_id, personnel_id, field_name, requested_value, changes, status')
       .eq('request_id', requestId)
       .eq('status', 'pending')
       .maybeSingle();
@@ -235,9 +291,17 @@ export const approveProfileChangeRequest = async ({ requestId, reviewedBy }) => 
       return { data: null, error: 'This request is no longer pending.' };
     }
 
+    const normalizedRequest = normalizeRequestRow(requestRow);
+    const profileUpdates = Object.fromEntries(
+      normalizedRequest.change_items.map((item) => [item.field_name, item.requested_value])
+    );
+    if (Object.keys(profileUpdates).length === 0) {
+      return { data: null, error: 'This request has no valid profile changes.' };
+    }
+
     const { data: workspaceUpdate, error: workspaceUpdateError } = await supabase
       .from('personnel_workspace_profiles')
-      .update({ [requestRow.field_name]: requestRow.requested_value })
+      .update({ ...profileUpdates, updated_at: new Date().toISOString() })
       .eq('admin_id', requestRow.personnel_id)
       .select('admin_id')
       .maybeSingle();
@@ -247,7 +311,7 @@ export const approveProfileChangeRequest = async ({ requestId, reviewedBy }) => 
     if (!workspaceUpdate) {
       const { error: profileUpdateError } = await supabase
         .from('admin')
-        .update({ [requestRow.field_name]: requestRow.requested_value })
+        .update(profileUpdates)
         .eq('admin_id', requestRow.personnel_id);
 
       if (profileUpdateError) throw profileUpdateError;
@@ -262,7 +326,7 @@ export const approveProfileChangeRequest = async ({ requestId, reviewedBy }) => 
       })
       .eq('request_id', requestId)
       .eq('status', 'pending')
-      .select('request_id, personnel_id, field_name, requested_value, status, reviewed_at, reviewed_by')
+      .select('request_id, personnel_id, field_name, requested_value, changes, status, reviewed_at, reviewed_by')
       .maybeSingle();
 
     if (error) throw error;
@@ -276,6 +340,57 @@ export const approveProfileChangeRequest = async ({ requestId, reviewedBy }) => 
     return { data, error: null };
   } catch (error) {
     console.error('Error approving profile change request:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const archiveProfileChangeRequest = async ({ requestId, archivedBy }) => {
+  try {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .update({
+        is_archived: true,
+        archived_at: new Date().toISOString(),
+        archived_by: archivedBy || null
+      })
+      .eq('request_id', requestId)
+      .neq('status', 'pending')
+      .eq('is_archived', false)
+      .select('request_id, is_archived, archived_at, archived_by')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return { data: null, error: 'Only reviewed profile requests can be archived.' };
+
+    emitDataChanged('profile_change_requests', { action: 'archive', request_id: requestId });
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error archiving profile change request:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const restoreProfileChangeRequest = async ({ requestId }) => {
+  try {
+    const { data, error } = await supabase
+      .from(TABLE)
+      .update({
+        is_archived: false,
+        archived_at: null,
+        archived_by: null
+      })
+      .eq('request_id', requestId)
+      .eq('is_archived', true)
+      .select('request_id, is_archived')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return { data: null, error: 'Archived profile request was not found.' };
+
+    emitDataChanged('profile_change_requests', { action: 'restore', request_id: requestId });
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error restoring profile change request:', error);
     return { data: null, error: error.message };
   }
 };

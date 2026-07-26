@@ -33,6 +33,9 @@ const RANK_OPTIONS = [
   'FO2',
   'FO1'
 ];
+const EMPTY_REQUEST_VALUES = Object.fromEntries(
+  PROFILE_FIELD_OPTIONS.map((option) => [option.value, ''])
+);
 
 export default function PersonnelProfile() {
   const { currentUser, setCurrentUser } = useUser();
@@ -56,10 +59,9 @@ const [modal, setModal] = useState({
   type: "info", // "success" | "error" | "confirm"
   message: "",
   onConfirm: null,
-});
+  });
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
-  const [requestField, setRequestField] = useState(PROFILE_FIELD_OPTIONS[0].value);
-  const [requestValue, setRequestValue] = useState('');
+  const [requestValues, setRequestValues] = useState({ ...EMPTY_REQUEST_VALUES });
   const [requestReason, setRequestReason] = useState('');
   const [isRequestSaving, setIsRequestSaving] = useState(false);
   const [requestMessage, setRequestMessage] = useState({ type: '', text: '' });
@@ -68,7 +70,10 @@ const [modal, setModal] = useState({
   const [loadingMyRequests, setLoadingMyRequests] = useState(false);
   const profileHeaderRef = useRef(null);
   const profileContentRef = useRef(null);
-  const hasUnsavedRequest = isRequestModalOpen && Boolean(requestValue.trim() || requestReason.trim());
+  const hasUnsavedRequest = isRequestModalOpen && Boolean(
+    Object.values(requestValues).some((value) => String(value || '').trim())
+    || requestReason.trim()
+  );
 
   useLayoutEffect(() => {
     const headerEl = profileHeaderRef.current;
@@ -262,8 +267,7 @@ const [modal, setModal] = useState({
   };
 
   const openRequestModal = () => {
-    setRequestField(PROFILE_FIELD_OPTIONS[0].value);
-    setRequestValue('');
+    setRequestValues({ ...EMPTY_REQUEST_VALUES });
     setRequestReason('');
     setRequestMessage({ type: '', text: '' });
     setIsRequestModalOpen(true);
@@ -281,7 +285,7 @@ const [modal, setModal] = useState({
   const discardRequestChanges = () => {
     setIsDiscardRequestOpen(false);
     setIsRequestModalOpen(false);
-    setRequestValue('');
+    setRequestValues({ ...EMPTY_REQUEST_VALUES });
     setRequestReason('');
     setRequestMessage({ type: '', text: '' });
   };
@@ -290,21 +294,37 @@ const [modal, setModal] = useState({
     if (isRequestSaving) return;
     setRequestMessage({ type: '', text: '' });
 
-    let requestedValue = requestValue;
-    if (NAME_FIELDS.includes(requestField)) {
-      requestedValue = normalizeSpaces(requestValue);
-      if (!requestedValue || !NAME_PATTERN.test(requestedValue)) {
-        setRequestMessage({ type: 'error', text: 'Only letters and spaces are allowed.' });
-        return;
+    const changes = {};
+    for (const option of PROFILE_FIELD_OPTIONS) {
+      let requestedValue = String(requestValues[option.value] || '').trim();
+      if (!requestedValue) continue;
+
+      if (NAME_FIELDS.includes(option.value)) {
+        requestedValue = normalizeSpaces(requestedValue);
+        if (!NAME_PATTERN.test(requestedValue)) {
+          setRequestMessage({
+            type: 'error',
+            text: `${option.label} may only contain letters and spaces.`
+          });
+          return;
+        }
       }
+
+      changes[option.value] = {
+        currentValue: getCurrentFieldValue(option.value),
+        requestedValue
+      };
+    }
+
+    if (Object.keys(changes).length === 0) {
+      setRequestMessage({ type: 'error', text: 'Enter at least one detail you want to change.' });
+      return;
     }
 
     setIsRequestSaving(true);
 
     const { error } = await submitProfileChangeRequest(currentUser?.admin_id, {
-      fieldName: requestField,
-      currentValue: getCurrentFieldValue(requestField),
-      requestedValue,
+      changes,
       reason: requestReason
     });
 
@@ -316,7 +336,7 @@ const [modal, setModal] = useState({
 
     setIsRequestSaving(false);
     setIsRequestModalOpen(false);
-    setRequestValue('');
+    setRequestValues({ ...EMPTY_REQUEST_VALUES });
     setRequestReason('');
     loadMyRequests();
     showModal({
@@ -328,7 +348,7 @@ const [modal, setModal] = useState({
       personnelId: currentUser.admin_id,
       activityType: 'profile_change_request',
       action: 'Profile Change Request Submitted',
-      details: `Requested to change ${getProfileFieldLabel(requestField)} to "${requestedValue}".`
+      details: `Requested changes to ${Object.keys(changes).map(getProfileFieldLabel).join(', ')}.`
     });
   };
 const captureFace = async () => {
@@ -538,14 +558,22 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                       {myRequests.map((request) => (
                         <div className="my-request-item" key={request.request_id}>
                           <div className="my-request-item-header">
-                            <span className="my-request-field">{getProfileFieldLabel(request.field_name)}</span>
+                            <span className="my-request-field">
+                              {request.change_items?.length > 1
+                                ? `${request.change_items.length} details`
+                                : getProfileFieldLabel(request.field_name)}
+                            </span>
                             <span className={`my-request-status my-request-status-${request.status}`}>
                               {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                             </span>
                           </div>
-                          <div className="my-request-values">
-                            <span>Current: {request.current_value || '—'}</span>
-                            <span>Requested: {request.requested_value}</span>
+                          <div className="my-request-change-list">
+                            {(request.change_items || []).map((change) => (
+                              <div className="my-request-change" key={change.field_name}>
+                                <strong>{change.field_label}</strong>
+                                <span>{change.current_value || '—'} to {change.requested_value}</span>
+                              </div>
+                            ))}
                           </div>
                           {request.reason && (
                             <div className="my-request-reason">Reason: {request.reason}</div>
@@ -625,36 +653,29 @@ const showModal = ({ type = "info", message, onConfirm }) => {
               </div>
 
               <div className="request-modal-body">
-                <div className="form-field-full">
-                  <label htmlFor="requestField">Field</label>
-                  <select
-                    id="requestField"
-                    value={requestField}
-                    onChange={(e) => {
-                      setRequestField(e.target.value);
-                      setRequestValue('');
-                    }}
-                  >
-                    {PROFILE_FIELD_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-                </div>
+                <p className="request-modal-intro">
+                  Enter only the details you want changed. All entered details will be submitted as one request.
+                </p>
 
-                <div className="form-field-full">
-                  <label>Current Value</label>
-                  <input type="text" value={getCurrentFieldValue(requestField) || '—'} readOnly disabled />
-                </div>
-
-                <div className="form-field-full">
-                  <label htmlFor="requestValue">Requested New Value</label>
-                  <input
-                    id="requestValue"
-                    type="text"
-                    value={requestValue}
-                    onChange={(e) => setRequestValue(filterRequestValueForField(requestField, e.target.value))}
-                    placeholder={`Enter new ${getProfileFieldLabel(requestField).toLowerCase()}`}
-                  />
+                <div className="request-change-fields">
+                  {PROFILE_FIELD_OPTIONS.map((option) => (
+                    <div className="request-change-field" key={option.value}>
+                      <label htmlFor={`request-${option.value}`}>{option.label}</label>
+                      <span className="request-current-value">
+                        Current: {getCurrentFieldValue(option.value) || '—'}
+                      </span>
+                      <input
+                        id={`request-${option.value}`}
+                        type={option.value === 'email' ? 'email' : 'text'}
+                        value={requestValues[option.value] || ''}
+                        onChange={(event) => setRequestValues((current) => ({
+                          ...current,
+                          [option.value]: filterRequestValueForField(option.value, event.target.value)
+                        }))}
+                        placeholder={`New ${option.label.toLowerCase()}`}
+                      />
+                    </div>
+                  ))}
                 </div>
 
                 <div className="form-field-full">

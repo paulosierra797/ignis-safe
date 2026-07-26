@@ -45,7 +45,7 @@
 .ai-recommendations-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 6000;
   display: flex;
   justify-content: flex-end;
   padding: 1.25rem;
@@ -131,7 +131,12 @@
 
   .ai-recommendations-dialog {
     width: 100%;
-    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     border-radius: 0;
+  }
+
+  .ai-recommendations-dialog-header {
+    padding-top: max(1rem, env(safe-area-inset-top));
   }
 }

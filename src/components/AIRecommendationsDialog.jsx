@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import ModuleRecommendations from './ModuleRecommendations';
 import './AIRecommendationsDialog.css';
 
@@ -12,8 +13,13 @@ export default function AIRecommendationsDialog() {
       if (event.key === 'Escape') setIsOpen(false);
     };
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [isOpen]);
 
   return (
@@ -29,7 +35,7 @@ export default function AIRecommendationsDialog() {
         <span>AI Recommendations</span>
       </button>
 
-      {isOpen && (
+      {isOpen && createPortal((
         <div
           className="ai-recommendations-overlay"
           role="presentation"
@@ -62,7 +68,7 @@ export default function AIRecommendationsDialog() {
             </div>
           </section>
         </div>
-      )}
+      ), document.body)}
     </>
   );
 }

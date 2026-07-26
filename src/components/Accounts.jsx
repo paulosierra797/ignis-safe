@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useBlocker } from 'react-router-dom';
-import { FaChevronDown } from 'react-icons/fa';
+import { FaArchive, FaChevronDown, FaTimes, FaUndo } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { supabase } from "../utils/supabaseClient";
@@ -19,6 +19,8 @@ import {
 import {
   getPendingLeaveRequests,
   getAllLeaveRequests,
+  archiveLeaveRequest,
+  restoreLeaveRequest,
   approveLeaveRequest,
   rejectLeaveRequest,
   getPersonnelShiftSchedule,
@@ -30,6 +32,8 @@ import {
 } from '../utils/personnelOperationsService';
 import {
   getAllProfileChangeRequests,
+  archiveProfileChangeRequest,
+  restoreProfileChangeRequest,
   approveProfileChangeRequest,
   rejectProfileChangeRequest,
   getProfileFieldLabel
@@ -224,6 +228,28 @@ function RequestSectionToggle({ expanded, itemCount, label, onToggle }) {
   );
 }
 
+function ProfileRequestChanges({ request }) {
+  const changes = Array.isArray(request?.change_items) && request.change_items.length > 0
+    ? request.change_items
+    : [{
+      field_name: request?.field_name,
+      field_label: getProfileFieldLabel(request?.field_name),
+      current_value: request?.current_value || '',
+      requested_value: request?.requested_value || ''
+    }];
+
+  return (
+    <div className="profile-request-change-list">
+      {changes.map((change) => (
+        <div className="profile-request-change-item" key={change.field_name}>
+          <strong>{change.field_label}</strong>
+          <span>{change.current_value || '—'} to {change.requested_value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AccountDirectoryGroup({
   title,
   description,
@@ -340,6 +366,7 @@ export default function Accounts() {
   const [isAddExitConfirmOpen, setIsAddExitConfirmOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
+  const [isShiftExitConfirmOpen, setIsShiftExitConfirmOpen] = useState(false);
   const [isPersonnelShiftModalOpen, setIsPersonnelShiftModalOpen] = useState(false);
   const [isPersonnelShiftExitConfirmOpen, setIsPersonnelShiftExitConfirmOpen] = useState(false);
   const [isShiftConfirmModalOpen, setIsShiftConfirmModalOpen] = useState(false);
@@ -358,16 +385,22 @@ export default function Accounts() {
   const [pendingRequestMessage, setPendingRequestMessage] = useState('');
   const [processingRequestId, setProcessingRequestId] = useState('');
   const [leaveRequestHistory, setLeaveRequestHistory] = useState([]);
+  const [archivedLeaveRequests, setArchivedLeaveRequests] = useState([]);
   const [leaveHistoryLoading, setLeaveHistoryLoading] = useState(true);
   const [leaveHistoryMessage, setLeaveHistoryMessage] = useState('');
   const [leaveHistoryStatusFilter, setLeaveHistoryStatusFilter] = useState('all');
   const [leaveHistorySearch, setLeaveHistorySearch] = useState('');
   const [profileChangeRequests, setProfileChangeRequests] = useState([]);
+  const [archivedProfileChangeRequests, setArchivedProfileChangeRequests] = useState([]);
   const [profileRequestsLoading, setProfileRequestsLoading] = useState(true);
   const [profileRequestMessage, setProfileRequestMessage] = useState('');
   const [profileHistoryStatusFilter, setProfileHistoryStatusFilter] = useState('all');
   const [profileHistorySearch, setProfileHistorySearch] = useState('');
   const [processingProfileRequestId, setProcessingProfileRequestId] = useState('');
+  const [requestArchiveType, setRequestArchiveType] = useState('');
+  const [requestArchiveLoading, setRequestArchiveLoading] = useState(false);
+  const [requestArchiveMessage, setRequestArchiveMessage] = useState('');
+  const [processingArchiveRequestId, setProcessingArchiveRequestId] = useState('');
   const [pendingRejectRequest, setPendingRejectRequest] = useState(null);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReasonInput, setRejectReasonInput] = useState('');
@@ -435,6 +468,12 @@ export default function Accounts() {
   const isPersonnelShiftDirty = isPersonnelShiftModalOpen && (
     selectedShiftPersonnelIds.length > 0 || selectedShiftForAssignment !== 'A'
   );
+  const isShiftScheduleDirty = isShiftModalOpen && (
+    JSON.stringify([...(shiftSelection.shift_a_dates || [])].sort())
+      !== JSON.stringify([...(shiftSchedule.shift_a_dates || [])].sort())
+    || JSON.stringify([...(shiftSelection.shift_b_dates || [])].sort())
+      !== JSON.stringify([...(shiftSchedule.shift_b_dates || [])].sort())
+  );
   const shouldBlockAccountsNavigation = useCallback(({ currentLocation, nextLocation }) => {
     if (bypassAddNavigationRef.current) {
       bypassAddNavigationRef.current = false;
@@ -443,13 +482,15 @@ export default function Accounts() {
 
     const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
     const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
-    return (isAddFormDirty || isPersonnelShiftDirty) && currentPath !== nextPath;
-  }, [isAddFormDirty, isPersonnelShiftDirty]);
+    return (isAddFormDirty || isPersonnelShiftDirty || isShiftScheduleDirty) && currentPath !== nextPath;
+  }, [isAddFormDirty, isPersonnelShiftDirty, isShiftScheduleDirty]);
   const addPersonnelBlocker = useBlocker(shouldBlockAccountsNavigation);
   const hasPendingAddExit = isAddExitConfirmOpen
     || (addPersonnelBlocker.state === 'blocked' && isAddFormDirty);
   const hasPendingPersonnelShiftExit = isPersonnelShiftExitConfirmOpen
     || (addPersonnelBlocker.state === 'blocked' && isPersonnelShiftDirty);
+  const hasPendingShiftScheduleExit = isShiftExitConfirmOpen
+    || (addPersonnelBlocker.state === 'blocked' && isShiftScheduleDirty);
   const [leaveFormData, setLeaveFormData] = useState({
     start_date: '',
     end_date: ''
@@ -460,7 +501,7 @@ export default function Accounts() {
   ), [accounts]);
 
   useEffect(() => {
-    if (!isAddFormDirty && !isPersonnelShiftDirty) {
+    if (!isAddFormDirty && !isPersonnelShiftDirty && !isShiftScheduleDirty) {
       return undefined;
     }
 
@@ -471,7 +512,7 @@ export default function Accounts() {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isAddFormDirty, isPersonnelShiftDirty]);
+  }, [isAddFormDirty, isPersonnelShiftDirty, isShiftScheduleDirty]);
 
   const fromIsoDate = (dateValue) => {
     const parts = String(dateValue || '').split('-');
@@ -755,6 +796,36 @@ export default function Accounts() {
     setProfileRequestsLoading(false);
   };
 
+  const loadArchivedRequests = async (type) => {
+    setRequestArchiveLoading(true);
+    setRequestArchiveMessage('');
+
+    const result = type === 'leave'
+      ? await getAllLeaveRequests({ archived: true })
+      : await getAllProfileChangeRequests({ archived: true });
+
+    if (result.error) {
+      setRequestArchiveMessage(result.error);
+    } else if (type === 'leave') {
+      setArchivedLeaveRequests(result.data || []);
+    } else {
+      setArchivedProfileChangeRequests(result.data || []);
+    }
+
+    setRequestArchiveLoading(false);
+  };
+
+  const openRequestArchive = async (type) => {
+    setRequestArchiveType(type);
+    await loadArchivedRequests(type);
+  };
+
+  const closeRequestArchive = () => {
+    if (processingArchiveRequestId) return;
+    setRequestArchiveType('');
+    setRequestArchiveMessage('');
+  };
+
   useEffect(() => {
     const handleDataChanged = (event) => {
       const scope = event?.detail?.scope || '';
@@ -950,6 +1021,17 @@ export default function Accounts() {
 
   const pendingProfileChangeRequestCount = pendingProfileChangeRequests.length;
 
+  const getProfileRequestChanges = (request) => (
+    Array.isArray(request?.change_items) && request.change_items.length > 0
+      ? request.change_items
+      : [{
+        field_name: request?.field_name,
+        field_label: getProfileFieldLabel(request?.field_name),
+        current_value: request?.current_value || '',
+        requested_value: request?.requested_value || ''
+      }]
+  );
+
   const matchesProfileHistorySearch = (request, query) => {
     if (!query) return true;
 
@@ -958,7 +1040,12 @@ export default function Accounts() {
       request.field_name,
       getProfileFieldLabel(request.field_name),
       request.current_value,
-      request.requested_value
+      request.requested_value,
+      ...getProfileRequestChanges(request).flatMap((change) => [
+        change.field_label,
+        change.current_value,
+        change.requested_value
+      ])
     ]
       .filter(Boolean)
       .join(' ')
@@ -1010,12 +1097,16 @@ export default function Accounts() {
       return;
     }
 
+    const changeSummary = getProfileRequestChanges(request)
+      .map((change) => `${change.field_label}: ${change.current_value || '—'} to ${change.requested_value}`)
+      .join('; ');
+
     logAdminActivity({
       actorId: currentUser?.admin_id || null,
       actorName: currentUser?.name || currentUser?.email || 'Admin User',
       action: 'Profile Change Request Approved',
       actionType: 'edit',
-      details: `Approved ${getProfileFieldLabel(request.field_name)} change for ${request.personnel_name || request.personnel_id} (${request.current_value || '—'} -> ${request.requested_value}).`,
+      details: `Approved profile changes for ${request.personnel_name || request.personnel_id}: ${changeSummary}.`,
       metadata: {
         request_id: request.request_id,
         personnel_id: request.personnel_id,
@@ -1048,12 +1139,16 @@ export default function Accounts() {
       return;
     }
 
+    const requestedFields = getProfileRequestChanges(request)
+      .map((change) => change.field_label)
+      .join(', ');
+
     logAdminActivity({
       actorId: currentUser?.admin_id || null,
       actorName: currentUser?.name || currentUser?.email || 'Admin User',
       action: 'Profile Change Request Rejected',
       actionType: 'edit',
-      details: `Rejected ${getProfileFieldLabel(request.field_name)} change for ${request.personnel_name || request.personnel_id}.`,
+      details: `Rejected profile changes (${requestedFields}) for ${request.personnel_name || request.personnel_id}.`,
       metadata: {
         request_id: request.request_id,
         personnel_id: request.personnel_id,
@@ -1065,6 +1160,72 @@ export default function Accounts() {
 
     await loadProfileChangeRequests();
     setProcessingProfileRequestId('');
+  };
+
+  const requestArchiveHistoryItem = (type, request) => {
+    const label = type === 'leave' ? 'leave request' : 'profile change request';
+    setPendingConfirmAction({
+      action: 'archive-request-history',
+      payload: { type, request },
+      title: `Archive ${type === 'leave' ? 'Leave' : 'Profile'} Request`,
+      message: `Archive this ${label} for ${request.personnel_name || 'this personnel member'}? It will move to the archive list and can be restored later.`,
+      confirmLabel: 'Archive'
+    });
+    setIsConfirmActionModalOpen(true);
+  };
+
+  const executeArchiveHistoryItem = async (type, request) => {
+    setProcessingArchiveRequestId(request.request_id);
+    const result = type === 'leave'
+      ? await archiveLeaveRequest({
+        requestId: request.request_id,
+        archivedBy: currentUser?.admin_id || null
+      })
+      : await archiveProfileChangeRequest({
+        requestId: request.request_id,
+        archivedBy: currentUser?.admin_id || null
+      });
+
+    if (result.error) {
+      setRequestArchiveMessage(result.error);
+      if (type === 'leave') {
+        setLeaveHistoryMessage(result.error);
+      } else {
+        setProfileRequestMessage(result.error);
+      }
+      setProcessingArchiveRequestId('');
+      return;
+    }
+
+    if (type === 'leave') {
+      setLeaveRequestHistory((current) => current.filter((row) => row.request_id !== request.request_id));
+    } else {
+      setProfileChangeRequests((current) => current.filter((row) => row.request_id !== request.request_id));
+    }
+
+    setProcessingArchiveRequestId('');
+  };
+
+  const handleRestoreHistoryItem = async (type, request) => {
+    if (processingArchiveRequestId) return;
+    setProcessingArchiveRequestId(request.request_id);
+    setRequestArchiveMessage('');
+
+    const result = type === 'leave'
+      ? await restoreLeaveRequest({ requestId: request.request_id })
+      : await restoreProfileChangeRequest({ requestId: request.request_id });
+
+    if (result.error) {
+      setRequestArchiveMessage(result.error);
+      setProcessingArchiveRequestId('');
+      return;
+    }
+
+    await Promise.all([
+      type === 'leave' ? loadLeaveRequestHistory() : loadProfileChangeRequests(),
+      loadArchivedRequests(type)
+    ]);
+    setProcessingArchiveRequestId('');
   };
 
   const handleDeleteUser = async (adminId) => {
@@ -1905,7 +2066,32 @@ const permissions = getDefaultPermissions(formData.role);
     }
 
     setIsShiftModalOpen(false);
+    setIsShiftExitConfirmOpen(false);
     setShiftMessage({ type: '', text: '' });
+  };
+
+  const requestCloseShiftModal = () => {
+    if (isShiftSaving) return;
+    if (!isShiftScheduleDirty) {
+      closeShiftModal();
+      return;
+    }
+    setIsShiftExitConfirmOpen(true);
+  };
+
+  const handleKeepEditingShiftSchedule = () => {
+    setIsShiftExitConfirmOpen(false);
+    if (addPersonnelBlocker.state === 'blocked') {
+      addPersonnelBlocker.reset();
+    }
+  };
+
+  const handleDiscardShiftSchedule = () => {
+    setIsShiftExitConfirmOpen(false);
+    closeShiftModal();
+    if (addPersonnelBlocker.state === 'blocked') {
+      addPersonnelBlocker.proceed();
+    }
   };
 
   const closePersonnelShiftModal = () => {
@@ -2173,7 +2359,13 @@ const permissions = getDefaultPermissions(formData.role);
           : row
       )
     );
-    await loadShiftSummary(shiftSummaryMonth);
+    await Promise.all([
+      fetchAccounts(),
+      loadShiftSummary(shiftSummaryMonth)
+    ]);
+    if (isDayDetailModalOpen && dayDetailDate) {
+      await openDayDetailModal(dayDetailDate);
+    }
 
     logAdminActivity({
       actorId: currentUser?.admin_id || null,
@@ -2211,6 +2403,13 @@ const permissions = getDefaultPermissions(formData.role);
 
     if (pendingConfirmAction.action === 'clear-leave-date') {
       await executeClearLeaveDate(pendingConfirmAction.payload.account);
+    }
+
+    if (pendingConfirmAction.action === 'archive-request-history') {
+      await executeArchiveHistoryItem(
+        pendingConfirmAction.payload.type,
+        pendingConfirmAction.payload.request
+      );
     }
 
     setIsConfirmActionProcessing(false);
@@ -2568,9 +2767,19 @@ const permissions = getDefaultPermissions(formData.role);
         <div className="leave-approval-card leave-history-card">
           <div className="leave-approval-header">
             <h3>Leave Request History</h3>
-            <span>
-              {visibleLeaveRequestHistory.length} of {filteredLeaveRequestHistory.length} shown
-            </span>
+            <div className="request-history-heading-actions">
+              <span>
+                {visibleLeaveRequestHistory.length} of {filteredLeaveRequestHistory.length} shown
+              </span>
+              <button
+                type="button"
+                className="request-archive-list-button"
+                onClick={() => openRequestArchive('leave')}
+              >
+                <FaArchive aria-hidden="true" />
+                Archive List
+              </button>
+            </div>
           </div>
 
           <div className="request-history-toolbar">
@@ -2618,6 +2827,7 @@ const permissions = getDefaultPermissions(formData.role);
                     <th>Date Reviewed</th>
                     <th>Reviewed By</th>
                     <th>Rejection Reason</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2648,6 +2858,19 @@ const permissions = getDefaultPermissions(formData.role);
                         {request.status === 'rejected'
                           ? (request.rejection_reason || '—')
                           : '—'}
+                      </td>
+                      <td>
+                        {request.status !== 'pending' && (
+                          <button
+                            type="button"
+                            className="request-row-icon-button"
+                            onClick={() => requestArchiveHistoryItem('leave', request)}
+                            aria-label={`Archive leave request for ${request.personnel_name || 'personnel'}`}
+                            title="Archive request"
+                          >
+                            <FaArchive aria-hidden="true" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -2710,6 +2933,17 @@ const permissions = getDefaultPermissions(formData.role);
                     {request.rejection_reason || '—'}
                   </p>
                 )}
+
+                {request.status !== 'pending' && (
+                  <button
+                    type="button"
+                    className="request-mobile-archive-button"
+                    onClick={() => requestArchiveHistoryItem('leave', request)}
+                  >
+                    <FaArchive aria-hidden="true" />
+                    Archive
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -2741,9 +2975,7 @@ const permissions = getDefaultPermissions(formData.role);
                 <thead>
                   <tr>
                     <th>Personnel</th>
-                    <th>Field</th>
-                    <th>Current Value</th>
-                    <th>Requested Value</th>
+                    <th>Requested Changes</th>
                     <th>Reason</th>
                     <th>Requested</th>
                     <th>Action</th>
@@ -2759,9 +2991,7 @@ const permissions = getDefaultPermissions(formData.role);
                           <div className="profile-request-personnel">{request.personnel_name}</div>
                           <div className="profile-request-email">{request.personnel_email}</div>
                         </td>
-                        <td>{getProfileFieldLabel(request.field_name)}</td>
-                        <td>{request.current_value || '—'}</td>
-                        <td className="profile-request-value-cell">{request.requested_value}</td>
+                        <td><ProfileRequestChanges request={request} /></td>
                         <td>{request.reason || '—'}</td>
                         <td>{new Date(request.requested_at).toLocaleDateString('en-US')}</td>
                         <td>
@@ -2800,15 +3030,7 @@ const permissions = getDefaultPermissions(formData.role);
                 <div className="leave-request-card" key={request.request_id}>
                   <h3>{request.personnel_name}</h3>
 
-                  <p>
-                    <strong>Field</strong><br />
-                    {getProfileFieldLabel(request.field_name)}
-                  </p>
-
-                  <p>
-                    <strong>Current → Requested</strong><br />
-                    {request.current_value || '—'} → {request.requested_value}
-                  </p>
+                  <ProfileRequestChanges request={request} />
 
                   {request.reason && (
                     <p>
@@ -2853,9 +3075,19 @@ const permissions = getDefaultPermissions(formData.role);
         <div className="profile-request-card profile-history-card">
           <div className="leave-approval-header">
             <h3>Profile Change Request History</h3>
-            <span>
-              {visibleProfileChangeHistory.length} of {filteredProfileChangeHistory.length} shown
-            </span>
+            <div className="request-history-heading-actions">
+              <span>
+                {visibleProfileChangeHistory.length} of {filteredProfileChangeHistory.length} shown
+              </span>
+              <button
+                type="button"
+                className="request-archive-list-button"
+                onClick={() => openRequestArchive('profile')}
+              >
+                <FaArchive aria-hidden="true" />
+                Archive List
+              </button>
+            </div>
           </div>
 
           <div className="request-history-toolbar">
@@ -2890,14 +3122,13 @@ const permissions = getDefaultPermissions(formData.role);
                 <thead>
                   <tr>
                     <th>Personnel</th>
-                    <th>Requested Field</th>
-                    <th>Previous Value</th>
-                    <th>Requested Value</th>
+                    <th>Requested Changes</th>
                     <th>Reason</th>
                     <th>Status</th>
                     <th>Date Requested</th>
                     <th>Date Reviewed</th>
                     <th>Reviewed By</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2907,9 +3138,7 @@ const permissions = getDefaultPermissions(formData.role);
                         <div className="profile-request-personnel">{request.personnel_name}</div>
                         <div className="profile-request-email">{request.personnel_email}</div>
                       </td>
-                      <td>{getProfileFieldLabel(request.field_name)}</td>
-                      <td>{request.current_value || '—'}</td>
-                      <td className="profile-request-value-cell">{request.requested_value}</td>
+                      <td><ProfileRequestChanges request={request} /></td>
                       <td>{request.reason || '—'}</td>
                       <td className="profile-request-status-cell">
                         <span className={`profile-request-status profile-request-status-${request.status}`}>
@@ -2927,6 +3156,19 @@ const permissions = getDefaultPermissions(formData.role);
                           : '—'}
                       </td>
                       <td>{request.reviewed_by_name || '—'}</td>
+                      <td>
+                        {request.status !== 'pending' && (
+                          <button
+                            type="button"
+                            className="request-row-icon-button"
+                            onClick={() => requestArchiveHistoryItem('profile', request)}
+                            aria-label={`Archive profile change request for ${request.personnel_name || 'personnel'}`}
+                            title="Archive request"
+                          >
+                            <FaArchive aria-hidden="true" />
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2939,15 +3181,7 @@ const permissions = getDefaultPermissions(formData.role);
               <div className="leave-request-card" key={request.request_id}>
                 <h3>{request.personnel_name}</h3>
 
-                <p>
-                  <strong>Requested Field</strong><br />
-                  {getProfileFieldLabel(request.field_name)}
-                </p>
-
-                <p>
-                  <strong>Previous → Requested</strong><br />
-                  {request.current_value || '—'} → {request.requested_value}
-                </p>
+                <ProfileRequestChanges request={request} />
 
                 <p>
                   <strong>Reason</strong><br />
@@ -2979,6 +3213,17 @@ const permissions = getDefaultPermissions(formData.role);
                   <strong>Reviewed By</strong><br />
                   {request.reviewed_by_name || '—'}
                 </p>
+
+                {request.status !== 'pending' && (
+                  <button
+                    type="button"
+                    className="request-mobile-archive-button"
+                    onClick={() => requestArchiveHistoryItem('profile', request)}
+                  >
+                    <FaArchive aria-hidden="true" />
+                    Archive
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -3606,7 +3851,7 @@ const permissions = getDefaultPermissions(formData.role);
                 <h3>Set Shift Duty Dates</h3>
                 <button
                   className="accounts-modal-close"
-                  onClick={closeShiftModal}
+                  onClick={requestCloseShiftModal}
                   aria-label="Close shift schedule modal"
                 >
                   x
@@ -3758,7 +4003,7 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
 
               <div className="accounts-modal-footer">
-                <button className="accounts-modal-draft" onClick={closeShiftModal} disabled={isShiftSaving}>
+                <button className="accounts-modal-draft" onClick={requestCloseShiftModal} disabled={isShiftSaving}>
                   Cancel
                 </button>
                 <button
@@ -4044,6 +4289,45 @@ const permissions = getDefaultPermissions(formData.role);
           </div>
         )}
 
+        {hasPendingShiftScheduleExit && (
+          <div
+            className="accounts-modal-overlay accounts-unsaved-overlay"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="shiftScheduleUnsavedTitle"
+            aria-describedby="shiftScheduleUnsavedDescription"
+          >
+            <div className="accounts-modal accounts-unsaved-modal">
+              <div className="accounts-modal-header">
+                <h3 id="shiftScheduleUnsavedTitle">Discard unsaved shift dates?</h3>
+              </div>
+
+              <div className="accounts-modal-body">
+                <p id="shiftScheduleUnsavedDescription" className="accounts-unsaved-message">
+                  Your shift date changes have not been saved. Are you sure you want to discard them and leave?
+                </p>
+              </div>
+
+              <div className="accounts-modal-footer">
+                <button
+                  type="button"
+                  className="accounts-modal-draft"
+                  onClick={handleKeepEditingShiftSchedule}
+                >
+                  Keep Editing
+                </button>
+                <button
+                  type="button"
+                  className="accounts-modal-discard"
+                  onClick={handleDiscardShiftSchedule}
+                >
+                  Discard Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {hasPendingPersonnelShiftExit && (
           <div
             className="accounts-modal-overlay accounts-unsaved-overlay"
@@ -4078,6 +4362,101 @@ const permissions = getDefaultPermissions(formData.role);
                 >
                   Discard Changes
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {requestArchiveType && (
+          <div
+            className="accounts-modal-overlay request-archive-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="requestArchiveTitle"
+          >
+            <div className="accounts-modal request-archive-modal">
+              <div className="accounts-modal-header">
+                <div>
+                  <span className="request-archive-eyebrow">Archived history</span>
+                  <h3 id="requestArchiveTitle">
+                    {requestArchiveType === 'leave'
+                      ? 'Leave Request Archive'
+                      : 'Profile Change Request Archive'}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  className="accounts-modal-close"
+                  onClick={closeRequestArchive}
+                  aria-label="Close request archive"
+                  disabled={Boolean(processingArchiveRequestId)}
+                >
+                  <FaTimes aria-hidden="true" />
+                </button>
+              </div>
+
+              <div className="accounts-modal-body request-archive-body">
+                {requestArchiveMessage && (
+                  <div className="accounts-modal-message accounts-modal-message-error">
+                    {requestArchiveMessage}
+                  </div>
+                )}
+
+                {requestArchiveLoading ? (
+                  <p className="leave-approval-empty">Loading archived requests...</p>
+                ) : (
+                  (requestArchiveType === 'leave'
+                    ? archivedLeaveRequests
+                    : archivedProfileChangeRequests
+                  ).length === 0 ? (
+                    <p className="leave-approval-empty">No archived requests.</p>
+                  ) : (
+                    <div className="request-archive-list">
+                      {(requestArchiveType === 'leave'
+                        ? archivedLeaveRequests
+                        : archivedProfileChangeRequests
+                      ).map((request) => (
+                        <article className="request-archive-item" key={request.request_id}>
+                          <div className="request-archive-item-main">
+                            <div className="request-archive-item-heading">
+                              <strong>{request.personnel_name || request.personnel_id}</strong>
+                              <span className={`profile-request-status profile-request-status-${request.status}`}>
+                                {formatRequestStatus(request.status)}
+                              </span>
+                            </div>
+
+                            {requestArchiveType === 'leave' ? (
+                              <p>
+                                {formatLeaveDate(request.start_date)} to {formatLeaveDate(request.end_date)}
+                                {request.reason ? ` · ${request.reason}` : ''}
+                              </p>
+                            ) : (
+                              <ProfileRequestChanges request={request} />
+                            )}
+
+                            <small>
+                              Archived {request.archived_at
+                                ? new Date(request.archived_at).toLocaleDateString('en-US')
+                                : '—'}
+                              {request.archived_by_name ? ` by ${request.archived_by_name}` : ''}
+                            </small>
+                          </div>
+
+                          <button
+                            type="button"
+                            className="request-restore-button"
+                            onClick={() => handleRestoreHistoryItem(requestArchiveType, request)}
+                            disabled={Boolean(processingArchiveRequestId)}
+                            aria-label={`Restore request for ${request.personnel_name || 'personnel'}`}
+                          >
+                            <FaUndo aria-hidden="true" />
+                            {processingArchiveRequestId === request.request_id ? 'Restoring...' : 'Restore'}
+                          </button>
+                        </article>
+                      ))}
+                    </div>
+                  )
+                )}
               </div>
             </div>
           </div>

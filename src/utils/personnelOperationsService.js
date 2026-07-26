@@ -91,6 +91,7 @@ export const getPersonnelLeaveRequest = async (adminId) => {
       .from(LEAVE_REQUESTS_TABLE)
       .select('request_id, start_date, end_date, reason, status, rejection_reason, created_at, updated_at')
       .eq('personnel_id', adminId)
+      .eq('is_archived', false)
       .order('created_at', { ascending: false })
       .limit(1);
 
@@ -193,6 +194,7 @@ export const getPendingLeaveRequests = async () => {
       .from(LEAVE_REQUESTS_TABLE)
       .select('request_id, personnel_id, start_date, end_date, reason, status, created_at')
       .eq('status', 'pending')
+      .eq('is_archived', false)
       .order('created_at', { ascending: true });
 
     if (error) throw error;
@@ -209,13 +211,14 @@ export const getPendingLeaveRequests = async () => {
   }
 };
 
-export const getAllLeaveRequests = async () => {
+export const getAllLeaveRequests = async ({ archived = false } = {}) => {
   try {
     const [requestsRes, usersRes] = await Promise.all([
       supabase
         .from(LEAVE_REQUESTS_TABLE)
-        .select('request_id, personnel_id, start_date, end_date, reason, status, approved_by, approved_at, rejection_reason, created_at, updated_at')
-        .order('created_at', { ascending: false }),
+        .select('request_id, personnel_id, start_date, end_date, reason, status, approved_by, approved_at, rejection_reason, created_at, updated_at, is_archived, archived_at, archived_by')
+        .eq('is_archived', archived)
+        .order(archived ? 'archived_at' : 'created_at', { ascending: false }),
       getAllUsers({ includePersonnelWorkspaceProfiles: true })
     ]);
 
@@ -241,13 +244,15 @@ export const getAllLeaveRequests = async () => {
     const rows = (requestsRes.data || []).map((row) => {
       const personnel = personnelById.get(row.personnel_id);
       const reviewer = row.approved_by ? accountById.get(row.approved_by) : null;
+      const archiver = row.archived_by ? accountById.get(row.archived_by) : null;
 
       return {
         ...row,
         personnel_name: formatUserLabel(personnel),
         personnel_rank: personnel?.rank || '',
         personnel_email: personnel?.email || '',
-        reviewed_by_name: reviewer ? formatUserLabel(reviewer) : null
+        reviewed_by_name: reviewer ? formatUserLabel(reviewer) : null,
+        archived_by_name: archiver ? formatUserLabel(archiver) : null
       };
     });
 
@@ -261,6 +266,57 @@ export const getAllLeaveRequests = async () => {
       };
     }
     return { data: [], error: error.message };
+  }
+};
+
+export const archiveLeaveRequest = async ({ requestId, archivedBy }) => {
+  try {
+    const { data, error } = await supabase
+      .from(LEAVE_REQUESTS_TABLE)
+      .update({
+        is_archived: true,
+        archived_at: new Date().toISOString(),
+        archived_by: archivedBy || null
+      })
+      .eq('request_id', requestId)
+      .neq('status', 'pending')
+      .eq('is_archived', false)
+      .select('request_id, is_archived, archived_at, archived_by')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return { data: null, error: 'Only reviewed leave requests can be archived.' };
+
+    emitDataChanged('leave_requests', { action: 'archive', request_id: requestId });
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error archiving leave request:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const restoreLeaveRequest = async ({ requestId }) => {
+  try {
+    const { data, error } = await supabase
+      .from(LEAVE_REQUESTS_TABLE)
+      .update({
+        is_archived: false,
+        archived_at: null,
+        archived_by: null
+      })
+      .eq('request_id', requestId)
+      .eq('is_archived', true)
+      .select('request_id, is_archived')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) return { data: null, error: 'Archived leave request was not found.' };
+
+    emitDataChanged('leave_requests', { action: 'restore', request_id: requestId });
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error restoring leave request:', error);
+    return { data: null, error: error.message };
   }
 };
 
@@ -351,19 +407,13 @@ export const getPersonnelShiftSchedule = async ({
       Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
     const scheduleStartDate = toIsoDate(start);
     const scheduleEndDate = toIsoDate(end);
-    const [configResult, personnelResult, assignmentResult, leaveRequestResult] = await Promise.all([
+    const [configResult, personnelResult, assignmentResult] = await Promise.all([
       getShiftScheduleConfig(),
       getAllUsers({ includePersonnelWorkspaceProfiles: true }),
       getShiftAssignmentsForPeriod({
         startDate: scheduleStartDate,
         endDate: scheduleEndDate
-      }),
-      supabase
-        .from(LEAVE_REQUESTS_TABLE)
-        .select('personnel_id, start_date, end_date, status')
-        .lte('start_date', scheduleEndDate)
-        .gte('end_date', scheduleStartDate)
-        .eq('status', 'approved')
+      })
     ]);
 
     if (configResult.error) {
@@ -378,15 +428,10 @@ export const getPersonnelShiftSchedule = async ({
       return { data: null, error: assignmentResult.error };
     }
 
-    if (leaveRequestResult.error) {
-      return { data: null, error: leaveRequestResult.error.message };
-    }
-
     const config = configResult.data;
     const personnelRows = (Array.isArray(personnelResult.data) ? personnelResult.data : [])
       .filter((personnel) => String(personnel.role || '').toLowerCase() === 'personnel');
     const assignments = Array.isArray(assignmentResult.data) ? assignmentResult.data : [];
-    const approvedLeaveRequests = Array.isArray(leaveRequestResult.data) ? leaveRequestResult.data : [];
     const personnelById = new Map(personnelRows.map((personnel) => [personnel.admin_id, personnel]));
 
     const shiftA = new Set(config?.shift_a_dates || []);
@@ -402,26 +447,13 @@ export const getPersonnelShiftSchedule = async ({
       const hasB = shiftB.has(isoDate);
       const shiftTypes = [hasA ? 'A' : null, hasB ? 'B' : null].filter(Boolean);
 
-      const approvedLeavePersonnel = approvedLeaveRequests
-        .filter((request) => isDateWithinInclusiveRange(isoDate, request.start_date, request.end_date))
-        .map((request) => personnelById.get(request.personnel_id) || null)
-        .filter(Boolean)
-        .map((personnel) => ({
-          admin_id: personnel.admin_id,
-          name: formatPersonnelName(personnel)
-        }));
-
-      const approvedLeaveIds = new Set(approvedLeavePersonnel.map((personnel) => personnel.admin_id));
-      const legacyCurrentLeavePersonnel = personnelRows
-        .filter((personnel) => !approvedLeaveIds.has(personnel.admin_id))
+      const onLeavePersonnel = personnelRows
         .filter((personnel) => String(personnel.status || '').toLowerCase() === 'on leave')
         .filter((personnel) => isDateWithinInclusiveRange(isoDate, personnel.leave_start_date, personnel.leave_end_date))
         .map((personnel) => ({
           admin_id: personnel.admin_id,
           name: formatPersonnelName(personnel)
         }));
-
-      const onLeavePersonnel = [...approvedLeavePersonnel, ...legacyCurrentLeavePersonnel];
 
       const leavePersonnelIds = new Set(onLeavePersonnel.map((personnel) => personnel.admin_id));
 
@@ -492,29 +524,20 @@ export const getPersonnelForDate = async (dateIso) => {
       return { data: null, error: 'Missing date.' };
     }
 
-    const [configResult, personnelResult, assignmentResult, attendanceResult, leaveRequestResult] = await Promise.all([
+    const [configResult, personnelResult, assignmentResult, attendanceResult] = await Promise.all([
       getShiftScheduleConfig(),
       getAllUsers({ includePersonnelWorkspaceProfiles: true }),
       getShiftAssignmentsForPeriod({ startDate: dateIso, endDate: dateIso }),
       supabase
         .from('attendance_records')
         .select('personnel_id, time_in, time_out')
-        .eq('attendance_date', dateIso),
-      supabase
-        .from(LEAVE_REQUESTS_TABLE)
-        .select('personnel_id, start_date, end_date, status')
-        .lte('start_date', dateIso)
-        .gte('end_date', dateIso)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false })
+        .eq('attendance_date', dateIso)
     ]);
 
     if (configResult.error) return { data: null, error: configResult.error };
     if (personnelResult.error) return { data: null, error: personnelResult.error };
     if (assignmentResult.error) return { data: null, error: assignmentResult.error };
     if (attendanceResult.error) throw attendanceResult.error;
-    if (leaveRequestResult.error) throw leaveRequestResult.error;
-
     const config = configResult.data;
     const personnelRows = (Array.isArray(personnelResult.data) ? personnelResult.data : [])
       .filter((personnel) => String(personnel.role || '').toLowerCase() === 'personnel');
@@ -525,40 +548,13 @@ export const getPersonnelForDate = async (dateIso) => {
       (attendanceResult.data || []).map((row) => [row.personnel_id, row])
     );
 
-    const leaveRequestByPersonnelId = new Map();
-    (leaveRequestResult.data || []).forEach((row) => {
-      if (!leaveRequestByPersonnelId.has(row.personnel_id)) {
-        leaveRequestByPersonnelId.set(row.personnel_id, row);
-      }
-    });
-
     const shiftA = new Set(config?.shift_a_dates || []);
     const shiftB = new Set(config?.shift_b_dates || []);
     const hasA = shiftA.has(dateIso);
     const hasB = shiftB.has(dateIso);
     const shiftTypes = [hasA ? 'A' : null, hasB ? 'B' : null].filter(Boolean);
 
-    const approvedLeavePersonnel = Array.from(leaveRequestByPersonnelId.entries())
-      .map(([personnelId, request]) => {
-        const personnel = personnelById.get(personnelId);
-        if (!personnel) return null;
-
-        return {
-          admin_id: personnel.admin_id,
-          name: formatPersonnelName(personnel),
-          rank: personnel.rank || '-',
-          leave_start_date: request.start_date,
-          leave_end_date: request.end_date,
-          approval_status: 'Approved'
-        };
-      })
-      .filter(Boolean);
-
-    // Keep compatibility with leave dates created before leave request history
-    // was introduced, while prioritizing approved historical request records.
-    const approvedLeaveIds = new Set(approvedLeavePersonnel.map((personnel) => personnel.admin_id));
-    const legacyCurrentLeavePersonnel = personnelRows
-      .filter((personnel) => !approvedLeaveIds.has(personnel.admin_id))
+    const onLeave = personnelRows
       .filter((personnel) => String(personnel.status || '').toLowerCase() === 'on leave')
       .filter((personnel) => isDateWithinInclusiveRange(dateIso, personnel.leave_start_date, personnel.leave_end_date))
       .map((personnel) => ({
@@ -569,8 +565,6 @@ export const getPersonnelForDate = async (dateIso) => {
         leave_end_date: personnel.leave_end_date,
         approval_status: 'Approved'
       }));
-
-    const onLeave = [...approvedLeavePersonnel, ...legacyCurrentLeavePersonnel];
 
     const onLeaveIds = new Set(onLeave.map((personnel) => personnel.admin_id));
 

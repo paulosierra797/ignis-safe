@@ -56,6 +56,12 @@ const EMPTY_PERSONNEL_FORM = {
   contact_number: ''
 };
 const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
+const getCurrentShiftDates = (dates = []) => {
+  const todayIso = getManilaToday();
+  return Array.from(new Set(
+    (Array.isArray(dates) ? dates : []).filter((dateValue) => dateValue >= todayIso)
+  )).sort();
+};
 
 const toIsoDate = (date) => {
   const year = date.getFullYear();
@@ -696,10 +702,9 @@ export default function Accounts() {
 
   const resetActiveShiftDates = () => {
     const activeKey = activeShift === 'A' ? 'shift_a_dates' : 'shift_b_dates';
-    const todayIso = getManilaToday();
     setShiftSelection((prev) => ({
       ...prev,
-      [activeKey]: (prev[activeKey] || []).filter((dateValue) => dateValue < todayIso)
+      [activeKey]: []
     }));
   };
 
@@ -729,8 +734,8 @@ export default function Accounts() {
     }
 
     setShiftSchedule({
-      shift_a_dates: data?.shift_a_dates || [],
-      shift_b_dates: data?.shift_b_dates || []
+      shift_a_dates: getCurrentShiftDates(data?.shift_a_dates),
+      shift_b_dates: getCurrentShiftDates(data?.shift_b_dates)
     });
   };
 
@@ -1822,8 +1827,8 @@ const permissions = getDefaultPermissions(formData.role);
     }
 
     const shiftDates = selectedShiftForAssignment === 'A'
-      ? shiftSchedule.shift_a_dates
-      : shiftSchedule.shift_b_dates;
+      ? getCurrentShiftDates(shiftSchedule.shift_a_dates)
+      : getCurrentShiftDates(shiftSchedule.shift_b_dates);
 
     if (!shiftDates || shiftDates.length === 0) {
       setPersonnelShiftMessage({
@@ -1860,8 +1865,8 @@ const permissions = getDefaultPermissions(formData.role);
 
     // Get dates from the shift schedule
     const shiftDates = selectedShiftForAssignment === 'A' 
-      ? shiftSchedule.shift_a_dates 
-      : shiftSchedule.shift_b_dates;
+      ? getCurrentShiftDates(shiftSchedule.shift_a_dates)
+      : getCurrentShiftDates(shiftSchedule.shift_b_dates);
 
     if (!shiftDates || shiftDates.length === 0) {
       setPersonnelShiftMessage({ 
@@ -2043,8 +2048,8 @@ const permissions = getDefaultPermissions(formData.role);
 
   const openShiftModal = () => {
     const selectedShiftData = {
-      shift_a_dates: [...(shiftSchedule.shift_a_dates || [])].sort(),
-      shift_b_dates: [...(shiftSchedule.shift_b_dates || [])].sort()
+      shift_a_dates: getCurrentShiftDates(shiftSchedule.shift_a_dates),
+      shift_b_dates: getCurrentShiftDates(shiftSchedule.shift_b_dates)
     };
 
     const earliest = [
@@ -2076,7 +2081,10 @@ const permissions = getDefaultPermissions(formData.role);
 
   const loadShiftAssignmentsForSchedule = async () => {
     // derive period from current shiftSchedule
-    const allDates = [ ...(shiftSchedule.shift_a_dates || []), ...(shiftSchedule.shift_b_dates || []) ];
+    const allDates = [
+      ...getCurrentShiftDates(shiftSchedule.shift_a_dates),
+      ...getCurrentShiftDates(shiftSchedule.shift_b_dates)
+    ];
     if (!allDates.length) {
       setPeriodAssignments([]);
       return;
@@ -2191,8 +2199,8 @@ const permissions = getDefaultPermissions(formData.role);
   const handleSaveShiftSchedule = async () => {
     setShiftMessage({ type: '', text: '' });
 
-    const shiftADates = [...(shiftSelection.shift_a_dates || [])].sort();
-    const shiftBDates = [...(shiftSelection.shift_b_dates || [])].sort();
+    const shiftADates = getCurrentShiftDates(shiftSelection.shift_a_dates);
+    const shiftBDates = getCurrentShiftDates(shiftSelection.shift_b_dates);
 
     if (!shiftADates.length || !shiftBDates.length) {
       setShiftMessage({

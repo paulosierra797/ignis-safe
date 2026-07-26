@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useBlocker } from 'react-router-dom';
-import { FaArchive, FaChevronDown, FaTimes, FaUndo } from 'react-icons/fa';
+import { FaArchive, FaChevronDown, FaSearch, FaTimes, FaUndo } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { supabase } from "../utils/supabaseClient";
@@ -24,8 +24,7 @@ import {
   approveLeaveRequest,
   rejectLeaveRequest,
   getPersonnelShiftSchedule,
-  assignPersonnelToShift,
-  getPersonnelShiftAssignments,
+  assignPersonnelToShiftBulk,
   getShiftAssignmentsForPeriod,
   removeShiftAssignment,
   getPersonnelForDate
@@ -374,10 +373,9 @@ export default function Accounts() {
   const [isLeaveSaving, setIsLeaveSaving] = useState(false);
   const [isShiftSaving, setIsShiftSaving] = useState(false);
   const [isPersonnelShiftSaving, setIsPersonnelShiftSaving] = useState(false);
-  const [selectedShiftPersonnel, setSelectedShiftPersonnel] = useState(null);
   const [selectedShiftPersonnelIds, setSelectedShiftPersonnelIds] = useState([]);
-  const [shiftAssignments, setShiftAssignments] = useState([]);
-  const [selectedShiftForAssignment, setSelectedShiftForAssignment] = useState('A');
+  const [selectedShiftForAssignment, setSelectedShiftForAssignment] = useState('');
+  const [personnelShiftSearch, setPersonnelShiftSearch] = useState('');
   const [personnelShiftMessage, setPersonnelShiftMessage] = useState({ type: '', text: '' });
   const [periodAssignments, setPeriodAssignments] = useState([]);
   const [pendingRequestsLoading, setPendingRequestsLoading] = useState(true);
@@ -466,7 +464,7 @@ export default function Accounts() {
     (value) => String(value || '').trim() !== ''
   );
   const isPersonnelShiftDirty = isPersonnelShiftModalOpen && (
-    selectedShiftPersonnelIds.length > 0 || selectedShiftForAssignment !== 'A'
+    selectedShiftPersonnelIds.length > 0 || Boolean(selectedShiftForAssignment)
   );
   const isShiftScheduleDirty = isShiftModalOpen && (
     JSON.stringify([...(shiftSelection.shift_a_dates || [])].sort())
@@ -1711,10 +1709,13 @@ const permissions = getDefaultPermissions(formData.role);
       }
     });
 
-    const oppositeMap = selectedType === 'A' ? existingB : existingA;
-    const pendingIds = selectedShiftPersonnelIds.filter((id) => !oppositeMap.has(id));
+    const pendingIds = selectedShiftPersonnelIds.filter(
+      (id) => !existingA.has(id) && !existingB.has(id)
+    );
     const targetMap = selectedType === 'A' ? existingA : existingB;
-    pendingIds.forEach((id) => targetMap.set(id, true));
+    if (targetMap) {
+      pendingIds.forEach((id) => targetMap.set(id, true));
+    }
 
     const buildList = (map) =>
       Array.from(map.keys()).map((id) => {
@@ -1734,7 +1735,84 @@ const permissions = getDefaultPermissions(formData.role);
     };
   }, [periodAssignments, selectedShiftPersonnelIds, selectedShiftForAssignment, findPersonnelAccount]);
 
+  const personnelShiftCandidates = useMemo(() => {
+    const normalizedSearch = personnelShiftSearch.trim().toLowerCase();
+
+    return accounts
+      .filter(isPersonnelAccount)
+      .filter((account) => {
+        if (!normalizedSearch) {
+          return true;
+        }
+
+        const searchableText = [
+          account.first_name,
+          account.last_name,
+          account.rank,
+          account.email
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+        return searchableText.includes(normalizedSearch);
+      })
+      .sort((first, second) =>
+        formatPersonnelName(first).localeCompare(formatPersonnelName(second))
+      );
+  }, [accounts, personnelShiftSearch]);
+
+  const selectedShiftPersonnelRows = useMemo(
+    () => selectedShiftPersonnelIds
+      .map((personnelId) => findPersonnelAccount(personnelId))
+      .filter(Boolean),
+    [findPersonnelAccount, selectedShiftPersonnelIds]
+  );
+
+  const visibleAssignablePersonnelIds = useMemo(
+    () => personnelShiftCandidates
+      .filter((account) => !periodAssignments.some(
+        (assignment) => assignment.personnel_id === account.admin_id
+      ))
+      .map((account) => account.admin_id),
+    [periodAssignments, personnelShiftCandidates]
+  );
+
+  const allVisiblePersonnelSelected = Boolean(visibleAssignablePersonnelIds.length)
+    && visibleAssignablePersonnelIds.every((personnelId) =>
+      selectedShiftPersonnelIds.includes(personnelId)
+    );
+
+  const handleSelectShiftForAssignment = (shiftType) => {
+    if (shiftType === selectedShiftForAssignment) {
+      return;
+    }
+
+    setSelectedShiftForAssignment(shiftType);
+    setSelectedShiftPersonnelIds([]);
+    setPersonnelShiftMessage({ type: '', text: '' });
+  };
+
+  const handleToggleVisiblePersonnel = () => {
+    if (!selectedShiftForAssignment || !visibleAssignablePersonnelIds.length) {
+      return;
+    }
+
+    setSelectedShiftPersonnelIds((currentIds) => {
+      if (allVisiblePersonnelSelected) {
+        return currentIds.filter((id) => !visibleAssignablePersonnelIds.includes(id));
+      }
+
+      return Array.from(new Set([...currentIds, ...visibleAssignablePersonnelIds]));
+    });
+  };
+
   const openShiftConfirmModal = () => {
+    if (!selectedShiftForAssignment) {
+      setPersonnelShiftMessage({ type: 'error', text: 'Please choose Shift A or Shift B first.' });
+      return;
+    }
+
     if (!selectedShiftPersonnelIds.length) {
       setPersonnelShiftMessage({ type: 'error', text: 'Please select at least one personnel member.' });
       return;
@@ -1807,44 +1885,39 @@ const permissions = getDefaultPermissions(formData.role);
     setIsPersonnelShiftSaving(true);
     setPersonnelShiftMessage({ type: '', text: '' });
 
-    // Enforce one-shift-only rule for the active schedule period.
-    const conflictingPersonnelIds = selectedShiftPersonnelIds.filter((personnelId) =>
-      periodAssignments.some((assignment) =>
-        assignment.personnel_id === personnelId
-          && String(assignment.shift_type || '').toUpperCase() !== selectedShiftType
-      )
+    // A personnel member can only have one assignment in the active schedule period.
+    const alreadyAssignedPersonnelIds = selectedShiftPersonnelIds.filter((personnelId) =>
+      periodAssignments.some((assignment) => assignment.personnel_id === personnelId)
     );
 
     const assignablePersonnelIds = selectedShiftPersonnelIds.filter(
-      (personnelId) => !conflictingPersonnelIds.includes(personnelId)
+      (personnelId) => !alreadyAssignedPersonnelIds.includes(personnelId)
     );
 
     if (!assignablePersonnelIds.length) {
-      const conflictNames = conflictingPersonnelIds
+      const assignedNames = alreadyAssignedPersonnelIds
         .map((personnelId) => getPersonnelNameById(personnelId))
         .join(', ');
 
       setPersonnelShiftMessage({
         type: 'error',
-        text: `Cannot assign Shift ${selectedShiftType}. These personnel are already assigned to the other shift this period: ${conflictNames}.`
+        text: `Cannot assign Shift ${selectedShiftType}. These personnel already have an assignment in this schedule: ${assignedNames}.`
       });
       setIsPersonnelShiftSaving(false);
       return;
     }
 
-    const assignmentResults = await Promise.all(
-      assignablePersonnelIds.map(async (personnelId) => {
-        const { error } = await assignPersonnelToShift({
-          personnelId,
-          shiftType: selectedShiftType,
-          startDate: formStartDate,
-          endDate: formEndDate,
-          assignedBy: currentUser?.admin_id || null
-        });
-
-        return { personnelId, error };
-      })
-    );
+    const { error: bulkAssignmentError } = await assignPersonnelToShiftBulk({
+      personnelIds: assignablePersonnelIds,
+      shiftType: selectedShiftType,
+      startDate: formStartDate,
+      endDate: formEndDate,
+      assignedBy: currentUser?.admin_id || null
+    });
+    const assignmentResults = assignablePersonnelIds.map((personnelId) => ({
+      personnelId,
+      error: bulkAssignmentError
+    }));
 
     const failedAssignments = assignmentResults.filter((row) => row.error);
     const successfulAssignments = assignmentResults.filter((row) => !row.error);
@@ -1874,19 +1947,15 @@ const permissions = getDefaultPermissions(formData.role);
     await loadShiftAssignmentsForSchedule();
     await loadShiftSummary(shiftSummaryMonth);
 
-    if (selectedShiftPersonnel?.admin_id) {
-      await loadPersonnelShiftAssignments(selectedShiftPersonnel.admin_id);
-    }
-
     if (!failedAssignments.length) {
-      if (conflictingPersonnelIds.length) {
-        const conflictNames = conflictingPersonnelIds
+      if (alreadyAssignedPersonnelIds.length) {
+        const assignedNames = alreadyAssignedPersonnelIds
           .map((personnelId) => getPersonnelNameById(personnelId))
           .join(', ');
 
         setPersonnelShiftMessage({
           type: 'error',
-          text: `Shift assignment saved for ${successfulAssignments.length} personnel. Not assigned (already in opposite shift): ${conflictNames}.`
+          text: `Shift assignment saved for ${successfulAssignments.length} personnel. Already assigned and skipped: ${assignedNames}.`
         });
       } else {
         setPersonnelShiftMessage({
@@ -1909,31 +1978,24 @@ const permissions = getDefaultPermissions(formData.role);
         const failedNames = failedAssignments
           .map((row) => getPersonnelNameById(row.personnelId))
           .join(', ');
-        const conflictNames = conflictingPersonnelIds
+        const assignedNames = alreadyAssignedPersonnelIds
           .map((personnelId) => getPersonnelNameById(personnelId))
           .join(', ');
         const firstFailureReason = failedAssignments[0]?.error || 'Unknown error';
-        const conflictSuffix = conflictNames
-          ? ` Opposite-shift blocked: ${conflictNames}.`
+        const assignedSuffix = assignedNames
+          ? ` Already assigned: ${assignedNames}.`
           : '';
 
         setPersonnelShiftMessage({
           type: 'error',
           text: successfulAssignments.length
-            ? `Assigned ${successfulAssignments.length} personnel. Failed for: ${failedNames}. Reason: ${firstFailureReason}.${conflictSuffix}`
-            : `Failed to assign selected personnel: ${failedNames}. Reason: ${firstFailureReason}.${conflictSuffix}`
+            ? `Assigned ${successfulAssignments.length} personnel. Failed for: ${failedNames}. Reason: ${firstFailureReason}.${assignedSuffix}`
+            : `Failed to assign selected personnel: ${failedNames}. Reason: ${firstFailureReason}.${assignedSuffix}`
         });
       }
     }
 
     setIsPersonnelShiftSaving(false);
-  };
-
-  const loadPersonnelShiftAssignments = async (personnelId) => {
-    const { data, error } = await getPersonnelShiftAssignments(personnelId);
-    if (!error) {
-      setShiftAssignments(data || []);
-    }
   };
 
   const handleRemoveShiftAssignment = async (assignmentId) => {
@@ -1958,51 +2020,28 @@ const permissions = getDefaultPermissions(formData.role);
       return;
     }
 
-    // Reload assignments
-    if (selectedShiftPersonnel) {
-      await loadPersonnelShiftAssignments(selectedShiftPersonnel.admin_id);
-    }
-
     await loadShiftAssignmentsForSchedule();
     await loadShiftSummary(shiftSummaryMonth);
 
     setPersonnelShiftMessage({ type: 'success', text: 'Shift assignment removed successfully.' });
   };
 
-  const handleSelectPersonnelForShift = async (personnel) => {
-    setSelectedShiftPersonnel(personnel);
-    await loadPersonnelShiftAssignments(personnel.admin_id);
-    setPersonnelShiftMessage({ type: '', text: '' });
-  };
-
-  const handleTogglePersonnelForShift = async (personnel, checked) => {
+  const handleTogglePersonnelForShift = (personnel, checked) => {
     if (!personnel?.admin_id) {
       return;
     }
 
-    const currentIds = selectedShiftPersonnelIds;
-    const nextIds = checked
-      ? Array.from(new Set([...currentIds, personnel.admin_id]))
-      : currentIds.filter((id) => id !== personnel.admin_id);
-
-    setSelectedShiftPersonnelIds(nextIds);
-
-    if (checked && !selectedShiftPersonnel) {
-      await handleSelectPersonnelForShift(personnel);
+    if (checked && periodAssignments.some(
+      (assignment) => assignment.personnel_id === personnel.admin_id
+    )) {
       return;
     }
 
-    if (!checked && selectedShiftPersonnel?.admin_id === personnel.admin_id) {
-      const nextPreviewId = nextIds[0];
-      const nextPreviewPersonnel = findPersonnelAccount(nextPreviewId) || null;
-
-      if (nextPreviewPersonnel) {
-        await handleSelectPersonnelForShift(nextPreviewPersonnel);
-      } else {
-        setSelectedShiftPersonnel(null);
-        setShiftAssignments([]);
-      }
-    }
+    setSelectedShiftPersonnelIds((currentIds) => checked
+      ? Array.from(new Set([...currentIds, personnel.admin_id]))
+      : currentIds.filter((id) => id !== personnel.admin_id)
+    );
+    setPersonnelShiftMessage({ type: '', text: '' });
   };
 
   const openShiftModal = () => {
@@ -2025,10 +2064,9 @@ const permissions = getDefaultPermissions(formData.role);
   };
 
   const openPersonnelShiftModal = () => {
-    setSelectedShiftPersonnel(null);
     setSelectedShiftPersonnelIds([]);
-    setSelectedShiftForAssignment('A');
-    setShiftAssignments([]);
+    setSelectedShiftForAssignment('');
+    setPersonnelShiftSearch('');
     setPersonnelShiftMessage({ type: '', text: '' });
     setIsShiftConfirmModalOpen(false);
     setIsPersonnelShiftModalOpen(true);
@@ -2102,9 +2140,9 @@ const permissions = getDefaultPermissions(formData.role);
     setIsShiftConfirmModalOpen(false);
     setIsPersonnelShiftModalOpen(false);
     setPersonnelShiftMessage({ type: '', text: '' });
-    setSelectedShiftPersonnel(null);
     setSelectedShiftPersonnelIds([]);
-    setSelectedShiftForAssignment('A');
+    setSelectedShiftForAssignment('');
+    setPersonnelShiftSearch('');
     setIsPersonnelShiftExitConfirmOpen(false);
     pendingPersonnelShiftNavigationRef.current = null;
   };
@@ -2588,6 +2626,10 @@ const permissions = getDefaultPermissions(formData.role);
                 const shiftLabel = row?.shift || 'Off Duty';
                 const onDutyCount = row?.onDutyCount ?? 0;
                 const onLeaveCount = row?.onLeaveCount ?? 0;
+                const onDutyPersonnel = Array.isArray(row?.onDutyPersonnel)
+                  ? row.onDutyPersonnel
+                  : [];
+                const visibleOnDutyPersonnel = onDutyPersonnel.slice(0, 2);
                 const isPastDate = isoDate < shiftSummaryTodayIso;
                 const isToday = isoDate === shiftSummaryTodayIso;
                 const shiftClass = shiftLabel === 'Shift A'
@@ -2618,10 +2660,24 @@ const permissions = getDefaultPermissions(formData.role);
                       <span className={`shift-summary-shift-label ${shiftClass}`}>{shiftLabel}</span>
                     </div>
                     <div className="shift-summary-day-body">
-                      <div className="shift-summary-day-stats">
-                        <span className="shift-summary-stat shift-summary-stat-duty">On Duty: {onDutyCount}</span>
-                        <span className="shift-summary-stat shift-summary-stat-leave">On Leave: {onLeaveCount}</span>
+                      <span className="shift-summary-stat shift-summary-stat-duty">On Duty ({onDutyCount})</span>
+                      <div className="shift-summary-duty-names">
+                        {visibleOnDutyPersonnel.length ? (
+                          <>
+                            {visibleOnDutyPersonnel.map((personnel) => (
+                              <span key={personnel.admin_id} title={personnel.name}>
+                                {personnel.name}
+                              </span>
+                            ))}
+                            {onDutyPersonnel.length > visibleOnDutyPersonnel.length && (
+                              <strong>+{onDutyPersonnel.length - visibleOnDutyPersonnel.length} more</strong>
+                            )}
+                          </>
+                        ) : (
+                          <span className="shift-summary-duty-empty">No personnel</span>
+                        )}
                       </div>
+                      <span className="shift-summary-stat shift-summary-stat-leave">On Leave: {onLeaveCount}</span>
                     </div>
                   </div>
                 );
@@ -4030,45 +4086,186 @@ const permissions = getDefaultPermissions(formData.role);
             <div className="accounts-modal accounts-shift-modal accounts-personnel-shift-modal">
               <div className="accounts-modal-header">
                 <h3>Assign Personnel to Shifts</h3>
+                <button
+                  className="accounts-modal-close"
+                  type="button"
+                  onClick={requestClosePersonnelShiftModal}
+                  aria-label="Close shift assignment"
+                  disabled={isPersonnelShiftSaving}
+                >
+                  <FaTimes aria-hidden="true" />
+                </button>
               </div>
 
               <div className="accounts-modal-body">
-                <div className={`shift-personnel-selector shift-personnel-selector-${selectedShiftForAssignment.toLowerCase()}`}>
-                  <label>
-                    <strong>Select Personnel (multiple allowed):</strong>
-                  </label>
+                <section className="shift-assignment-step">
+                  <div className="shift-assignment-step-heading">
+                    <span className="shift-assignment-step-number">1</span>
+                    <div>
+                      <h4>Select Shift</h4>
+                      <p>Choose the shift before selecting personnel.</p>
+                    </div>
+                  </div>
 
-                  <div className="shift-personnel-checkbox-list">
-                    {accounts
-                      .filter((account) => isPersonnelAccount(account))
-                      .map((account) => (
-                        <label key={account.admin_id} className="shift-personnel-checkbox-item">
+                  <div className="shift-type-selector" role="group" aria-label="Select shift">
+                    {['A', 'B'].map((shiftType) => {
+                      const dateCount = shiftType === 'A'
+                        ? shiftSchedule.shift_a_dates?.length || 0
+                        : shiftSchedule.shift_b_dates?.length || 0;
+
+                      return (
+                        <button
+                          key={shiftType}
+                          type="button"
+                          className={`shift-type-option shift-type-option-${shiftType.toLowerCase()} ${selectedShiftForAssignment === shiftType ? 'active' : ''}`}
+                          onClick={() => handleSelectShiftForAssignment(shiftType)}
+                          disabled={!dateCount}
+                          aria-pressed={selectedShiftForAssignment === shiftType}
+                        >
+                          <span>Shift {shiftType}</span>
+                          <small>
+                            {dateCount
+                              ? `${dateCount} ${dateCount === 1 ? 'date' : 'dates'}`
+                              : 'No dates set'}
+                          </small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className={`shift-assignment-step ${!selectedShiftForAssignment ? 'is-disabled' : ''}`}>
+                  <div className="shift-assignment-step-heading">
+                    <span className="shift-assignment-step-number">2</span>
+                    <div>
+                      <h4>Select Personnel</h4>
+                      <p>
+                        {selectedShiftForAssignment
+                          ? `Assigning personnel to Shift ${selectedShiftForAssignment}.`
+                          : 'Select Shift A or Shift B to continue.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="shift-personnel-workspace">
+                    <div className={`shift-personnel-selector shift-personnel-selector-${selectedShiftForAssignment.toLowerCase()}`}>
+                      <div className="shift-personnel-toolbar">
+                        <label className="shift-personnel-search" htmlFor="personnel-shift-search">
+                          <FaSearch aria-hidden="true" />
                           <input
-                            type="checkbox"
-                            className="shift-personnel-checkbox-input"
-                            checked={selectedShiftPersonnelIds.includes(account.admin_id)}
-                            onChange={(event) => {
-                              handleTogglePersonnelForShift(account, event.target.checked);
-                            }}
+                            id="personnel-shift-search"
+                            type="search"
+                            value={personnelShiftSearch}
+                            onChange={(event) => setPersonnelShiftSearch(event.target.value)}
+                            placeholder="Search name, rank, or email"
+                            disabled={!selectedShiftForAssignment}
                           />
-                          <span className="shift-personnel-checkbox-info">
-                            <span className="shift-personnel-checkbox-rank">
-                              {account.rank || 'N/A'}
-                            </span>
-                            <span className="shift-personnel-checkbox-name">
-                              {account.first_name} {account.last_name}
-                            </span>
-                          </span>
                         </label>
-                      ))}
-                  </div>
+                        <div className="shift-personnel-toolbar-actions">
+                          <button
+                            type="button"
+                            onClick={handleToggleVisiblePersonnel}
+                            disabled={!selectedShiftForAssignment || !visibleAssignablePersonnelIds.length}
+                          >
+                            {allVisiblePersonnelSelected ? 'Deselect Results' : 'Select Results'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedShiftPersonnelIds([])}
+                            disabled={!selectedShiftPersonnelIds.length}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
 
-                  <div className="shift-personnel-selection-count">
-                    {selectedShiftPersonnelIds.length} selected
-                  </div>
-                </div>
+                      <div className="shift-personnel-list-meta">
+                        <span>{personnelShiftCandidates.length} personnel</span>
+                        <strong>{selectedShiftPersonnelIds.length} selected</strong>
+                      </div>
 
-                <div className="shift-overview-grid">
+                      <div className="shift-personnel-checkbox-list">
+                        {!selectedShiftForAssignment ? (
+                          <div className="shift-personnel-empty">Select a shift to open the personnel list.</div>
+                        ) : personnelShiftCandidates.length === 0 ? (
+                          <div className="shift-personnel-empty">No personnel match your search.</div>
+                        ) : personnelShiftCandidates.map((account) => {
+                          const existingAssignment = periodAssignments.find(
+                            (assignment) => assignment.personnel_id === account.admin_id
+                          );
+                          const assignedShift = String(existingAssignment?.shift_type || '').toUpperCase();
+                          const isUnavailable = Boolean(existingAssignment);
+
+                          return (
+                            <label
+                              key={account.admin_id}
+                              className={`shift-personnel-checkbox-item ${isUnavailable ? 'is-unavailable' : ''}`}
+                            >
+                              <input
+                                type="checkbox"
+                                className="shift-personnel-checkbox-input"
+                                checked={selectedShiftPersonnelIds.includes(account.admin_id)}
+                                disabled={isUnavailable}
+                                onChange={(event) => {
+                                  handleTogglePersonnelForShift(account, event.target.checked);
+                                }}
+                              />
+                              <span className="shift-personnel-checkbox-info">
+                                <span className="shift-personnel-checkbox-name">
+                                  {formatPersonnelName(account)}
+                                </span>
+                                <span className="shift-personnel-checkbox-rank">
+                                  {account.rank || 'N/A'}
+                                </span>
+                              </span>
+                              {assignedShift && (
+                                <span className={`shift-personnel-assigned-tag shift-personnel-assigned-tag-${assignedShift.toLowerCase()}`}>
+                                  Shift {assignedShift}
+                                </span>
+                              )}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <aside className={`shift-selected-review shift-selected-review-${selectedShiftForAssignment.toLowerCase()}`}>
+                      <div className="shift-selected-review-header">
+                        <h5>Selected for Shift {selectedShiftForAssignment || '-'}</h5>
+                        <span>{selectedShiftPersonnelRows.length}</span>
+                      </div>
+                      <div className="shift-selected-review-list">
+                        {selectedShiftPersonnelRows.length ? (
+                          selectedShiftPersonnelRows.map((personnel) => (
+                            <div key={personnel.admin_id} className="shift-selected-review-item">
+                              <span>
+                                <strong>{formatPersonnelName(personnel)}</strong>
+                                <small>{personnel.rank || 'N/A'}</small>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePersonnelForShift(personnel, false)}
+                                aria-label={`Remove ${formatPersonnelName(personnel)} from selection`}
+                                title="Remove from selection"
+                              >
+                                <FaTimes aria-hidden="true" />
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="shift-personnel-empty">No personnel selected.</div>
+                        )}
+                      </div>
+                    </aside>
+                  </div>
+                </section>
+
+                <section className="shift-current-assignments">
+                  <div className="shift-current-assignments-heading">
+                    <h4>Current Schedule Assignments</h4>
+                    <span>{periodAssignments.length} assignment{periodAssignments.length === 1 ? '' : 's'}</span>
+                  </div>
+                  <div className="shift-overview-grid">
                   <div className="shift-overview-col shift-overview-col-a">
                     <div className="shift-overview-header shift-overview-header-a">Shift A</div>
                     <div className="shift-overview-list">
@@ -4080,11 +4277,29 @@ const permissions = getDefaultPermissions(formData.role);
                         return ids.length ? (
                           <>
                             <div className="shift-overview-count">{ids.length} personnel assigned</div>
-                            {ids.map((personnelId) => (
-                              <div key={personnelId} className="shift-overview-item">
-                                {getPersonnelNameById(personnelId)}
-                              </div>
-                            ))}
+                            {ids.map((personnelId) => {
+                              const assignment = periodAssignments.find((row) =>
+                                row.personnel_id === personnelId
+                                  && String(row.shift_type || '').toUpperCase() === 'A'
+                              );
+
+                              return (
+                                <div key={personnelId} className="shift-overview-item">
+                                  <span>{getPersonnelNameById(personnelId)}</span>
+                                  {assignment?.assignment_id && (
+                                    <button
+                                      className="shift-overview-remove"
+                                      type="button"
+                                      onClick={() => handleRemoveShiftAssignment(assignment.assignment_id)}
+                                      aria-label={`Remove ${getPersonnelNameById(personnelId)} from Shift A`}
+                                      title="Remove assignment"
+                                    >
+                                      <FaTimes aria-hidden="true" />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </>
                         ) : (
                           <div className="shift-overview-empty">No personnel assigned</div>
@@ -4104,11 +4319,29 @@ const permissions = getDefaultPermissions(formData.role);
                         return ids.length ? (
                           <>
                             <div className="shift-overview-count">{ids.length} personnel assigned</div>
-                            {ids.map((personnelId) => (
-                              <div key={personnelId} className="shift-overview-item">
-                                {getPersonnelNameById(personnelId)}
-                              </div>
-                            ))}
+                            {ids.map((personnelId) => {
+                              const assignment = periodAssignments.find((row) =>
+                                row.personnel_id === personnelId
+                                  && String(row.shift_type || '').toUpperCase() === 'B'
+                              );
+
+                              return (
+                                <div key={personnelId} className="shift-overview-item">
+                                  <span>{getPersonnelNameById(personnelId)}</span>
+                                  {assignment?.assignment_id && (
+                                    <button
+                                      className="shift-overview-remove"
+                                      type="button"
+                                      onClick={() => handleRemoveShiftAssignment(assignment.assignment_id)}
+                                      aria-label={`Remove ${getPersonnelNameById(personnelId)} from Shift B`}
+                                      title="Remove assignment"
+                                    >
+                                      <FaTimes aria-hidden="true" />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </>
                         ) : (
                           <div className="shift-overview-empty">No personnel assigned</div>
@@ -4116,92 +4349,8 @@ const permissions = getDefaultPermissions(formData.role);
                       })()}
                     </div>
                   </div>
-                </div>
-
-                {selectedShiftPersonnelIds.length > 0 && (
-                  <div className={`shift-assignment-form shift-assignment-form-${selectedShiftForAssignment.toLowerCase()}`}>
-                    <h4>Assign {selectedShiftPersonnelIds.length} selected personnel to:</h4>
-
-                    <div className="shift-assignment-simple">
-                      <div className="shift-assignment-shift">
-                        <label htmlFor="shift-assignment-type">Shift:</label>
-                        <select
-                          id="shift-assignment-type"
-                          value={selectedShiftForAssignment}
-                          onChange={(e) => setSelectedShiftForAssignment(e.target.value)}
-                        >
-                          <option value="A">Shift A</option>
-                          <option value="B">Shift B</option>
-                        </select>
-                      </div>
-
-                      <div className="shift-assignment-shift">
-                        <label htmlFor="shift-assignment-preview">Preview assignments for:</label>
-                        <select
-                          id="shift-assignment-preview"
-                          value={selectedShiftPersonnel?.admin_id || ''}
-                          onChange={(event) => {
-                            const selectedId = event.target.value;
-                            const selectedPersonnel = findPersonnelAccount(selectedId);
-                            if (selectedPersonnel) {
-                              handleSelectPersonnelForShift(selectedPersonnel);
-                            }
-                          }}
-                        >
-                          {selectedShiftPersonnelIds.map((personnelId) => {
-                            const personnel = findPersonnelAccount(personnelId);
-                            if (!personnel) {
-                              return null;
-                            }
-
-                            return (
-                              <option key={personnelId} value={personnelId}>
-                                {personnel.first_name} {personnel.last_name}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-                    </div>
-
-                    <button
-                      className="shift-assign-btn"
-                      onClick={openShiftConfirmModal}
-                      disabled={isPersonnelShiftSaving}
-                    >
-                      {isPersonnelShiftSaving ? 'Assigning...' : 'Add Shift Assignment'}
-                    </button>
-
-                    {shiftAssignments.length > 0 && (
-                      <div className="shift-assignments-list">
-                        <h5>
-                          Current Shift Assignments for {selectedShiftPersonnel?.first_name} {selectedShiftPersonnel?.last_name}:
-                        </h5>
-                        <div className="assignments-table">
-                          {shiftAssignments.map((assignment) => (
-                            <div key={assignment.assignment_id} className="assignment-row">
-                              <div className="assignment-info">
-                                <span className={`assignment-shift assignment-shift-${String(assignment.shift_type || '').toLowerCase()}`}>
-                                  Shift {assignment.shift_type}
-                                </span>
-                                <span className="assignment-dates">
-                                  {formatShiftDate(assignment.start_date)} - {formatShiftDate(assignment.end_date)}
-                                </span>
-                              </div>
-                              <button
-                                className="assignment-remove-btn"
-                                onClick={() => handleRemoveShiftAssignment(assignment.assignment_id)}
-                                title="Remove this assignment"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
-                )}
+                </section>
 
                 {personnelShiftMessage.text && (
                   <div className={`accounts-modal-message accounts-modal-message-${personnelShiftMessage.type}`}>
@@ -4213,6 +4362,16 @@ const permissions = getDefaultPermissions(formData.role);
               <div className="accounts-modal-footer">
                 <button className="accounts-modal-draft" onClick={requestClosePersonnelShiftModal} disabled={isPersonnelShiftSaving}>
                   Cancel
+                </button>
+                <button
+                  className="accounts-modal-add"
+                  type="button"
+                  onClick={openShiftConfirmModal}
+                  disabled={isPersonnelShiftSaving || !selectedShiftForAssignment || !selectedShiftPersonnelIds.length}
+                >
+                  {isPersonnelShiftSaving
+                    ? 'Assigning...'
+                    : `Review ${selectedShiftPersonnelIds.length} ${selectedShiftPersonnelIds.length === 1 ? 'Assignment' : 'Assignments'}`}
                 </button>
               </div>
             </div>

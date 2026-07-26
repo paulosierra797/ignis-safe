@@ -634,7 +634,8 @@ export const getShiftAssignmentSummaryForDate = async (dateIso) => {
           admin_id: personnel.admin_id,
           name: formatPersonnelName(personnel),
           rank: personnel.rank || '-'
-        }));
+        }))
+        .sort((first, second) => first.name.localeCompare(second.name));
     };
 
     return {
@@ -689,6 +690,59 @@ export const assignPersonnelToShift = async ({ personnelId, shiftType, startDate
       };
     }
     return { data: null, error: error.message };
+  }
+};
+
+export const assignPersonnelToShiftBulk = async ({
+  personnelIds,
+  shiftType,
+  startDate,
+  endDate,
+  assignedBy
+}) => {
+  try {
+    const uniquePersonnelIds = Array.from(new Set(
+      (Array.isArray(personnelIds) ? personnelIds : []).filter(Boolean)
+    ));
+
+    if (!uniquePersonnelIds.length || !shiftType || !startDate || !endDate) {
+      return { data: [], error: 'Missing required fields for shift assignment.' };
+    }
+
+    if (endDate < startDate) {
+      return { data: [], error: 'End date must be on or after the start date.' };
+    }
+
+    const rows = uniquePersonnelIds.map((personnelId) => ({
+      personnel_id: personnelId,
+      shift_type: shiftType.toUpperCase(),
+      start_date: startDate,
+      end_date: endDate,
+      assigned_by: assignedBy
+    }));
+
+    const { data, error } = await supabase
+      .from(PERSONNEL_SHIFT_ASSIGNMENTS_TABLE)
+      .insert(rows)
+      .select();
+
+    if (error) throw error;
+
+    emitDataChanged('dashboard', {
+      action: 'shift_assign_bulk',
+      personnel_ids: uniquePersonnelIds
+    });
+
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error('Error assigning personnel to shift in bulk:', error);
+    if (error?.code === '42P01' || String(error?.message || '').toLowerCase().includes('personnel_shift')) {
+      return {
+        data: [],
+        error: 'Personnel shift assignments table is missing. Run personnel_shift_assignments_setup.sql first.'
+      };
+    }
+    return { data: [], error: error.message };
   }
 };
 

@@ -243,7 +243,7 @@ if (currentKnowledge < 40) {
 
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [fetchDashboardData]);
 
   useEffect(() => {
     const handleDataChanged = (event) => {
@@ -980,13 +980,15 @@ if (currentKnowledge < 40) {
                     <table className="dashboard-modal-table">
                       <thead>
                         <tr>
+                          <th>No.</th>
                           <th>Name</th>
                           <th>Rank</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {shiftAssignments.shiftA.map((person) => (
+                        {shiftAssignments.shiftA.map((person, index) => (
                           <tr key={person.admin_id}>
+                            <td>{index + 1}</td>
                             <td>{person.name}</td>
                             <td>{person.rank}</td>
                           </tr>
@@ -1027,13 +1029,15 @@ if (currentKnowledge < 40) {
                     <table className="dashboard-modal-table">
                       <thead>
                         <tr>
+                          <th>No.</th>
                           <th>Name</th>
                           <th>Rank</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {shiftAssignments.shiftB.map((person) => (
+                        {shiftAssignments.shiftB.map((person, index) => (
                           <tr key={person.admin_id}>
+                            <td>{index + 1}</td>
                             <td>{person.name}</td>
                             <td>{person.rank}</td>
                           </tr>

@@ -373,6 +373,7 @@ export default function Accounts() {
   const [isLeaveSaving, setIsLeaveSaving] = useState(false);
   const [isShiftSaving, setIsShiftSaving] = useState(false);
   const [isPersonnelShiftSaving, setIsPersonnelShiftSaving] = useState(false);
+  const [isPersonnelShiftReviewSaved, setIsPersonnelShiftReviewSaved] = useState(false);
   const [selectedShiftPersonnelIds, setSelectedShiftPersonnelIds] = useState([]);
   const [selectedShiftForAssignment, setSelectedShiftForAssignment] = useState('');
   const [personnelShiftSearch, setPersonnelShiftSearch] = useState('');
@@ -1790,6 +1791,7 @@ const permissions = getDefaultPermissions(formData.role);
 
     setSelectedShiftForAssignment(shiftType);
     setSelectedShiftPersonnelIds([]);
+    setIsPersonnelShiftReviewSaved(false);
     setPersonnelShiftMessage({ type: '', text: '' });
   };
 
@@ -1798,6 +1800,7 @@ const permissions = getDefaultPermissions(formData.role);
       return;
     }
 
+    setIsPersonnelShiftReviewSaved(false);
     setSelectedShiftPersonnelIds((currentIds) => {
       if (allVisiblePersonnelSelected) {
         return currentIds.filter((id) => !visibleAssignablePersonnelIds.includes(id));
@@ -1839,14 +1842,6 @@ const permissions = getDefaultPermissions(formData.role);
       return;
     }
     setIsShiftConfirmModalOpen(false);
-  };
-
-  const handleCancelShiftConfirm = () => {
-    if (isPersonnelShiftSaving) {
-      return;
-    }
-    setIsShiftConfirmModalOpen(false);
-    requestClosePersonnelShiftModal();
   };
 
   const handleConfirmShiftAssignment = async () => {
@@ -1923,6 +1918,7 @@ const permissions = getDefaultPermissions(formData.role);
     const successfulAssignments = assignmentResults.filter((row) => !row.error);
 
     if (successfulAssignments.length) {
+      setIsPersonnelShiftReviewSaved(true);
       const successfulPersonnelNames = successfulAssignments
         .map((row) => getPersonnelNameById(row.personnelId))
         .join(', ');
@@ -2041,6 +2037,7 @@ const permissions = getDefaultPermissions(formData.role);
       ? Array.from(new Set([...currentIds, personnel.admin_id]))
       : currentIds.filter((id) => id !== personnel.admin_id)
     );
+    setIsPersonnelShiftReviewSaved(false);
     setPersonnelShiftMessage({ type: '', text: '' });
   };
 
@@ -2067,6 +2064,7 @@ const permissions = getDefaultPermissions(formData.role);
     setSelectedShiftPersonnelIds([]);
     setSelectedShiftForAssignment('');
     setPersonnelShiftSearch('');
+    setIsPersonnelShiftReviewSaved(false);
     setPersonnelShiftMessage({ type: '', text: '' });
     setIsShiftConfirmModalOpen(false);
     setIsPersonnelShiftModalOpen(true);
@@ -2143,6 +2141,7 @@ const permissions = getDefaultPermissions(formData.role);
     setSelectedShiftPersonnelIds([]);
     setSelectedShiftForAssignment('');
     setPersonnelShiftSearch('');
+    setIsPersonnelShiftReviewSaved(false);
     setIsPersonnelShiftExitConfirmOpen(false);
     pendingPersonnelShiftNavigationRef.current = null;
   };
@@ -2152,7 +2151,7 @@ const permissions = getDefaultPermissions(formData.role);
       return;
     }
 
-    if (!isPersonnelShiftDirty) {
+    if (!isPersonnelShiftDirty || isPersonnelShiftReviewSaved) {
       closePersonnelShiftModal();
       return;
     }
@@ -4360,18 +4359,21 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
 
               <div className="accounts-modal-footer">
-                <button className="accounts-modal-draft" onClick={requestClosePersonnelShiftModal} disabled={isPersonnelShiftSaving}>
-                  Cancel
-                </button>
                 <button
                   className="accounts-modal-add"
                   type="button"
-                  onClick={openShiftConfirmModal}
-                  disabled={isPersonnelShiftSaving || !selectedShiftForAssignment || !selectedShiftPersonnelIds.length}
+                  onClick={isPersonnelShiftReviewSaved ? closePersonnelShiftModal : openShiftConfirmModal}
+                  disabled={
+                    isPersonnelShiftSaving
+                    || (!isPersonnelShiftReviewSaved
+                      && (!selectedShiftForAssignment || !selectedShiftPersonnelIds.length))
+                  }
                 >
                   {isPersonnelShiftSaving
                     ? 'Assigning...'
-                    : `Review ${selectedShiftPersonnelIds.length} ${selectedShiftPersonnelIds.length === 1 ? 'Assignment' : 'Assignments'}`}
+                    : isPersonnelShiftReviewSaved
+                      ? 'Save'
+                      : `Review ${selectedShiftPersonnelIds.length} ${selectedShiftPersonnelIds.length === 1 ? 'Assignment' : 'Assignments'}`}
                 </button>
               </div>
             </div>
@@ -4437,11 +4439,8 @@ const permissions = getDefaultPermissions(formData.role);
                 <button className="accounts-modal-draft" onClick={closeShiftConfirmModal} disabled={isPersonnelShiftSaving}>
                   Back to Edit
                 </button>
-                <button className="accounts-modal-draft" onClick={handleCancelShiftConfirm} disabled={isPersonnelShiftSaving}>
-                  Cancel
-                </button>
                 <button className="accounts-modal-add" onClick={handleConfirmShiftAssignment} disabled={isPersonnelShiftSaving}>
-                  {isPersonnelShiftSaving ? 'Assigning...' : 'Confirm Assignment'}
+                  {isPersonnelShiftSaving ? 'Saving...' : 'Save Assignments'}
                 </button>
               </div>
             </div>

@@ -2196,26 +2196,9 @@ const permissions = getDefaultPermissions(formData.role);
     }
   };
 
-  const handleSaveShiftSchedule = async () => {
+  const saveShiftSchedule = async (payload) => {
     setShiftMessage({ type: '', text: '' });
-
-    const shiftADates = getCurrentShiftDates(shiftSelection.shift_a_dates);
-    const shiftBDates = getCurrentShiftDates(shiftSelection.shift_b_dates);
-
-    if (!shiftADates.length || !shiftBDates.length) {
-      setShiftMessage({
-        type: 'error',
-        text: 'Please select at least one duty date for both Shift A and Shift B.'
-      });
-      return;
-    }
-
     setIsShiftSaving(true);
-
-    const payload = {
-      shift_a_dates: shiftADates,
-      shift_b_dates: shiftBDates
-    };
 
     const { error } = await saveShiftScheduleConfig(payload, currentUser?.admin_id || null);
     if (error) {
@@ -2254,6 +2237,37 @@ const permissions = getDefaultPermissions(formData.role);
     setTimeout(() => {
       closeShiftModal();
     }, 900);
+  };
+
+  const handleSaveShiftSchedule = async () => {
+    setShiftMessage({ type: '', text: '' });
+
+    const payload = {
+      shift_a_dates: getCurrentShiftDates(shiftSelection.shift_a_dates),
+      shift_b_dates: getCurrentShiftDates(shiftSelection.shift_b_dates)
+    };
+    const clearedShifts = [
+      payload.shift_a_dates.length ? null : 'Shift A',
+      payload.shift_b_dates.length ? null : 'Shift B'
+    ].filter(Boolean);
+
+    if (clearedShifts.length) {
+      const clearTarget = clearedShifts.length === 2
+        ? 'Shift A and Shift B'
+        : clearedShifts[0];
+
+      setPendingConfirmAction({
+        action: 'save-cleared-shift-schedule',
+        payload: { schedule: payload },
+        title: 'Clear Shift Dates?',
+        message: `${clearTarget} ${clearedShifts.length === 2 ? 'have' : 'has'} no selected duty dates. Saving will clear ${clearedShifts.length === 2 ? 'both shift schedules' : `${clearTarget}'s schedule`}. Are you sure you want to continue?`,
+        confirmLabel: 'Clear and Save'
+      });
+      setIsConfirmActionModalOpen(true);
+      return;
+    }
+
+    await saveShiftSchedule(payload);
   };
 
   const openLeaveModal = (account) => {
@@ -2448,6 +2462,10 @@ const permissions = getDefaultPermissions(formData.role);
 
     if (pendingConfirmAction.action === 'clear-leave-date') {
       await executeClearLeaveDate(pendingConfirmAction.payload.account);
+    }
+
+    if (pendingConfirmAction.action === 'save-cleared-shift-schedule') {
+      await saveShiftSchedule(pendingConfirmAction.payload.schedule);
     }
 
     if (pendingConfirmAction.action === 'archive-request-history') {
@@ -3575,7 +3593,7 @@ const permissions = getDefaultPermissions(formData.role);
                   onClick={handleCloseModal}
                   aria-label="Close modal"
                 >
-                  x
+                  <FaTimes aria-hidden="true" />
                 </button>
               </div>
 
@@ -4726,7 +4744,11 @@ const permissions = getDefaultPermissions(formData.role);
                   Cancel
                 </button>
                 <button className="leave-reject-btn" onClick={confirmActionModal} disabled={isConfirmActionProcessing}>
-                  {isConfirmActionProcessing ? 'Processing...' : pendingConfirmAction.confirmLabel}
+                  {isConfirmActionProcessing
+                    ? pendingConfirmAction.action === 'save-cleared-shift-schedule'
+                      ? 'Saving...'
+                      : 'Processing...'
+                    : pendingConfirmAction.confirmLabel}
                 </button>
               </div>
             </div>

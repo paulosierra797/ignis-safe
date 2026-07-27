@@ -455,6 +455,7 @@ export default function Accounts() {
 
   // Form state
   const [formData, setFormData] = useState({ ...EMPTY_PERSONNEL_FORM });
+  const addPersonnelRequestRef = useRef(false);
   const pendingAddNavigationRef = useRef(null);
   const pendingPersonnelShiftNavigationRef = useRef(null);
   const bypassAddNavigationRef = useRef(false);
@@ -1439,6 +1440,10 @@ console.log("AUTH USER:", authData);
   }, 1500);
 };
   const handleAddPersonnel = async () => {
+    if (addPersonnelRequestRef.current) {
+      return;
+    }
+
     // Validation
     const firstName = formData.first_name.trim();
     const lastName = formData.last_name.trim();
@@ -1473,6 +1478,7 @@ console.log("AUTH USER:", authData);
       return;
     }
 
+    addPersonnelRequestRef.current = true;
     setIsLoading(true);
     setMessage({ type: 'info', text: 'Sending the activation invitation...' });
 
@@ -1635,6 +1641,7 @@ const permissions = getDefaultPermissions(formData.role);
           : err.message || 'Failed to add personnel. Please try again.'
       });
     } finally {
+      addPersonnelRequestRef.current = false;
       setIsLoading(false);
     }
   };

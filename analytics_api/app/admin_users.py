@@ -20,6 +20,39 @@ class CreateUserRequest(BaseModel):
     permissions: Optional[List[str]] = None
 
 
+def get_admin_by_email(email: str) -> Optional[Dict[str, Any]]:
+    response = (
+        supabase.table("admin")
+        .select("*")
+        .eq("email", email)
+        .limit(1)
+        .execute()
+    )
+    rows = response.data or []
+    return rows[0] if rows else None
+
+
+def build_create_response(
+    admin_record: Dict[str, Any],
+    auth_user_id: str,
+    email: str,
+    reused_existing: bool = False,
+) -> Dict[str, Any]:
+    return {
+        "data": {
+            "auth": {
+                "user": {
+                    "id": auth_user_id,
+                    "email": email,
+                }
+            },
+            "user": admin_record,
+            "reused_existing": reused_existing,
+        },
+        "error": None,
+    }
+
+
 @router.post("/api/admin/users/create", dependencies=[Depends(require_api_key)])
 def create_user(request: CreateUserRequest) -> Dict[str, Any]:
     email = str(request.email or "").strip().lower()
@@ -34,6 +67,13 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
         raise HTTPException(status_code=400, detail="email is required")
     if not first_name or not last_name:
         raise HTTPException(status_code=400, detail="first_name and last_name are required")
+
+    existing_admin = get_admin_by_email(email)
+    if existing_admin:
+        raise HTTPException(
+            status_code=409,
+            detail="An account with this email address is already registered.",
+        )
 
     auth_user_id: Optional[str] = None
     redirect_url = str(os.getenv("INVITE_REDIRECT_URL") or "").strip()
@@ -79,19 +119,18 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
         if not created_admin:
             raise HTTPException(status_code=500, detail="Admin profile was not created.")
 
-        return {
-            "data": {
-                "auth": {
-                    "user": {
-                        "id": auth_user_id,
-                        "email": email,
-                    }
-                },
-                "user": created_admin,
-            },
-            "error": None,
-        }
+        return build_create_response(created_admin, auth_user_id, email)
     except HTTPException:
+        existing_admin = get_admin_by_email(email)
+        if existing_admin:
+            existing_admin_id = str(existing_admin.get("admin_id") or auth_user_id or "")
+            return build_create_response(
+                existing_admin,
+                existing_admin_id,
+                email,
+                reused_existing=True,
+            )
+
         if auth_user_id:
             try:
                 supabase.auth.admin.delete_user(auth_user_id)
@@ -99,6 +138,16 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
                 pass
         raise
     except Exception as error:
+        existing_admin = get_admin_by_email(email)
+        if existing_admin:
+            existing_admin_id = str(existing_admin.get("admin_id") or auth_user_id or "")
+            return build_create_response(
+                existing_admin,
+                existing_admin_id,
+                email,
+                reused_existing=True,
+            )
+
         if auth_user_id:
             try:
                 supabase.auth.admin.delete_user(auth_user_id)

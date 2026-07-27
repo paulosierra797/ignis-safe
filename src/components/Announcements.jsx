@@ -789,6 +789,9 @@ export default function Announcements() {
                 <div className="form-row">
                   <div className="form-field">
                     <label htmlFor="targetPersonnel">Select Personnel <span className="required-asterisk">*</span></label>
+                    <p className="form-help-text personnel-picker-subtitle">
+                      Choose one or more personnel to receive this announcement.
+                    </p>
                     <PersonnelPicker
                       id="targetPersonnel"
                       personnel={recipients}

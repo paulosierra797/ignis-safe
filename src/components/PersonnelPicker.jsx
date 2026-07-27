@@ -1,9 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaSearch, FaTimes, FaChevronDown } from 'react-icons/fa';
+import React, { useMemo, useState } from 'react';
+import { FaSearch, FaTimes } from 'react-icons/fa';
 import { formatStatusLabel } from '../utils/statusUtils';
 import './PersonnelPicker.css';
-
-const SUMMARY_CHIP_LIMIT = 3;
 
 const isActiveStatus = (status) => String(status || '').toLowerCase() === 'active';
 
@@ -13,13 +11,9 @@ export default function PersonnelPicker({
   selectedIds = [],
   onChange,
   error = '',
-  disabled = false,
-  placeholder = 'Choose personnel'
+  disabled = false
 }) {
-  const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const containerRef = useRef(null);
-  const searchInputRef = useRef(null);
 
   const personnelById = useMemo(() => {
     const map = new Map();
@@ -47,170 +41,140 @@ export default function PersonnelPicker({
     [selectedIds, personnelById]
   );
 
-  useEffect(() => {
-    if (!open) return undefined;
+  const visibleActiveIds = useMemo(
+    () => filteredPersonnel.filter((person) => isActiveStatus(person.status)).map((person) => person.admin_id),
+    [filteredPersonnel]
+  );
 
-    const closeAndResetSearch = () => {
-      setOpen(false);
-      setSearch('');
-    };
-
-    const handleOutsideClick = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        closeAndResetSearch();
-      }
-    };
-
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') closeAndResetSearch();
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('keydown', handleEscape);
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('keydown', handleEscape);
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (open && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  }, [open]);
-
-  const toggleOpen = () => {
-    if (disabled) return;
-    if (open) setSearch('');
-    setOpen((prev) => !prev);
-  };
+  const allVisibleSelected = visibleActiveIds.length > 0
+    && visibleActiveIds.every((personId) => selectedIds.includes(personId));
 
   const togglePersonnel = (personId) => {
+    if (disabled) return;
     const next = selectedIds.includes(personId)
       ? selectedIds.filter((existingId) => existingId !== personId)
       : [...selectedIds, personId];
     onChange(next);
   };
 
-  const handleSelectAll = () => {
-    const activeIds = sortedPersonnel.filter((person) => isActiveStatus(person.status)).map((person) => person.admin_id);
-    const merged = Array.from(new Set([...selectedIds, ...activeIds]));
-    onChange(merged);
+  const handleToggleVisible = () => {
+    if (disabled) return;
+    if (allVisibleSelected) {
+      onChange(selectedIds.filter((existingId) => !visibleActiveIds.includes(existingId)));
+    } else {
+      onChange(Array.from(new Set([...selectedIds, ...visibleActiveIds])));
+    }
   };
 
-  const handleClearAll = () => {
+  const handleClear = () => {
+    if (disabled) return;
     onChange([]);
   };
 
   const handleRemove = (personId) => {
+    if (disabled) return;
     onChange(selectedIds.filter((existingId) => existingId !== personId));
   };
 
-  const triggerLabel = selectedIds.length === 0
-    ? placeholder
-    : `${selectedIds.length} personnel selected`;
-
-  const showFullChips = selectedPersonnel.length > 0 && selectedPersonnel.length <= SUMMARY_CHIP_LIMIT;
-  const showSummary = selectedPersonnel.length > SUMMARY_CHIP_LIMIT;
-
   return (
     <div
-      className={`personnel-picker ${disabled ? 'is-disabled' : ''} ${error ? 'has-error' : ''}`}
-      ref={containerRef}
+      id={id}
+      className={`personnel-picker-two-col ${disabled ? 'is-disabled' : ''} ${error ? 'has-error' : ''}`}
     >
-      <button
-        id={id}
-        type="button"
-        className="personnel-picker-trigger"
-        onClick={toggleOpen}
-        disabled={disabled}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <span className={selectedIds.length === 0 ? 'personnel-picker-trigger-placeholder' : ''}>
-          {triggerLabel}
-        </span>
-        <FaChevronDown className={`personnel-picker-trigger-chevron ${open ? 'is-open' : ''}`} aria-hidden="true" />
-      </button>
+      <div className="personnel-picker-left">
+        <label className="personnel-picker-search">
+          <FaSearch aria-hidden="true" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search personnel by name or rank..."
+            disabled={disabled}
+          />
+        </label>
 
-      {showFullChips && (
-        <div className="personnel-picker-chips">
-          {selectedPersonnel.map((person) => (
-            <span key={person.admin_id} className="personnel-picker-chip">
-              {person.name}
-              <button
-                type="button"
-                className="personnel-picker-chip-remove"
-                onClick={() => handleRemove(person.admin_id)}
-                aria-label={`Remove ${person.name}`}
-              >
-                <FaTimes aria-hidden="true" />
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {showSummary && (
-        <div className="personnel-picker-summary">
-          {selectedPersonnel.slice(0, 2).map((person) => person.name).join(', ')}
-          {' '}
-          <span className="personnel-picker-summary-more">+{selectedPersonnel.length - 2} more</span>
-        </div>
-      )}
-
-      {open && (
-        <div className="personnel-picker-panel" role="listbox" aria-multiselectable="true">
-          <label className="personnel-picker-search">
-            <FaSearch aria-hidden="true" />
-            <input
-              ref={searchInputRef}
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search personnel by name or rank..."
-            />
-          </label>
-
-          <div className="personnel-picker-toolbar">
-            <div className="personnel-picker-toolbar-actions">
-              <button type="button" onClick={handleSelectAll}>Select All</button>
-              <button type="button" onClick={handleClearAll}>Clear All</button>
-            </div>
-            <span className="personnel-picker-toolbar-count">{selectedIds.length} selected</span>
+        <div className="personnel-picker-toolbar">
+          <div className="personnel-picker-toolbar-actions">
+            <button
+              type="button"
+              onClick={handleToggleVisible}
+              disabled={disabled || !visibleActiveIds.length}
+            >
+              {allVisibleSelected ? 'Deselect Results' : 'Select Results'}
+            </button>
+            <button
+              type="button"
+              onClick={handleClear}
+              disabled={disabled || !selectedIds.length}
+            >
+              Clear
+            </button>
           </div>
+        </div>
 
-          <div className="personnel-picker-list">
-            {filteredPersonnel.length === 0 ? (
-              <div className="personnel-picker-empty">No personnel match your search.</div>
-            ) : (
-              filteredPersonnel.map((person) => {
-                const active = isActiveStatus(person.status);
-                const checked = selectedIds.includes(person.admin_id);
+        <div className="personnel-picker-list-meta">
+          <span>{personnel.length} personnel</span>
+          <strong>{selectedIds.length} selected</strong>
+        </div>
 
-                return (
-                  <label
-                    key={person.admin_id}
-                    className={`personnel-picker-item ${!active ? 'is-unavailable' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="personnel-picker-checkbox"
-                      checked={checked}
-                      disabled={!active}
-                      onChange={() => togglePersonnel(person.admin_id)}
-                    />
-                    <span className="personnel-picker-item-name">{person.name}</span>
+        <div className="personnel-picker-checkbox-list" role="listbox" aria-multiselectable="true">
+          {filteredPersonnel.length === 0 ? (
+            <div className="personnel-picker-empty">No personnel match your search.</div>
+          ) : (
+            filteredPersonnel.map((person) => {
+              const active = isActiveStatus(person.status);
+              const checked = selectedIds.includes(person.admin_id);
+
+              return (
+                <label
+                  key={person.admin_id}
+                  className={`personnel-picker-checkbox-item ${!active ? 'is-unavailable' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    className="personnel-picker-checkbox-input"
+                    checked={checked}
+                    disabled={disabled || !active}
+                    onChange={() => togglePersonnel(person.admin_id)}
+                  />
+                  <span className="personnel-picker-checkbox-info">
+                    <span className="personnel-picker-checkbox-name">{person.name}</span>
                     <span className={`personnel-picker-status-badge ${active ? 'is-active' : 'is-inactive'}`}>
                       {formatStatusLabel(person.status)}
                     </span>
-                  </label>
-                );
-              })
-            )}
-          </div>
+                  </span>
+                </label>
+              );
+            })
+          )}
         </div>
-      )}
+      </div>
+
+      <aside className="personnel-picker-right">
+        <div className="personnel-picker-right-header">
+          <h5>Selected Personnel</h5>
+          <span>{selectedPersonnel.length}</span>
+        </div>
+        <div className="personnel-picker-right-list">
+          {selectedPersonnel.length ? (
+            selectedPersonnel.map((person) => (
+              <div key={person.admin_id} className="personnel-picker-right-item">
+                <span>{person.name}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemove(person.admin_id)}
+                  aria-label={`Remove ${person.name}`}
+                  disabled={disabled}
+                >
+                  <FaTimes aria-hidden="true" />
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="personnel-picker-empty">No personnel selected.</div>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }

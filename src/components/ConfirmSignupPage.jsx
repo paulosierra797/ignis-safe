@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaCheck, FaCircle, FaEye, FaEyeSlash, FaUserShield } from 'react-icons/fa';
+import { FaCheck, FaCircle, FaEye, FaEyeSlash, FaUser, FaUserShield } from 'react-icons/fa';
 import {
   activateInvitedAccount,
   getInviteActivationContext,
@@ -192,7 +192,9 @@ export default function ConfirmSignupPage() {
         <div className="confirm-signup-card" role="main" aria-labelledby="confirm-signup-title">
           <img className="confirm-signup-logo" src={ignissafe} alt="Ignis Safe" />
           <div className="confirm-signup-account-type">
-            {isAdminInvite && <FaUserShield aria-hidden="true" />}
+            {isAdminInvite
+              ? <FaUserShield aria-hidden="true" />
+              : <FaUser aria-hidden="true" />}
             <span>{isAdminInvite ? 'Administrator activation' : 'Personnel activation'}</span>
           </div>
           <h1 id="confirm-signup-title">

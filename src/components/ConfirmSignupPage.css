@@ -26,9 +26,20 @@
     url('../assets/BG.png') center / cover fixed;
 }
 
+.confirm-signup-page--personnel {
+  background:
+    linear-gradient(rgba(49, 35, 8, 0.62), rgba(146, 83, 8, 0.55)),
+    url('../assets/BG.png') center / cover fixed;
+}
+
 .confirm-signup-page--admin .confirm-signup-card {
   border-top: 5px solid #b91c1c;
   box-shadow: 0 18px 45px rgba(17, 24, 39, 0.28);
+}
+
+.confirm-signup-page--personnel .confirm-signup-card {
+  border-top: 5px solid #f59e0b;
+  box-shadow: 0 18px 45px rgba(69, 42, 8, 0.3);
 }
 
 .confirm-signup-logo {
@@ -100,6 +111,11 @@
   color: #991b1b;
 }
 
+.confirm-signup-page--personnel .confirm-signup-account-type {
+  background: #fffbeb;
+  color: #92400e;
+}
+
 .confirm-signup-account-type svg {
   flex: 0 0 auto;
 }
@@ -108,8 +124,33 @@
   background: #991b1b;
 }
 
+.confirm-signup-page--personnel .confirm-signup-primary {
+  background: #fbbf24;
+  color: #1f2937;
+}
+
 .confirm-signup-page--admin .confirm-signup-form label {
   color: #7f1d1d;
+}
+
+.confirm-signup-page--personnel .confirm-signup-form label {
+  color: #92400e;
+}
+
+.confirm-signup-page--personnel .confirm-signup-form input:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+}
+
+.confirm-signup-page--personnel .confirm-signup-password-toggle:hover,
+.confirm-signup-page--personnel .confirm-signup-password-toggle:focus-visible {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.confirm-signup-page--personnel .confirm-signup-footer a {
+  color: #b45309;
 }
 
 .confirm-signup-password-input {

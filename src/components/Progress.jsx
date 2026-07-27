@@ -388,46 +388,64 @@ export default function Progress() {
               <div className="progress-modal-content">
                 <div className="progress-modal-grid">
                   <div className="progress-modal-section">
-                    <h4>Basic Info</h4>
+                    <h4><span className="progress-modal-section-icon">👤</span>Basic Info</h4>
                     <div className="progress-modal-info">
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-label">ACCOUNT STATUS</span>
-                        <span className={`progress-modal-status ${selectedUser.accessStatus === 'ACTIVE' ? 'active' : 'inactive'}`}>
-                          {formatStatusLabel(selectedUser.accessStatus)}
-                        </span>
+                        <span className="progress-modal-info-icon">🛡️</span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">ACCOUNT STATUS</span>
+                          <span className={`progress-modal-status ${selectedUser.accessStatus === 'ACTIVE' ? 'active' : 'inactive'}`}>
+                            {formatStatusLabel(selectedUser.accessStatus)}
+                          </span>
+                        </div>
                       </div>
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-label">DATE CREATED</span>
-                        <span className="progress-modal-value">{formatDate(selectedUser.dateCreated)}</span>
+                        <span className="progress-modal-info-icon">📅</span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">DATE CREATED</span>
+                          <span className="progress-modal-value">{formatDate(selectedUser.dateCreated)}</span>
+                        </div>
                       </div>
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-label">LAST ACTIVITY</span>
-                        <span className="progress-modal-value">{formatDate(selectedUser.lastActivityAt)}</span>
+                        <span className="progress-modal-info-icon">🕒</span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">LAST ACTIVITY</span>
+                          <span className="progress-modal-value">{formatDate(selectedUser.lastActivityAt)}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="progress-modal-section">
-                    <h4>Learning Progress</h4>
+                    <h4><span className="progress-modal-section-icon">📈</span>Learning Progress</h4>
                     <div className="progress-modal-info">
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-label">MODULES COMPLETED</span>
-                        <span className="progress-modal-value">{selectedUser.modulesCompleted}</span>
+                        <span className="progress-modal-info-icon">✅</span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">MODULES COMPLETED</span>
+                          <span className="progress-modal-value">{selectedUser.modulesCompleted}</span>
+                        </div>
                       </div>
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-label">OVERALL PROGRESS</span>
-                        <span className="progress-modal-value">{selectedUser.overallPercent}%</span>
+                        <span className="progress-modal-info-icon">📊</span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">OVERALL PROGRESS</span>
+                          <span className="progress-modal-value">{selectedUser.overallPercent}%</span>
+                        </div>
                       </div>
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-label">LAST MODULE ACCESSED</span>
-                        <span className="progress-modal-value">{selectedUser.lastAccessedModule}</span>
+                        <span className="progress-modal-info-icon">📍</span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">LAST MODULE ACCESSED</span>
+                          <span className="progress-modal-value">{selectedUser.lastAccessedModule}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="progress-modal-full">
-                  <h4>Modules Progress</h4>
+                  <h4><span className="progress-modal-section-icon">📚</span>Modules Progress</h4>
                   <div className="progress-modal-modules">
                     {selectedUser.modules.map((module) => (
                       <div key={module.name} className="progress-modal-module-card">
@@ -448,7 +466,7 @@ export default function Progress() {
                 </div>
 
                 <div className="progress-modal-full">
-                  <h4>Test Tracking</h4>
+                  <h4><span className="progress-modal-section-icon">📝</span>Test Tracking</h4>
                   <div className="progress-modal-tests">
                     {selectedUser.modules.map((module) => (
                       <div key={module.name}>
@@ -473,7 +491,7 @@ export default function Progress() {
                                 <div key={idx} style={{ marginBottom: idx < module.tests.length - 1 ? '0.8rem' : '0' }}>
                                   <div style={{ fontWeight: '600', color: '#1f2937' }}>{test.name}</div>
                                   <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                                    Score: {test.score} | Date: {formatDate(test.date)}
+                                    Score: {test.score}/10 | Date: {formatDate(test.date)}
                                   </div>
                                 </div>
                               ))}

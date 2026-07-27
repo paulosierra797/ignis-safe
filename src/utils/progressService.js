@@ -64,10 +64,11 @@ const buildModuleProgress = ({ profileId, module, moduleProgressRow, attemptsFor
     })
     .map((attempt) => {
       const assessment = assessmentsById[attempt.assessment_id] || {};
+      const scorePercent = toNumber(attempt.score, 0);
       return {
         id: attempt.id,
         name: formatTestName(assessment.type),
-        score: toNumber(attempt.score, 0),
+        score: Math.max(0, Math.min(10, Math.round(scorePercent / 10))),
         date: getAttemptTimestamp(attempt),
         status: 'COMPLETED',
       };

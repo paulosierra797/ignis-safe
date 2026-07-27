@@ -36,6 +36,12 @@ export default function AuditLogs() {
     loadAuditLogs();
   }, []);
 
+  const totalActivities = auditLogs.length;
+  const todaysActivities = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    return auditLogs.filter((log) => new Date(log.timestamp).toDateString() === todayStr).length;
+  }, [auditLogs]);
+
   const filteredLogs = useMemo(() => {
     const normalizedSearch = filterSearch.trim().toLowerCase();
 
@@ -79,6 +85,17 @@ export default function AuditLogs() {
             {tableMessage}
           </div>
         )}
+
+        <div className="audit-logs-stats">
+          <div className="audit-logs-stat-card">
+            <div className="audit-logs-stat-label">Today's Activities</div>
+            <div className="audit-logs-stat-value">{todaysActivities}</div>
+          </div>
+          <div className="audit-logs-stat-card">
+            <div className="audit-logs-stat-label">Total Activities</div>
+            <div className="audit-logs-stat-value">{totalActivities}</div>
+          </div>
+        </div>
 
         <div className="audit-logs-filters">
           <div className="audit-logs-filter-row">

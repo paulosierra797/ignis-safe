@@ -1276,8 +1276,8 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.75rem 1rem;
-  margin-top: 1rem;
-  padding-top: 0.85rem;
+  margin: 1rem 0.5rem 0.75rem;
+  padding: 0.85rem 0.5rem 0.5rem;
   border-top: 1px solid #e2e8f0;
 }
 
@@ -1290,7 +1290,8 @@
 .accounts-directory-page-controls {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.9rem;
+  padding: 0 0.35rem 0.25rem;
 }
 
 .accounts-directory-page-controls span {
@@ -1303,7 +1304,7 @@
 
 .accounts-directory-page-controls button {
   min-height: 36px;
-  padding: 0.45rem 0.8rem;
+  padding: 0.55rem 1.1rem;
   border: 1px solid #d8a4a4;
   border-radius: 8px;
   background: #ffffff;
@@ -1725,6 +1726,85 @@
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.delete-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.accounts-delete-warning {
+  margin: 0;
+  color: #7f1d1d;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.accounts-delete-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #b91c1c;
+  border-radius: 8px;
+  background: #fffafa;
+}
+
+.accounts-delete-preview-heading {
+  margin-bottom: 0.15rem;
+  color: #991b1b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.accounts-delete-preview > strong {
+  color: #1f2937;
+  font-size: 0.98rem;
+}
+
+.accounts-delete-preview > span,
+.accounts-delete-preview-meta {
+  color: #64748b;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.accounts-delete-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  margin-top: 0.25rem;
+}
+
+.accounts-delete-preview-meta b {
+  color: #475569;
+}
+
+.accounts-delete-confirm-label {
+  display: block;
+  margin: 1rem 0 0.4rem;
+  color: #374151;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.accounts-delete-confirm-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.7rem 0.8rem;
+  color: #1f2937;
+  font: inherit;
+  outline: none;
+}
+
+.accounts-delete-confirm-input:focus {
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
 }
 
 .shift-calendar-editor {

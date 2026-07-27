@@ -114,11 +114,60 @@
   opacity: 0.5;
 }
 
-.confirm-signup-password-help {
-  margin: 0;
-  color: #64748b;
+.confirm-signup-password-requirements {
+  margin: 0.1rem 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 9px;
+  background: #f9fafb;
+}
+
+.confirm-signup-password-requirements p {
+  margin: 0 0 0.55rem;
+  color: #374151;
   font-size: 0.8rem;
-  line-height: 1.45;
+  font-weight: 700;
+}
+
+.confirm-signup-password-requirements ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.confirm-signup-password-requirements li {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.confirm-signup-password-requirements li svg {
+  flex: 0 0 auto;
+  width: 0.65rem;
+  height: 0.65rem;
+  color: #cbd5e1;
+}
+
+.confirm-signup-password-requirements li.is-met {
+  color: #166534;
+  font-weight: 600;
+}
+
+.confirm-signup-password-requirements li.is-met svg {
+  color: #16a34a;
+}
+
+@media (max-width: 520px) {
+  .confirm-signup-password-requirements ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .confirm-signup-message {

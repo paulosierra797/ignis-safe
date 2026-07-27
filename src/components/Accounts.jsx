@@ -56,6 +56,10 @@ const EMPTY_PERSONNEL_FORM = {
   contact_number: ''
 };
 const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
+const isAlreadyRegisteredInviteError = (error) => {
+  const normalizedError = String(error || '').toLowerCase();
+  return normalizedError.includes('already') && normalizedError.includes('registered');
+};
 const getCurrentShiftDates = (dates = []) => {
   const todayIso = getManilaToday();
   return Array.from(new Set(
@@ -410,6 +414,8 @@ export default function Accounts() {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReasonInput, setRejectReasonInput] = useState('');
   const [pendingDeleteUserId, setPendingDeleteUserId] = useState('');
+  const [pendingDeleteAccount, setPendingDeleteAccount] = useState(null);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState('');
   const [isDeleteUserModalOpen, setIsDeleteUserModalOpen] = useState(false);
   const [isDeleteUserProcessing, setIsDeleteUserProcessing] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState({ type: '', text: '' });
@@ -1248,6 +1254,8 @@ export default function Accounts() {
 
     setDeleteMessage({ type: '', text: '' });
     setPendingDeleteUserId(adminId);
+    setPendingDeleteAccount(targetAccount);
+    setDeleteConfirmationInput('');
     setIsDeleteUserModalOpen(true);
   };
 
@@ -1258,12 +1266,14 @@ export default function Accounts() {
 
     setIsDeleteUserModalOpen(false);
     setPendingDeleteUserId('');
+    setPendingDeleteAccount(null);
+    setDeleteConfirmationInput('');
     setDeleteMessage({ type: '', text: '' });
   };
 
   const confirmDeleteUser = async () => {
     const adminId = pendingDeleteUserId;
-    if (!adminId) {
+    if (!adminId || deleteConfirmationInput.trim() !== 'Delete') {
       return;
     }
 
@@ -1271,7 +1281,9 @@ export default function Accounts() {
     setDeleteMessage({ type: '', text: '' });
 
     try {
-      const target = accounts.find((account) => account.admin_id === adminId);
+      const target = pendingDeleteAccount || accounts.find((account) =>
+        String(account.admin_id || account.id) === String(adminId)
+      );
       const { error, deletedCount } = await deleteUser(adminId);
       if (error) {
         setDeleteMessage({ type: 'error', text: `Error deleting user: ${error}` });
@@ -1302,6 +1314,8 @@ export default function Accounts() {
       setTimeout(() => {
         setIsDeleteUserModalOpen(false);
         setPendingDeleteUserId('');
+        setPendingDeleteAccount(null);
+        setDeleteConfirmationInput('');
         setDeleteMessage({ type: '', text: '' });
       }, 900);
     } catch (err) {
@@ -1557,8 +1571,8 @@ const permissions = getDefaultPermissions(formData.role);
       const result = signupResponse;
       
       if (result.error) {
-        if (String(result.error).toLowerCase().includes('already registered')) {
-          setMessage({ type: 'error', text: 'This email is already registered in authentication. Use a different email or remove the existing auth user first.' });
+        if (isAlreadyRegisteredInviteError(result.error)) {
+          setMessage({ type: 'error', text: 'An account with this email address is already registered.' });
           setIsLoading(false);
           return;
         }
@@ -1610,7 +1624,12 @@ const permissions = getDefaultPermissions(formData.role);
       }, 1200);
     } catch (err) {
       console.error('Error adding personnel:', err);
-      setMessage({ type: 'error', text: err.message || 'Failed to add personnel. Please check console for details.' });
+      setMessage({
+        type: 'error',
+        text: isAlreadyRegisteredInviteError(err?.message)
+          ? 'An account with this email address is already registered.'
+          : err.message || 'Failed to add personnel. Please try again.'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -4662,7 +4681,36 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
 
               <div className="accounts-modal-body">
-                <p>Are you sure you want to delete this user?</p>
+                <p className="accounts-delete-warning">
+                  Are you sure you want to permanently delete this personnel account?
+                </p>
+
+                <div className="accounts-delete-preview" aria-label="Personnel account to be deleted">
+                  <div className="accounts-delete-preview-heading">Account to be deleted</div>
+                  <strong>
+                    {`${pendingDeleteAccount?.first_name || ''} ${pendingDeleteAccount?.last_name || ''}`.trim()
+                      || 'Personnel'}
+                  </strong>
+                  <span>{pendingDeleteAccount?.email || 'No email available'}</span>
+                  <div className="accounts-delete-preview-meta">
+                    <span><b>Rank:</b> {pendingDeleteAccount?.rank || 'Not provided'}</span>
+                    <span><b>Role:</b> {pendingDeleteAccount?.role || 'Personnel'}</span>
+                  </div>
+                </div>
+
+                <label className="accounts-delete-confirm-label" htmlFor="delete-personnel-confirmation">
+                  Type <strong>Delete</strong> to confirm
+                </label>
+                <input
+                  id="delete-personnel-confirmation"
+                  className="accounts-delete-confirm-input"
+                  type="text"
+                  value={deleteConfirmationInput}
+                  onChange={(event) => setDeleteConfirmationInput(event.target.value)}
+                  autoComplete="off"
+                  spellCheck="false"
+                  disabled={isDeleteUserProcessing}
+                />
                 {deleteMessage.text && (
                   <div className={`accounts-modal-message accounts-modal-message-${deleteMessage.type}`}>
                     {deleteMessage.text}
@@ -4674,7 +4722,11 @@ const permissions = getDefaultPermissions(formData.role);
                 <button className="accounts-modal-draft" onClick={closeDeleteUserModal} disabled={isDeleteUserProcessing}>
                   Cancel
                 </button>
-                <button className="delete-btn" onClick={confirmDeleteUser} disabled={isDeleteUserProcessing}>
+                <button
+                  className="delete-btn"
+                  onClick={confirmDeleteUser}
+                  disabled={isDeleteUserProcessing || deleteConfirmationInput.trim() !== 'Delete'}
+                >
                   {isDeleteUserProcessing ? 'Deleting...' : 'Delete'}
                 </button>
               </div>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaCheck, FaCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
 import {
   activateInvitedAccount,
   resendSignupCode,
@@ -38,6 +38,19 @@ export default function ConfirmSignupPage() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [isVerifying, setIsVerifying] = useState(false);
   const [isResending, setIsResending] = useState(false);
+  const passwordChecks = [
+    { key: 'length', label: 'At least 8 characters', met: password.length >= 8 },
+    { key: 'uppercase', label: 'One uppercase letter', met: /[A-Z]/.test(password) },
+    { key: 'lowercase', label: 'One lowercase letter', met: /[a-z]/.test(password) },
+    { key: 'number', label: 'One number', met: /\d/.test(password) },
+    { key: 'special', label: 'One special character', met: /[^A-Za-z0-9]/.test(password) },
+    {
+      key: 'match',
+      label: 'Passwords match',
+      met: Boolean(confirmPassword) && password === confirmPassword
+    }
+  ];
+  const isInvitePasswordValid = passwordChecks.every((check) => check.met);
   
   const handleVerifyOtp = async (event) => {
     event.preventDefault();
@@ -204,9 +217,19 @@ export default function ConfirmSignupPage() {
               </button>
             </div>
 
-            <p className="confirm-signup-password-help">
-              At least 8 characters with uppercase, lowercase, number, and special character.
-            </p>
+            <div className="confirm-signup-password-requirements" aria-live="polite">
+              <p>Password must include:</p>
+              <ul>
+                {passwordChecks.map((check) => (
+                  <li className={check.met ? 'is-met' : ''} key={check.key}>
+                    {check.met
+                      ? <FaCheck aria-hidden="true" />
+                      : <FaCircle aria-hidden="true" />}
+                    <span>{check.label}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
 
             {message.text && (
               <div className={`confirm-signup-message confirm-signup-message-${message.type}`}>
@@ -214,7 +237,11 @@ export default function ConfirmSignupPage() {
               </div>
             )}
 
-            <button type="submit" className="confirm-signup-primary" disabled={isVerifying}>
+            <button
+              type="submit"
+              className="confirm-signup-primary"
+              disabled={isVerifying || !isInvitePasswordValid}
+            >
               {isVerifying ? 'Activating...' : 'Activate Account'}
             </button>
           </form>

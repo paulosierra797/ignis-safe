@@ -1053,6 +1053,8 @@ body.sidebar-collapsed .nav-section {
 }
 
 .dashboard-main {
+  --page-content-gutter-x: 1.75rem;
+  --page-content-gutter-y: 1.5rem;
   padding: 1.5rem 1.75rem 2.5rem;
 }
 

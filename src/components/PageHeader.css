@@ -1,6 +1,7 @@
 ﻿.page-header {
-  --page-header-gutter-x: 2rem;
-  --page-header-gutter-y: 2rem;
+  --page-header-gutter-x: var(--page-content-gutter-x, 2rem);
+  --page-header-gutter-y: var(--page-content-gutter-y, 2rem);
+  box-sizing: border-box;
   display: flex;
   justify-content: space-between;
   align-items: center;

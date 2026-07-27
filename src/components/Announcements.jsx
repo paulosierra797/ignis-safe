@@ -4,9 +4,9 @@ import { FiArchive } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
+import PersonnelRecipientPicker from './PersonnelRecipientPicker';
 import LandingContentEditor from './LandingContentEditor';
 import { useUser } from '../context/UserContext';
-import { formatStatusLabel } from '../utils/statusUtils';
 import {
   createAnnouncement,
   getAnnouncementsForUser,
@@ -778,26 +778,15 @@ export default function Announcements() {
 
               {formData.audience_type === 'specific_personnel' && (
                 <div className="form-row">
-                  <div className="form-field">
-                    <label htmlFor="targetPersonnel">Select Personnel</label>
-                    <select
-                      id="targetPersonnel"
-                      value={formData.target_personnel_id}
-                      onChange={(event) => setFormData((prev) => ({ ...prev, target_personnel_id: event.target.value }))}
-                    >
-                      <option value="">Choose personnel</option>
-                      {recipients.map((person) => (
-                        <option key={person.admin_id} value={person.admin_id}>
-                          {person.name} ({formatStatusLabel(person.status)})
-                        </option>
-                      ))}
-                    </select>
-                    {recipients.length === 0 && (
-                      <small className="form-help-text" style={{ color: '#dc2626' }}>
-                        No active personnel available. Refresh page or contact admin.
-                      </small>
-                    )}
-                  </div>
+                  <PersonnelRecipientPicker
+                    idPrefix="announcement"
+                    recipients={recipients}
+                    value={formData.target_personnel_id}
+                    onChange={(targetPersonnelId) => setFormData((prev) => ({
+                      ...prev,
+                      target_personnel_id: targetPersonnelId
+                    }))}
+                  />
                 </div>
               )}
 

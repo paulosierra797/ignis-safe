@@ -3,6 +3,7 @@ import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingContentEditor from './LandingContentEditor';
+import PersonnelRecipientPicker from './PersonnelRecipientPicker';
 import './AppDialog.css';
 import { useUser } from '../context/UserContext';
 import {
@@ -12,7 +13,6 @@ import {
   getPersonnelRecipients
 } from '../utils/announcementsService';
 import { logAdminActivity } from '../utils/usersService';
-import { formatStatusLabel } from '../utils/statusUtils';
 import './ContentManagement.css';
 
 const AUDIENCE_OPTIONS = [
@@ -418,26 +418,15 @@ export default function ContentManagement() {
 
                 {formData.audience_type === 'specific_personnel' && (
                   <div className="form-row">
-                    <div className="form-field">
-                      <label htmlFor="targetPersonnel">Select Personnel</label>
-                      <select
-                        id="targetPersonnel"
-                        value={formData.target_personnel_id}
-                        onChange={(event) => setFormData((prev) => ({ ...prev, target_personnel_id: event.target.value }))}
-                      >
-                        <option value="">Choose personnel</option>
-                        {recipients.map((person) => (
-                          <option key={person.admin_id} value={person.admin_id}>
-                            {person.name} ({formatStatusLabel(person.status)})
-                          </option>
-                        ))}
-                      </select>
-                      {recipients.length === 0 && (
-                        <small className="form-help-text" style={{ color: '#dc2626' }}>
-                          No active personnel available. Refresh page or contact admin.
-                        </small>
-                      )}
-                    </div>
+                    <PersonnelRecipientPicker
+                      idPrefix="content-announcement"
+                      recipients={recipients}
+                      value={formData.target_personnel_id}
+                      onChange={(targetPersonnelId) => setFormData((prev) => ({
+                        ...prev,
+                        target_personnel_id: targetPersonnelId
+                      }))}
+                    />
                   </div>
                 )}
 

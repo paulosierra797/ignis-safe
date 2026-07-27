@@ -58,7 +58,11 @@ const EMPTY_PERSONNEL_FORM = {
 const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
 const isAlreadyRegisteredInviteError = (error) => {
   const normalizedError = String(error || '').toLowerCase();
-  return normalizedError.includes('already') && normalizedError.includes('registered');
+  return (normalizedError.includes('already') && normalizedError.includes('registered'))
+    || normalizedError.includes('duplicate key')
+    || normalizedError.includes('admin_email_key')
+    || normalizedError.includes("'code': '23505'")
+    || (normalizedError.includes('key (email)') && normalizedError.includes('already exists'));
 };
 const getCurrentShiftDates = (dates = []) => {
   const todayIso = getManilaToday();

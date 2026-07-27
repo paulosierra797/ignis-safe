@@ -1,6 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import LandingPreview from './LandingPreview';
 import { useLandingContent } from '../context/LandingContentContext';
 import './LandingContentEditor.css';
 import './AppDialog.css';
@@ -41,7 +42,6 @@ const isValidLandingDraftShape = (value) => Boolean(
 );
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
-const toPhoneHref = (value) => `tel:${String(value || '').replace(/[^\d+]/g, '')}`;
 const toLines = (value) => (Array.isArray(value) ? value : [String(value || '')]).join('\n');
 const fromLines = (value) => String(value || '').split('\n').map((line) => line.trim()).filter(Boolean);
 const mobileNumberRegex = /^09\d{9}$/;
@@ -729,29 +729,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         </SectionBlock>
       </div>
 
-      <section className="editor-card preview-card">
-        <h3>Quick Preview</h3>
-        <p className="preview-title">{draft.hero.title}</p>
-        <p><strong>{draft.hero.lead}</strong> {draft.hero.description}</p>
-        <hr />
-        <p><strong>{draft.about.title}:</strong> {draft.about.intro}</p>
-        <hr />
-        <p><strong>{draft.contact.title}</strong></p>
-        <p>{draft.contact.emergencyTitle}</p>
-        <p>
-          <a href={toPhoneHref(draft.contact.landlinePrimary)}>{draft.contact.landlinePrimary}</a>
-          {' / '}
-          <a href={toPhoneHref(draft.contact.landlineSecondary)}>{draft.contact.landlineSecondary}</a>
-        </p>
-        <p><a href={toPhoneHref(draft.contact.mobile)}>{draft.contact.mobile}</a></p>
-        <hr />
-        <p><strong>{draft.process.english.title}</strong></p>
-        <p>{draft.process.english.processSteps[0]?.title}</p>
-        <p>{draft.process.english.processSteps[0]?.steps?.[0]?.text}</p>
-        <hr />
-        <p><strong>{draft.faq.english.title}</strong></p>
-        <p>{draft.faq.english.faqs[0]?.question}</p>
-      </section>
+      <LandingPreview content={draft} />
 
       {confirmModal.open && (
         <div className="modal-overlay" role="dialog" aria-modal="true">

@@ -1,0 +1,115 @@
+.landing-preview-card {
+  padding: 1.25rem;
+  gap: 1rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.landing-preview-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.landing-preview-card .landing-preview-title {
+  margin: 0 0 0.2rem;
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.landing-preview-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+  max-width: 46ch;
+}
+
+.landing-preview-devices {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  background: #f3f4f6;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.landing-preview-device-btn {
+  border: none;
+  background: transparent;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: #4b5563;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.landing-preview-device-btn:hover {
+  color: #111827;
+}
+
+.landing-preview-device-btn.is-active {
+  background: #ffffff;
+  color: #a8171c;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+
+.landing-preview-canvas {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #eef0f3;
+  border: 1px solid #e6dcdc;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  justify-content: center;
+}
+
+.landing-preview-stage {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.landing-preview-scaler {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: top left;
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+}
+
+.landing-preview-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .landing-preview-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .landing-preview-devices {
+    justify-content: stretch;
+  }
+
+  .landing-preview-device-btn {
+    flex: 1;
+  }
+}

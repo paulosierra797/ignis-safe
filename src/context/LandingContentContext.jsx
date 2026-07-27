@@ -356,3 +356,21 @@ export const LandingContentProvider = ({ children }) => {
 
   return <LandingContentContext.Provider value={value}>{children}</LandingContentContext.Provider>;
 };
+
+// Lets admin preview screens (e.g. the Quick Preview) feed unsaved draft
+// content into the real landing-page components without touching the
+// live saved content or triggering a database write.
+export const LandingContentPreviewProvider = ({ content, children }) => {
+  const value = useMemo(
+    () => ({
+      content: mergeWithDefaults(content),
+      setContent: async () => ({ error: null }),
+      resetContent: async () => ({ error: null }),
+      defaults: DEFAULT_LANDING_CONTENT,
+      loadingContent: false,
+    }),
+    [content]
+  );
+
+  return <LandingContentContext.Provider value={value}>{children}</LandingContentContext.Provider>;
+};

@@ -100,43 +100,58 @@
 
 .admin-reports-stats {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 0.45rem;
+  gap: 0.9rem;
   margin-bottom: 0.8rem;
+  padding: 0.7rem 0.1rem;
+  border-bottom: 1px solid #eeeeee;
+  color: #4b5563;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.admin-reports-legend-label {
+  color: #374151;
+  font-size: 0.76rem;
 }
 
 .report-stat-chip {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  padding: 0.22rem 0.62rem;
+  gap: 0.35rem;
+  padding: 0;
   font-size: 0.76rem;
-  font-weight: 700;
+  font-weight: 600;
+}
+
+.report-legend-dot {
+  width: 8px;
+  height: 8px;
+  display: inline-block;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .chip-all {
-  background: #f3f4f6;
-  color: #374151;
+  color: #6b7280;
 }
 
 .chip-submitted {
-  background: #e0f2fe;
-  color: #075985;
+  color: #0284c7;
 }
 
 .chip-review {
-  background: #fef3c7;
-  color: #92400e;
+  color: #d97706;
 }
 
 .chip-approved {
-  background: #dcfce7;
-  color: #166534;
+  color: #16a34a;
 }
 
 .chip-rejected {
-  background: #fee2e2;
-  color: #991b1b;
+  color: #dc2626;
 }
 
 .admin-reports-filterbar {

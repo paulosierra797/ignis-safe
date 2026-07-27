@@ -410,12 +410,28 @@ export default function AdminReports() {
             </div>
           </div>
 
-          <div className="admin-reports-stats">
-            <span className="report-stat-chip chip-all">All {reports.length}</span>
-            <span className="report-stat-chip chip-submitted">Submitted {submittedCount}</span>
-            <span className="report-stat-chip chip-review">Under Review {reviewCount}</span>
-            <span className="report-stat-chip chip-approved">Approved {approvedCount}</span>
-            <span className="report-stat-chip chip-rejected">Rejected {rejectedCount}</span>
+          <div className="admin-reports-stats" aria-label="Report status legends">
+            <strong className="admin-reports-legend-label">Legends:</strong>
+            <span className="report-stat-chip chip-all">
+              <i className="report-legend-dot" aria-hidden="true" />
+              All {reports.length}
+            </span>
+            <span className="report-stat-chip chip-submitted">
+              <i className="report-legend-dot" aria-hidden="true" />
+              Submitted {submittedCount}
+            </span>
+            <span className="report-stat-chip chip-review">
+              <i className="report-legend-dot" aria-hidden="true" />
+              Under Review {reviewCount}
+            </span>
+            <span className="report-stat-chip chip-approved">
+              <i className="report-legend-dot" aria-hidden="true" />
+              Approved {approvedCount}
+            </span>
+            <span className="report-stat-chip chip-rejected">
+              <i className="report-legend-dot" aria-hidden="true" />
+              Rejected {rejectedCount}
+            </span>
           </div>
 
           <div className="admin-reports-filterbar">

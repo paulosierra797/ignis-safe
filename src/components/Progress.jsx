@@ -455,14 +455,14 @@ export default function Progress() {
                   <div className="progress-modal-section">
                     <h4><FiBarChart2 className="progress-modal-section-icon" aria-hidden="true" />Learning Progress</h4>
                     <div className="progress-modal-info">
-                      <div className="progress-modal-info-item">
+                      <div className="progress-modal-info-item progress-modal-info-item-centered">
                         <span className="progress-modal-info-icon"><FiCheckCircle aria-hidden="true" /></span>
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">MODULES COMPLETED</span>
                           <span className="progress-modal-value">{selectedUser.modulesCompleted}</span>
                         </div>
                       </div>
-                      <div className="progress-modal-info-item">
+                      <div className="progress-modal-info-item progress-modal-info-item-centered">
                         <span className="progress-modal-info-icon"><FiBarChart2 aria-hidden="true" /></span>
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">OVERALL PROGRESS</span>

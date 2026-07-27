@@ -449,6 +449,17 @@
   box-shadow: 0 5px 14px rgba(15, 23, 42, 0.07);
 }
 
+.progress-modal-info-item-centered {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.progress-modal-info-item-centered .progress-modal-info-body {
+  align-items: center;
+}
+
 .progress-modal-info-icon {
   display: grid;
   place-items: center;

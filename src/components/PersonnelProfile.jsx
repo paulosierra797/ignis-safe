@@ -483,7 +483,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
   id="firstName"
   type="text"
   value={currentUser?.first_name || ''}
-  readOnly
+  disabled
 />
                   </div>
 
@@ -493,7 +493,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
   id="lastName"
   type="text"
   value={currentUser?.last_name || ''}
-  readOnly
+  disabled
 />
                   </div>
                 </div>
@@ -504,7 +504,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
   <input
     type="text"
     value={currentUser?.rank || ''}
-    readOnly
+    disabled
   />
 </div>
 
@@ -542,7 +542,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                   </button>
                   <button
                     type="button"
-                    className="change-password-btn"
+                    className="change-password-btn register-face-btn"
                     onClick={handleFaceRegisterClick}
                   >
                     Register Face ID

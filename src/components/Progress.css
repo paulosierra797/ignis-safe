@@ -266,8 +266,8 @@
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.75rem;
-  padding: 1.25rem 3rem 1.25rem 1.75rem;
-  background: linear-gradient(90deg, #A71930 0%, #D97F7F 50%, #F99D2D 100%);
+  padding: 1.25rem 3.75rem 1.25rem 1.75rem;
+  background: linear-gradient(135deg, #C1272D 0%, #A61E24 55%, #7A171B 100%);
   border-bottom: 1px solid #e5e7eb;
   border-radius: 12px 12px 0 0;
 }
@@ -281,7 +281,8 @@
   margin: 0 0 0.25rem 0;
   font-size: 1.3rem;
   font-weight: 700;
-  color: white;
+  color: #ffffff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
   overflow-wrap: break-word;
   word-break: break-word;
 }
@@ -289,7 +290,8 @@
 .progress-modal-user-info p {
   margin: 0;
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: #ffe9ea;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   overflow-wrap: break-word;
   word-break: break-word;
 }
@@ -299,6 +301,7 @@
   color: white;
   white-space: normal;
   flex: 0 1 auto;
+  margin-right: 1.5rem;
 }
 
 .progress-activity-badge {
@@ -354,11 +357,19 @@
 
 .progress-modal-section h4 {
   margin: 0 0 1rem 0;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #1f2937;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid #A71930;
+  border-bottom: 2px solid #F25C5C;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.progress-modal-section-icon {
+  font-size: 1rem;
+  line-height: 1;
 }
 
 .progress-modal-info {
@@ -369,12 +380,33 @@
 
 .progress-modal-info-item {
   display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #f1d5d5;
+  border-left: 4px solid #F25C5C;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(214, 76, 76, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.progress-modal-info-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(214, 76, 76, 0.14);
+}
+
+.progress-modal-info-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.progress-modal-info-body {
+  display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 1.2rem;
-  border: 2px solid #A71930;
-  border-radius: 8px;
-  background: white;
+  gap: 0.4rem;
+  min-width: 0;
 }
 
 .progress-modal-label {
@@ -409,29 +441,67 @@
   color: #991b1b;
 }
 
+.progress-modal-status-toggle {
+  align-self: flex-start;
+  margin-top: 0.3rem;
+  border: none;
+  border-radius: 6px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.progress-modal-status-toggle.deactivate {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.progress-modal-status-toggle.deactivate:hover {
+  background: #fecaca;
+}
+
+.progress-modal-status-toggle.reactivate {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.progress-modal-status-toggle.reactivate:hover {
+  background: #bbf7d0;
+}
+
+.progress-modal-status-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .progress-modal-full {
   grid-column: 1 / -1;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .progress-modal-full h4 {
-  margin: 0 0 1rem 0;
-  font-size: 0.9rem;
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
   font-weight: 700;
   color: #1f2937;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid #A71930;
+  border-bottom: 2px solid #F25C5C;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .progress-modal-modules {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
+  gap: 0.6rem;
 }
 
 .progress-modal-module-card {
   background: #f9fafb;
-  padding: 1rem;
+  padding: 0.6rem 0.8rem;
   border-radius: 6px;
   border: 1px solid #e5e7eb;
 }
@@ -440,13 +510,13 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.4rem;
 }
 
 .progress-modal-module-name {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #1f2937;
   flex: 1 1 auto;
@@ -457,9 +527,9 @@
 
 .progress-modal-module-badge {
   display: inline-block;
-  padding: 0.25rem 0.6rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 12px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
@@ -508,15 +578,18 @@
   gap: 0.5rem;
   padding: 1rem 1.2rem;
   background: white;
-  border-radius: 6px;
-  border: 2px solid #A71930;
+  border-radius: 8px;
+  border: 1px solid #f1d5d5;
+  border-left: 4px solid #F25C5C;
+  box-shadow: 0 1px 4px rgba(214, 76, 76, 0.06);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .progress-modal-test-item:hover {
-  background: #f9fafb;
+  background: #fff5f5;
+  box-shadow: 0 4px 12px rgba(214, 76, 76, 0.12);
 }
 
 .progress-modal-test-name {
@@ -550,10 +623,11 @@
 
 .progress-modal-test-details {
   padding: 1rem 1.2rem;
-  background: #f9fafb;
-  border: 2px solid #A71930;
+  background: #fff5f5;
+  border: 1px solid #f1d5d5;
+  border-left: 4px solid #F25C5C;
   border-top: none;
-  border-radius: 0 0 6px 6px;
+  border-radius: 0 0 8px 8px;
   margin-top: -2px;
   display: flex;
   flex-wrap: wrap;

@@ -1072,10 +1072,6 @@ export default function AssessmentQuestions() {
                       />
                     </label>
                     <span className="assessment-question-type-label">Multiple Choice</span>
-                    <label className="assessment-active-status">
-                      <input type="checkbox" checked={Boolean(question.is_active)} disabled />
-                      <span>{question.is_active ? 'Active' : 'Inactive'}</span>
-                    </label>
                     {isQuestionDirty && <span className="assessment-dirty-badge">Unsaved changes</span>}
                     {question._isAiGenerated && <span className="assessment-ai-draft-badge">AI draft</span>}
                   </div>

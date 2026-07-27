@@ -4,8 +4,8 @@ import { FiArchive } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
-import PersonnelRecipientPicker from './PersonnelRecipientPicker';
 import LandingContentEditor from './LandingContentEditor';
+import PersonnelPicker from './PersonnelPicker';
 import { useUser } from '../context/UserContext';
 import {
   createAnnouncement,
@@ -137,9 +137,10 @@ export default function Announcements() {
       title: draft?.title || '',
       content: draft?.content || '',
       audience_type: draft?.audience_type || 'public',
-      target_personnel_id: draft?.target_personnel_id || ''
+      target_personnel_ids: Array.isArray(draft?.target_personnel_ids) ? draft.target_personnel_ids : []
     };
   });
+  const [personnelSelectionError, setPersonnelSelectionError] = useState('');
   const [draftAttachmentMeta, setDraftAttachmentMeta] = useState(() => {
     const draft = readAnnouncementDraft();
     return Array.isArray(draft?.attachments) ? draft.attachments : [];
@@ -175,7 +176,7 @@ export default function Announcements() {
     formData.title.trim() ||
     formData.content.trim() ||
     formData.audience_type !== 'public' ||
-    formData.target_personnel_id ||
+    formData.target_personnel_ids.length > 0 ||
     attachmentFiles.length > 0 ||
     draftAttachmentMeta.length > 0
   );
@@ -211,7 +212,7 @@ export default function Announcements() {
       title: formData.title,
       content: formData.content,
       audience_type: formData.audience_type,
-      target_personnel_id: formData.target_personnel_id,
+      target_personnel_ids: formData.target_personnel_ids,
       attachments: attachmentFiles.length > 0
         ? attachmentFiles.map((file) => ({ name: file.name, size: file.size, type: file.type }))
         : draftAttachmentMeta
@@ -235,10 +236,11 @@ export default function Announcements() {
       title: '',
       content: '',
       audience_type: 'public',
-      target_personnel_id: ''
+      target_personnel_ids: []
     });
     setAttachmentFiles([]);
     setDraftAttachmentMeta([]);
+    setPersonnelSelectionError('');
   };
 
   const runAnnouncementManualNavigation = (navigation) => {
@@ -441,8 +443,9 @@ export default function Announcements() {
       return;
     }
     
-    if (formData.audience_type === 'specific_personnel' && !formData.target_personnel_id) {
-      setMessage({ type: 'error', text: 'Please select a personnel recipient before sending.' });
+    if (formData.audience_type === 'specific_personnel' && formData.target_personnel_ids.length === 0) {
+      setPersonnelSelectionError('Please select at least one personnel recipient.');
+      setMessage({ type: 'error', text: 'Please select at least one personnel recipient.' });
       return;
     }
 
@@ -462,7 +465,7 @@ export default function Announcements() {
         title: formData.title,
         content: formData.content,
         audience_type: formData.audience_type,
-        target_personnel_id: formData.target_personnel_id || null,
+        target_personnel_ids: formData.target_personnel_ids,
         attachments: attachmentFiles
       };
 
@@ -763,11 +766,17 @@ export default function Announcements() {
                     id="announcementAudience"
                     required
                     value={formData.audience_type}
-                    onChange={(event) => setFormData((prev) => ({
-                      ...prev,
-                      audience_type: event.target.value,
-                      target_personnel_id: event.target.value === 'specific_personnel' ? prev.target_personnel_id : ''
-                    }))}
+                    onChange={(event) => {
+                      const nextAudience = event.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        audience_type: nextAudience,
+                        target_personnel_ids: nextAudience === 'specific_personnel' ? prev.target_personnel_ids : []
+                      }));
+                      if (nextAudience !== 'specific_personnel') {
+                        setPersonnelSelectionError('');
+                      }
+                    }}
                   >
                     {AUDIENCE_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>{option.label}</option>
@@ -778,15 +787,34 @@ export default function Announcements() {
 
               {formData.audience_type === 'specific_personnel' && (
                 <div className="form-row">
-                  <PersonnelRecipientPicker
-                    idPrefix="announcement"
-                    recipients={recipients}
-                    value={formData.target_personnel_id}
-                    onChange={(targetPersonnelId) => setFormData((prev) => ({
-                      ...prev,
-                      target_personnel_id: targetPersonnelId
-                    }))}
-                  />
+                  <div className="form-field">
+                    <label htmlFor="targetPersonnel">Select Personnel <span className="required-asterisk">*</span></label>
+                    <p className="form-help-text personnel-picker-subtitle">
+                      Choose one or more personnel to receive this announcement.
+                    </p>
+                    <PersonnelPicker
+                      id="targetPersonnel"
+                      personnel={recipients}
+                      selectedIds={formData.target_personnel_ids}
+                      onChange={(nextIds) => {
+                        setFormData((prev) => ({ ...prev, target_personnel_ids: nextIds }));
+                        if (nextIds.length > 0) {
+                          setPersonnelSelectionError('');
+                        }
+                      }}
+                      error={personnelSelectionError}
+                    />
+                    {personnelSelectionError && (
+                      <small className="form-help-text personnel-picker-error-text">
+                        {personnelSelectionError}
+                      </small>
+                    )}
+                    {recipients.length === 0 && (
+                      <small className="form-help-text" style={{ color: '#dc2626' }}>
+                        No active personnel available. Refresh page or contact admin.
+                      </small>
+                    )}
+                  </div>
                 </div>
               )}
 

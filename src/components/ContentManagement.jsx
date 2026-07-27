@@ -3,7 +3,7 @@ import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingContentEditor from './LandingContentEditor';
-import PersonnelRecipientPicker from './PersonnelRecipientPicker';
+import PersonnelPicker from './PersonnelPicker';
 import './AppDialog.css';
 import { useUser } from '../context/UserContext';
 import {
@@ -76,7 +76,7 @@ export default function ContentManagement() {
     title: '',
     content: '',
     audience_type: 'public',
-    target_personnel_id: ''
+    target_personnel_ids: []
   });
 
   const landingEditorRef = useRef(null);
@@ -254,13 +254,18 @@ export default function ContentManagement() {
       return;
     }
 
+    if (formData.audience_type === 'specific_personnel' && formData.target_personnel_ids.length === 0) {
+      setMessage({ type: 'error', text: 'Please select at least one personnel recipient.' });
+      return;
+    }
+
     setSubmitting(true);
     setMessage({ type: '', text: '' });
 
-    const { data, error } = await createAnnouncement({
+    const { data, error } = await createAnnouncement(currentUser, {
       ...formData,
       attachments: attachmentFiles
-    }, currentUser);
+    });
 
     if (error) {
       setMessage({ type: 'error', text: `Failed to create announcement: ${error}` });
@@ -284,7 +289,7 @@ export default function ContentManagement() {
       title: '',
       content: '',
       audience_type: 'public',
-      target_personnel_id: ''
+      target_personnel_ids: []
     });
     setAttachmentFiles([]);
     setMessage({ type: 'success', text: 'Announcement sent successfully!' });
@@ -406,7 +411,7 @@ export default function ContentManagement() {
                       onChange={(event) => setFormData((prev) => ({
                         ...prev,
                         audience_type: event.target.value,
-                        target_personnel_id: event.target.value === 'specific_personnel' ? prev.target_personnel_id : ''
+                        target_personnel_ids: event.target.value === 'specific_personnel' ? prev.target_personnel_ids : []
                       }))}
                     >
                       {AUDIENCE_OPTIONS.map((option) => (
@@ -418,13 +423,13 @@ export default function ContentManagement() {
 
                 {formData.audience_type === 'specific_personnel' && (
                   <div className="form-row">
-                    <PersonnelRecipientPicker
-                      idPrefix="content-announcement"
-                      recipients={recipients}
-                      value={formData.target_personnel_id}
-                      onChange={(targetPersonnelId) => setFormData((prev) => ({
+                    <PersonnelPicker
+                      id="contentAnnouncementPersonnel"
+                      personnel={recipients}
+                      selectedIds={formData.target_personnel_ids}
+                      onChange={(nextIds) => setFormData((prev) => ({
                         ...prev,
-                        target_personnel_id: targetPersonnelId
+                        target_personnel_ids: nextIds
                       }))}
                     />
                   </div>

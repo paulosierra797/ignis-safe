@@ -39,8 +39,7 @@ const EMPTY_HISTORY_FILTERS = {
   title: '',
   fileName: '',
   date: '',
-  status: 'all',
-  remarks: ''
+  status: 'all'
 };
 
 const formatDateFilterValue = (value) => {
@@ -190,9 +189,7 @@ export default function Reports() {
           attachmentNames.includes(historyFilters.fileName.trim().toLowerCase())) &&
         (!historyFilters.date ||
           formatDateFilterValue(report.submitted_at || report.created_at) === historyFilters.date) &&
-        (historyFilters.status === 'all' || reportStatus === historyFilters.status) &&
-        (!historyFilters.remarks.trim() ||
-          String(report.internal_notes || '').toLowerCase().includes(historyFilters.remarks.trim().toLowerCase()))
+        (historyFilters.status === 'all' || reportStatus === historyFilters.status)
       );
     });
   }, [reportHistory, historyFilters]);
@@ -474,17 +471,6 @@ export default function Reports() {
                 </select>
               </label>
 
-              <label className="report-history-filter report-history-filter-remarks">
-                <span>Admin Remarks</span>
-                <input
-                  type="text"
-                  className="report-history-search-input"
-                  placeholder="Enter remark"
-                  value={historyFilters.remarks}
-                  onChange={(event) => updateHistoryFilter('remarks', event.target.value)}
-                />
-              </label>
-
               <button
                 type="button"
                 className="report-history-search-clear"
@@ -503,14 +489,13 @@ export default function Reports() {
                     <th>File</th>
                     <th>Date Submitted</th>
                     <th>Status</th>
-                    <th>Admin Remarks</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loadingHistory && (
                     <tr>
-                      <td colSpan="6" className="no-data">Loading report history...</td>
+                      <td colSpan="5" className="no-data">Loading report history...</td>
                     </tr>
                   )}
                   {!loadingHistory && filteredReportHistory.map((report) => (
@@ -527,7 +512,6 @@ export default function Reports() {
                           {formatStatusLabel(report.status)}
                         </span>
                       </td>
-                      <td>{report.internal_notes || '-'}</td>
                       <td>
                         <ReportFileActions report={report} />
                       </td>
@@ -535,12 +519,12 @@ export default function Reports() {
                   ))}
                   {!loadingHistory && reportHistory.length === 0 && (
                     <tr>
-                      <td colSpan="6" className="no-data">You have not submitted any reports yet.</td>
+                      <td colSpan="5" className="no-data">You have not submitted any reports yet.</td>
                     </tr>
                   )}
                   {!loadingHistory && reportHistory.length > 0 && filteredReportHistory.length === 0 && (
                     <tr>
-                      <td colSpan="6" className="no-data">No reports match your search.</td>
+                      <td colSpan="5" className="no-data">No reports match your search.</td>
                     </tr>
                   )}
                 </tbody>
@@ -561,7 +545,6 @@ export default function Reports() {
                     <ReportFileNames report={report} />
                   </div>
                   <p><strong>Date Submitted:</strong> {formatDateTime(report.submitted_at || report.created_at)}</p>
-                  <p><strong>Admin Remarks:</strong> {report.internal_notes || '-'}</p>
                   <ReportFileActions report={report} />
                 </div>
               ))}

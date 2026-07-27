@@ -268,7 +268,7 @@
 
 .report-history-filters {
   display: grid;
-  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  grid-template-columns: repeat(4, minmax(150px, 1fr)) auto;
   align-items: end;
   gap: 0.75rem;
   margin-bottom: 1.25rem;
@@ -285,10 +285,6 @@
   color: #475569;
   font-size: 0.76rem;
   font-weight: 700;
-}
-
-.report-history-filter-remarks {
-  grid-column: span 2;
 }
 
 .report-history-search-wrapper {
@@ -398,10 +394,6 @@
 
   .report-history-filters {
     grid-template-columns: 1fr;
-  }
-
-  .report-history-filter-remarks {
-    grid-column: auto;
   }
 
   .report-history-search-clear {

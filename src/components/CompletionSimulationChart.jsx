@@ -29,7 +29,12 @@ const options = {
       beginAtZero: true,
       max: 100,
       ticks: {
-        stepSize: 20
+        stepSize: 20,
+        callback: (value) => `${value}%`,
+        color: '#667085'
+      },
+      grid: {
+        color: 'rgba(152, 162, 179, 0.18)'
       }
     },
     x: {
@@ -51,14 +56,14 @@ const data = {
     {
       label: 'Completion Rate',
       data: [],
-      backgroundColor: '#a78bfa',
+      backgroundColor: '#0f766e',
       borderRadius: 4,
       barPercentage: 0.8
     },
     {
       label: 'Simulation Score',
       data: [],
-      backgroundColor: '#fbbf24',
+      backgroundColor: '#f59e0b',
       borderRadius: 4,
       barPercentage: 0.8
     }

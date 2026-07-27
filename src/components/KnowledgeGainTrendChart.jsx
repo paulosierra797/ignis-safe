@@ -31,10 +31,16 @@ const options = {
   },
   scales: {
     y: {
-      beginAtZero: true,
-      max: 100,
+      suggestedMin: -20,
+      suggestedMax: 100,
       ticks: {
         callback: (value) => `${value}%`,
+        color: '#667085',
+      },
+      grid: {
+        color: (context) => context.tick.value === 0
+          ? 'rgba(71, 84, 103, 0.45)'
+          : 'rgba(152, 162, 179, 0.18)',
       },
     },
     x: {
@@ -51,13 +57,13 @@ const fallbackData = {
     {
       label: 'Knowledge Gain',
       data: [],
-      borderColor: '#0ea5e9',
-      backgroundColor: 'rgba(14, 165, 233, 0.15)',
+      borderColor: '#0f766e',
+      backgroundColor: 'rgba(15, 118, 110, 0.12)',
       fill: true,
       tension: 0.35,
       pointRadius: 4,
       pointHoverRadius: 5,
-      pointBackgroundColor: '#0284c7',
+      pointBackgroundColor: '#0f766e',
     },
   ],
 };

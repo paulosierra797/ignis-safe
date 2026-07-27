@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FaArrowDown, FaArrowUp, FaMinus } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import './Analytics.css';
@@ -37,6 +38,20 @@ const DEFAULT_CHARTS = {
   riskDistribution: { labels: ['High', 'Moderate', 'Low'], values: [0, 0, 0] },
 };
 
+const clampPercent = (value) => Math.min(100, Math.max(0, Number(value) || 0));
+
+function AnalyticsCardHeader({ title, description, children }) {
+  return (
+    <div className="analytics-card-header">
+      <div>
+        <h3>{title}</h3>
+        <p>{description}</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function Analytics() {
   const [searchQuery, setSearchQuery] = useState('');
   const [timeframe, setTimeframe] = useState('All-time');
@@ -50,26 +65,30 @@ export default function Analytics() {
   const [isLoadingStats, setIsLoadingStats] = useState(true);
 // Starting Knowledge
 let startingColor = "#22c55e";
-if (stats.startingKnowledge < 30) {
+if (stats.startingKnowledge < 40) {
   startingColor = "#ef4444";
 } else if (stats.startingKnowledge < 70) {
   startingColor = "#f59e0b";
 }
 
-// Current Knowledge stays green so it is clearly distinguished from the starting score.
-const currentColor = "#22c55e";
+let currentColor = "#22c55e";
+if (stats.currentKnowledge < 40) {
+  currentColor = "#ef4444";
+} else if (stats.currentKnowledge < 70) {
+  currentColor = "#f59e0b";
+}
 
 // Knowledge Gain
 let gainColor = "#22c55e";
-let gainArrow = "▲";
+let GainArrowIcon = FaArrowUp;
 let gainStatusLabel = "Improved";
 if (stats.knowledgeGainPercent < 0) {
   gainColor = "#ef4444";
-  gainArrow = "▼";
+  GainArrowIcon = FaArrowDown;
   gainStatusLabel = "Declined";
 } else if (stats.knowledgeGainPercent === 0) {
   gainColor = "#9ca3af";
-  gainArrow = "●";
+  GainArrowIcon = FaMinus;
   gainStatusLabel = "No Change";
 }
 
@@ -142,6 +161,17 @@ const { data: chartsData } =
           onSearchChange={setSearchQuery}
         />
 
+        <div className="analytics-page-summary">
+          <div>
+            <span>Learning insights</span>
+            <h2>Training Performance Overview</h2>
+          </div>
+          <p>
+            See how learners use the application, complete training, and improve their knowledge.
+            Filters update every measure and chart below.
+          </p>
+        </div>
+
         <div className="analytics-filters">
           <div className="filter-pill filter-pill-timeframe">
             <span className="filter-label">Timeframe:</span>
@@ -178,27 +208,57 @@ const { data: chartsData } =
 
         <div className="analytics-stats-row">
           <div className="analytics-stat-card">
-            <h3>Active Users</h3>
+            <div className="analytics-stat-heading">
+              <span>Participation</span>
+              <h3>Active Learners</h3>
+            </div>
             <div className="stat-value">
               <span className="main-value">{isLoadingStats ? '...' : stats.activeUsers}</span>
               <span className="sub-value">/{isLoadingStats ? '...' : stats.totalUsers}</span>
             </div>
+            <div className="analytics-stat-meter">
+              <span
+                style={{
+                  width: `${stats.totalUsers > 0 ? clampPercent((stats.activeUsers / stats.totalUsers) * 100) : 0}%`
+                }}
+              />
+            </div>
+            <p>Active learner accounts compared with all registered learners in the selected view.</p>
           </div>
           <div className="analytics-stat-card">
-            <h3>Training Completion</h3>
+            <div className="analytics-stat-heading">
+              <span>Learning activity</span>
+              <h3>Questions Answered</h3>
+            </div>
             <div className="stat-value">
               <span className="main-value">
                 {isLoadingStats ? '...' : stats.questionsAnswered.toLocaleString()}
               </span>
             </div>
+            <p>Total assessment questions submitted by the learners included in the filters.</p>
+          </div>
+          <div className="analytics-stat-card">
+            <div className="analytics-stat-heading">
+              <span>Time spent</span>
+              <h3>Average Session</h3>
+            </div>
+            <div className="stat-value">
+              <span className="main-value main-value-time">
+                {isLoadingStats ? '...' : stats.avgSessionLength}
+              </span>
+            </div>
+            <p>Typical time a learner spends in one application session.</p>
           </div>
         </div>
 
         <div className="knowledge-section">
           <div className="knowledge-compare-card">
             <div className="knowledge-compare-header">
-              <h3>Knowledge Progress</h3>
-              <span className="knowledge-compare-sub">Starting vs. Current</span>
+              <div>
+                <h3>Knowledge Progress</h3>
+                <p>Average assessment scores before training compared with the latest scores.</p>
+              </div>
+              <span className="knowledge-compare-sub">0-100 score</span>
             </div>
 
             <div className="knowledge-bar-row">
@@ -218,6 +278,7 @@ const { data: chartsData } =
                   }}
                 ></div>
               </div>
+              <small>Baseline score before the selected learners began training.</small>
             </div>
 
             <div className="knowledge-bar-row">
@@ -237,13 +298,17 @@ const { data: chartsData } =
                   }}
                 ></div>
               </div>
+              <small>Latest measured score from completed learning assessments.</small>
             </div>
           </div>
 
           <div className="knowledge-gain-card">
             <h3>Knowledge Gain</h3>
+            <p className="knowledge-gain-description">Difference between starting and current knowledge.</p>
             <div className="gain-indicator">
-              <span className="gain-arrow" style={{ color: gainColor }}>{gainArrow}</span>
+              <span className="gain-arrow" style={{ color: gainColor }}>
+                <GainArrowIcon aria-hidden="true" />
+              </span>
               <span className="gain-value" style={{ color: gainColor }}>
                 {isLoadingStats
                   ? '...'
@@ -280,8 +345,10 @@ const { data: chartsData } =
         </div>
 
         <div className="analytics-overview">
-          <div className="overview-header">
-            <h3>User Overview</h3>
+          <AnalyticsCardHeader
+            title="Active Learner Trend"
+            description="How many learners used the application in each period."
+          >
             <select
               className="time-select"
               value={userOverviewRange}
@@ -292,19 +359,27 @@ const { data: chartsData } =
               <option value="Month">This Month</option>
               <option value="Week">This Week</option>
             </select>
-          </div>
+          </AnalyticsCardHeader>
           <div className="overview-chart">
-            <div style={{ height: '220px', padding: '1rem 0.5rem' }}>
+            <div className="analytics-chart-canvas analytics-chart-canvas-wide">
               <UserOverviewChart chartData={charts.userOverview} isLoading={isLoadingStats} />
             </div>
           </div>
         </div>
 
+        <div className="analytics-section-heading">
+          <span>Detailed views</span>
+          <h2>Learning Activity and Outcomes</h2>
+          <p>Use these charts to spot participation changes, module strengths, and learners who may need support.</p>
+        </div>
+
         <div className="analytics-charts-grid">
           {/* User Activity Trends */}
           <div className="analytics-chart-card activity-trends">
-            <div className="chart-header">
-              <h3>User Activity Trends</h3>
+            <AnalyticsCardHeader
+              title="Attempt Activity"
+              description="Started attempts compared with attempts learners completed and submitted."
+            >
               <select
                 className="chart-timeframe-select"
                 value={activityTrendsView}
@@ -314,25 +389,28 @@ const { data: chartsData } =
                 <option value="Week">Week</option>
                 <option value="Year">Year</option>
               </select>
-            </div>
-            <div style={{ height: '220px', padding: '1rem 0.5rem' }}>
+            </AnalyticsCardHeader>
+            <div className="analytics-chart-canvas">
               <ActivityTrendsChart chartData={charts.activityTrends} />
             </div>
           </div>
 
           {/* Learning Improvement */}
           <div className="analytics-chart-card">
-            <h3>Learning Improvement by Module</h3>
-            <div style={{ height: '300px', padding: '1rem 0.5rem' }}>
+            <AnalyticsCardHeader
+              title="Knowledge Improvement by Module"
+              description="Pre-test and post-test scores show where learning improved after training."
+            />
+            <div className="analytics-chart-canvas analytics-chart-canvas-tall">
               <TrainingProgressChart chartData={charts.learningByModule} />
             </div>
             <div className="training-legend">
               <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#f99ca2' }}></span>
+                <span className="legend-dot" style={{ background: '#15803d' }}></span>
                 <span>Post-Test (%)</span>
               </div>
               <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#5dc5d8' }}></span>
+                <span className="legend-dot" style={{ background: '#2563eb' }}></span>
                 <span>Pre-Test (%)</span>
               </div>
             </div>
@@ -340,13 +418,16 @@ const { data: chartsData } =
 
           {/* Completion and Simulation */}
           <div className="analytics-chart-card">
-            <h3>Completion and Simulation</h3>
-            <div style={{ height: '300px', padding: '1rem 0.5rem' }}>
+            <AnalyticsCardHeader
+              title="Module and Simulation Completion"
+              description="Compares lesson completion with completion of the related practical simulation."
+            />
+            <div className="analytics-chart-canvas analytics-chart-canvas-tall">
               <CompletionSimulationChart chartData={charts.completionByModule} />
             </div>
             <div className="training-legend">
               <div className="legend-item">
-                <span className="legend-dot" style={{ background: '#a78bfa' }}></span>
+                <span className="legend-dot" style={{ background: '#0f766e' }}></span>
                 <span>Completion Rate (%)</span>
               </div>
               <div className="legend-item">
@@ -358,16 +439,22 @@ const { data: chartsData } =
 
           {/* Knowledge Gain Trend */}
           <div className="analytics-chart-card">
-            <h3>Knowledge Gain Trend (AI)</h3>
-            <div style={{ height: '240px', padding: '1rem 0.5rem' }}>
+            <AnalyticsCardHeader
+              title="Knowledge Gain Over Time"
+              description="Tracks how the measured improvement in learner scores changes over time."
+            />
+            <div className="analytics-chart-canvas">
               <KnowledgeGainTrendChart chartData={charts.knowledgeGainTrend} />
             </div>
           </div>
 
           {/* Risk Distribution */}
           <div className="analytics-chart-card">
-            <h3>Learner Risk Distribution</h3>
-            <div style={{ height: '250px', padding: '0.75rem 0.5rem' }}>
+            <AnalyticsCardHeader
+              title="Learners Needing Support"
+              description="Groups learners by how urgently their recent results may need attention."
+            />
+            <div className="analytics-chart-canvas analytics-chart-canvas-donut">
               <RiskDistributionChart chartData={charts.riskDistribution} />
             </div>
           </div>
@@ -375,9 +462,11 @@ const { data: chartsData } =
 
         {/* Test Attempts */}
         <div className="analytics-chart-card performance-chart">
-          <h3>Test Attempts per Module</h3>
-          <div className="performance-subheader">Engagement</div>
-          <div style={{ height: '260px', padding: '1rem' }}>
+          <AnalyticsCardHeader
+            title="Assessment Attempts by Module"
+            description="Shows where learners are most active and where repeated attempts may indicate difficulty."
+          />
+          <div className="analytics-chart-canvas analytics-chart-canvas-wide">
             <PerformanceChart chartData={charts.attemptsByModule} />
           </div>
           <div className="performance-legend">

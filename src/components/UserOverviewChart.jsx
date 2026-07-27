@@ -40,8 +40,8 @@ export default function UserOverviewChart({ chartData, isLoading = false }) {
         backgroundColor: (context) => {
           const ctx = context.chart.ctx;
           const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-          gradient.addColorStop(0, 'rgba(249, 115, 22, 0.5)');
-          gradient.addColorStop(1, 'rgba(249, 115, 22, 0.05)');
+          gradient.addColorStop(0, 'rgba(249, 115, 22, 0.28)');
+          gradient.addColorStop(1, 'rgba(249, 115, 22, 0.02)');
           return gradient;
         },
         fill: true,
@@ -91,7 +91,12 @@ export default function UserOverviewChart({ chartData, isLoading = false }) {
           drawBorder: false
         },
         ticks: {
-          display: false
+          display: true,
+          precision: 0,
+          color: '#667085',
+          font: {
+            size: 10
+          }
         }
       }
     },

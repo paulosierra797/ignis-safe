@@ -71,6 +71,27 @@ const getBarHeights = (values) => {
   });
 };
 
+const clampPercent = (value) => Math.min(100, Math.max(0, toNumber(value, 0)));
+
+const getKnowledgeLevel = (value) => {
+  const score = toNumber(value, 0);
+  if (score < 40) return 'Needs support';
+  if (score < 70) return 'Developing';
+  return 'Proficient';
+};
+
+function DashboardSectionHeader({ eyebrow, title, description }) {
+  return (
+    <div className="dashboard-section-heading">
+      <div>
+        <span>{eyebrow}</span>
+        <h3>{title}</h3>
+      </div>
+      <p>{description}</p>
+    </div>
+  );
+}
+
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -98,7 +119,6 @@ export default function Dashboard() {
   const knowledgeGain = analyticsStats.knowledgeGainPercent;
 const isNegative = knowledgeGain < 0;
 const gainColor = isNegative ? "#ef4444" : "#22c55e"; // red : green
-const gradientId = isNegative ? "lossGradient" : "gainGradient";
   const startingKnowledge = analyticsStats.startingKnowledge;
 
 let startingColor = "#22c55e"; // Green
@@ -340,14 +360,18 @@ if (currentKnowledge < 40) {
         />
 
         {loadError && (
-          <div style={{ marginBottom: '0.9rem', color: '#991b1b', fontWeight: 600 }}>
+          <div className="dashboard-load-message">
             {loadError}
           </div>
         )}
 
         {/* Personnel Metrics Section */}
         <div className="metrics-section">
-          <h3 className="section-title">Personnel Overview</h3>
+          <DashboardSectionHeader
+            eyebrow="Today"
+            title="Personnel Operations"
+            description="Current staffing, attendance, duty, and leave information for today's operations."
+          />
           <div className="metrics-grid">
             <div
               className="metric-card clickable"
@@ -369,7 +393,7 @@ if (currentKnowledge < 40) {
                   <span className="main-number">{personnelStats.totalPersonnel}</span>
                   <span className="sub-number">/{personnelStats.totalCapacity}</span>
                 </div>
-                <span className="metric-status active">Active</span>
+                <p className="metric-description">Registered personnel compared with the configured staffing capacity.</p>
               </div>
             </div>
 
@@ -397,7 +421,7 @@ if (currentKnowledge < 40) {
                 <div className="metric-value">
                   <span className="main-number">{loading ? '...' : shiftAssignments.shiftA.length}</span>
                 </div>
-                <span className="metric-status active">View List</span>
+                <p className="metric-description">Personnel assigned to Shift A for today's duty schedule.</p>
               </div>
             </div>
 
@@ -425,7 +449,7 @@ if (currentKnowledge < 40) {
                 <div className="metric-value">
                   <span className="main-number">{loading ? '...' : shiftAssignments.shiftB.length}</span>
                 </div>
-                <span className="metric-status active">View List</span>
+                <p className="metric-description">Personnel assigned to Shift B for today's duty schedule.</p>
               </div>
             </div>
 
@@ -452,6 +476,7 @@ if (currentKnowledge < 40) {
                 <div className="progress-bar">
                   <div className="progress-fill" style={{ width: `${personnelStats.attendancePercentage}%` }}></div>
                 </div>
+                <p className="metric-description">Share of expected personnel who recorded attendance today.</p>
               </div>
             </div>
 
@@ -479,7 +504,7 @@ if (currentKnowledge < 40) {
                 <div className="metric-value">
                   <span className="main-number">{loading ? '...' : todayPersonnel.onDuty.length}</span>
                 </div>
-                <span className="metric-status active">View List</span>
+                <p className="metric-description">Assigned personnel available for duty after approved leave is considered.</p>
               </div>
             </div>
 
@@ -506,7 +531,7 @@ if (currentKnowledge < 40) {
                 <div className="metric-value">
                   <span className="main-number">{loading ? '...' : todayPersonnel.onLeave.length}</span>
                 </div>
-                <span className="metric-status active">View List</span>
+                <p className="metric-description">Personnel covered by an approved leave period today.</p>
               </div>
             </div>
           </div>
@@ -514,7 +539,11 @@ if (currentKnowledge < 40) {
 
         {/* Mobile App Users Section */}
         <div className="metrics-section">
-          <h3 className="section-title">Mobile App Users</h3>
+          <DashboardSectionHeader
+            eyebrow="Engagement"
+            title="Mobile Learning Activity"
+            description="Registration, recent use, and training completion across mobile learners."
+          />
           <div className="metrics-grid-4">
             <div
               className="metric-card compact clickable"
@@ -542,6 +571,7 @@ if (currentKnowledge < 40) {
                     ? '...'
                     : `${registrationTrend >= 0 ? '+' : ''}${registrationTrend}% this month`}
                 </span>
+                <p className="metric-description">All learner accounts currently registered in the mobile application.</p>
               </div>
             </div>
 
@@ -568,6 +598,7 @@ if (currentKnowledge < 40) {
                 <span className="metric-detail">
                   {loading ? '...' : `This Week: ${mobileStats.activeUsersThisWeek}`}
                 </span>
+                <p className="metric-description">Learners who opened and used the application during the selected day.</p>
               </div>
             </div>
 
@@ -594,6 +625,7 @@ if (currentKnowledge < 40) {
                 <span className="metric-comparison">
                   {loading ? '...' : `Last Month: ${mobileStats.newRegistrationsPrevious}`}
                 </span>
+                <p className="metric-description">Accounts created during the most recent 30-day period.</p>
               </div>
             </div>
 
@@ -623,146 +655,90 @@ if (currentKnowledge < 40) {
                     style={{ width: `${loading ? 0 : mobileStats.trainingCompletionPercent}%` }}
                   ></div>
                 </div>
+                <p className="metric-description">Average module completion across the available training content.</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Knowledge Gain Statistics */}
-        <div className="metrics-section">
-          <h3 className="section-title">Knowledge Statistics</h3>
-          <div className="metrics-grid">
-            <div
-              className="metric-card knowledge clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate('/dashboard/analytics')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
-              aria-label="Open Analytics page"
-            >
-              <div className="metric-content">
-                <p className="metric-label">Starting Knowledge</p>
-                <div className="knowledge-display">
-                  <span
-  className="knowledge-percent"
-  style={{ color: startingColor }}
->
-  {loading ? "..." : `${startingKnowledge}%`}
-</span>
-                  <div className="knowledge-trend-line">
-                    <div className="knowledge-trend-line">
-  <svg width="120" height="40" viewBox="0 0 120 40">
-    <path
-      d="M 0 30 Q 20 25, 40 28 T 80 22 T 120 20"
-      stroke={startingColor}
-      strokeWidth="2"
-      fill="none"
-    />
-    <circle cx="0" cy="30" r="3" fill={startingColor} />
-    <circle cx="120" cy="20" r="3" fill={startingColor} />
-  </svg>
-</div>
-                  </div>
+        <section className="dashboard-knowledge-section">
+          <DashboardSectionHeader
+            eyebrow="Learning outcome"
+            title="Knowledge Journey"
+            description="A direct comparison of average learner scores before training and their latest measured scores."
+          />
+          <div
+            className="knowledge-journey"
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate('/dashboard/analytics')}
+            onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
+            aria-label="Open detailed learning analytics"
+          >
+            <div className="knowledge-score">
+              <div
+                className="knowledge-ring"
+                style={{
+                  '--knowledge-value': `${clampPercent(startingKnowledge)}%`,
+                  '--knowledge-color': startingColor,
+                }}
+              >
+                <div>
+                  <strong>{loading ? '...' : `${startingKnowledge}%`}</strong>
+                  <span>Starting</span>
                 </div>
+              </div>
+              <div className="knowledge-score-copy">
+                <strong>Starting Knowledge</strong>
+                <span>{getKnowledgeLevel(startingKnowledge)}</span>
+                <p>Average baseline score recorded before learners completed training.</p>
               </div>
             </div>
 
-            <div
-              className="metric-card knowledge clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate('/dashboard/analytics')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
-              aria-label="Open Analytics page"
-            >
-              <div className="metric-content">
-                <p className="metric-label">Current Knowledge</p>
-                <div className="knowledge-display">
-                 <span
-  className="knowledge-percent current"
-  style={{ color: currentColor }}
->
-  {loading ? '...' : `${currentKnowledge}%`}
-</span>
-                  <div className="knowledge-trend-line">
-                    <svg width="120" height="40" viewBox="0 0 120 40">
-                      <path
-  d="M 0 35 Q 20 28, 40 30 T 80 18 T 120 12"
-  stroke={currentColor}
-  strokeWidth="2"
-  fill="none"
-/>
-<circle cx="0" cy="35" r="3" fill={currentColor} />
-<circle cx="120" cy="12" r="3" fill={currentColor} />
-                    </svg>
-                  </div>
-                </div>
+            <div className="knowledge-change">
+              <span className="knowledge-change-label">Measured change</span>
+              <strong style={{ color: gainColor }}>
+                {loading ? '...' : `${knowledgeGainPrefix}${knowledgeGain}%`}
+              </strong>
+              <div className="knowledge-change-track" aria-hidden="true">
+                <span style={{ left: `${clampPercent(startingKnowledge)}%`, background: startingColor }} />
+                <span style={{ left: `${clampPercent(currentKnowledge)}%`, background: currentColor }} />
               </div>
+              <p>
+                {isNegative
+                  ? 'Latest scores are below the starting average and may need closer review.'
+                  : 'Latest scores are above the starting average, showing learning improvement.'}
+              </p>
             </div>
 
-            <div
-              className="metric-card knowledge clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate('/dashboard/analytics')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
-              aria-label="Open Analytics page"
-            >
-              <div className="metric-content">
-                <p className="metric-label">Knowledge Gain</p>
-                <div className="knowledge-display">
-                   <span className={`knowledge-percent ${isNegative ? "loss" : "gain"}`}>
-      {loading
-        ? "..."
-        : `${knowledgeGainPrefix}${knowledgeGain}%`}
-    </span>
-                  <div className={`knowledge-trend-line ${isNegative ? "down" : "up"}`}>
-                    <svg width="120" height="40" viewBox="0 0 120 40">
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="100%" x2="0%" y2="0%">
-            <stop offset="0%" stopColor={gainColor} stopOpacity="0.1" />
-            <stop offset="100%" stopColor={gainColor} stopOpacity="0.3" />
-          </linearGradient>
-        </defs>
-
-        {isNegative ? (
-          <>
-            <path
-              d="M 0 8 L 30 14 L 60 20 L 90 30 L 120 38 L 120 40 L 0 40 Z"
-              fill={`url(#${gradientId})`}
-            />
-            <path
-              d="M 0 8 L 30 14 L 60 20 L 90 30 L 120 38"
-              stroke={gainColor}
-              strokeWidth="2"
-              fill="none"
-            />
-            <circle cx="120" cy="38" r="3" fill={gainColor} />
-          </>
-        ) : (
-          <>
-            <path
-              d="M 0 38 L 30 32 L 60 28 L 90 18 L 120 8 L 120 40 L 0 40 Z"
-              fill={`url(#${gradientId})`}
-            />
-            <path
-              d="M 0 38 L 30 32 L 60 28 L 90 18 L 120 8"
-              stroke={gainColor}
-              strokeWidth="2"
-              fill="none"
-            />
-            <circle cx="120" cy="8" r="3" fill={gainColor} />
-          </>
-        )}
-      </svg>
-                  </div>
+            <div className="knowledge-score">
+              <div
+                className="knowledge-ring"
+                style={{
+                  '--knowledge-value': `${clampPercent(currentKnowledge)}%`,
+                  '--knowledge-color': currentColor,
+                }}
+              >
+                <div>
+                  <strong>{loading ? '...' : `${currentKnowledge}%`}</strong>
+                  <span>Current</span>
                 </div>
+              </div>
+              <div className="knowledge-score-copy">
+                <strong>Current Knowledge</strong>
+                <span>{getKnowledgeLevel(currentKnowledge)}</span>
+                <p>Average latest score after completed assessments and learning activity.</p>
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
         {/* Charts Section */}
+        <DashboardSectionHeader
+          eyebrow="Trends"
+          title="Learning Performance"
+          description="Recent submitted activity and module completion, shown together for quick comparison."
+        />
         <div className="charts-section">
           <div
             className="chart-card clickable"
@@ -773,7 +749,10 @@ if (currentKnowledge < 40) {
             aria-label="Open Analytics page"
           >
             <div className="chart-header">
-              <h3>User Activity Trends</h3>
+              <div>
+                <h3>Submitted Learning Activity</h3>
+                <p>Number of completed and submitted attempts in each period.</p>
+              </div>
               <select
                 className="chart-select"
                 value={activityTimeframe}
@@ -816,7 +795,10 @@ if (currentKnowledge < 40) {
             aria-label="Open Progress page"
           >
             <div className="chart-header">
-              <h3>Training Progress Distribution</h3>
+              <div>
+                <h3>Completion by Module</h3>
+                <p>Percentage of learners who completed each training module.</p>
+              </div>
             </div>
             <div className="chart-body">
               <div className="stats-list">

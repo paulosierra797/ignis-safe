@@ -29,7 +29,12 @@ const options = {
       beginAtZero: true,
       max: 100,
       ticks: {
-        stepSize: 20
+        stepSize: 20,
+        callback: (value) => `${value}%`,
+        color: '#667085'
+      },
+      grid: {
+        color: 'rgba(152, 162, 179, 0.18)'
       }
     },
     x: {
@@ -51,14 +56,14 @@ const data = {
     {
       label: 'Post-Test',
       data: [],
-      backgroundColor: '#f99ca2',
+      backgroundColor: '#15803d',
       borderRadius: 4,
       barPercentage: 0.8
     },
     {
       label: 'Pre-Test',
       data: [],
-      backgroundColor: '#5dc5d8',
+      backgroundColor: '#2563eb',
       borderRadius: 4,
       barPercentage: 0.8
     }

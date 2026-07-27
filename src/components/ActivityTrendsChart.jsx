@@ -17,7 +17,17 @@ const options = {
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      display: false
+      display: true,
+      position: 'top',
+      align: 'start',
+      labels: {
+        usePointStyle: true,
+        pointStyle: 'circle',
+        boxWidth: 8,
+        boxHeight: 8,
+        color: '#667085',
+        font: { size: 11 }
+      }
     },
     title: {
       display: false
@@ -26,9 +36,12 @@ const options = {
   scales: {
     y: {
       beginAtZero: true,
-      max: 400,
       ticks: {
-        stepSize: 100
+        precision: 0,
+        color: '#667085'
+      },
+      grid: {
+        color: 'rgba(152, 162, 179, 0.18)'
       }
     },
     x: {
@@ -40,20 +53,20 @@ const options = {
 };
 
 const data = {
-  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  labels: [],
   datasets: [
     {
       label: 'Activity 1',
-      data: [60, 120, 140, 100, 85, 65, 180, 260, 100, 180, 190, 200],
-      backgroundColor: '#f87171',
+      data: [],
+      backgroundColor: '#2563eb',
       borderRadius: 4,
       barPercentage: 0.8,
       categoryPercentage: 0.9
     },
     {
       label: 'Activity 2',
-      data: [140, 200, 220, 280, 260, 300, 240, 340, 160, 360, 380, 400],
-      backgroundColor: '#fbbf24',
+      data: [],
+      backgroundColor: '#f59e0b',
       borderRadius: 4,
       barPercentage: 0.8,
       categoryPercentage: 0.9

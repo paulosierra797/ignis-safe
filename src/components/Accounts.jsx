@@ -4743,7 +4743,15 @@ const permissions = getDefaultPermissions(formData.role);
                 <button className="accounts-modal-draft" onClick={closeConfirmActionModal} disabled={isConfirmActionProcessing}>
                   Cancel
                 </button>
-                <button className="leave-reject-btn" onClick={confirmActionModal} disabled={isConfirmActionProcessing}>
+        <button
+          className={
+            ['remove-shift-assignment', 'save-cleared-shift-schedule'].includes(pendingConfirmAction.action)
+              ? 'accounts-modal-draft'
+              : 'leave-reject-btn'
+          }
+          onClick={confirmActionModal}
+          disabled={isConfirmActionProcessing}
+        >
                   {isConfirmActionProcessing
                     ? pendingConfirmAction.action === 'save-cleared-shift-schedule'
                       ? 'Saving...'

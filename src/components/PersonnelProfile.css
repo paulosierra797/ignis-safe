@@ -535,6 +535,15 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
   background: #374151;
 }
 
+.register-face-btn {
+  background: #f59e0b;
+  color: #1f2937;
+}
+
+.register-face-btn:hover {
+  background: #d97706;
+}
+
 .my-requests-section {
   margin-top: 1.5rem;
   padding-top: 1.25rem;

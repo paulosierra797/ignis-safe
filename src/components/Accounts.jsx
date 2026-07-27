@@ -4746,7 +4746,7 @@ const permissions = getDefaultPermissions(formData.role);
         <button
           className={
             ['remove-shift-assignment', 'save-cleared-shift-schedule'].includes(pendingConfirmAction.action)
-              ? 'accounts-modal-draft'
+              ? 'accounts-modal-add'
               : 'leave-reject-btn'
           }
           onClick={confirmActionModal}

@@ -75,9 +75,10 @@ const validateTrustedDeviceRecord = (record, { deviceId, userId }) => {
 export default function LoginPage() {
   const navigate = useNavigate();
   const { currentUser, setCurrentUser, refreshCurrentUser } = useUser();
+  const requestedPortal = new URLSearchParams(window.location.search).get('portal');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loginPortal, setLoginPortal] = useState('admin');
+  const [loginPortal, setLoginPortal] = useState(requestedPortal === 'personnel' ? 'personnel' : 'admin');
   const [rememberMe, setRememberMe] = useState(false);
   const [pendingRole, setPendingRole] = useState('');
   const [showPassword, setShowPassword] = useState(false);

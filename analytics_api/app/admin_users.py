@@ -1,5 +1,6 @@
 import os
 from typing import Any, Dict, List, Optional
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -53,6 +54,31 @@ def build_create_response(
     }
 
 
+def build_invite_redirect_url(role: str) -> str:
+    configured_url = str(os.getenv("INVITE_REDIRECT_URL") or "").strip()
+    if not configured_url:
+        configured_url = (
+            str(os.getenv("FRONTEND_ORIGINS") or "http://localhost:5173")
+            .split(",")[0]
+            .strip()
+        )
+
+    parsed_url = urlsplit(configured_url)
+    query = dict(parse_qsl(parsed_url.query, keep_blank_values=True))
+    query.update({
+        "mode": "invite",
+        "portal": "admin" if role.lower() == "admin" else "personnel",
+    })
+
+    return urlunsplit((
+        parsed_url.scheme,
+        parsed_url.netloc,
+        "/confirm-signup",
+        urlencode(query),
+        "",
+    ))
+
+
 @router.post("/api/admin/users/create", dependencies=[Depends(require_api_key)])
 def create_user(request: CreateUserRequest) -> Dict[str, Any]:
     email = str(request.email or "").strip().lower()
@@ -76,10 +102,7 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
         )
 
     auth_user_id: Optional[str] = None
-    redirect_url = str(os.getenv("INVITE_REDIRECT_URL") or "").strip()
-    if not redirect_url:
-        frontend_origin = str(os.getenv("FRONTEND_ORIGINS") or "http://localhost:5173").split(",")[0].strip()
-        redirect_url = f"{frontend_origin.rstrip('/')}/confirm-signup?mode=invite"
+    redirect_url = build_invite_redirect_url(role)
 
     try:
         auth_response = supabase.auth.admin.invite_user_by_email(

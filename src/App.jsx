@@ -45,16 +45,27 @@ function LandingPage() {
   const searchParams = new URLSearchParams(location.search);
   const hasPendingActivation = ['Pending Activation', 'Pending Verification']
     .includes(currentUser?.status);
+  const invitePortal = ['admin', 'personnel'].includes(searchParams.get('portal'))
+    ? searchParams.get('portal')
+    : String(currentUser?.role || '').toLowerCase();
   const isInviteLink = hashParams.get('type') === 'invite'
     || searchParams.get('type') === 'invite'
+    || searchParams.get('mode') === 'invite'
+    || (searchParams.has('code') && ['admin', 'personnel'].includes(invitePortal))
     || hasPendingActivation;
 
   if (isInviteLink) {
+    const activationParams = new URLSearchParams(location.search);
+    activationParams.set('mode', 'invite');
+    if (['admin', 'personnel'].includes(invitePortal)) {
+      activationParams.set('portal', invitePortal);
+    }
+
     return (
       <Navigate
         to={{
           pathname: '/confirm-signup',
-          search: '?mode=invite',
+          search: `?${activationParams.toString()}`,
           hash: location.hash
         }}
         replace

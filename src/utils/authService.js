@@ -623,6 +623,29 @@ export const activateInvitedAccount = async (newPassword) => {
   }
 };
 
+export const getInviteActivationContext = async () => {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+
+    const invitedUser = data?.session?.user;
+    if (!invitedUser) {
+      return { data: null, error: null };
+    }
+
+    return {
+      data: {
+        email: invitedUser.email || '',
+        role: String(invitedUser.user_metadata?.role || '').trim().toLowerCase()
+      },
+      error: null
+    };
+  } catch (error) {
+    console.error('Error loading invitation context:', error);
+    return { data: null, error: error.message };
+  }
+};
+
 export const verifyCurrentPassword = async (currentPassword) => {
   try {
     const { data: userData, error: userError } = await supabase.auth.getUser();

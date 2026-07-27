@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaCheck, FaCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaCheck, FaCircle, FaEye, FaEyeSlash, FaUserShield } from 'react-icons/fa';
 import {
   activateInvitedAccount,
+  getInviteActivationContext,
   resendSignupCode,
   signOut,
   verifySignupCode
@@ -13,6 +14,9 @@ import './ConfirmSignupPage.css';
 
 const OTP_REQUEST_TIMEOUT_MS = 15000;
 const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+const normalizeInviteRole = (role) => String(role || '').trim().toLowerCase() === 'admin'
+  ? 'admin'
+  : 'personnel';
 
 const withTimeout = (promise, timeoutMs, message) =>
   Promise.race([
@@ -27,8 +31,10 @@ export default function ConfirmSignupPage() {
   const location = useLocation();
   const { setCurrentUser } = useUser();
   const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
-  const isInviteActivation = new URLSearchParams(location.search).get('mode') === 'invite'
+  const searchParams = new URLSearchParams(location.search);
+  const isInviteActivation = searchParams.get('mode') === 'invite'
     || hashParams.get('type') === 'invite';
+  const [inviteRole, setInviteRole] = useState(() => normalizeInviteRole(searchParams.get('portal')));
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [password, setPassword] = useState('');
@@ -51,6 +57,26 @@ export default function ConfirmSignupPage() {
     }
   ];
   const isInvitePasswordValid = passwordChecks.every((check) => check.met);
+  const isAdminInvite = inviteRole === 'admin';
+
+  useEffect(() => {
+    if (!isInviteActivation) {
+      return;
+    }
+
+    let isCancelled = false;
+    const loadInviteContext = async () => {
+      const { data } = await getInviteActivationContext();
+      if (!isCancelled && data?.role) {
+        setInviteRole(normalizeInviteRole(data.role));
+      }
+    };
+
+    void loadInviteContext();
+    return () => {
+      isCancelled = true;
+    };
+  }, [isInviteActivation]);
   
   const handleVerifyOtp = async (event) => {
     event.preventDefault();
@@ -151,7 +177,7 @@ export default function ConfirmSignupPage() {
       localStorage.removeItem('user');
       setMessage({ type: 'success', text: 'Account activated. You can now sign in.' });
       setTimeout(() => {
-        navigate('/login?verified=1', { replace: true });
+        navigate(`/login?verified=1&portal=${inviteRole}`, { replace: true });
       }, 1500);
     } catch (err) {
       setMessage({ type: 'error', text: err.message || 'Unable to activate this account.' });
@@ -162,12 +188,20 @@ export default function ConfirmSignupPage() {
 
   if (isInviteActivation) {
     return (
-      <div className="confirm-signup-page">
+      <div className={`confirm-signup-page confirm-signup-page--${inviteRole}`}>
         <div className="confirm-signup-card" role="main" aria-labelledby="confirm-signup-title">
           <img className="confirm-signup-logo" src={ignissafe} alt="Ignis Safe" />
-          <h1 id="confirm-signup-title">Activate Account</h1>
+          <div className="confirm-signup-account-type">
+            {isAdminInvite && <FaUserShield aria-hidden="true" />}
+            <span>{isAdminInvite ? 'Administrator activation' : 'Personnel activation'}</span>
+          </div>
+          <h1 id="confirm-signup-title">
+            {isAdminInvite ? 'Activate Admin Account' : 'Activate Personnel Account'}
+          </h1>
           <p className="confirm-signup-description">
-            Create your password to finish activating your personnel account.
+            {isAdminInvite
+              ? 'Create your password to securely activate your administrator account.'
+              : 'Create your password to finish activating your personnel account.'}
           </p>
 
           <form className="confirm-signup-form" onSubmit={handleActivateInvite}>
@@ -247,7 +281,7 @@ export default function ConfirmSignupPage() {
           </form>
 
           <p className="confirm-signup-footer">
-            Already activated? <Link to="/login">Go to Login</Link>
+            Already activated? <Link to={`/login?portal=${inviteRole}`}>Go to Login</Link>
           </p>
         </div>
       </div>

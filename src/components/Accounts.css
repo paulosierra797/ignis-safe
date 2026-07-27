@@ -2539,22 +2539,43 @@
   gap: 0.65rem;
 }
 
-.shift-selected-review-item > span {
+.shift-selected-review-info {
   min-width: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
 }
 
-.shift-selected-review-item strong {
+.shift-selected-review-item strong,
+.shift-switch-confirm-item strong {
   overflow-wrap: anywhere;
   color: #1f2937;
   font-size: 0.84rem;
 }
 
-.shift-selected-review-item small {
+.shift-selected-review-item small,
+.shift-switch-confirm-item small {
   margin-top: 0.12rem;
   color: #64748b;
   font-size: 0.72rem;
+}
+
+.shift-personnel-avatar-photo,
+.shift-personnel-avatar-fallback {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.shift-personnel-avatar-fallback {
+  display: inline-grid;
+  place-items: center;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .shift-selected-review-item button,
@@ -2929,6 +2950,43 @@
 
 .accounts-modal-discard:hover {
   background: #b91c1c;
+}
+
+.accounts-shift-switch-confirm-modal {
+  width: min(480px, 100%);
+}
+
+.shift-switch-confirm-message {
+  margin: 0 0 1rem;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.shift-switch-confirm-list {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  scrollbar-gutter: stable;
+}
+
+.shift-switch-confirm-item {
+  min-height: 52px;
+  padding: 0.55rem 0.7rem;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.shift-switch-confirm-item:last-child {
+  border-bottom: none;
+}
+
+.shift-switch-confirm-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 @media (max-width: 700px) {

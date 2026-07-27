@@ -59,6 +59,29 @@ const EMPTY_PERSONNEL_FORM = {
   contact_number: ''
 };
 const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
+const getPersonnelInitials = (account) => {
+  const first = String(account?.first_name || '').trim().charAt(0);
+  const last = String(account?.last_name || '').trim().charAt(0);
+  return `${first}${last}`.toUpperCase() || 'P';
+};
+
+function PersonnelAvatar({ account, className = '' }) {
+  if (account?.avatar_url) {
+    return (
+      <img
+        src={account.avatar_url}
+        alt=""
+        className={`shift-personnel-avatar-photo ${className}`.trim()}
+      />
+    );
+  }
+
+  return (
+    <span className={`shift-personnel-avatar-fallback ${className}`.trim()} aria-hidden="true">
+      {getPersonnelInitials(account)}
+    </span>
+  );
+}
 const isAlreadyRegisteredInviteError = (error) => {
   const normalizedError = String(error || '').toLowerCase();
   return (normalizedError.includes('already') && normalizedError.includes('registered'))
@@ -393,6 +416,8 @@ export default function Accounts() {
   const [isPersonnelShiftReviewSaved, setIsPersonnelShiftReviewSaved] = useState(false);
   const [selectedShiftPersonnelIds, setSelectedShiftPersonnelIds] = useState([]);
   const [selectedShiftForAssignment, setSelectedShiftForAssignment] = useState('');
+  const [isShiftSwitchConfirmOpen, setIsShiftSwitchConfirmOpen] = useState(false);
+  const [pendingShiftSwitchTarget, setPendingShiftSwitchTarget] = useState('');
   const [personnelShiftSearch, setPersonnelShiftSearch] = useState('');
   const [personnelShiftMessage, setPersonnelShiftMessage] = useState({ type: '', text: '' });
   const [periodAssignments, setPeriodAssignments] = useState([]);
@@ -611,6 +636,17 @@ export default function Accounts() {
     }
 
     return [account.rank, account.first_name, account.last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim() || account.email || 'Personnel';
+  };
+
+  const formatPersonnelFullName = (account) => {
+    if (!account) {
+      return 'Personnel';
+    }
+
+    return [account.first_name, account.last_name]
       .filter(Boolean)
       .join(' ')
       .trim() || account.email || 'Personnel';
@@ -1822,15 +1858,57 @@ const permissions = getDefaultPermissions(formData.role);
       selectedShiftPersonnelIds.includes(personnelId)
     );
 
+  const performShiftSwitch = (shiftType) => {
+    setSelectedShiftForAssignment(shiftType);
+    setSelectedShiftPersonnelIds([]);
+    setIsPersonnelShiftReviewSaved(false);
+    setPersonnelShiftMessage({ type: '', text: '' });
+  };
+
   const handleSelectShiftForAssignment = (shiftType) => {
     if (shiftType === selectedShiftForAssignment) {
       return;
     }
 
-    setSelectedShiftForAssignment(shiftType);
-    setSelectedShiftPersonnelIds([]);
-    setIsPersonnelShiftReviewSaved(false);
-    setPersonnelShiftMessage({ type: '', text: '' });
+    if (selectedShiftForAssignment && selectedShiftPersonnelIds.length > 0) {
+      setPendingShiftSwitchTarget(shiftType);
+      setIsShiftSwitchConfirmOpen(true);
+      return;
+    }
+
+    performShiftSwitch(shiftType);
+  };
+
+  const handleCancelShiftSwitch = () => {
+    setIsShiftSwitchConfirmOpen(false);
+    setPendingShiftSwitchTarget('');
+  };
+
+  const handleDiscardAndSwitchShift = () => {
+    const targetShift = pendingShiftSwitchTarget;
+    setIsShiftSwitchConfirmOpen(false);
+    setPendingShiftSwitchTarget('');
+
+    if (targetShift) {
+      performShiftSwitch(targetShift);
+    }
+  };
+
+  const handleSaveShiftAndSwitch = async () => {
+    if (isPersonnelShiftSaving) {
+      return;
+    }
+
+    const targetShift = pendingShiftSwitchTarget;
+    setIsShiftSwitchConfirmOpen(false);
+
+    const success = await handleAssignPersonnelToShift();
+
+    if (success && targetShift) {
+      performShiftSwitch(targetShift);
+    }
+
+    setPendingShiftSwitchTarget('');
   };
 
   const handleToggleVisiblePersonnel = () => {
@@ -1893,20 +1971,20 @@ const permissions = getDefaultPermissions(formData.role);
   const handleAssignPersonnelToShift = async () => {
     if (!selectedShiftPersonnelIds.length) {
       setPersonnelShiftMessage({ type: 'error', text: 'Please select at least one personnel member.' });
-      return;
+      return false;
     }
 
     // Get dates from the shift schedule
-    const shiftDates = selectedShiftForAssignment === 'A' 
+    const shiftDates = selectedShiftForAssignment === 'A'
       ? getCurrentShiftDates(shiftSchedule.shift_a_dates)
       : getCurrentShiftDates(shiftSchedule.shift_b_dates);
 
     if (!shiftDates || shiftDates.length === 0) {
-      setPersonnelShiftMessage({ 
-        type: 'error', 
-        text: `Shift ${selectedShiftForAssignment} has no dates set. Please set shift dates first.` 
+      setPersonnelShiftMessage({
+        type: 'error',
+        text: `Shift ${selectedShiftForAssignment} has no dates set. Please set shift dates first.`
       });
-      return;
+      return false;
     }
 
     // Get the first and last dates
@@ -1937,7 +2015,7 @@ const permissions = getDefaultPermissions(formData.role);
         text: `Cannot assign Shift ${selectedShiftType}. These personnel already have an assignment in this schedule: ${assignedNames}.`
       });
       setIsPersonnelShiftSaving(false);
-      return;
+      return false;
     }
 
     const { error: bulkAssignmentError } = await assignPersonnelToShiftBulk({
@@ -2030,6 +2108,7 @@ const permissions = getDefaultPermissions(formData.role);
     }
 
     setIsPersonnelShiftSaving(false);
+    return !failedAssignments.length && successfulAssignments.length > 0;
   };
 
   const handleRemoveShiftAssignment = async (assignmentId) => {
@@ -4287,14 +4366,16 @@ const permissions = getDefaultPermissions(formData.role);
                         {selectedShiftPersonnelRows.length ? (
                           selectedShiftPersonnelRows.map((personnel) => (
                             <div key={personnel.admin_id} className="shift-selected-review-item">
-                              <span>
-                                <strong>{formatPersonnelName(personnel)}</strong>
+                              <PersonnelAvatar account={personnel} className="shift-selected-review-avatar" />
+                              <span className="shift-selected-review-info">
+                                <strong>{formatPersonnelFullName(personnel)}</strong>
                                 <small>{personnel.rank || 'N/A'}</small>
+                                <small>ID: {personnel.admin_id}</small>
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleTogglePersonnelForShift(personnel, false)}
-                                aria-label={`Remove ${formatPersonnelName(personnel)} from selection`}
+                                aria-label={`Remove ${formatPersonnelFullName(personnel)} from selection`}
                                 title="Remove from selection"
                               >
                                 <FaTimes aria-hidden="true" />
@@ -4491,6 +4572,73 @@ const permissions = getDefaultPermissions(formData.role);
                 </button>
                 <button className="accounts-modal-add" onClick={handleConfirmShiftAssignment} disabled={isPersonnelShiftSaving}>
                   {isPersonnelShiftSaving ? 'Saving...' : 'Save Assignments'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isShiftSwitchConfirmOpen && (
+          <div
+            className="accounts-modal-overlay"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="shiftSwitchConfirmTitle"
+            aria-describedby="shiftSwitchConfirmDescription"
+          >
+            <div className="accounts-modal accounts-shift-switch-confirm-modal">
+              <div className="accounts-modal-header">
+                <h3 id="shiftSwitchConfirmTitle">Confirm Shift {selectedShiftForAssignment} Personnel</h3>
+              </div>
+
+              <div className="accounts-modal-body">
+                <p id="shiftSwitchConfirmDescription" className="shift-switch-confirm-message">
+                  You selected the following personnel for Shift {selectedShiftForAssignment}. Would you like to save
+                  these selections before switching to Shift {pendingShiftSwitchTarget}?
+                </p>
+
+                <div className="shift-switch-confirm-list">
+                  {selectedShiftPersonnelRows.length ? (
+                    selectedShiftPersonnelRows.map((personnel) => (
+                      <div key={personnel.admin_id} className="shift-switch-confirm-item">
+                        <PersonnelAvatar account={personnel} className="shift-selected-review-avatar" />
+                        <span className="shift-selected-review-info">
+                          <strong>{formatPersonnelFullName(personnel)}</strong>
+                          <small>{personnel.rank || 'N/A'}</small>
+                          <small>ID: {personnel.admin_id}</small>
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="shift-personnel-empty">No personnel selected.</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="accounts-modal-footer shift-switch-confirm-actions">
+                <button
+                  type="button"
+                  className="accounts-modal-draft"
+                  onClick={handleCancelShiftSwitch}
+                  disabled={isPersonnelShiftSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="accounts-modal-discard"
+                  onClick={handleDiscardAndSwitchShift}
+                  disabled={isPersonnelShiftSaving}
+                >
+                  Discard and Switch
+                </button>
+                <button
+                  type="button"
+                  className="accounts-modal-add"
+                  onClick={handleSaveShiftAndSwitch}
+                  disabled={isPersonnelShiftSaving}
+                >
+                  {isPersonnelShiftSaving ? 'Saving...' : `Save Shift ${selectedShiftForAssignment}`}
                 </button>
               </div>
             </div>

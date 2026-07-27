@@ -5,6 +5,8 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const ACCOUNT_ACTIVITY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 const MODULE_DISPLAY_TITLES = {
   1: 'Module 1 - Fire Extinguisher: Basics, Types, and How to Use',
   2: 'Module 2 - House Fire: How to Get Out Safely During a Fire',
@@ -45,6 +47,17 @@ const getMostRecentDate = (dates = []) => {
     .sort((a, b) => b.getTime() - a.getTime())[0] || null;
 };
 
+const getAccountStatus = (lastActivityAt) => {
+  if (!lastActivityAt) return 'Inactive';
+
+  const lastActivityTime = new Date(lastActivityAt).getTime();
+  if (Number.isNaN(lastActivityTime)) return 'Inactive';
+
+  return Date.now() - lastActivityTime < ACCOUNT_ACTIVITY_WINDOW_MS
+    ? 'Active'
+    : 'Inactive';
+};
+
 const buildModuleProgress = ({ profileId, module, moduleProgressRow, attemptsForUser, assessmentsById }) => {
   const preDone = Boolean(moduleProgressRow?.pre_test_completed_at);
   const simulationDone = Boolean(moduleProgressRow?.simulation_completed_at);
@@ -81,8 +94,11 @@ const buildModuleProgress = ({ profileId, module, moduleProgressRow, attemptsFor
 
   const latestActivityDate = getMostRecentDate([
     moduleProgressRow?.pre_test_completed_at,
+    moduleProgressRow?.learning_material_completed_at,
     moduleProgressRow?.simulation_completed_at,
     moduleProgressRow?.post_test_completed_at,
+    moduleProgressRow?.updated_at,
+    moduleProgressRow?.created_at,
     ...tests.map((test) => test.date),
   ]);
 
@@ -109,7 +125,7 @@ export const getProgressPageData = async () => {
     ] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, username, created_at, updated_at, is_active')
+        .select('id, first_name, last_name, email, username, created_at, updated_at')
         .order('created_at', { ascending: false }),
       supabase
         .from('modules')
@@ -117,7 +133,7 @@ export const getProgressPageData = async () => {
         .order('module_no', { ascending: true, nullsFirst: false }),
       supabase
         .from('module_progress')
-        .select('user_id, module_id, pre_test_completed_at, simulation_completed_at, post_test_completed_at, created_at'),
+        .select('user_id, module_id, pre_test_completed_at, learning_material_completed_at, simulation_completed_at, post_test_completed_at, created_at, updated_at'),
       supabase
         .from('assessment_attempts')
         .select('id, user_id, assessment_id, score, submitted_at, started_at, created_at, status'),
@@ -195,6 +211,7 @@ export const getProgressPageData = async () => {
         profile.updated_at,
         profile.created_at,
       ]);
+      const normalizedLastActivityAt = lastActivityAt ? lastActivityAt.toISOString() : null;
 
       return {
         id: profile.id,
@@ -206,9 +223,9 @@ export const getProgressPageData = async () => {
         email: profile.email || '-',
         moduleProgress: `${completedModules}/${totalModules} Modules`,
         overallPercent,
-        lastActivityAt: lastActivityAt ? lastActivityAt.toISOString() : null,
+        lastActivityAt: normalizedLastActivityAt,
         lastAccessedModule: latestModule?.name || 'N/A',
-        accessStatus: profile.is_active === false ? 'DEACTIVATED' : 'ACTIVE',
+        accessStatus: getAccountStatus(normalizedLastActivityAt),
         dateCreated: profile.created_at || null,
         modulesCompleted: completedModules,
         modules: userModules,
@@ -228,21 +245,5 @@ export const getProgressPageData = async () => {
       data: { users: [], modules: [] },
       error: error.message,
     };
-  }
-};
-
-export const setUserActiveStatus = async (userId, isActive) => {
-  try {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_active: isActive })
-      .eq('id', userId);
-
-    if (error) throw error;
-
-    return { error: null };
-  } catch (error) {
-    console.error('Error updating user account status:', error);
-    return { error: error.message };
   }
 };

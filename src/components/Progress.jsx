@@ -1,13 +1,20 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  FiActivity,
+  FiBarChart2,
+  FiBookOpen,
+  FiCalendar,
+  FiCheckCircle,
+  FiChevronDown,
+  FiClock,
+  FiMail,
+  FiMapPin,
+} from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
-import { UnsavedChangesDialog } from './UnsavedChangesPrompt';
 import './Progress.css';
-import { getProgressPageData, setUserActiveStatus } from '../utils/progressService';
-import { logAdminActivity } from '../utils/usersService';
-import { formatStatusLabel } from '../utils/statusUtils';
-import { useUser } from '../context/UserContext';
+import { getProgressPageData } from '../utils/progressService';
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -22,6 +29,19 @@ const formatLongDate = (value) => {
   if (Number.isNaN(date.getTime())) return '-';
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
+
+const getUserInitials = (name = '') =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'U';
+
+const getActivityDescription = (status) =>
+  status === 'Active'
+    ? 'Activity recorded within the last 7 days.'
+    : 'No activity recorded for 7 consecutive days.';
 
 const COMPLETION_RANGES = [
   { label: 'All', min: null, max: null },
@@ -51,7 +71,6 @@ const matchesCompletionFilter = (overallPercent, filterValue) => {
 };
 
 export default function Progress() {
-  const { currentUser } = useUser();
   const [progressRows, setProgressRows] = useState([]);
   const [moduleOptions, setModuleOptions] = useState(['All']);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,8 +83,6 @@ export default function Progress() {
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [expandedTests, setExpandedTests] = useState({});
-  const [isDeactivateConfirmOpen, setIsDeactivateConfirmOpen] = useState(false);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const completionBlurTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -86,10 +103,9 @@ export default function Progress() {
         setProgressRows(data?.users || []);
         const nextModuleOptions = ['All', ...(data?.modules || [])];
         setModuleOptions(nextModuleOptions);
-
-        if (!nextModuleOptions.includes(moduleFilter)) {
-          setModuleFilter('All');
-        }
+        setModuleFilter((current) => (
+          nextModuleOptions.includes(current) ? current : 'All'
+        ));
       }
 
       setIsLoading(false);
@@ -157,36 +173,6 @@ export default function Progress() {
     setShowModal(false);
     setSelectedUser(null);
     setExpandedTests({});
-    setIsDeactivateConfirmOpen(false);
-  };
-
-  const handleToggleAccountStatus = async () => {
-    if (!selectedUser || isUpdatingStatus) return;
-    const nextIsActive = selectedUser.accessStatus !== 'ACTIVE';
-
-    setIsUpdatingStatus(true);
-    const { error } = await setUserActiveStatus(selectedUser.id, nextIsActive);
-    setIsUpdatingStatus(false);
-    setIsDeactivateConfirmOpen(false);
-
-    if (error) {
-      window.alert(`Failed to update account status: ${error}`);
-      return;
-    }
-
-    const nextAccessStatus = nextIsActive ? 'ACTIVE' : 'DEACTIVATED';
-    setSelectedUser((current) => (current ? { ...current, accessStatus: nextAccessStatus } : current));
-    setProgressRows((current) =>
-      current.map((row) => (row.id === selectedUser.id ? { ...row, accessStatus: nextAccessStatus } : row))
-    );
-
-    void logAdminActivity({
-      actorId: currentUser?.admin_id,
-      actorName: currentUser?.name || 'Admin User',
-      action: nextIsActive ? 'User Account Reactivated' : 'User Account Deactivated',
-      actionType: 'edit',
-      details: `${nextIsActive ? 'Reactivated' : 'Deactivated'} the account for ${selectedUser.name} (${selectedUser.email}).`,
-    });
   };
 
   const toggleTestExpanded = (moduleName) => {
@@ -414,12 +400,10 @@ export default function Progress() {
           <div className="progress-modal-overlay" onClick={handleCloseModal}>
             <div className="progress-modal" onClick={(e) => e.stopPropagation()}>
               <div className="progress-modal-header">
-                <div className="progress-modal-user-info">
-                  <h2>{selectedUser.name}</h2>
-                  <p>{selectedUser.email}</p>
-                </div>
-                <div className="progress-modal-activity">
-                  Last Activity: <span className="progress-activity-badge">{formatDate(selectedUser.lastActivityAt)}</span>
+                <div className="progress-modal-heading">
+                  <span className="progress-modal-eyebrow">User Details</span>
+                  <h2>Learning Profile</h2>
+                  <p>Account activity and training performance</p>
                 </div>
                 <CloseButton
                   className="progress-modal-close"
@@ -429,36 +413,37 @@ export default function Progress() {
               </div>
 
               <div className="progress-modal-content">
+                <section className="progress-modal-identity">
+                  <div className="progress-modal-avatar" aria-hidden="true">
+                    {getUserInitials(selectedUser.name)}
+                  </div>
+                  <div className="progress-modal-identity-copy">
+                    <span className="progress-modal-label">USER ACCOUNT</span>
+                    <h3>{selectedUser.name}</h3>
+                    <p><FiMail aria-hidden="true" />{selectedUser.email}</p>
+                  </div>
+                  <div className="progress-modal-status-summary">
+                    <span className="progress-modal-label">ACCOUNT STATUS</span>
+                    <span className={`progress-modal-status ${selectedUser.accessStatus.toLowerCase()}`}>
+                      {selectedUser.accessStatus}
+                    </span>
+                    <small>{getActivityDescription(selectedUser.accessStatus)}</small>
+                  </div>
+                </section>
+
                 <div className="progress-modal-grid">
                   <div className="progress-modal-section">
-                    <h4><span className="progress-modal-section-icon">👤</span>Basic Info</h4>
+                    <h4><FiActivity className="progress-modal-section-icon" aria-hidden="true" />Account Activity</h4>
                     <div className="progress-modal-info">
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon">🛡️</span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">ACCOUNT STATUS</span>
-                          <span className={`progress-modal-status ${selectedUser.accessStatus === 'ACTIVE' ? 'active' : 'inactive'}`}>
-                            {formatStatusLabel(selectedUser.accessStatus)}
-                          </span>
-                          <button
-                            type="button"
-                            className={`progress-modal-status-toggle ${selectedUser.accessStatus === 'ACTIVE' ? 'deactivate' : 'reactivate'}`}
-                            onClick={() => setIsDeactivateConfirmOpen(true)}
-                            disabled={isUpdatingStatus}
-                          >
-                            {selectedUser.accessStatus === 'ACTIVE' ? 'Deactivate Account' : 'Reactivate Account'}
-                          </button>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon">📅</span>
+                        <span className="progress-modal-info-icon"><FiCalendar aria-hidden="true" /></span>
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">DATE CREATED</span>
                           <span className="progress-modal-value">{formatLongDate(selectedUser.dateCreated)}</span>
                         </div>
                       </div>
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon">🕒</span>
+                        <span className="progress-modal-info-icon"><FiClock aria-hidden="true" /></span>
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">LAST ACTIVITY</span>
                           <span className="progress-modal-value">{formatLongDate(selectedUser.lastActivityAt)}</span>
@@ -468,24 +453,24 @@ export default function Progress() {
                   </div>
 
                   <div className="progress-modal-section">
-                    <h4><span className="progress-modal-section-icon">📈</span>Learning Progress</h4>
+                    <h4><FiBarChart2 className="progress-modal-section-icon" aria-hidden="true" />Learning Progress</h4>
                     <div className="progress-modal-info">
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon">✅</span>
+                        <span className="progress-modal-info-icon"><FiCheckCircle aria-hidden="true" /></span>
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">MODULES COMPLETED</span>
                           <span className="progress-modal-value">{selectedUser.modulesCompleted}</span>
                         </div>
                       </div>
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon">📊</span>
+                        <span className="progress-modal-info-icon"><FiBarChart2 aria-hidden="true" /></span>
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">OVERALL PROGRESS</span>
                           <span className="progress-modal-value">{selectedUser.overallPercent}%</span>
                         </div>
                       </div>
                       <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon">📍</span>
+                        <span className="progress-modal-info-icon"><FiMapPin aria-hidden="true" /></span>
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">LAST MODULE ACCESSED</span>
                           <span className="progress-modal-value">{selectedUser.lastAccessedModule}</span>
@@ -496,7 +481,7 @@ export default function Progress() {
                 </div>
 
                 <div className="progress-modal-full">
-                  <h4><span className="progress-modal-section-icon">📚</span>Modules Progress</h4>
+                  <h4><FiBookOpen className="progress-modal-section-icon" aria-hidden="true" />Module Progress</h4>
                   <div className="progress-modal-modules">
                     {selectedUser.modules.map((module) => (
                       <div key={module.name} className="progress-modal-module-card">
@@ -517,24 +502,26 @@ export default function Progress() {
                 </div>
 
                 <div className="progress-modal-full">
-                  <h4><span className="progress-modal-section-icon">📝</span>Test Tracking</h4>
+                  <h4><FiCheckCircle className="progress-modal-section-icon" aria-hidden="true" />Test Tracking</h4>
                   <div className="progress-modal-tests">
                     {selectedUser.modules.map((module) => (
                       <div key={module.name}>
-                        <div 
+                        <button
+                          type="button"
                           className="progress-modal-test-item" 
                           onClick={() => toggleTestExpanded(module.name)}
+                          aria-expanded={Boolean(expandedTests[module.name])}
                         >
                           <span className="progress-modal-test-name">
                             <span className={`progress-modal-test-dropdown ${expandedTests[module.name] ? 'open' : ''}`}>
-                              ▼
+                              <FiChevronDown aria-hidden="true" />
                             </span>
                             {module.name}
                           </span>
                           <span className="progress-modal-test-status">
                             {module.tests.length > 0 ? `${module.tests.length} tests` : 'No tests yet'}
                           </span>
-                        </div>
+                        </button>
                         {expandedTests[module.name] && module.tests.length > 0 && (
                           <div className="progress-modal-test-details">
                             <div>
@@ -556,21 +543,6 @@ export default function Progress() {
               </div>
             </div>
           </div>
-        )}
-
-        {isDeactivateConfirmOpen && selectedUser && (
-          <UnsavedChangesDialog
-            title={selectedUser.accessStatus === 'ACTIVE' ? 'Deactivate this account?' : 'Reactivate this account?'}
-            message={
-              selectedUser.accessStatus === 'ACTIVE'
-                ? `${selectedUser.name} will be signed out and will not be able to log in to the app until reactivated.`
-                : `${selectedUser.name} will be able to log in to the app again.`
-            }
-            stayLabel="Cancel"
-            leaveLabel={isUpdatingStatus ? 'Please wait...' : selectedUser.accessStatus === 'ACTIVE' ? 'Deactivate' : 'Reactivate'}
-            onStay={() => setIsDeactivateConfirmOpen(false)}
-            onLeave={handleToggleAccountStatus}
-          />
         )}
       </div>
     </div>

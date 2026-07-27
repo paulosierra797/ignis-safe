@@ -237,7 +237,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.68);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -245,13 +246,14 @@
 }
 
 .progress-modal {
-  background: white;
-  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
   max-width: 1000px;
-  width: 90%;
+  width: min(94%, 1000px);
   max-height: 90vh;
   overflow: hidden;
-  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
   display: flex;
   flex-direction: column;
 }
@@ -262,57 +264,38 @@
   z-index: 5;
   flex-shrink: 0;
   display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 1.25rem 3.75rem 1.25rem 1.75rem;
-  background: linear-gradient(135deg, #C1272D 0%, #A61E24 55%, #7A171B 100%);
-  border-bottom: 1px solid #e5e7eb;
-  border-radius: 12px 12px 0 0;
+  align-items: center;
+  padding: 1.25rem 4rem 1.25rem 1.75rem;
+  background: #a61e24;
+  border-bottom: 4px solid #fbbf24;
+  border-radius: 8px 8px 0 0;
 }
 
-.progress-modal-user-info {
-  flex: 1 1 220px;
+.progress-modal-heading {
   min-width: 0;
 }
 
-.progress-modal-user-info h2 {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: #ffffff;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-  overflow-wrap: break-word;
-  word-break: break-word;
+.progress-modal-eyebrow {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #fde68a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-.progress-modal-user-info p {
+.progress-modal-heading h2 {
   margin: 0;
-  font-size: 0.9rem;
-  color: #ffe9ea;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  overflow-wrap: break-word;
-  word-break: break-word;
+  color: #ffffff;
+  font-size: 1.35rem;
+  font-weight: 800;
 }
 
-.progress-modal-activity {
-  font-size: 0.9rem;
-  color: white;
-  white-space: normal;
-  flex: 0 1 auto;
-  margin-right: 1.5rem;
-}
-
-.progress-activity-badge {
-  display: inline-block;
-  background: #fbbf24;
-  color: white;
-  padding: 0.3rem 0.8rem;
-  border-radius: 4px;
-  font-weight: 600;
-  margin-left: 0.5rem;
-  white-space: nowrap;
+.progress-modal-heading p {
+  margin: 0.25rem 0 0;
+  color: #fee2e2;
+  font-size: 0.86rem;
 }
 
 .progress-modal-close {
@@ -334,21 +317,89 @@
 }
 
 .progress-modal-close:hover {
-  color: rgba(255, 255, 255, 0.8);
+  color: #fde68a;
 }
 
 .progress-modal-content {
-  padding: 2rem;
+  padding: 1.5rem;
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
 }
 
+.progress-modal-identity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(220px, 300px);
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1.15rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-top: 3px solid #c1272d;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.progress-modal-avatar {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: #c1272d;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.progress-modal-identity-copy {
+  min-width: 0;
+}
+
+.progress-modal-identity-copy h3 {
+  margin: 0.2rem 0 0.3rem;
+  color: #172033;
+  font-size: 1.15rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.progress-modal-identity-copy p {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
+.progress-modal-identity-copy p svg {
+  flex: 0 0 auto;
+}
+
+.progress-modal-status-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+  padding-left: 1rem;
+  border-left: 1px solid #e2e8f0;
+}
+
+.progress-modal-status-summary small {
+  grid-column: 1 / -1;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
 .progress-modal-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .progress-modal-section {
@@ -361,20 +412,21 @@
   font-weight: 700;
   color: #1f2937;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid #F25C5C;
+  border-bottom: 1px solid #dbe2ea;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
 .progress-modal-section-icon {
-  font-size: 1rem;
+  color: #c1272d;
+  font-size: 1.05rem;
   line-height: 1;
 }
 
 .progress-modal-info {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.2rem;
 }
 
@@ -382,23 +434,30 @@
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid #f1d5d5;
-  border-left: 4px solid #F25C5C;
-  border-radius: 10px;
+  min-height: 78px;
+  padding: 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #c1272d;
+  border-radius: 8px;
   background: #fff;
-  box-shadow: 0 1px 4px rgba(214, 76, 76, 0.06);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .progress-modal-info-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(214, 76, 76, 0.14);
+  border-color: #f0b6b9;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.07);
 }
 
 .progress-modal-info-icon {
-  font-size: 1.35rem;
-  line-height: 1;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 6px;
+  background: #fff1f2;
+  color: #b91c1c;
+  font-size: 1rem;
   flex-shrink: 0;
 }
 
@@ -414,7 +473,7 @@
   font-weight: 700;
   color: #9ca3af;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.04em;
 }
 
 .progress-modal-value {
@@ -426,7 +485,7 @@
 .progress-modal-status {
   display: inline-block;
   padding: 0.3rem 0.8rem;
-  border-radius: 4px;
+  border-radius: 999px;
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -437,48 +496,17 @@
 }
 
 .progress-modal-status.inactive {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.progress-modal-status-toggle {
-  align-self: flex-start;
-  margin-top: 0.3rem;
-  border: none;
-  border-radius: 6px;
-  padding: 0.4rem 0.7rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.progress-modal-status-toggle.deactivate {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.progress-modal-status-toggle.deactivate:hover {
-  background: #fecaca;
-}
-
-.progress-modal-status-toggle.reactivate {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.progress-modal-status-toggle.reactivate:hover {
-  background: #bbf7d0;
-}
-
-.progress-modal-status-toggle:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  background: #f1f5f9;
+  color: #475569;
 }
 
 .progress-modal-full {
   grid-column: 1 / -1;
   margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
 }
 
 .progress-modal-full h4 {
@@ -487,7 +515,7 @@
   font-weight: 700;
   color: #1f2937;
   padding-bottom: 0.75rem;
-  border-bottom: 2px solid #F25C5C;
+  border-bottom: 1px solid #dbe2ea;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -500,10 +528,10 @@
 }
 
 .progress-modal-module-card {
-  background: #f9fafb;
-  padding: 0.6rem 0.8rem;
+  background: #f8fafc;
+  padding: 0.75rem 0.85rem;
   border-radius: 6px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
 }
 
 .progress-modal-module-header {
@@ -571,6 +599,7 @@
 }
 
 .progress-modal-test-item {
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
@@ -579,17 +608,19 @@
   padding: 1rem 1.2rem;
   background: white;
   border-radius: 8px;
-  border: 1px solid #f1d5d5;
-  border-left: 4px solid #F25C5C;
-  box-shadow: 0 1px 4px rgba(214, 76, 76, 0.06);
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #c1272d;
+  box-shadow: none;
   font-size: 0.9rem;
+  font-family: inherit;
+  text-align: left;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .progress-modal-test-item:hover {
-  background: #fff5f5;
-  box-shadow: 0 4px 12px rgba(214, 76, 76, 0.12);
+  background: #fff7f7;
+  border-color: #f0b6b9;
 }
 
 .progress-modal-test-name {
@@ -607,10 +638,14 @@
 .progress-modal-test-status {
   flex-shrink: 0;
   white-space: nowrap;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .progress-modal-test-dropdown {
-  display: inline-block;
+  display: inline-grid;
+  place-items: center;
   width: 20px;
   height: 20px;
   flex-shrink: 0;
@@ -623,9 +658,9 @@
 
 .progress-modal-test-details {
   padding: 1rem 1.2rem;
-  background: #fff5f5;
-  border: 1px solid #f1d5d5;
-  border-left: 4px solid #F25C5C;
+  background: #fffafa;
+  border: 1px solid #f0d7d8;
+  border-left: 3px solid #c1272d;
   border-top: none;
   border-radius: 0 0 8px 8px;
   margin-top: -2px;
@@ -643,6 +678,17 @@
 
 
 @media (max-width: 1024px) {
+  .progress-modal-identity {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .progress-modal-status-summary {
+    grid-column: 1 / -1;
+    padding: 0.85rem 0 0;
+    border-top: 1px solid #e2e8f0;
+    border-left: 0;
+  }
+
   .progress-modal-grid {
     grid-template-columns: 1fr;
   }
@@ -671,11 +717,44 @@
   }
 
   .progress-modal-content {
-    padding: 1.25rem;
+    padding: 1rem;
+  }
+
+  .progress-modal-identity {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 1rem;
   }
 
   .progress-modal-info-item {
     padding: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-modal-heading p {
+    display: none;
+  }
+
+  .progress-modal-identity {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+
+  .progress-modal-avatar {
+    margin: 0 auto;
+  }
+
+  .progress-modal-identity-copy p {
+    justify-content: center;
+  }
+
+  .progress-modal-status-summary {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .progress-modal-status-summary small {
+    grid-column: 1;
   }
 }
 

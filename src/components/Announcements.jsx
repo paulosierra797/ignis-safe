@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
-import { FiArchive, FiX } from 'react-icons/fi';
+import { FiArchive } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import CloseButton from './CloseButton';
 import LandingContentEditor from './LandingContentEditor';
 import { useUser } from '../context/UserContext';
+import { formatStatusLabel } from '../utils/statusUtils';
 import {
   createAnnouncement,
   getAnnouncementsForUser,
@@ -786,7 +788,7 @@ export default function Announcements() {
                       <option value="">Choose personnel</option>
                       {recipients.map((person) => (
                         <option key={person.admin_id} value={person.admin_id}>
-                          {person.name} ({person.status})
+                          {person.name} ({formatStatusLabel(person.status)})
                         </option>
                       ))}
                     </select>
@@ -1057,14 +1059,11 @@ export default function Announcements() {
                   Archive List{archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}
                 </h2>
               </div>
-              <button
-                type="button"
+              <CloseButton
+                className="archived-panel-close"
                 onClick={toggleArchivedPanel}
-                aria-label="Close archive list"
-                title="Close"
-              >
-                <FiX aria-hidden="true" />
-              </button>
+                label="Close archive list"
+              />
             </div>
 
             <div className="archived-panel">
@@ -1157,42 +1156,42 @@ export default function Announcements() {
 
       {hasPendingAnnouncementExit && (
         <div
-          className="unsaved-exit-overlay"
+          className="unsaved-exit-overlay app-unsaved-overlay"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="unsavedExitTitle"
           aria-describedby="unsavedExitDescription"
         >
-          <div className="unsaved-exit-modal">
-            <div className="unsaved-exit-icon" aria-hidden="true">
+          <div className="unsaved-exit-modal app-unsaved-dialog">
+            <div className="unsaved-exit-icon app-unsaved-icon" aria-hidden="true">
               !
             </div>
-            <h3 id="unsavedExitTitle" className="unsaved-exit-title">
+            <h3 id="unsavedExitTitle" className="unsaved-exit-title app-unsaved-title">
               {exitModalContext === 'landing' ? 'Unsaved Landing Page' : 'Unsaved Announcement'}
             </h3>
-            <p id="unsavedExitDescription" className="unsaved-exit-message">
+            <p id="unsavedExitDescription" className="unsaved-exit-message app-unsaved-message">
               {exitModalContext === 'landing'
                 ? 'You have unsaved changes in this landing page. What would you like to do before leaving this page?'
                 : 'You have unsaved changes in this announcement. What would you like to do before leaving this page?'}
             </p>
-            <div className="unsaved-exit-actions">
+            <div className="unsaved-exit-actions app-unsaved-actions">
               <button
                 type="button"
-                className="unsaved-exit-btn unsaved-exit-btn-save"
+                className="unsaved-exit-btn unsaved-exit-btn-save app-unsaved-button app-unsaved-button--save"
                 onClick={handleSaveAnnouncementDraftAndContinue}
               >
                 Save Draft and Continue
               </button>
               <button
                 type="button"
-                className="unsaved-exit-btn unsaved-exit-btn-leave"
+                className="unsaved-exit-btn unsaved-exit-btn-leave app-unsaved-button app-unsaved-button--discard"
                 onClick={handleLeaveAnnouncementWithoutSaving}
               >
                 Leave Without Saving
               </button>
               <button
                 type="button"
-                className="unsaved-exit-btn unsaved-exit-btn-cancel"
+                className="unsaved-exit-btn unsaved-exit-btn-cancel app-unsaved-button app-unsaved-button--cancel"
                 onClick={handleKeepEditingAnnouncement}
               >
                 Cancel

@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import CloseButton from './CloseButton';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import jsPDF from 'jspdf';
@@ -394,14 +395,11 @@ const AttendanceAdmin = () => {
                   <h2 id="attendanceDetailsTitle">{selectedRecord.name}</h2>
                   <p>{selectedRecord.rank} · {selectedRecord.date}</p>
                 </div>
-                <button
-                  type="button"
+                <CloseButton
                   className="attendance-details-close"
                   onClick={() => setSelectedRecord(null)}
-                  aria-label="Close verification details"
-                >
-                  ×
-                </button>
+                  label="Close verification details"
+                />
               </header>
 
               <div className="attendance-details-status-row">

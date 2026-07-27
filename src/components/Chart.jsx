@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import './AppDialog.css';
 import { useUser } from '../context/UserContext';
 import {
   getOrgChartConfig,
@@ -1090,30 +1091,30 @@ export default function Chart() {
 
       {hasPendingNavigation && !errorInfo && (
         <div
-          className="org-modal-overlay"
+          className="org-modal-overlay app-unsaved-overlay"
           role="dialog"
           aria-modal="true"
           aria-labelledby="orgUnsavedTitle"
           aria-describedby="orgUnsavedDescription"
         >
-          <div className="org-modal org-unsaved-modal">
+          <div className="org-modal org-unsaved-modal app-unsaved-dialog">
             <div
-              className="org-modal-icon org-modal-icon-warning"
+              className="org-modal-icon org-modal-icon-warning app-unsaved-icon"
               aria-hidden="true"
             >
               !
             </div>
-            <h3 id="orgUnsavedTitle" className="org-modal-title">
+            <h3 id="orgUnsavedTitle" className="org-modal-title app-unsaved-title">
               Unsaved Organizational Chart Changes
             </h3>
-            <p id="orgUnsavedDescription" className="org-modal-message">
+            <p id="orgUnsavedDescription" className="org-modal-message app-unsaved-message">
               You have unsaved changes in the Organizational Chart. What would you like to do before leaving this page?
             </p>
 
-            <div className="org-modal-actions org-unsaved-actions">
+            <div className="org-modal-actions org-unsaved-actions app-unsaved-actions">
               <button
                 type="button"
-                className="org-modal-btn org-modal-btn-save"
+                className="org-modal-btn org-modal-btn-save app-unsaved-button app-unsaved-button--save"
                 onClick={handleSaveAndContinue}
                 disabled={isSaving}
               >
@@ -1121,7 +1122,7 @@ export default function Chart() {
               </button>
               <button
                 type="button"
-                className="org-modal-btn org-modal-btn-leave"
+                className="org-modal-btn org-modal-btn-leave app-unsaved-button app-unsaved-button--discard"
                 onClick={handleLeaveWithoutSaving}
                 disabled={isSaving}
               >
@@ -1129,7 +1130,7 @@ export default function Chart() {
               </button>
               <button
                 type="button"
-                className="org-modal-btn org-modal-btn-cancel"
+                className="org-modal-btn org-modal-btn-cancel app-unsaved-button app-unsaved-button--cancel"
                 onClick={handleCancelNavigation}
                 disabled={isSaving}
               >

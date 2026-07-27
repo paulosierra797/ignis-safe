@@ -3,6 +3,7 @@ import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingContentEditor from './LandingContentEditor';
+import './AppDialog.css';
 import { useUser } from '../context/UserContext';
 import {
   createAnnouncement,
@@ -11,6 +12,7 @@ import {
   getPersonnelRecipients
 } from '../utils/announcementsService';
 import { logAdminActivity } from '../utils/usersService';
+import { formatStatusLabel } from '../utils/statusUtils';
 import './ContentManagement.css';
 
 const AUDIENCE_OPTIONS = [
@@ -426,7 +428,7 @@ export default function ContentManagement() {
                         <option value="">Choose personnel</option>
                         {recipients.map((person) => (
                           <option key={person.admin_id} value={person.admin_id}>
-                            {person.name} ({person.status})
+                            {person.name} ({formatStatusLabel(person.status)})
                           </option>
                         ))}
                       </select>
@@ -568,24 +570,24 @@ export default function ContentManagement() {
 
       {hasPendingExit && (
         <div
-          className="content-unsaved-overlay"
+          className="content-unsaved-overlay app-unsaved-overlay"
           role="alertdialog"
           aria-modal="true"
           aria-labelledby="content-unsaved-title"
           aria-describedby="content-unsaved-description"
         >
-          <div className="content-unsaved-modal">
-            <div className="content-unsaved-icon" aria-hidden="true">!</div>
-            <h3 id="content-unsaved-title" className="content-unsaved-title">
+          <div className="content-unsaved-modal app-unsaved-dialog">
+            <div className="content-unsaved-icon app-unsaved-icon" aria-hidden="true">!</div>
+            <h3 id="content-unsaved-title" className="content-unsaved-title app-unsaved-title">
               Unsaved Landing Page Changes
             </h3>
-            <p id="content-unsaved-description" className="content-unsaved-message">
+            <p id="content-unsaved-description" className="content-unsaved-message app-unsaved-message">
               You have unsaved changes in the Landing Page editor. What would you like to do before leaving?
             </p>
-            <div className="content-unsaved-actions">
+            <div className="content-unsaved-actions app-unsaved-actions">
               <button
                 type="button"
-                className="content-unsaved-btn content-unsaved-btn-save"
+                className="content-unsaved-btn content-unsaved-btn-save app-unsaved-button app-unsaved-button--save"
                 onClick={handleSaveAndContinue}
                 disabled={isLandingSaving}
               >
@@ -593,7 +595,7 @@ export default function ContentManagement() {
               </button>
               <button
                 type="button"
-                className="content-unsaved-btn content-unsaved-btn-leave"
+                className="content-unsaved-btn content-unsaved-btn-leave app-unsaved-button app-unsaved-button--discard"
                 onClick={handleLeaveWithoutSaving}
                 disabled={isLandingSaving}
               >
@@ -601,7 +603,7 @@ export default function ContentManagement() {
               </button>
               <button
                 type="button"
-                className="content-unsaved-btn content-unsaved-btn-cancel"
+                className="content-unsaved-btn content-unsaved-btn-cancel app-unsaved-button app-unsaved-button--cancel"
                 onClick={handleCancelExit}
                 disabled={isLandingSaving}
               >

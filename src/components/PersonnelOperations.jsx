@@ -10,6 +10,7 @@ import {
 } from '../utils/personnelOperationsService';
 import { getManilaToday } from '../utils/dateUtils';
 import { logPersonnelActivity } from '../utils/activityLogService';
+import { formatStatusLabel } from '../utils/statusUtils';
 import './PersonnelOperations.css';
 
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -458,7 +459,7 @@ const [leaveRes, scheduleRes] = await Promise.all([
             {leaveRequest.latest_request && (
               <div className="leave-request-meta">
                 <p><strong>Last Request:</strong> {formatDate(leaveRequest.latest_request.start_date)} to {formatDate(leaveRequest.latest_request.end_date)}</p>
-                <p><strong>Status:</strong> {String(leaveRequest.latest_request.status || '').toUpperCase()}</p>
+                <p><strong>Status:</strong> {formatStatusLabel(leaveRequest.latest_request.status)}</p>
                 {leaveRequest.latest_request.rejection_reason && (
                   <p><strong>Rejection Reason:</strong> {leaveRequest.latest_request.rejection_reason}</p>
                 )}

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import './AppDialog.css';
 import {
   buildLearningMaterialModules,
   filterLearningMaterialModules,
@@ -643,22 +644,22 @@ if (textsResult.error && !message.text) {
 
         {hasPendingEditorNavigation && (
           <div
-            className="confirm-overlay learning-materials-unsaved-overlay"
+            className="confirm-overlay learning-materials-unsaved-overlay app-unsaved-overlay"
             role="dialog"
             aria-modal="true"
             aria-labelledby="learningMaterialsUnsavedTitle"
             aria-describedby="learningMaterialsUnsavedDescription"
           >
-            <div className="confirm-modal learning-materials-unsaved-modal">
-              <div className="confirm-icon learning-materials-unsaved-icon" aria-hidden="true">!</div>
-              <h3 id="learningMaterialsUnsavedTitle">Unsaved Learning Material Changes</h3>
-              <p id="learningMaterialsUnsavedDescription">
+            <div className="confirm-modal learning-materials-unsaved-modal app-unsaved-dialog">
+              <div className="confirm-icon learning-materials-unsaved-icon app-unsaved-icon" aria-hidden="true">!</div>
+              <h3 id="learningMaterialsUnsavedTitle" className="app-unsaved-title">Unsaved Learning Material Changes</h3>
+              <p id="learningMaterialsUnsavedDescription" className="app-unsaved-message">
                 You changed this module but have not saved it yet. What would you like to do before leaving or switching modules?
               </p>
-              <div className="confirm-buttons learning-materials-unsaved-actions">
+              <div className="confirm-buttons learning-materials-unsaved-actions app-unsaved-actions">
                 <button
                   type="button"
-                  className="confirm-btn"
+                  className="confirm-btn app-unsaved-button app-unsaved-button--save"
                   onClick={handleSaveAndContinue}
                   disabled={saving}
                 >
@@ -666,7 +667,7 @@ if (textsResult.error && !message.text) {
                 </button>
                 <button
                   type="button"
-                  className="discard-btn"
+                  className="discard-btn app-unsaved-button app-unsaved-button--discard"
                   onClick={handleDiscardAndContinue}
                   disabled={saving}
                 >
@@ -674,7 +675,7 @@ if (textsResult.error && !message.text) {
                 </button>
                 <button
                   type="button"
-                  className="cancel-btn"
+                  className="cancel-btn app-unsaved-button app-unsaved-button--cancel"
                   onClick={handleCancelEditorNavigation}
                   disabled={saving}
                 >

@@ -4,8 +4,10 @@ import { useBlocker } from 'react-router-dom';
 import { FaArchive, FaChevronDown, FaSearch, FaTimes, FaUndo } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import CloseButton from './CloseButton';
 import { supabase } from "../utils/supabaseClient";
 import './Accounts.css';
+import './AppDialog.css';
 import { invitePersonnel } from '../utils/authService';
 import {
   getAllUsers,
@@ -39,6 +41,7 @@ import {
 } from '../utils/profileChangeRequestsService';
 import { useUser } from '../context/UserContext';
 import { getManilaToday } from '../utils/dateUtils';
+import { formatStatusLabel } from '../utils/statusUtils';
 
 const validPersonnelNamePattern = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
 const contactNumberRegex = /^09\d{9}$/;
@@ -309,7 +312,7 @@ function AccountDirectoryGroup({
                       <span title={account.email || ''}>{account.email || '—'}</span>
                     </div>
                     <span className={`status-pill ${normalizedStatus}`}>
-                      {String(account.status || 'Inactive')}
+                      {formatStatusLabel(account.status, 'Inactive')}
                     </span>
                   </div>
 
@@ -998,7 +1001,7 @@ export default function Accounts() {
 
   const formatRequestStatus = (status) => {
     if (!status) return '—';
-    return status.charAt(0).toUpperCase() + status.slice(1);
+    return formatStatusLabel(status);
   };
 
   const matchesLeaveHistorySearch = (request, query) => {
@@ -3469,7 +3472,10 @@ const permissions = getDefaultPermissions(formData.role);
     <div className="accounts-modal">
       <div className="accounts-modal-header">
         <h3>Edit Personnel</h3>
-        <button onClick={() => setIsEditModalOpen(false)}>x</button>
+        <CloseButton
+          onClick={() => setIsEditModalOpen(false)}
+          label="Close edit personnel modal"
+        />
       </div>
 
      <div className="accounts-modal-body">
@@ -3617,14 +3623,11 @@ const permissions = getDefaultPermissions(formData.role);
             <div className="accounts-modal accounts-add-personnel-modal">
               <div className="accounts-modal-header">
                 <h3>Add New Personnel Account</h3>
-                <button
-                  type="button"
+                <CloseButton
                   className="accounts-modal-close"
                   onClick={handleCloseModal}
-                  aria-label="Close modal"
-                >
-                  <FaTimes aria-hidden="true" />
-                </button>
+                  label="Close add personnel modal"
+                />
               </div>
 
               <div className="accounts-modal-body">
@@ -3843,42 +3846,40 @@ const permissions = getDefaultPermissions(formData.role);
 
         {hasPendingAddExit && (
           <div
-            className="accounts-modal-overlay accounts-unsaved-overlay"
+            className="accounts-modal-overlay accounts-unsaved-overlay app-unsaved-overlay"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="accountsUnsavedTitle"
             aria-describedby="accountsUnsavedDescription"
           >
-            <div className="accounts-modal accounts-unsaved-modal">
+            <div className="accounts-modal accounts-unsaved-modal app-unsaved-dialog">
+              <div className="app-unsaved-icon" aria-hidden="true">!</div>
               <div className="accounts-modal-header">
-                <h3 id="accountsUnsavedTitle">Discard unsaved personnel details?</h3>
-                <button
-                  type="button"
+                <h3 id="accountsUnsavedTitle" className="app-unsaved-title">Discard unsaved personnel details?</h3>
+                <CloseButton
                   className="accounts-modal-close"
                   onClick={handleKeepEditingAddPersonnel}
-                  aria-label="Keep editing personnel details"
-                >
-                  x
-                </button>
+                  label="Keep editing personnel details"
+                />
               </div>
 
               <div className="accounts-modal-body">
-                <p id="accountsUnsavedDescription" className="accounts-unsaved-message">
+                <p id="accountsUnsavedDescription" className="accounts-unsaved-message app-unsaved-message">
                   You have unsaved changes in the new personnel account form. Are you sure you want to discard them and leave?
                 </p>
               </div>
 
-              <div className="accounts-modal-footer">
+              <div className="accounts-modal-footer app-unsaved-actions">
                 <button
                   type="button"
-                  className="accounts-modal-draft"
+                  className="accounts-modal-draft app-unsaved-button app-unsaved-button--cancel"
                   onClick={handleKeepEditingAddPersonnel}
                 >
                   Keep Editing
                 </button>
                 <button
                   type="button"
-                  className="accounts-modal-discard"
+                  className="accounts-modal-discard app-unsaved-button app-unsaved-button--discard"
                   onClick={handleDiscardAddPersonnel}
                 >
                   Discard Changes
@@ -3893,13 +3894,11 @@ const permissions = getDefaultPermissions(formData.role);
             <div className="accounts-modal accounts-leave-modal">
               <div className="accounts-modal-header">
                 <h3>Set Personnel Leave Dates</h3>
-                <button
+                <CloseButton
                   className="accounts-modal-close"
                   onClick={closeLeaveModal}
-                  aria-label="Close leave date modal"
-                >
-                  x
-                </button>
+                  label="Close leave date modal"
+                />
               </div>
 
               <div className="accounts-modal-body">
@@ -3960,13 +3959,11 @@ const permissions = getDefaultPermissions(formData.role);
             <div className="accounts-modal accounts-shift-modal">
               <div className="accounts-modal-header">
                 <h3>Set Shift Duty Dates</h3>
-                <button
+                <CloseButton
                   className="accounts-modal-close"
                   onClick={requestCloseShiftModal}
-                  aria-label="Close shift schedule modal"
-                >
-                  x
-                </button>
+                  label="Close shift schedule modal"
+                />
               </div>
 
               <div className="accounts-modal-body">
@@ -4141,15 +4138,12 @@ const permissions = getDefaultPermissions(formData.role);
             <div className="accounts-modal accounts-shift-modal accounts-personnel-shift-modal">
               <div className="accounts-modal-header">
                 <h3>Assign Personnel to Shifts</h3>
-                <button
+                <CloseButton
                   className="accounts-modal-close"
-                  type="button"
                   onClick={requestClosePersonnelShiftModal}
-                  aria-label="Close shift assignment"
+                  label="Close shift assignment"
                   disabled={isPersonnelShiftSaving}
-                >
-                  <FaTimes aria-hidden="true" />
-                </button>
+                />
               </div>
 
               <div className="accounts-modal-body">
@@ -4505,34 +4499,35 @@ const permissions = getDefaultPermissions(formData.role);
 
         {hasPendingShiftScheduleExit && (
           <div
-            className="accounts-modal-overlay accounts-unsaved-overlay"
+            className="accounts-modal-overlay accounts-unsaved-overlay app-unsaved-overlay"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="shiftScheduleUnsavedTitle"
             aria-describedby="shiftScheduleUnsavedDescription"
           >
-            <div className="accounts-modal accounts-unsaved-modal">
+            <div className="accounts-modal accounts-unsaved-modal app-unsaved-dialog">
+              <div className="app-unsaved-icon" aria-hidden="true">!</div>
               <div className="accounts-modal-header">
-                <h3 id="shiftScheduleUnsavedTitle">Discard unsaved shift dates?</h3>
+                <h3 id="shiftScheduleUnsavedTitle" className="app-unsaved-title">Discard unsaved shift dates?</h3>
               </div>
 
               <div className="accounts-modal-body">
-                <p id="shiftScheduleUnsavedDescription" className="accounts-unsaved-message">
+                <p id="shiftScheduleUnsavedDescription" className="accounts-unsaved-message app-unsaved-message">
                   Your shift date changes have not been saved. Are you sure you want to discard them and leave?
                 </p>
               </div>
 
-              <div className="accounts-modal-footer">
+              <div className="accounts-modal-footer app-unsaved-actions">
                 <button
                   type="button"
-                  className="accounts-modal-draft"
+                  className="accounts-modal-draft app-unsaved-button app-unsaved-button--cancel"
                   onClick={handleKeepEditingShiftSchedule}
                 >
                   Keep Editing
                 </button>
                 <button
                   type="button"
-                  className="accounts-modal-discard"
+                  className="accounts-modal-discard app-unsaved-button app-unsaved-button--discard"
                   onClick={handleDiscardShiftSchedule}
                 >
                   Discard Changes
@@ -4544,34 +4539,35 @@ const permissions = getDefaultPermissions(formData.role);
 
         {hasPendingPersonnelShiftExit && (
           <div
-            className="accounts-modal-overlay accounts-unsaved-overlay"
+            className="accounts-modal-overlay accounts-unsaved-overlay app-unsaved-overlay"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="personnelShiftUnsavedTitle"
             aria-describedby="personnelShiftUnsavedDescription"
           >
-            <div className="accounts-modal accounts-unsaved-modal">
+            <div className="accounts-modal accounts-unsaved-modal app-unsaved-dialog">
+              <div className="app-unsaved-icon" aria-hidden="true">!</div>
               <div className="accounts-modal-header">
-                <h3 id="personnelShiftUnsavedTitle">Discard pending shift changes?</h3>
+                <h3 id="personnelShiftUnsavedTitle" className="app-unsaved-title">Discard pending shift changes?</h3>
               </div>
 
               <div className="accounts-modal-body">
-                <p id="personnelShiftUnsavedDescription" className="accounts-unsaved-message">
+                <p id="personnelShiftUnsavedDescription" className="accounts-unsaved-message app-unsaved-message">
                   Your personnel selection and shift choice have not been assigned yet. Are you sure you want to discard them and leave?
                 </p>
               </div>
 
-              <div className="accounts-modal-footer">
+              <div className="accounts-modal-footer app-unsaved-actions">
                 <button
                   type="button"
-                  className="accounts-modal-draft"
+                  className="accounts-modal-draft app-unsaved-button app-unsaved-button--cancel"
                   onClick={handleKeepEditingPersonnelShift}
                 >
                   Keep Editing
                 </button>
                 <button
                   type="button"
-                  className="accounts-modal-discard"
+                  className="accounts-modal-discard app-unsaved-button app-unsaved-button--discard"
                   onClick={handleDiscardPersonnelShift}
                 >
                   Discard Changes
@@ -4598,15 +4594,12 @@ const permissions = getDefaultPermissions(formData.role);
                       : 'Profile Change Request Archive'}
                   </h3>
                 </div>
-                <button
-                  type="button"
+                <CloseButton
                   className="accounts-modal-close"
                   onClick={closeRequestArchive}
-                  aria-label="Close request archive"
+                  label="Close request archive"
                   disabled={Boolean(processingArchiveRequestId)}
-                >
-                  <FaTimes aria-hidden="true" />
-                </button>
+                />
               </div>
 
               <div className="accounts-modal-body request-archive-body">
@@ -4681,14 +4674,12 @@ const permissions = getDefaultPermissions(formData.role);
             <div className="accounts-modal accounts-confirm-modal">
               <div className="accounts-modal-header">
                 <h3>Delete User</h3>
-                <button
+                <CloseButton
                   className="accounts-modal-close"
                   onClick={closeDeleteUserModal}
-                  aria-label="Close delete confirmation modal"
+                  label="Close delete confirmation modal"
                   disabled={isDeleteUserProcessing}
-                >
-                  x
-                </button>
+                />
               </div>
 
               <div className="accounts-modal-body">
@@ -4750,14 +4741,12 @@ const permissions = getDefaultPermissions(formData.role);
             <div className="accounts-modal accounts-confirm-modal">
               <div className="accounts-modal-header">
                 <h3>Reject Leave Request</h3>
-                <button
+                <CloseButton
                   className="accounts-modal-close"
                   onClick={closeRejectModal}
-                  aria-label="Close reject leave modal"
+                  label="Close reject leave modal"
                   disabled={Boolean(processingRequestId)}
-                >
-                  x
-                </button>
+                />
               </div>
 
               <div className="accounts-modal-body">
@@ -4788,14 +4777,12 @@ const permissions = getDefaultPermissions(formData.role);
             <div className="accounts-modal accounts-confirm-modal">
               <div className="accounts-modal-header">
                 <h3>{pendingConfirmAction.title}</h3>
-                <button
+                <CloseButton
                   className="accounts-modal-close"
                   onClick={closeConfirmActionModal}
-                  aria-label="Close confirmation modal"
+                  label="Close confirmation modal"
                   disabled={isConfirmActionProcessing}
-                >
-                  x
-                </button>
+                />
               </div>
 
               <div className="accounts-modal-body">
@@ -4831,13 +4818,11 @@ const permissions = getDefaultPermissions(formData.role);
             <div className="accounts-modal accounts-day-detail-modal">
               <div className="accounts-modal-header">
                 <h3>{dayDetailDate ? formatLeaveDate(dayDetailDate) : 'Personnel for Date'}</h3>
-                <button
+                <CloseButton
                   className="accounts-modal-close"
                   onClick={closeDayDetailModal}
-                  aria-label="Close personnel detail modal"
-                >
-                  x
-                </button>
+                  label="Close personnel detail modal"
+                />
               </div>
 
               <div className="accounts-modal-body">
@@ -4902,7 +4887,7 @@ const permissions = getDefaultPermissions(formData.role);
                                   <td>{person.rank}</td>
                                   <td>{formatLeaveDate(person.leave_start_date)}</td>
                                   <td>{formatLeaveDate(person.leave_end_date)}</td>
-                                  <td>{person.approval_status}</td>
+                                  <td>{formatStatusLabel(person.approval_status)}</td>
                                 </tr>
                               ))}
                             </tbody>

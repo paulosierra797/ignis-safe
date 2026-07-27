@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { useLandingContent } from '../context/LandingContentContext';
 import './LandingContentEditor.css';
+import './AppDialog.css';
 
 const LANDING_DRAFT_STORAGE_KEY = 'ignis-safe:landing-draft';
 
@@ -819,24 +820,24 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       )}
 
       {discardModalOpen && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="discardChangesTitle" aria-describedby="discardChangesMessage">
-          <div className="modal reset-defaults-modal">
-            <div className="reset-defaults-icon" aria-hidden="true">!</div>
-            <h3 id="discardChangesTitle" className="reset-defaults-title">Discard Unsaved Changes?</h3>
-            <p id="discardChangesMessage" className="reset-defaults-message">
+        <div className="modal-overlay app-unsaved-overlay" role="dialog" aria-modal="true" aria-labelledby="discardChangesTitle" aria-describedby="discardChangesMessage">
+          <div className="modal reset-defaults-modal app-unsaved-dialog">
+            <div className="reset-defaults-icon app-unsaved-icon" aria-hidden="true">!</div>
+            <h3 id="discardChangesTitle" className="reset-defaults-title app-unsaved-title">Discard Unsaved Changes?</h3>
+            <p id="discardChangesMessage" className="reset-defaults-message app-unsaved-message">
               Your unsaved landing-page changes will be removed and the last saved content will be restored. This action cannot be undone.
             </p>
-            <div className="modal-actions">
+            <div className="modal-actions app-unsaved-actions">
               <button
                 type="button"
-                className="cancel-btn"
+                className="cancel-btn app-unsaved-button app-unsaved-button--cancel"
                 onClick={() => setDiscardModalOpen(false)}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="save-btn"
+                className="save-btn app-unsaved-button app-unsaved-button--discard"
                 onClick={confirmDiscard}
               >
                 Discard Changes

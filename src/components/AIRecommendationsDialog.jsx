@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import ModuleRecommendations from './ModuleRecommendations';
+import CloseButton from './CloseButton';
 import './AIRecommendationsDialog.css';
 
 export default function AIRecommendationsDialog() {
@@ -54,14 +55,11 @@ export default function AIRecommendationsDialog() {
                 <span className="ai-recommendations-eyebrow">AI insights</span>
                 <h2 id="ai-recommendations-title">Module Recommendations</h2>
               </div>
-              <button
-                type="button"
+              <CloseButton
                 className="ai-recommendations-close"
                 onClick={() => setIsOpen(false)}
-                aria-label="Close AI recommendations"
-              >
-                ×
-              </button>
+                label="Close AI recommendations"
+              />
             </div>
             <div className="ai-recommendations-dialog-body">
               <ModuleRecommendations />

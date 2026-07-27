@@ -4,6 +4,7 @@ import PageHeader from './PageHeader';
 import './History.css';
 import { useUser } from '../context/UserContext';
 import { getPersonnelActivityLogs } from '../utils/activityLogService';
+import { formatStatusLabel } from '../utils/statusUtils';
 
 const isSameDay = (isoValue, dateInput) => {
   if (!isoValue || !dateInput) return false;
@@ -190,7 +191,7 @@ export default function History() {
                     <td>{new Date(activity.performed_at).toLocaleString('en-US')}</td>
                     <td className="status-column">
                       <span className={`status-badge ${getStatusClass(activity.status)}`}>
-                        {activity.status}
+                        {formatStatusLabel(activity.status)}
                       </span>
                     </td>
                     <td>{activity.details || '-'}</td>
@@ -210,7 +211,7 @@ export default function History() {
                 <div className="history-card-header">
                   <span className="report-number">#{index + 1}</span>
                   <span className={`status-badge ${getStatusClass(activity.status)}`}>
-                    {activity.status}
+                    {formatStatusLabel(activity.status)}
                   </span>
                 </div>
 

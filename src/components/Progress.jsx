@@ -1,8 +1,10 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import CloseButton from './CloseButton';
 import './Progress.css';
 import { getProgressPageData } from '../utils/progressService';
+import { formatStatusLabel } from '../utils/statusUtils';
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -376,9 +378,11 @@ export default function Progress() {
                 <div className="progress-modal-activity">
                   Last Activity: <span className="progress-activity-badge">{formatDate(selectedUser.lastActivityAt)}</span>
                 </div>
-                <button className="progress-modal-close" onClick={handleCloseModal}>
-                  ×
-                </button>
+                <CloseButton
+                  className="progress-modal-close"
+                  onClick={handleCloseModal}
+                  label="Close personnel progress"
+                />
               </div>
 
               <div className="progress-modal-content">
@@ -389,7 +393,7 @@ export default function Progress() {
                       <div className="progress-modal-info-item">
                         <span className="progress-modal-label">ACCOUNT STATUS</span>
                         <span className={`progress-modal-status ${selectedUser.accessStatus === 'ACTIVE' ? 'active' : 'inactive'}`}>
-                          {selectedUser.accessStatus}
+                          {formatStatusLabel(selectedUser.accessStatus)}
                         </span>
                       </div>
                       <div className="progress-modal-info-item">
@@ -483,7 +487,7 @@ export default function Progress() {
                               fontWeight: '700',
                               whiteSpace: 'nowrap'
                             }}>
-                              {module.tests[0]?.status || 'PASSED'}
+                              {formatStatusLabel(module.tests[0]?.status, 'Passed')}
                             </span>
                           </div>
                         )}

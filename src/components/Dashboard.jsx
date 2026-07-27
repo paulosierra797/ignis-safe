@@ -2,11 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import CloseButton from './CloseButton';
 import AIRecommendationsDialog from './AIRecommendationsDialog';
 import { getPersonnelOverviewStats, getUsersFromProfiles } from '../utils/usersService';
 import { getAnalyticsDashboardStats, getAnalyticsChartsData } from '../utils/knowledgeAnalyticsService';
 import { getPersonnelForDate, getShiftAssignmentSummaryForDate } from '../utils/personnelOperationsService';
 import { getManilaToday } from '../utils/dateUtils';
+import { formatStatusLabel } from '../utils/statusUtils';
 import './Dashboard.css';
 
 const DEFAULT_ANALYTICS_STATS = {
@@ -838,13 +840,11 @@ if (currentKnowledge < 40) {
             <div className="dashboard-modal">
               <div className="dashboard-modal-header">
                 <h3>On Duty Today ({todayPersonnel.onDuty.length})</h3>
-                <button
+                <CloseButton
                   className="dashboard-modal-close"
                   onClick={() => setIsOnDutyModalOpen(false)}
-                  aria-label="Close on duty personnel modal"
-                >
-                  x
-                </button>
+                  label="Close on duty personnel modal"
+                />
               </div>
               <div className="dashboard-modal-body">
                 {loading ? (
@@ -889,13 +889,11 @@ if (currentKnowledge < 40) {
             <div className="dashboard-modal">
               <div className="dashboard-modal-header">
                 <h3>On Leave Today ({todayPersonnel.onLeave.length})</h3>
-                <button
+                <CloseButton
                   className="dashboard-modal-close"
                   onClick={() => setIsOnLeaveModalOpen(false)}
-                  aria-label="Close on leave personnel modal"
-                >
-                  x
-                </button>
+                  label="Close on leave personnel modal"
+                />
               </div>
               <div className="dashboard-modal-body">
                 {loading ? (
@@ -923,7 +921,7 @@ if (currentKnowledge < 40) {
                             <td>{person.name}</td>
                             <td>{person.rank}</td>
                             <td>{person.leave_start_date} - {person.leave_end_date}</td>
-                            <td>{person.approval_status}</td>
+                            <td>{formatStatusLabel(person.approval_status)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -940,13 +938,11 @@ if (currentKnowledge < 40) {
             <div className="dashboard-modal">
               <div className="dashboard-modal-header">
                 <h3>Shift A Today ({shiftAssignments.shiftA.length})</h3>
-                <button
+                <CloseButton
                   className="dashboard-modal-close"
                   onClick={() => setIsShiftAModalOpen(false)}
-                  aria-label="Close Shift A personnel modal"
-                >
-                  x
-                </button>
+                  label="Close Shift A personnel modal"
+                />
               </div>
               <div className="dashboard-modal-body">
                 {loading ? (
@@ -989,13 +985,11 @@ if (currentKnowledge < 40) {
             <div className="dashboard-modal">
               <div className="dashboard-modal-header">
                 <h3>Shift B Today ({shiftAssignments.shiftB.length})</h3>
-                <button
+                <CloseButton
                   className="dashboard-modal-close"
                   onClick={() => setIsShiftBModalOpen(false)}
-                  aria-label="Close Shift B personnel modal"
-                >
-                  x
-                </button>
+                  label="Close Shift B personnel modal"
+                />
               </div>
               <div className="dashboard-modal-body">
                 {loading ? (

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from
 import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import CloseButton from './CloseButton';
 import { uploadProfileImage } from '../utils/imageService';
 import * as faceapi from 'face-api.js';
 import { loadFaceModels } from '../utils/loadFaceModels';
@@ -16,6 +17,7 @@ import {
 } from '../utils/profileChangeRequestsService';
 import { logPersonnelActivity } from '../utils/activityLogService';
 import UnsavedChangesPrompt, { UnsavedChangesDialog } from './UnsavedChangesPrompt';
+import { formatStatusLabel } from '../utils/statusUtils';
 
 const RANK_OPTIONS = [
   'FDIR',
@@ -564,7 +566,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                                 : getProfileFieldLabel(request.field_name)}
                             </span>
                             <span className={`my-request-status my-request-status-${request.status}`}>
-                              {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                              {formatStatusLabel(request.status)}
                             </span>
                           </div>
                           <div className="my-request-change-list">
@@ -642,14 +644,11 @@ const showModal = ({ type = "info", message, onConfirm }) => {
             <div className="request-modal">
               <div className="request-modal-header">
                 <h3>Request to Change Information</h3>
-                <button
-                  type="button"
+                <CloseButton
                   className="request-modal-close"
                   onClick={closeRequestModal}
-                  aria-label="Close request modal"
-                >
-                  ×
-                </button>
+                  label="Close request modal"
+                />
               </div>
 
               <div className="request-modal-body">

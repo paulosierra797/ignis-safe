@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { FiCheckCircle, FiEye, FiMoreHorizontal, FiXCircle } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import { formatStatusLabel } from '../utils/statusUtils';
 import {
   getReportAttachments,
   getIntelUnitSubmittedReports,
@@ -503,7 +504,7 @@ export default function AdminReports() {
                           </td>
                           <td className="col-status">
                             <span className={`report-status-pill status-${String(report.status || '').toLowerCase().replace(/_/g, '-')}`}>
-                              {String(report.status || '-').replace('_', ' ').toUpperCase()}
+                              {formatStatusLabel(report.status)}
                             </span>
                           </td>
                           <td className="col-file">
@@ -535,7 +536,7 @@ export default function AdminReports() {
                             .toLowerCase()
                             .replace(/_/g, '-')}`}
                         >
-                          {String(report.status || '-').replace('_', ' ').toUpperCase()}
+                          {formatStatusLabel(report.status)}
                         </span>
                       </div>
 

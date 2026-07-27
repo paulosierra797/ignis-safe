@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { getPublicAnnouncements } from '../utils/announcementsService';
+import CloseButton from './CloseButton';
 import './LandingAnnouncements.css';
 
 const formatDate = (isoDate) => {
@@ -227,14 +228,11 @@ window.addEventListener("resize", handleResize);
           >
             <div className="landing-announcement-modal-header">
               <span className="landing-announcement-tag">Public notice</span>
-              <button
-                type="button"
+              <CloseButton
                 className="landing-announcement-modal-close"
                 onClick={() => setSelectedAnnouncement(null)}
-                aria-label="Close announcement"
-              >
-                ×
-              </button>
+                label="Close announcement"
+              />
             </div>
 
             <h2 id={`landing-announcement-modal-title-${selectedAnnouncement.announcement_id}`}>

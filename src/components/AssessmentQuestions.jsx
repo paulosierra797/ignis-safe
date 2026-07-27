@@ -3,6 +3,7 @@ import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import './AssessmentQuestions.css';
+import './AppDialog.css';
 import { useUser } from '../context/UserContext';
 import { logAdminActivity } from '../utils/usersService';
 import {
@@ -1259,26 +1260,26 @@ export default function AssessmentQuestions() {
 
         {hasPendingExit && !pendingDeleteQuestion && (
           <div
-            className="assessment-unsaved-overlay"
+            className="assessment-unsaved-overlay app-unsaved-overlay"
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="assessment-unsaved-title"
             aria-describedby="assessment-unsaved-description"
           >
-            <div className="assessment-unsaved-modal">
-              <div className="assessment-unsaved-icon" aria-hidden="true">
+            <div className="assessment-unsaved-modal app-unsaved-dialog">
+              <div className="assessment-unsaved-icon app-unsaved-icon" aria-hidden="true">
                 !
               </div>
-              <h3 id="assessment-unsaved-title" className="assessment-unsaved-title">
+              <h3 id="assessment-unsaved-title" className="assessment-unsaved-title app-unsaved-title">
                 Unsaved Assessment Questions
               </h3>
-              <p id="assessment-unsaved-description" className="assessment-unsaved-message">
+              <p id="assessment-unsaved-description" className="assessment-unsaved-message app-unsaved-message">
                 You have unsaved changes in this assessment. What would you like to do before leaving this page?
               </p>
-              <div className="assessment-unsaved-actions">
+              <div className="assessment-unsaved-actions app-unsaved-actions">
                 <button
                   type="button"
-                  className="assessment-unsaved-btn assessment-unsaved-btn-save"
+                  className="assessment-unsaved-btn assessment-unsaved-btn-save app-unsaved-button app-unsaved-button--save"
                   onClick={handleSaveAndContinue}
                   disabled={isSavingAll}
                 >
@@ -1286,7 +1287,7 @@ export default function AssessmentQuestions() {
                 </button>
                 <button
                   type="button"
-                  className="assessment-unsaved-btn assessment-unsaved-btn-leave"
+                  className="assessment-unsaved-btn assessment-unsaved-btn-leave app-unsaved-button app-unsaved-button--discard"
                   onClick={handleLeaveWithoutSaving}
                   disabled={isSavingAll}
                 >
@@ -1294,7 +1295,7 @@ export default function AssessmentQuestions() {
                 </button>
                 <button
                   type="button"
-                  className="assessment-unsaved-btn assessment-unsaved-btn-cancel"
+                  className="assessment-unsaved-btn assessment-unsaved-btn-cancel app-unsaved-button app-unsaved-button--cancel"
                   onClick={handleCancelExit}
                   disabled={isSavingAll}
                 >

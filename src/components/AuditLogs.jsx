@@ -6,6 +6,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { FaSearch } from 'react-icons/fa';
 import './AuditLogs.css';
 import { getAdminAuditLogs } from '../utils/usersService';
+import { formatStatusLabel } from '../utils/statusUtils';
 
 export default function AuditLogs() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -174,7 +175,7 @@ export default function AuditLogs() {
                     <td>{log.details}</td>
                     <td>
                       <span className="audit-logs-status-badge success">
-                        {log.status}
+                        {formatStatusLabel(log.status)}
                       </span>
                     </td>
                   </tr>

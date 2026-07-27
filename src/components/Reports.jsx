@@ -11,6 +11,7 @@ import {
   getReportAttachments
 } from '../utils/reportsService';
 import { logPersonnelActivity } from '../utils/activityLogService';
+import { formatStatusLabel } from '../utils/statusUtils';
 
 const formatDateTime = (value) => {
   if (!value) return '-';
@@ -523,7 +524,7 @@ export default function Reports() {
                       <td>{formatDateTime(report.submitted_at || report.created_at)}</td>
                       <td>
                         <span className={`status-badge ${getStatusClass(report.status)}`}>
-                          {String(report.status || '').replace('_', ' ')}
+                          {formatStatusLabel(report.status)}
                         </span>
                       </td>
                       <td>{report.internal_notes || '-'}</td>
@@ -552,7 +553,7 @@ export default function Reports() {
                   <div className="report-history-card-header">
                     <h3>{report.title || '-'}</h3>
                     <span className={`status-badge ${getStatusClass(report.status)}`}>
-                      {String(report.status || '').replace('_', ' ')}
+                      {formatStatusLabel(report.status)}
                     </span>
                   </div>
                   <div className="report-history-card-row">

@@ -109,7 +109,7 @@ export const getProgressPageData = async () => {
     ] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, username, created_at, updated_at')
+        .select('id, first_name, last_name, email, username, created_at, updated_at, is_active')
         .order('created_at', { ascending: false }),
       supabase
         .from('modules')
@@ -208,7 +208,7 @@ export const getProgressPageData = async () => {
         overallPercent,
         lastActivityAt: lastActivityAt ? lastActivityAt.toISOString() : null,
         lastAccessedModule: latestModule?.name || 'N/A',
-        accessStatus: 'ACTIVE',
+        accessStatus: profile.is_active === false ? 'DEACTIVATED' : 'ACTIVE',
         dateCreated: profile.created_at || null,
         modulesCompleted: completedModules,
         modules: userModules,
@@ -228,5 +228,21 @@ export const getProgressPageData = async () => {
       data: { users: [], modules: [] },
       error: error.message,
     };
+  }
+};
+
+export const setUserActiveStatus = async (userId, isActive) => {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_active: isActive })
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    return { error: null };
+  } catch (error) {
+    console.error('Error updating user account status:', error);
+    return { error: error.message };
   }
 };

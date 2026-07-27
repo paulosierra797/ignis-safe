@@ -2,15 +2,25 @@
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
+import { UnsavedChangesDialog } from './UnsavedChangesPrompt';
 import './Progress.css';
-import { getProgressPageData } from '../utils/progressService';
+import { getProgressPageData, setUserActiveStatus } from '../utils/progressService';
+import { logAdminActivity } from '../utils/usersService';
 import { formatStatusLabel } from '../utils/statusUtils';
+import { useUser } from '../context/UserContext';
 
 const formatDate = (value) => {
   if (!value) return '-';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '-';
   return date.toLocaleDateString('en-US');
+};
+
+const formatLongDate = (value) => {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 };
 
 const COMPLETION_RANGES = [
@@ -41,6 +51,7 @@ const matchesCompletionFilter = (overallPercent, filterValue) => {
 };
 
 export default function Progress() {
+  const { currentUser } = useUser();
   const [progressRows, setProgressRows] = useState([]);
   const [moduleOptions, setModuleOptions] = useState(['All']);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,6 +64,8 @@ export default function Progress() {
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [expandedTests, setExpandedTests] = useState({});
+  const [isDeactivateConfirmOpen, setIsDeactivateConfirmOpen] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const completionBlurTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -144,6 +157,36 @@ export default function Progress() {
     setShowModal(false);
     setSelectedUser(null);
     setExpandedTests({});
+    setIsDeactivateConfirmOpen(false);
+  };
+
+  const handleToggleAccountStatus = async () => {
+    if (!selectedUser || isUpdatingStatus) return;
+    const nextIsActive = selectedUser.accessStatus !== 'ACTIVE';
+
+    setIsUpdatingStatus(true);
+    const { error } = await setUserActiveStatus(selectedUser.id, nextIsActive);
+    setIsUpdatingStatus(false);
+    setIsDeactivateConfirmOpen(false);
+
+    if (error) {
+      window.alert(`Failed to update account status: ${error}`);
+      return;
+    }
+
+    const nextAccessStatus = nextIsActive ? 'ACTIVE' : 'DEACTIVATED';
+    setSelectedUser((current) => (current ? { ...current, accessStatus: nextAccessStatus } : current));
+    setProgressRows((current) =>
+      current.map((row) => (row.id === selectedUser.id ? { ...row, accessStatus: nextAccessStatus } : row))
+    );
+
+    void logAdminActivity({
+      actorId: currentUser?.admin_id,
+      actorName: currentUser?.name || 'Admin User',
+      action: nextIsActive ? 'User Account Reactivated' : 'User Account Deactivated',
+      actionType: 'edit',
+      details: `${nextIsActive ? 'Reactivated' : 'Deactivated'} the account for ${selectedUser.name} (${selectedUser.email}).`,
+    });
   };
 
   const toggleTestExpanded = (moduleName) => {
@@ -397,20 +440,28 @@ export default function Progress() {
                           <span className={`progress-modal-status ${selectedUser.accessStatus === 'ACTIVE' ? 'active' : 'inactive'}`}>
                             {formatStatusLabel(selectedUser.accessStatus)}
                           </span>
+                          <button
+                            type="button"
+                            className={`progress-modal-status-toggle ${selectedUser.accessStatus === 'ACTIVE' ? 'deactivate' : 'reactivate'}`}
+                            onClick={() => setIsDeactivateConfirmOpen(true)}
+                            disabled={isUpdatingStatus}
+                          >
+                            {selectedUser.accessStatus === 'ACTIVE' ? 'Deactivate Account' : 'Reactivate Account'}
+                          </button>
                         </div>
                       </div>
                       <div className="progress-modal-info-item">
                         <span className="progress-modal-info-icon">📅</span>
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">DATE CREATED</span>
-                          <span className="progress-modal-value">{formatDate(selectedUser.dateCreated)}</span>
+                          <span className="progress-modal-value">{formatLongDate(selectedUser.dateCreated)}</span>
                         </div>
                       </div>
                       <div className="progress-modal-info-item">
                         <span className="progress-modal-info-icon">🕒</span>
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">LAST ACTIVITY</span>
-                          <span className="progress-modal-value">{formatDate(selectedUser.lastActivityAt)}</span>
+                          <span className="progress-modal-value">{formatLongDate(selectedUser.lastActivityAt)}</span>
                         </div>
                       </div>
                     </div>
@@ -496,17 +547,6 @@ export default function Progress() {
                                 </div>
                               ))}
                             </div>
-                            <span style={{ 
-                              background: '#10b981', 
-                              color: 'white', 
-                              padding: '0.4rem 0.8rem', 
-                              borderRadius: '4px', 
-                              fontSize: '0.75rem', 
-                              fontWeight: '700',
-                              whiteSpace: 'nowrap'
-                            }}>
-                              {formatStatusLabel(module.tests[0]?.status, 'Passed')}
-                            </span>
                           </div>
                         )}
                       </div>
@@ -516,6 +556,21 @@ export default function Progress() {
               </div>
             </div>
           </div>
+        )}
+
+        {isDeactivateConfirmOpen && selectedUser && (
+          <UnsavedChangesDialog
+            title={selectedUser.accessStatus === 'ACTIVE' ? 'Deactivate this account?' : 'Reactivate this account?'}
+            message={
+              selectedUser.accessStatus === 'ACTIVE'
+                ? `${selectedUser.name} will be signed out and will not be able to log in to the app until reactivated.`
+                : `${selectedUser.name} will be able to log in to the app again.`
+            }
+            stayLabel="Cancel"
+            leaveLabel={isUpdatingStatus ? 'Please wait...' : selectedUser.accessStatus === 'ACTIVE' ? 'Deactivate' : 'Reactivate'}
+            onStay={() => setIsDeactivateConfirmOpen(false)}
+            onLeave={handleToggleAccountStatus}
+          />
         )}
       </div>
     </div>

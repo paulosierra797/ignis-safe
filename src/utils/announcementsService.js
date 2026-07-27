@@ -6,6 +6,7 @@ import { logPersonnelActivity } from './activityLogService';
 const ANNOUNCEMENTS_TABLE = 'announcements';
 const ANNOUNCEMENT_ATTACHMENTS_BUCKET = 'announcement_attachments';
 const ANNOUNCEMENT_ACK_TABLE = 'announcement_acknowledgments';
+const ANNOUNCEMENT_RECIPIENTS_TABLE = 'announcement_recipients';
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 const ATTACHMENT_UPLOAD_TIMEOUT_MS = 120000;
@@ -155,13 +156,21 @@ const uploadAnnouncementAttachments = async (currentUser, files) => {
   }
 };
 
+const formatPersonnelName = (person = {}) =>
+  [person.rank, person.first_name, person.last_name].filter(Boolean).join(' ').trim() || person.email || 'Personnel';
+
 const mapAnnouncement = (row = {}) => ({
   announcement_id: row.announcement_id,
   title: row.title || '',
   content: row.content || '',
   attachments: normalizeAttachments(row.attachments),
   audience_type: row.audience_type || 'public',
+  // target_personnel_id is legacy (single-recipient rows written before
+  // multi-select support). Current specific_personnel rows carry their
+  // recipients in announcement_recipients and are attached below as
+  // target_personnel_ids/target_personnel_names.
   target_personnel_id: row.target_personnel_id || null,
+  target_personnel_ids: row.target_personnel_id ? [row.target_personnel_id] : [],
   created_at: row.created_at || null,
   created_by: row.created_by || null,
   created_by_name: [row.creator?.rank, row.creator?.first_name, row.creator?.last_name]
@@ -172,6 +181,9 @@ const mapAnnouncement = (row = {}) => ({
     .filter(Boolean)
     .join(' ')
     .trim() || row.target?.email || '',
+  target_personnel_names: row.target?.rank || row.target?.first_name || row.target?.last_name || row.target?.email
+    ? [formatPersonnelName(row.target)]
+    : [],
   is_archived: Boolean(row.is_archived),
   archived_at: row.archived_at || null,
   archived_by: row.archived_by || null,
@@ -233,6 +245,51 @@ export const getPersonnelRecipients = async () => {
   }
 };
 
+const fetchAnnouncementRecipients = async (announcementIds) => {
+  const map = new Map();
+  if (!announcementIds.length) return map;
+
+  const { data, error } = await supabase
+    .from(ANNOUNCEMENT_RECIPIENTS_TABLE)
+    .select('announcement_id, personnel:admin(admin_id, first_name, last_name, rank, email)')
+    .in('announcement_id', announcementIds);
+
+  if (error) throw error;
+
+  (data || []).forEach((row) => {
+    if (!row.personnel) return;
+    const existing = map.get(row.announcement_id) || [];
+    existing.push({ admin_id: row.personnel.admin_id, name: formatPersonnelName(row.personnel) });
+    map.set(row.announcement_id, existing);
+  });
+
+  return map;
+};
+
+const mergeAnnouncementRecipients = async (announcements) => {
+  const specificAnnouncementIds = announcements
+    .filter((row) => row.audience_type === 'specific_personnel')
+    .map((row) => row.announcement_id);
+
+  const recipientsMap = await fetchAnnouncementRecipients(specificAnnouncementIds);
+
+  return announcements.map((row) => {
+    if (row.audience_type !== 'specific_personnel') return row;
+
+    const recipientRows = recipientsMap.get(row.announcement_id) || [];
+    const byId = new Map(
+      row.target_personnel_ids.map((personnelId, index) => [personnelId, row.target_personnel_names[index]])
+    );
+    recipientRows.forEach((recipient) => byId.set(recipient.admin_id, recipient.name));
+
+    return {
+      ...row,
+      target_personnel_ids: Array.from(byId.keys()),
+      target_personnel_names: Array.from(byId.values())
+    };
+  });
+};
+
 export const getAnnouncementsForUser = async (currentUser) => {
   try {
     const role = normalizeRole(currentUser?.role);
@@ -263,20 +320,38 @@ export const getAnnouncementsForUser = async (currentUser) => {
       if (!userId) {
         query = query.eq('audience_type', 'all_personnel');
       } else {
-        query = query.or(
-          `audience_type.eq.all_personnel,and(audience_type.eq.specific_personnel,target_personnel_id.eq.${userId})`
-        );
+        const { data: recipientRows, error: recipientError } = await supabase
+          .from(ANNOUNCEMENT_RECIPIENTS_TABLE)
+          .select('announcement_id')
+          .eq('personnel_id', userId);
+
+        if (recipientError) throw recipientError;
+
+        const orClauses = [
+          'audience_type.eq.all_personnel',
+          `and(audience_type.eq.specific_personnel,target_personnel_id.eq.${userId})`
+        ];
+        const recipientAnnouncementIds = (recipientRows || []).map((row) => row.announcement_id);
+        if (recipientAnnouncementIds.length > 0) {
+          orClauses.push(
+            `and(audience_type.eq.specific_personnel,announcement_id.in.(${recipientAnnouncementIds.join(',')}))`
+          );
+        }
+
+        query = query.or(orClauses.join(','));
       }
     }
 
     const { data, error } = await query;
     if (error) throw error;
 
-    const announcements = (data || []).map(mapAnnouncement);
+    let announcements = (data || []).map(mapAnnouncement);
 
     if (!announcements.length) {
       return { data: announcements, error: null };
     }
+
+    announcements = await mergeAnnouncementRecipients(announcements);
 
     const announcementIds = announcements.map((row) => row.announcement_id);
 
@@ -339,7 +414,7 @@ export const getAnnouncementsForUser = async (currentUser) => {
           const totalRecipients = row.audience_type === 'all_personnel'
             ? activePersonnelIds.size
             : row.audience_type === 'specific_personnel'
-              ? 1
+              ? row.target_personnel_ids.length
               : 0;
 
           let pendingPersonnel = [];
@@ -347,10 +422,10 @@ export const getAnnouncementsForUser = async (currentUser) => {
             pendingPersonnel = activePersonnel
               .filter((person) => !acknowledgedIds.has(person.admin_id))
               .map((person) => personnelNameById.get(person.admin_id));
-          } else if (row.audience_type === 'specific_personnel' && row.target_personnel_id) {
-            if (!acknowledgedIds.has(row.target_personnel_id)) {
-              pendingPersonnel = [row.target_personnel_name || personnelNameById.get(row.target_personnel_id) || 'Personnel'];
-            }
+          } else if (row.audience_type === 'specific_personnel' && row.target_personnel_ids.length) {
+            pendingPersonnel = row.target_personnel_ids
+              .filter((personnelId) => !acknowledgedIds.has(personnelId))
+              .map((personnelId, index) => personnelNameById.get(personnelId) || row.target_personnel_names[index] || 'Personnel');
           }
 
           return {
@@ -459,7 +534,7 @@ export const getPendingAcknowledgementCount = async (currentUser) => {
 
     const pendingCount = (announcements || []).filter((row) =>
       row.audience_type === 'specific_personnel' &&
-      row.target_personnel_id === personnelId &&
+      row.target_personnel_ids.includes(personnelId) &&
       !row.acknowledged_by_current_user
     ).length;
 
@@ -477,7 +552,9 @@ export const createAnnouncement = async (currentUser, payload) => {
     }
 
     const audienceType = String(payload?.audience_type || '').trim();
-    const targetPersonnelId = payload?.target_personnel_id || null;
+    const targetPersonnelIds = Array.from(
+      new Set((Array.isArray(payload?.target_personnel_ids) ? payload.target_personnel_ids : []).filter(Boolean))
+    );
 
     if (!payload?.title?.trim()) {
       throw new Error('Title is required.');
@@ -499,8 +576,8 @@ export const createAnnouncement = async (currentUser, payload) => {
       throw new Error(`You can attach up to ${MAX_ATTACHMENTS} files.`);
     }
 
-    if (audienceType === 'specific_personnel' && !targetPersonnelId) {
-      throw new Error('Please select a personnel recipient.');
+    if (audienceType === 'specific_personnel' && targetPersonnelIds.length === 0) {
+      throw new Error('Please select at least one personnel recipient.');
     }
 
     const uploadedAttachments = await uploadAnnouncementAttachments(currentUser, payload?.attachments || []);
@@ -515,7 +592,7 @@ export const createAnnouncement = async (currentUser, payload) => {
         content: payload.content.trim(),
         attachments: uploadedAttachments.data,
         audience_type: audienceType,
-        target_personnel_id: audienceType === 'specific_personnel' ? targetPersonnelId : null,
+        target_personnel_id: null,
         created_by: currentUser.admin_id
       })
       .select('announcement_id')
@@ -523,17 +600,28 @@ export const createAnnouncement = async (currentUser, payload) => {
 
     if (error) throw error;
 
+    if (audienceType === 'specific_personnel' && targetPersonnelIds.length > 0) {
+      const { error: recipientsError } = await supabase
+        .from(ANNOUNCEMENT_RECIPIENTS_TABLE)
+        .insert(targetPersonnelIds.map((personnelId) => ({
+          announcement_id: data.announcement_id,
+          personnel_id: personnelId
+        })));
+
+      if (recipientsError) throw recipientsError;
+    }
+
     await logAdminActivity({
       actorId: currentUser.admin_id,
       actorName: currentUser.name || currentUser.email || 'Admin User',
       action: 'Announcement Created',
       actionType: 'create',
-      details: `Audience: ${audienceType}${targetPersonnelId ? ` (${targetPersonnelId})` : ''}`,
+      details: `Audience: ${audienceType}${targetPersonnelIds.length ? ` (${targetPersonnelIds.join(', ')})` : ''}`,
       status: 'SUCCESS',
       metadata: {
         announcementId: data?.announcement_id || null,
         audienceType,
-        targetPersonnelId,
+        targetPersonnelIds,
         attachmentCount: uploadedAttachments.data.length
       }
     });
@@ -654,7 +742,8 @@ export const getArchivedAnnouncements = async (currentUser) => {
 
     if (error) throw error;
 
-    return { data: (data || []).map(mapAnnouncement), error: null };
+    const archived = (data || []).map(mapAnnouncement);
+    return { data: await mergeAnnouncementRecipients(archived), error: null };
   } catch (error) {
     console.error('Error fetching archived announcements:', error);
     return { data: [], error: error.message };
@@ -669,9 +758,12 @@ export const getAudienceLabel = (announcement) => {
   }
 
   if (audience === 'specific_personnel') {
-    return announcement?.target_personnel_name
-      ? `Specific: ${announcement.target_personnel_name}`
-      : 'Specific Personnel';
+    const names = Array.isArray(announcement?.target_personnel_names) ? announcement.target_personnel_names : [];
+
+    if (names.length === 0) return 'Specific Personnel';
+    if (names.length === 1) return `Specific: ${names[0]}`;
+    if (names.length <= 2) return `Specific: ${names.join(', ')}`;
+    return `Specific: ${names.slice(0, 2).join(', ')} +${names.length - 2} more`;
   }
 
   return 'Public';

@@ -63,8 +63,23 @@ alter table public.announcements
 create index if not exists idx_announcements_is_archived
   on public.announcements (is_archived);
 
+-- Multi-recipient support: an announcement targeted at "specific_personnel"
+-- can now address more than one person. target_personnel_id is kept only for
+-- backward compatibility with rows written before this table existed; new
+-- rows leave it null and record recipients here instead.
+create table if not exists public.announcement_recipients (
+  announcement_id uuid not null references public.announcements(announcement_id) on delete cascade,
+  personnel_id uuid not null references public.admin(admin_id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (announcement_id, personnel_id)
+);
+
+create index if not exists idx_announcement_recipients_personnel
+  on public.announcement_recipients (personnel_id);
+
 alter table public.announcements enable row level security;
 alter table public.announcement_acknowledgments enable row level security;
+alter table public.announcement_recipients enable row level security;
 
 drop policy if exists "announcements_select_public" on public.announcements;
 create policy "announcements_select_public"
@@ -101,7 +116,15 @@ using (
   or (
     is_archived = false
     and audience_type = 'specific_personnel'
-    and target_personnel_id = auth.uid()
+    and (
+      target_personnel_id = auth.uid()
+      or exists (
+        select 1
+        from public.announcement_recipients ar
+        where ar.announcement_id = announcements.announcement_id
+          and ar.personnel_id = auth.uid()
+      )
+    )
   )
 );
 
@@ -117,19 +140,7 @@ with check (
     where actor.admin_id = auth.uid()
       and lower(actor.role) = 'admin'
   )
-  and (
-    (audience_type = 'specific_personnel' and target_personnel_id is not null)
-    or (audience_type in ('public', 'all_personnel') and target_personnel_id is null)
-  )
-  and (
-    target_personnel_id is null
-    or exists (
-      select 1
-      from public.admin target_user
-      where target_user.admin_id = target_personnel_id
-        and lower(target_user.role) = 'personnel'
-    )
-  )
+  and target_personnel_id is null
   and created_by = auth.uid()
 );
 
@@ -158,6 +169,62 @@ with check (
 drop policy if exists "announcements_delete_admin" on public.announcements;
 create policy "announcements_delete_admin"
 on public.announcements
+for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin actor
+    where actor.admin_id = auth.uid()
+      and lower(actor.role) = 'admin'
+  )
+);
+
+drop policy if exists "announcement_recipients_select" on public.announcement_recipients;
+create policy "announcement_recipients_select"
+on public.announcement_recipients
+for select
+to authenticated
+using (
+  personnel_id = auth.uid()
+  or exists (
+    select 1
+    from public.admin actor
+    where actor.admin_id = auth.uid()
+      and lower(actor.role) = 'admin'
+  )
+);
+
+drop policy if exists "announcement_recipients_insert_admin" on public.announcement_recipients;
+create policy "announcement_recipients_insert_admin"
+on public.announcement_recipients
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.admin actor
+    where actor.admin_id = auth.uid()
+      and lower(actor.role) = 'admin'
+  )
+  and exists (
+    select 1
+    from public.admin target_user
+    where target_user.admin_id = personnel_id
+      and lower(target_user.role) = 'personnel'
+  )
+  and exists (
+    select 1
+    from public.announcements an
+    where an.announcement_id = announcement_recipients.announcement_id
+      and an.audience_type = 'specific_personnel'
+      and an.created_by = auth.uid()
+  )
+);
+
+drop policy if exists "announcement_recipients_delete_admin" on public.announcement_recipients;
+create policy "announcement_recipients_delete_admin"
+on public.announcement_recipients
 for delete
 to authenticated
 using (
@@ -211,7 +278,18 @@ with check (
     where an.announcement_id = announcement_id
       and (
         an.audience_type = 'all_personnel'
-        or (an.audience_type = 'specific_personnel' and an.target_personnel_id = auth.uid())
+        or (
+          an.audience_type = 'specific_personnel'
+          and (
+            an.target_personnel_id = auth.uid()
+            or exists (
+              select 1
+              from public.announcement_recipients ar
+              where ar.announcement_id = an.announcement_id
+                and ar.personnel_id = auth.uid()
+            )
+          )
+        )
       )
   )
 );

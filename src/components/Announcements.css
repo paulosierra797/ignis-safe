@@ -247,6 +247,11 @@
   font-size: 0.75rem;
 }
 
+.personnel-picker-error-text {
+  color: #dc2626;
+  font-weight: 600;
+}
+
 .attachment-selection-list {
   list-style: none;
   padding: 0;

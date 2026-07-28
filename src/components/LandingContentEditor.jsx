@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingPreview from './LandingPreview';
@@ -244,6 +244,21 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
     onDirtyChange?.(hasChanges);
   }, [hasChanges, onDirtyChange]);
 
+  const performSave = useCallback(async (nextDraft) => {
+    setSaving(true);
+    try {
+      const { error } = await setContent(nextDraft);
+      if (error) {
+        setSaveMessage(`Saved locally, but failed to sync to database: ${error}`);
+      } else {
+        setSaveMessage('Landing page content saved.');
+      }
+      window.setTimeout(() => setSaveMessage(''), 3000);
+    } finally {
+      setSaving(false);
+    }
+  }, [setContent]);
+
   useImperativeHandle(ref, () => ({
     discardUnsavedChanges: () => {
       clearLandingDraft();
@@ -270,7 +285,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       await performSave(nextDraft);
       return true;
     }
-  }), [content, draft]);
+  }), [content, draft, performSave]);
 
   const updateField = (section, field, value) => {
     setDraft((prev) => ({
@@ -392,21 +407,6 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       changes,
       onConfirm: () => performSave(nextDraft),
     });
-  };
-
-  const performSave = async (nextDraft) => {
-    setSaving(true);
-    try {
-      const { error } = await setContent(nextDraft);
-      if (error) {
-        setSaveMessage(`Saved locally, but failed to sync to database: ${error}`);
-      } else {
-        setSaveMessage('Landing page content saved.');
-      }
-      window.setTimeout(() => setSaveMessage(''), 3000);
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleDiscard = () => {

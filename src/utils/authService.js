@@ -2,18 +2,22 @@ import { supabase } from './supabaseClient';
 import { getStoredDeviceId } from './deviceTrust';
 
 const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
-const ADMIN_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
 
 const callAdminApi = async (endpoint, payload = null) => {
   if (!ADMIN_API_URL) return null;
 
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const accessToken = sessionData?.session?.access_token;
+  if (!accessToken) {
+    throw new Error('Please sign in as an administrator to continue.');
+  }
+
   const headers = {
     'Content-Type': 'application/json',
+    Authorization: `Bearer ${accessToken}`,
   };
-
-  if (ADMIN_API_KEY) {
-    headers['x-analytics-api-key'] = ADMIN_API_KEY;
-  }
 
   const response = await fetch(`${ADMIN_API_URL}${endpoint}`, {
     method: 'POST',
@@ -60,20 +64,6 @@ const resolveNameFields = (source = {}) => {
   return splitFullName(source.name || '');
 };
 
-const adminExistsForEmail = async (email) => {
-  const { data, error } = await supabase
-    .from('admin')
-    .select('admin_id')
-    .eq('email', email)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return !!data;
-};
-
 const withDisplayName = (adminData) => {
   if (!adminData) return adminData;
 
@@ -96,11 +86,7 @@ const syncAdminStatusIfVerified = async (authUser, adminData) => {
   if (!emailVerified || !isPending || requiresInviteActivation) return adminData;
 
   const { data: updatedAdmin, error: updateError } = await supabase
-    .from('admin')
-    .update({ status: 'Active' })
-    .eq('admin_id', adminData.admin_id)
-    .select()
-    .single();
+    .rpc('activate_own_backoffice_account');
 
   if (updateError) {
     console.warn('Could not update admin status after verification:', updateError);
@@ -238,9 +224,7 @@ export const signIn = async (email, password) => {
         adminData = await syncAdminStatusIfVerified(authData.user, adminData);
         // Update last login in background (fire and forget)
         supabase
-          .from('admin')
-          .update({ last_login: new Date().toISOString() })
-          .eq('admin_id', authData.user.id)
+          .rpc('touch_backoffice_activity')
           .then(() => {})
           .catch(() => {});
 
@@ -253,52 +237,8 @@ export const signIn = async (email, password) => {
         };
       }
 
-      // If admin record doesn't exist, create a fallback user object and try to insert record
-      console.warn('Admin record not found for user:', authData.user.id, ' - Creating fallback...');
-      const metadataName = resolveNameFields(authData.user.user_metadata || {});
-      
-      const fallbackUser = {
-        admin_id: authData.user.id,
-        email: authData.user.email,
-        first_name: metadataName.first_name,
-        last_name: metadataName.last_name,
-        role: 'admin',
-        rank: authData.user.user_metadata?.rank || 'ADMIN',
-        status: 'Active',
-        permissions: ['view_dashboard', 'view_charts', 'view_attendance', 'view_accounts', 'manage_users', 'view_analytics', 'view_progress', 'view_audit_logs', 'view_reports', 'manage_reports'],
-        last_login: new Date().toISOString(),
-        created_at: new Date().toISOString()
-      };
-
-      // Try to insert the admin record to restore it
-      try {
-        const { data: insertedData, error: insertError } = await supabase
-          .from('admin')
-          .insert([fallbackUser])
-          .select()
-          .single();
-
-        if (insertedData && !insertError) {
-          return { 
-            data: { 
-              auth: authData, 
-              user: withDisplayName(insertedData)
-            }, 
-            error: null 
-          };
-        }
-      } catch (insertError) {
-        console.error('Could not insert admin record:', insertError);
-      }
-
-      // Return fallback user if insertion failed
-      return { 
-        data: { 
-          auth: authData, 
-          user: withDisplayName(fallbackUser)
-        }, 
-        error: null 
-      };
+      await supabase.auth.signOut({ scope: 'local' });
+      throw new Error('This login is not connected to an authorized admin or personnel account.');
     }
 
     return { data: authData, error: null };
@@ -398,6 +338,17 @@ export const getSession = async () => {
   }
 };
 
+export const touchBackofficeActivity = async () => {
+  try {
+    const { data, error } = await supabase.rpc('touch_backoffice_activity');
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.warn('Could not update account activity:', error);
+    return { data: null, error: error.message };
+  }
+};
+
 // Get current user
 export const getCurrentUser = async () => {
   try {
@@ -440,40 +391,10 @@ if (authError) {
         return { data: withDisplayName(adminData), error: null };
       }
 
-      // If admin record doesn't exist, create a fallback user object
-      console.warn('Admin record not found for user:', user.id, ' - Creating fallback...');
-      const metadataName = resolveNameFields(user.user_metadata || {});
-      
-      const fallbackUser = {
-        admin_id: user.id,
-        email: user.email,
-        first_name: metadataName.first_name,
-        last_name: metadataName.last_name,
-        role: 'admin',
-        rank: user.user_metadata?.rank || 'ADMIN',
-        status: 'Active',
-        permissions: ['view_dashboard', 'view_charts', 'view_attendance', 'view_accounts', 'manage_users', 'view_analytics', 'view_progress', 'view_audit_logs', 'view_reports', 'manage_reports'],
-        last_login: new Date().toISOString(),
-        created_at: new Date().toISOString()
+      return {
+        data: null,
+        error: 'This login is not connected to an authorized admin or personnel account.'
       };
-
-      // Try to insert the admin record to restore it
-      try {
-        const { data: insertedData, error: insertError } = await supabase
-          .from('admin')
-          .insert([fallbackUser])
-          .select()
-          .single();
-
-        if (!insertError && insertedData) {
-          return { data: withDisplayName(insertedData), error: null };
-        }
-      } catch (insertError) {
-        console.error('Could not insert admin record:', insertError);
-      }
-
-      // Return fallback user if insertion failed
-      return { data: withDisplayName(fallbackUser), error: null };
     }
 
     return { data: null, error: 'No user found' };
@@ -489,11 +410,6 @@ export const sendPasswordResetEmail = async (email) => {
     const normalizedEmail = normalizeEmail(email);
     if (!normalizedEmail) {
       return { data: null, error: 'Please enter your email address.' };
-    }
-
-    const exists = await adminExistsForEmail(normalizedEmail);
-    if (!exists) {
-      return { data: null, error: 'No account found for that email address.' };
     }
 
     const { data, error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
@@ -607,9 +523,7 @@ export const activateInvitedAccount = async (newPassword) => {
     if (error) throw error;
 
     const { error: statusError } = await supabase
-      .from('admin')
-      .update({ status: 'Active' })
-      .eq('admin_id', invitedUser.id);
+      .rpc('activate_own_backoffice_account');
 
     if (statusError) {
       console.warn('Could not activate admin profile after password setup:', statusError);

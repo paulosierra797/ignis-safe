@@ -33,7 +33,7 @@ const AttendanceScan = () => {
       await navigator.clipboard.writeText(link);
       setCopied('Copied!');
       setTimeout(() => setCopied(''), 2000);
-    } catch (error) {
+    } catch {
       setCopied('Failed');
     }
   };

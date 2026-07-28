@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 
 const LayoutContext = createContext();
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useLayout = () => {
   const context = useContext(LayoutContext);
 

@@ -4,18 +4,13 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
 
-from supabase import create_client
-from .admin_users import router as admin_router
-
-app = FastAPI()
-
-app.include_router(admin_router)
+from .dependencies import require_admin, supabase
 load_dotenv()
 
 
@@ -188,23 +183,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-analytics_api_key = os.getenv("ANALYTICS_API_KEY", "").strip()
-
-if not supabase_url or not supabase_service_role_key:
-    raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
-
-supabase = create_client(supabase_url, supabase_service_role_key)
-
-
-def require_api_key(x_analytics_api_key: Optional[str] = Header(default=None)) -> None:
-    if not analytics_api_key:
-        return
-    if x_analytics_api_key != analytics_api_key:
-        raise HTTPException(status_code=401, detail="Invalid analytics API key")
-
 
 def fetch_all_rows(table: str, columns: str, page_size: int = 1000):
     print(f"Fetching table: {table}", flush=True)
@@ -1210,43 +1188,39 @@ def build_module_recommendations(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         if avg_score >= 80:
             level = "excellent"
             color = "green"
-            emoji = "✅"
         elif avg_score >= 65:
             level = "good"
             color = "blue"
-            emoji = "👍"
         elif avg_score >= 50:
             level = "moderate"
             color = "orange"
-            emoji = "⚠️"
         else:
             level = "low"
             color = "red"
-            emoji = "🚨"
         
         # Generate AI recommendations based on performance
         recommendations_text = []
         
         if avg_score >= 80:
-            recommendations_text.append("✓ Module is performing well — consider using as a template for other modules")
+            recommendations_text.append("Keep the current lesson structure and reuse its strongest approach in weaker modules")
             if pass_rate < 100:
-                recommendations_text.append(f"• {100 - pass_rate}% of learners need support — review edge cases")
+                remaining = round_value(100 - pass_rate, 1)
+                recommendations_text.append(f"Review the questions missed by the remaining {remaining}% of learners")
         elif avg_score >= 65:
-            recommendations_text.append("• Add more interactive examples to reinforce concepts")
-            recommendations_text.append("• Consider adding practice questions between sections")
+            recommendations_text.append("Add one worked example after each difficult concept")
+            recommendations_text.append("Insert short practice checks between lesson sections")
             if pass_rate < 80:
-                recommendations_text.append("• Extend practice time for struggling learners")
+                recommendations_text.append("Give struggling learners additional guided practice before the final assessment")
         elif avg_score >= 50:
-            recommendations_text.append("🔴 Content may be too advanced — simplify explanations")
-            recommendations_text.append("• Break module into smaller, focused segments")
-            recommendations_text.append("• Add prerequisite knowledge review section")
-            recommendations_text.append("• Increase simulation/practice opportunities")
+            recommendations_text.append("Rewrite complex explanations using shorter steps and plain-language examples")
+            recommendations_text.append("Break long lessons into smaller sections with one learning goal each")
+            recommendations_text.append("Add a short prerequisite review before the main lesson")
+            recommendations_text.append("Increase guided simulation and practice opportunities")
         else:
-            recommendations_text.append("🔴 URGENT: Module requires significant revision")
-            recommendations_text.append("• Completely rewrite confusing sections")
-            recommendations_text.append("• Add detailed visual aids and step-by-step walkthroughs")
-            recommendations_text.append("• Create guided simulation with hints")
-            recommendations_text.append("• Consider splitting into multiple modules")
+            recommendations_text.append("Review the lowest-performing topics and rewrite unclear explanations first")
+            recommendations_text.append("Add a visual, step-by-step walkthrough for each critical procedure")
+            recommendations_text.append("Provide guided practice with hints before independent simulation")
+            recommendations_text.append("Split the module if it currently covers several unrelated learning goals")
         
         recommendations.append({
             "moduleId": module_id,
@@ -1256,7 +1230,6 @@ def build_module_recommendations(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             "attemptCount": stats["attempts_count"],
             "level": level,
             "color": color,
-            "emoji": emoji,
             "recommendations": recommendations_text,
         })
     
@@ -1271,7 +1244,7 @@ def health_check() -> Dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/api/admin/users/delete", dependencies=[Depends(require_api_key)])
+@app.post("/api/admin/users/delete", dependencies=[Depends(require_admin)])
 def delete_user(request: DeleteUserRequest) -> Dict[str, Any]:
     admin_id = str(request.admin_id or "").strip()
     if not admin_id:
@@ -1324,7 +1297,7 @@ from .admin_users import router as admin_users_router
 app.include_router(admin_users_router)
 
 
-@app.get("/api/knowledge-analytics/filter-options")
+@app.get("/api/knowledge-analytics/filter-options", dependencies=[Depends(require_admin)])
 def get_filter_options():
     modules = fetch_all_rows(
         "modules",
@@ -1337,19 +1310,19 @@ def get_filter_options():
     }
 
 
-@app.post("/api/knowledge-analytics/dashboard-stats", dependencies=[Depends(require_api_key)])
+@app.post("/api/knowledge-analytics/dashboard-stats", dependencies=[Depends(require_admin)])
 def get_dashboard_stats(filters: Filters) -> Dict[str, Any]:
     data = load_analytics_base_data()
     return {"data": build_dashboard_stats(data, filters), "error": None}
 
 
-@app.post("/api/knowledge-analytics/charts", dependencies=[Depends(require_api_key)])
+@app.post("/api/knowledge-analytics/charts", dependencies=[Depends(require_admin)])
 def get_charts(filters: Filters) -> Dict[str, Any]:
     data = load_analytics_base_data()
     return {"data": build_charts(data, filters), "error": None}
 
 
-@app.post("/api/knowledge-analytics/dashboard", dependencies=[Depends(require_api_key)])
+@app.post("/api/knowledge-analytics/dashboard", dependencies=[Depends(require_admin)])
 def get_dashboard_bundle(filters: Filters) -> Dict[str, Any]:
     data = load_analytics_base_data()
     return {
@@ -1363,7 +1336,7 @@ def get_dashboard_bundle(filters: Filters) -> Dict[str, Any]:
     }
 
 
-@app.get("/api/knowledge-analytics/module-recommendations", dependencies=[Depends(require_api_key)])
+@app.get("/api/knowledge-analytics/module-recommendations", dependencies=[Depends(require_admin)])
 def get_module_recommendations() -> Dict[str, Any]:
     data = {
         "attempts": fetch_all_rows(

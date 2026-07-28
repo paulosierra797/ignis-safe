@@ -217,10 +217,10 @@ export const UserProvider = ({ children }) => {
 
     const rolePermissions = {
       admin: ['view_dashboard', 'view_charts', 'view_attendance', 'view_accounts', 'manage_users', 'view_analytics', 'view_progress', 'view_audit_logs', 'view_reports', 'manage_reports'],
-      personnel: ['create_reports'], // Only report creation
-      'fire-marshal': ['view_dashboard', 'view_reports', 'create_reports', 'view_attendance', 'view_analytics'],
-      'intel-unit': ['view_reports', 'manage_reports'] // Report review and management
+      personnel: ['create_reports']
     };
+
+    if (!Object.hasOwn(rolePermissions, role)) return;
 
     const updatedUser = {
       ...accountUser,

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useSearchParams, useNavigate } from 'react-router-dom';
 import { loadFaceModels } from '../utils/loadFaceModels';
 import { getFaceByAdminId } from '../utils/attendanceService';
-import * as faceapi from 'face-api.js';
+import * as faceapi from '@vladmandic/face-api';
 import { validateQRSession } from '../utils/attendanceService';
 import './AttendanceConfirm.css';
 import {

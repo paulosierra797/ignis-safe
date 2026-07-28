@@ -4,6 +4,7 @@ import { getLandingContentFromDb, saveLandingContentToDb } from '../utils/landin
 
 const STORAGE_KEY = 'ignis_landing_content_v1';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const DEFAULT_LANDING_CONTENT = {
   hero: {
     title: 'Protecting lives, property and community',
@@ -260,6 +261,7 @@ const readStoredContent = () => {
   }
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useLandingContent = () => {
   const context = useContext(LandingContentContext);
   if (!context) {
@@ -343,16 +345,13 @@ export const LandingContentProvider = ({ children }) => {
     return { error };
   };
 
-  const value = useMemo(
-    () => ({
-      content,
-      setContent,
-      resetContent,
-      defaults: DEFAULT_LANDING_CONTENT,
-      loadingContent,
-    }),
-    [content, loadingContent]
-  );
+  const value = {
+    content,
+    setContent,
+    resetContent,
+    defaults: DEFAULT_LANDING_CONTENT,
+    loadingContent,
+  };
 
   return <LandingContentContext.Provider value={value}>{children}</LandingContentContext.Provider>;
 };

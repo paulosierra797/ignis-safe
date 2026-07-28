@@ -5,7 +5,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from .dependencies import require_api_key, supabase
+from .dependencies import require_admin, supabase
 
 
 router = APIRouter()
@@ -79,20 +79,37 @@ def build_invite_redirect_url(role: str) -> str:
     ))
 
 
-@router.post("/api/admin/users/create", dependencies=[Depends(require_api_key)])
+@router.post("/api/admin/users/create", dependencies=[Depends(require_admin)])
 def create_user(request: CreateUserRequest) -> Dict[str, Any]:
     email = str(request.email or "").strip().lower()
     first_name = str(request.first_name or "").strip()
     last_name = str(request.last_name or "").strip()
-    role = str(request.role or "personnel").strip() or "personnel"
+    role = str(request.role or "personnel").strip().lower() or "personnel"
     rank = str(request.rank or "").strip()
     contact_number = str(request.contact_number or "").strip() or None
-    permissions = request.permissions or []
+    permissions = (
+        [
+            "view_dashboard",
+            "view_charts",
+            "view_attendance",
+            "view_accounts",
+            "manage_users",
+            "view_analytics",
+            "view_progress",
+            "view_audit_logs",
+            "view_reports",
+            "manage_reports",
+        ]
+        if role == "admin"
+        else ["create_reports"]
+    )
 
     if not email:
         raise HTTPException(status_code=400, detail="email is required")
     if not first_name or not last_name:
         raise HTTPException(status_code=400, detail="first_name and last_name are required")
+    if role not in {"admin", "personnel"}:
+        raise HTTPException(status_code=400, detail="role must be admin or personnel")
 
     existing_admin = get_admin_by_email(email)
     if existing_admin:
@@ -144,16 +161,6 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
 
         return build_create_response(created_admin, auth_user_id, email)
     except HTTPException:
-        existing_admin = get_admin_by_email(email)
-        if existing_admin:
-            existing_admin_id = str(existing_admin.get("admin_id") or auth_user_id or "")
-            return build_create_response(
-                existing_admin,
-                existing_admin_id,
-                email,
-                reused_existing=True,
-            )
-
         if auth_user_id:
             try:
                 supabase.auth.admin.delete_user(auth_user_id)
@@ -163,12 +170,9 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
     except Exception as error:
         existing_admin = get_admin_by_email(email)
         if existing_admin:
-            existing_admin_id = str(existing_admin.get("admin_id") or auth_user_id or "")
-            return build_create_response(
-                existing_admin,
-                existing_admin_id,
-                email,
-                reused_existing=True,
+            raise HTTPException(
+                status_code=409,
+                detail="An account with this email address is already registered.",
             )
 
         if auth_user_id:

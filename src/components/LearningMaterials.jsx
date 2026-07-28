@@ -465,26 +465,17 @@ try {
 
       if (!mounted) return;
 
-      if (materialsResult.error) {
-        setMessage({ type: 'error', text: `Failed to load learning materials: ${materialsResult.error}` });
-      }
+      const firstLoadError = [
+        materialsResult.error && `Failed to load learning materials: ${materialsResult.error}`,
+        guidesResult.error && `Failed to load class guides: ${guidesResult.error}`,
+        detailsResult.error && `Failed to load fire class details: ${detailsResult.error}`,
+        textsResult.error && `Failed to load learning texts: ${textsResult.error}`,
+        mediaResult.error && `Failed to load media assets: ${mediaResult.error}`
+      ].find(Boolean);
 
-      if (guidesResult.error && !message.text) {
-        setMessage({ type: 'error', text: `Failed to load class guides: ${guidesResult.error}` });
+      if (firstLoadError) {
+        setMessage({ type: 'error', text: firstLoadError });
       }
-      if (detailsResult.error && !message.text) {
-    setMessage({
-        type: "error",
-        text: `Failed to load fire class details: ${detailsResult.error}`
-    });
-}
-
-if (textsResult.error && !message.text) {
-    setMessage({
-        type: "error",
-        text: `Failed to load learning texts: ${textsResult.error}`
-    });
-}
 
       setModules(buildLearningMaterialModules(materialsResult.data || []));
       setFireGuides(guidesResult.data || []);

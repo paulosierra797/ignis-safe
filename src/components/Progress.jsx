@@ -7,8 +7,12 @@ import {
   FiCheckCircle,
   FiChevronDown,
   FiClock,
+  FiFileText,
+  FiGlobe,
   FiMail,
   FiMapPin,
+  FiPlayCircle,
+  FiUser,
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -42,6 +46,22 @@ const getActivityDescription = (status) =>
   status === 'Active'
     ? 'Activity recorded within the last 7 days.'
     : 'No activity recorded for 7 consecutive days.';
+
+const formatProfileLabel = (value, fallback = 'Not recorded') => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return fallback;
+
+  return normalized
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+};
+
+const getLanguageLabel = (languageCode) => {
+  const normalized = String(languageCode || '').trim().toLowerCase();
+  if (['tl', 'fil', 'filipino', 'tagalog'].includes(normalized)) return 'Filipino';
+  if (normalized === 'en' || normalized === 'english') return 'English';
+  return formatProfileLabel(normalized);
+};
 
 const COMPLETION_RANGES = [
   { label: 'All', min: null, max: null },
@@ -415,7 +435,11 @@ export default function Progress() {
               <div className="progress-modal-content">
                 <section className="progress-modal-identity">
                   <div className="progress-modal-avatar" aria-hidden="true">
-                    {getUserInitials(selectedUser.name)}
+                    {selectedUser.avatarUrl ? (
+                      <img src={selectedUser.avatarUrl} alt="" />
+                    ) : (
+                      getUserInitials(selectedUser.name)
+                    )}
                   </div>
                   <div className="progress-modal-identity-copy">
                     <span className="progress-modal-label">USER ACCOUNT</span>
@@ -447,6 +471,62 @@ export default function Progress() {
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">LAST ACTIVITY</span>
                           <span className="progress-modal-value">{formatLongDate(selectedUser.lastActivityAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="progress-modal-section">
+                    <h4><FiUser className="progress-modal-section-icon" aria-hidden="true" />Account and App Details</h4>
+                    <div className="progress-modal-info">
+                      <div className="progress-modal-info-item">
+                        <span className="progress-modal-info-icon"><FiUser aria-hidden="true" /></span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">USERNAME</span>
+                          <span className="progress-modal-value">{selectedUser.username}</span>
+                        </div>
+                      </div>
+                      <div className="progress-modal-info-item">
+                        <span className="progress-modal-info-icon"><FiCheckCircle aria-hidden="true" /></span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">REGISTRATION</span>
+                          <span className="progress-modal-value">
+                            {formatProfileLabel(selectedUser.registrationStatus)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="progress-modal-info-item">
+                        <span className="progress-modal-info-icon"><FiGlobe aria-hidden="true" /></span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">APP LANGUAGE</span>
+                          <span className="progress-modal-value">
+                            {getLanguageLabel(selectedUser.appLanguageCode)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="progress-modal-info-item">
+                        <span className="progress-modal-info-icon"><FiFileText aria-hidden="true" /></span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">TERMS AGREEMENT</span>
+                          <span className="progress-modal-value">
+                            {selectedUser.termsAccepted
+                              ? `Accepted${selectedUser.termsAcceptedAt ? ` on ${formatLongDate(selectedUser.termsAcceptedAt)}` : ''}`
+                              : 'Not accepted'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="progress-modal-info-item">
+                        <span className="progress-modal-info-icon"><FiPlayCircle aria-hidden="true" /></span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">SIMULATIONS COMPLETED</span>
+                          <span className="progress-modal-value">{selectedUser.completedSimulations}</span>
+                        </div>
+                      </div>
+                      <div className="progress-modal-info-item">
+                        <span className="progress-modal-info-icon"><FiPlayCircle aria-hidden="true" /></span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">LAST SIMULATION</span>
+                          <span className="progress-modal-value">{selectedUser.lastSimulation}</span>
                         </div>
                       </div>
                     </div>

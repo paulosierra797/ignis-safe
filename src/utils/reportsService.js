@@ -239,7 +239,7 @@ export const saveInvestigationDraft = async ({
   }
 };
 
-export const getIntelUnitSubmittedReports = async () => {
+export const getAdminSubmittedReports = async () => {
   try {
     const { data, error } = await supabase
       .from(REPORTS_TABLE)
@@ -313,7 +313,7 @@ export const updateReportStatus = async (reportId, status, internalNotes = '') =
 
     if (error) throw error;
 
-    // Best-effort audit trail logging for Intel Unit actions.
+    // Best-effort audit trail logging for administrator review actions.
     try {
       const {
         data: { user }
@@ -323,7 +323,7 @@ export const updateReportStatus = async (reportId, status, internalNotes = '') =
         const actorName = [user.user_metadata?.first_name, user.user_metadata?.last_name]
           .filter(Boolean)
           .join(' ')
-          .trim() || user.email || 'Intel Unit';
+          .trim() || user.email || 'Administrator';
 
         await supabase
           .from(REPORT_REVIEW_TABLE)
@@ -350,10 +350,10 @@ export const updateReportStatus = async (reportId, status, internalNotes = '') =
 
 export const canMonitorReports = (currentUser) => {
   const role = formatRole(currentUser?.role);
-  return role === 'admin' || role === 'intel unit' || role === 'intel-unit';
+  return role === 'admin';
 };
 
-export const getIntelUnitArchivedReports = async () => {
+export const getAdminArchivedReports = async () => {
   try {
     const { data, error } = await supabase
       .from(REPORTS_TABLE)
@@ -398,7 +398,7 @@ const mapReviewActionToLabel = (action = '') => {
   return { action: 'Report Updated', actionType: 'edit' };
 };
 
-export const getIntelUnitAuditLogs = async () => {
+export const getAdminReportAuditLogs = async () => {
   try {
     const [{ data: reportsData, error: reportsError }, { data: reviewsData, error: reviewsError }] = await Promise.all([
       supabase
@@ -432,7 +432,7 @@ export const getIntelUnitAuditLogs = async () => {
       return {
         id: `review-${row.review_id}`,
         timestamp: row.acted_at,
-        user: row.acted_by_name || 'Intel Unit',
+        user: row.acted_by_name || 'Administrator',
         action: mapped.action,
         actionType: mapped.actionType,
         details:
@@ -450,7 +450,7 @@ export const getIntelUnitAuditLogs = async () => {
 
     return { data: combined, error: null };
   } catch (error) {
-    console.error('Error fetching Intel Unit audit logs:', error);
+    console.error('Error fetching administrator report audit logs:', error);
     return { data: [], error: error.message };
   }
 };

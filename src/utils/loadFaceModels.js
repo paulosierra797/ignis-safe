@@ -1,5 +1,5 @@
 // utils/loadFaceModels.js
-import * as faceapi from 'face-api.js';
+import * as faceapi from '@vladmandic/face-api';
 
 export const loadFaceModels = async () => {
   await faceapi.nets.tinyFaceDetector.loadFromUri('/models');

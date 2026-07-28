@@ -196,7 +196,7 @@ export default function ContentManagement() {
     }
   };
 
-  const loadAnnouncements = async () => {
+  const loadAnnouncements = useCallback(async () => {
     const { data, error } = await getAnnouncementsForUser(currentUser);
     if (error) {
       setMessage({ type: 'error', text: `Failed to load announcements: ${error}` });
@@ -205,7 +205,7 @@ export default function ContentManagement() {
     }
 
     setAnnouncements(data || []);
-  };
+  }, [currentUser]);
 
   const loadRecipients = async () => {
     const { data, error } = await getPersonnelRecipients();
@@ -231,7 +231,7 @@ export default function ContentManagement() {
     if (currentUser?.admin_id) {
       initialize();
     }
-  }, [currentUser]);
+  }, [currentUser, loadAnnouncements]);
 
   const filteredAnnouncements = useMemo(() => {
     if (!searchQuery.trim()) {

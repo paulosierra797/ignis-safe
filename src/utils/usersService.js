@@ -5,7 +5,6 @@ const SHIFT_SCHEDULE_TABLE = 'shift_schedule';
 const PERSONNEL_WORKSPACE_TABLE = 'personnel_workspace_profiles';
 const SHIFT_SCHEDULE_KEY = 'main';
 const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
-const ADMIN_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
 
 const emitDataChanged = (scope, detail = {}) => {
@@ -121,13 +120,18 @@ export const updatePersonnelWorkspaceProfile = async (adminId, updates) => {
 const callAdminApi = async (endpoint, payload = null) => {
   if (!ADMIN_API_URL) return null;
 
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const accessToken = sessionData?.session?.access_token;
+  if (!accessToken) {
+    throw new Error('Please sign in as an administrator to continue.');
+  }
+
   const headers = {
     'Content-Type': 'application/json',
+    Authorization: `Bearer ${accessToken}`,
   };
-
-  if (ADMIN_API_KEY) {
-    headers['x-analytics-api-key'] = ADMIN_API_KEY;
-  }
 
   const response = await fetch(`${ADMIN_API_URL}${endpoint}`, {
     method: payload ? 'POST' : 'GET',
@@ -454,15 +458,10 @@ export const getActiveUsers = async () => {
 // Update admin last login
 export const updateUserLastLogin = async (adminId) => {
   try {
-    const { data, error } = await supabase
-      .from('admin')
-      .update({ last_login: new Date().toISOString() })
-      .eq('admin_id', adminId)
-      .select()
-      .single();
+    const { data, error } = await supabase.rpc('touch_backoffice_activity');
     
     if (error) throw error;
-    return { data, error: null };
+    return { data: { admin_id: adminId, last_login: data }, error: null };
   } catch (error) {
     console.error('Error updating last login:', error);
     return { data: null, error: error.message };

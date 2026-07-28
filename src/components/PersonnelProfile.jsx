@@ -4,7 +4,7 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import { uploadProfileImage } from '../utils/imageService';
-import * as faceapi from 'face-api.js';
+import * as faceapi from '@vladmandic/face-api';
 import { loadFaceModels } from '../utils/loadFaceModels';
 import Webcam from 'react-webcam';
 import './PersonnelProfile.css';

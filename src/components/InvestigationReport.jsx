@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './InvestigationReport.css';
@@ -281,7 +281,7 @@ export default function InvestigationReport({
     setActiveStepIndex((prev) => Math.max(prev - 1, 0));
   };
 
-  const buildPdf = async () => {
+  const buildPdf = useCallback(async () => {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
     const marginX = 48;
@@ -661,7 +661,7 @@ export default function InvestigationReport({
             maxHeight
           );
           cursorY += maxHeight + 14;
-        } catch (error) {
+        } catch {
           doc.setFont('times', 'normal');
           doc.text('Attached image could not be rendered.', marginX, cursorY);
           cursorY += 18;
@@ -949,7 +949,7 @@ export default function InvestigationReport({
     doc.text(recommendationLines, marginX, cursorY);
 
     return doc;
-  };
+  }, [formValues, reportMeta.pdfTitle, reportMeta.tableTitle, reportType]);
 
   useEffect(() => {
     if (!showPreview) {
@@ -958,22 +958,24 @@ export default function InvestigationReport({
     }
 
     let isMounted = true;
+    let previewUrl = '';
 
     (async () => {
       const doc = await buildPdf();
       if (!isMounted) return;
       const blob = doc.output('blob');
       const url = URL.createObjectURL(blob);
+      previewUrl = url;
       setPdfUrl(url);
     })();
 
     return () => {
       isMounted = false;
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
       }
     };
-  }, [showPreview, formValues]);
+  }, [showPreview, buildPdf]);
 
   const handlePrint = async () => {
     const doc = await buildPdf();
@@ -1088,7 +1090,7 @@ export default function InvestigationReport({
         return;
       }
 
-      setSubmitMessage({ type: 'success', text: 'Report submitted successfully. Intel Unit can now monitor this report.' });
+      setSubmitMessage({ type: 'success', text: 'Report submitted successfully. Administrators can now review this report.' });
       setTimeout(() => {
         onClose?.();
       }, 900);

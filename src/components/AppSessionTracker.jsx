@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useUser } from '../context/UserContext';
 import { endAppSession, startAppSession } from '../utils/appSessionService';
+import { touchBackofficeActivity } from '../utils/authService';
 
 export default function AppSessionTracker() {
   const { currentUser } = useUser();
@@ -11,6 +12,7 @@ export default function AppSessionTracker() {
     const adminId = currentUser?.admin_id || null;
     const userRole = String(currentUser?.role || '').toLowerCase();
     const isMobilePersonnel = userRole === 'personnel' || userRole === 'mobile-user';
+    const tracksBackofficeActivity = userRole === 'admin' || userRole === 'personnel';
 
     const closeSession = async (reason) => {
       const activeSession = activeSessionRef.current;
@@ -39,6 +41,14 @@ export default function AppSessionTracker() {
       void closeSession('non_mobile_user');
     }
 
+    const updateActivity = () => {
+      if (adminId && tracksBackofficeActivity && document.visibilityState !== 'hidden') {
+        void touchBackofficeActivity();
+      }
+    };
+    updateActivity();
+    const activityInterval = window.setInterval(updateActivity, 5 * 60 * 1000);
+
     const handlePageHide = () => {
       void closeSession('pagehide');
     };
@@ -59,10 +69,11 @@ export default function AppSessionTracker() {
         window.removeEventListener('pagehide', handlePageHide);
         window.removeEventListener('beforeunload', handleBeforeUnload);
       }
+      window.clearInterval(activityInterval);
 
       void closeSession(adminId && isMobilePersonnel ? 'cleanup' : 'logout');
     };
-  }, [currentUser?.admin_id]);
+  }, [currentUser?.admin_id, currentUser?.role]);
 
   return null;
 }

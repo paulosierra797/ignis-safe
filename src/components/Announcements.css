@@ -1134,3 +1134,133 @@
     overflow-wrap: anywhere;
   }
 }
+
+/* =========================================================
+   CREATE ANNOUNCEMENT — TITLE/AUDIENCE/PERSONNEL ALIGNMENT
+   This page is rendered by Announcements.jsx.
+   ========================================================= */
+
+.composer-card .announcement-recipient-grid {
+  --announcement-recipient-column-gap: 1.5rem;
+
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  column-gap: var(--announcement-recipient-column-gap) !important;
+  row-gap: 1.5rem !important;
+  align-items: start !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}
+
+.composer-card .announcement-recipient-grid > .form-field {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}
+
+.composer-card .announcement-recipient-grid > .form-field > input,
+.composer-card .announcement-recipient-grid > .form-field > select {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}
+
+/*
+  The heading spans both columns. The picker below it then
+  creates one equal card under Title and one under Audience.
+*/
+.composer-card
+  .announcement-recipient-grid
+  > .announcement-personnel-picker-field {
+  grid-column: 1 / -1 !important;
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+.composer-card
+  .announcement-recipient-grid
+  > .announcement-personnel-picker-field
+  > .personnel-picker-two-col {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  column-gap: var(--announcement-recipient-column-gap) !important;
+  row-gap: 0 !important;
+  align-items: stretch !important;
+  justify-items: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+.composer-card
+  .announcement-recipient-grid
+  > .announcement-personnel-picker-field
+  > .personnel-picker-two-col
+  > .personnel-picker-left,
+.composer-card
+  .announcement-recipient-grid
+  > .announcement-personnel-picker-field
+  > .personnel-picker-two-col
+  > .personnel-picker-right {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 560px !important;
+  align-self: stretch !important;
+  box-sizing: border-box;
+}
+
+/*
+  At smaller widths, Title, Audience, personnel list, and
+  selected personnel stack into one column.
+*/
+@media (max-width: 900px) {
+  .composer-card .announcement-recipient-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    column-gap: 0 !important;
+    row-gap: 1rem !important;
+  }
+
+  .composer-card
+    .announcement-recipient-grid
+    > .announcement-personnel-picker-field {
+    grid-column: 1 !important;
+  }
+
+  .composer-card
+    .announcement-recipient-grid
+    > .announcement-personnel-picker-field
+    > .personnel-picker-two-col {
+    grid-template-columns: minmax(0, 1fr) !important;
+    column-gap: 0 !important;
+    row-gap: 1rem !important;
+  }
+
+  .composer-card
+    .announcement-recipient-grid
+    > .announcement-personnel-picker-field
+    > .personnel-picker-two-col
+    > .personnel-picker-left {
+    height: min(460px, 50vh) !important;
+  }
+
+  .composer-card
+    .announcement-recipient-grid
+    > .announcement-personnel-picker-field
+    > .personnel-picker-two-col
+    > .personnel-picker-right {
+    height: min(320px, 38vh) !important;
+  }
+}
+

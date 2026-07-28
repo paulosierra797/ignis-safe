@@ -90,10 +90,20 @@
 }
 
 .report-upload-title-input {
-  min-height: 88px;
-  resize: vertical;
-  font-family: inherit;
+  min-height: 140px;
+  resize: none;
+  overflow-y: auto;
+  border-color: #cbd5e1;
+  padding: 0.7rem 0.8rem;
+  color: #334155;
+  font-family: 'Poppins', sans-serif;
   line-height: 1.5;
+}
+
+.report-upload-title-input:focus {
+  outline: none;
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
 }
 
 .report-upload-hint {

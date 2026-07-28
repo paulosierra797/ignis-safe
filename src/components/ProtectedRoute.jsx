@@ -1,50 +1,49 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { getPendingAcknowledgementCount } from '../utils/announcementsService';
 
-export default function ProtectedRoute({ children, requiredPermission }) {
+export default function ProtectedRoute({ children, requiredPermission, allowedRoles = [] }) {
   const { currentUser, loading } = useUser();
   const location = useLocation();
-  const [checkingAcknowledgement, setCheckingAcknowledgement] = useState(true);
-  const [hasPendingAcknowledgement, setHasPendingAcknowledgement] = useState(false);
+  const role = String(currentUser?.role || '').toLowerCase();
+  const shouldCheckAcknowledgements = !loading
+    && Boolean(currentUser?.admin_id)
+    && role === 'personnel'
+    && location.pathname !== '/personnel/announcements';
+  const acknowledgementKey = shouldCheckAcknowledgements
+    ? `${currentUser.admin_id}:${location.pathname}`
+    : '';
+  const [acknowledgementResult, setAcknowledgementResult] = useState({
+    key: '',
+    hasPending: false
+  });
 
   useEffect(() => {
-    const checkPendingAcknowledgements = async () => {
-      const role = String(currentUser?.role || '').toLowerCase();
-      const isPersonnel = role === 'personnel';
+    if (!acknowledgementKey) return undefined;
+    let isCancelled = false;
 
-      if (!isPersonnel) {
-        setHasPendingAcknowledgement(false);
-        setCheckingAcknowledgement(false);
-        return;
-      }
-
-      const isAnnouncementsPage = location.pathname === '/personnel/announcements';
-      if (isAnnouncementsPage) {
-        setHasPendingAcknowledgement(false);
-        setCheckingAcknowledgement(false);
-        return;
-      }
-
-      setCheckingAcknowledgement(true);
+    const timeoutId = window.setTimeout(async () => {
       const { data, error } = await getPendingAcknowledgementCount(currentUser);
-      if (error) {
-        setHasPendingAcknowledgement(false);
-      } else {
-        setHasPendingAcknowledgement((data?.pendingCount || 0) > 0);
+      if (!isCancelled) {
+        setAcknowledgementResult({
+          key: acknowledgementKey,
+          hasPending: !error && (data?.pendingCount || 0) > 0
+        });
       }
-      setCheckingAcknowledgement(false);
-    };
+    }, 0);
 
-    if (!loading && currentUser) {
-      checkPendingAcknowledgements();
-    } else if (!loading) {
-      setCheckingAcknowledgement(false);
-    }
-  }, [currentUser, loading, location.pathname]);
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [acknowledgementKey, currentUser]);
+
+  const checkingAcknowledgement = Boolean(
+    acknowledgementKey && acknowledgementResult.key !== acknowledgementKey
+  );
+  const hasPendingAcknowledgement = acknowledgementResult.key === acknowledgementKey
+    && acknowledgementResult.hasPending;
 
   if (loading) {
     return (
@@ -61,6 +60,16 @@ export default function ProtectedRoute({ children, requiredPermission }) {
 
   if (!currentUser) {
     return <Navigate to="/login" replace />;
+  }
+
+  const normalizedRole = String(currentUser.role || '').trim().toLowerCase();
+  if (allowedRoles.length > 0 && !allowedRoles.includes(normalizedRole)) {
+    const fallbackPath = normalizedRole === 'admin'
+      ? '/dashboard'
+      : normalizedRole === 'personnel'
+        ? '/personnel/operations'
+        : '/login';
+    return <Navigate to={fallbackPath} replace />;
   }
 
   if (checkingAcknowledgement) {
@@ -91,7 +100,7 @@ export default function ProtectedRoute({ children, requiredPermission }) {
   }
 
   if (requiredPermission && !currentUser.permissions?.includes(requiredPermission)) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={normalizedRole === 'personnel' ? '/personnel/operations' : '/dashboard'} replace />;
   }
 
   if (hasPendingAcknowledgement) {

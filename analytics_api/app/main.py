@@ -4,18 +4,13 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
 
-from supabase import create_client
-from .admin_users import router as admin_router
-
-app = FastAPI()
-
-app.include_router(admin_router)
+from .dependencies import require_admin, supabase
 load_dotenv()
 
 
@@ -188,23 +183,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-supabase_url = os.getenv("SUPABASE_URL")
-supabase_service_role_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-analytics_api_key = os.getenv("ANALYTICS_API_KEY", "").strip()
-
-if not supabase_url or not supabase_service_role_key:
-    raise RuntimeError("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY")
-
-supabase = create_client(supabase_url, supabase_service_role_key)
-
-
-def require_api_key(x_analytics_api_key: Optional[str] = Header(default=None)) -> None:
-    if not analytics_api_key:
-        return
-    if x_analytics_api_key != analytics_api_key:
-        raise HTTPException(status_code=401, detail="Invalid analytics API key")
-
 
 def fetch_all_rows(table: str, columns: str, page_size: int = 1000):
     print(f"Fetching table: {table}", flush=True)
@@ -1266,7 +1244,7 @@ def health_check() -> Dict[str, str]:
     return {"status": "ok"}
 
 
-@app.post("/api/admin/users/delete", dependencies=[Depends(require_api_key)])
+@app.post("/api/admin/users/delete", dependencies=[Depends(require_admin)])
 def delete_user(request: DeleteUserRequest) -> Dict[str, Any]:
     admin_id = str(request.admin_id or "").strip()
     if not admin_id:
@@ -1319,7 +1297,7 @@ from .admin_users import router as admin_users_router
 app.include_router(admin_users_router)
 
 
-@app.get("/api/knowledge-analytics/filter-options")
+@app.get("/api/knowledge-analytics/filter-options", dependencies=[Depends(require_admin)])
 def get_filter_options():
     modules = fetch_all_rows(
         "modules",
@@ -1332,19 +1310,19 @@ def get_filter_options():
     }
 
 
-@app.post("/api/knowledge-analytics/dashboard-stats", dependencies=[Depends(require_api_key)])
+@app.post("/api/knowledge-analytics/dashboard-stats", dependencies=[Depends(require_admin)])
 def get_dashboard_stats(filters: Filters) -> Dict[str, Any]:
     data = load_analytics_base_data()
     return {"data": build_dashboard_stats(data, filters), "error": None}
 
 
-@app.post("/api/knowledge-analytics/charts", dependencies=[Depends(require_api_key)])
+@app.post("/api/knowledge-analytics/charts", dependencies=[Depends(require_admin)])
 def get_charts(filters: Filters) -> Dict[str, Any]:
     data = load_analytics_base_data()
     return {"data": build_charts(data, filters), "error": None}
 
 
-@app.post("/api/knowledge-analytics/dashboard", dependencies=[Depends(require_api_key)])
+@app.post("/api/knowledge-analytics/dashboard", dependencies=[Depends(require_admin)])
 def get_dashboard_bundle(filters: Filters) -> Dict[str, Any]:
     data = load_analytics_base_data()
     return {
@@ -1358,7 +1336,7 @@ def get_dashboard_bundle(filters: Filters) -> Dict[str, Any]:
     }
 
 
-@app.get("/api/knowledge-analytics/module-recommendations", dependencies=[Depends(require_api_key)])
+@app.get("/api/knowledge-analytics/module-recommendations", dependencies=[Depends(require_admin)])
 def get_module_recommendations() -> Dict[str, Any]:
     data = {
         "attempts": fetch_all_rows(

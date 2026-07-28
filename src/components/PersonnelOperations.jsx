@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { useUser } from '../context/UserContext';
@@ -39,23 +38,6 @@ const toIsoDate = (date) => {
   return `${year}-${month}-${day}`;
 };
 
-const fromIsoDate = (dateValue) => {
-  const parts = String(dateValue || '').split('-');
-  if (parts.length !== 3) {
-    return null;
-  }
-
-  const year = Number(parts[0]);
-  const month = Number(parts[1]);
-  const day = Number(parts[2]);
-
-  if (!year || !month || !day) {
-    return null;
-  }
-
-  return new Date(year, month - 1, day);
-};
-
 const getCalendarCells = (monthDate) => {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -75,7 +57,6 @@ const getCalendarCells = (monthDate) => {
 };
 
 export default function PersonnelOperations() {
-  const navigate = useNavigate();
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);

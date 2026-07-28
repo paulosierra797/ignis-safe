@@ -68,43 +68,54 @@ const toNumericPersonnelId = (value, fallbackSeed = '') => {
 
 // QR Session Management
 export const generateQRSession = async (stationId = 'DEFAULT') => {
-  const sessionId = crypto.randomUUID();
-  const now = new Date();
+  const { data, error } = await supabase.rpc('create_attendance_qr_session', {
+    p_station_id: stationId
+  });
 
-  const session = {
-    session_id: sessionId,
-    station_id: stationId,
-    created_at: now.toISOString(),
-    expires_at: new Date(now.getTime() + 5 * 60 * 1000).toISOString(),
-    used: false
-  };
+  if (error) {
+    throw new Error(error.message || 'Could not create the attendance QR session.');
+  }
 
-  await supabase.from('qr_sessions').insert(session);
-
-  return session;
+  return data;
 };
+
+export const getActiveQRSession = async (stationId = 'DEFAULT') => {
+  const { data, error } = await supabase.rpc('get_active_attendance_qr_session', {
+    p_station_id: stationId
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Could not load the attendance QR session.');
+  }
+
+  return data || null;
+};
+
 export const validateQRSession = async (sessionId) => {
-  const { data, error } = await supabase
-    .from('qr_sessions')
-    .select('*')
-    .eq('session_id', sessionId)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('validate_attendance_qr_session', {
+    p_session_id: sessionId
+  });
 
   if (error || !data) {
     return { valid: false, reason: 'Invalid QR session' };
   }
 
-  const now = new Date();
+  return data;
+};
 
-  if (new Date(data.expires_at) < now) {
-    return { valid: false, reason: 'QR expired' };
+export const consumeQRSession = async (sessionId) => {
+  if (!sessionId) return false;
+
+  const { data, error } = await supabase.rpc('consume_attendance_qr_session', {
+    p_session_id: sessionId
+  });
+
+  if (error) {
+    console.warn('Could not consume attendance QR session:', error);
+    return false;
   }
 
-  if (data.used) {
-    return { valid: false, reason: 'QR already used' };
-  }
-
-  return { valid: true, session: data };
+  return data === true;
 };
 export const isSessionValid = (session) => {
   if (!session) return false;
@@ -472,10 +483,7 @@ export const recordAttendance = async ({ officer, mode, location, qrSessionId, v
 
       // ✅ Disable QR after successful timeout
       if (qrSessionId) {
-        await supabase
-          .from('qr_sessions')
-          .update({ used: true })
-          .eq('session_id', qrSessionId);
+        await consumeQRSession(qrSessionId);
       }
 
 
@@ -547,10 +555,7 @@ export const recordAttendance = async ({ officer, mode, location, qrSessionId, v
 
   // ✅ Disable QR after successful attendance creation
   if (qrSessionId) {
-    await supabase
-      .from('qr_sessions')
-      .update({ used: true })
-      .eq('session_id', qrSessionId);
+    await consumeQRSession(qrSessionId);
   }
 
 

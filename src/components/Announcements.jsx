@@ -156,16 +156,20 @@ export default function Announcements() {
   // is active. An admin viewing /personnel/* is in the Personnel workspace
   // and must see Personnel-only functions, even though their role is admin.
   const isPersonnelWorkspace = location.pathname.startsWith('/personnel');
-  const isIntelUnitWorkspace = location.pathname.startsWith('/intel-unit');
-  const sidebarVariant = isPersonnelWorkspace ? 'personnel' : isIntelUnitWorkspace ? 'intel-unit' : 'admin';
+  const sidebarVariant = isPersonnelWorkspace ? 'personnel' : 'admin';
   const isAdmin = role === 'admin' && !isPersonnelWorkspace;
   // Services key off currentUser.role (e.g. acknowledgeAnnouncement requires
   // role === 'personnel'). While an admin is in the Personnel workspace we
   // fetch/act using their own admin_id but under a personnel-shaped role so
   // they see and can acknowledge their own announcement feed.
-  const effectiveUser = isPersonnelWorkspace && role === 'admin'
-    ? { ...currentUser, role: 'personnel' }
-    : currentUser;
+  const effectiveUser = useMemo(
+    () => (
+      isPersonnelWorkspace && role === 'admin'
+        ? { ...currentUser, role: 'personnel' }
+        : currentUser
+    ),
+    [currentUser, isPersonnelWorkspace, role]
+  );
   const isAnnouncementTab = !isAdmin || activeTab === 'announcements';
   const announcementWordCount = useMemo(
     () => countAnnouncementWords(formData.content),
@@ -322,7 +326,7 @@ export default function Announcements() {
     setDraftAttachmentMeta((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
-  const loadAnnouncements = async () => {
+  const loadAnnouncements = useCallback(async () => {
     const { data, error } = await getAnnouncementsForUser(effectiveUser);
     if (error) {
       setMessage({ type: 'error', text: `Failed to load announcements: ${error}` });
@@ -331,7 +335,7 @@ export default function Announcements() {
     }
 
     setAnnouncements(data || []);
-  };
+  }, [effectiveUser]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -353,7 +357,7 @@ export default function Announcements() {
     };
 
     initialize();
-  }, [isAdmin, isPersonnelWorkspace, currentUser?.admin_id]);
+  }, [isAdmin, isPersonnelWorkspace, currentUser?.admin_id, loadAnnouncements]);
 
   // Announcements has no polling of its own; other tabs/users emit this
   // event (e.g. a personnel acknowledging) so an already-open admin view
@@ -366,7 +370,7 @@ export default function Announcements() {
 
     window.addEventListener('ignis-safe:data-changed', handleDataChanged);
     return () => window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
-  }, [effectiveUser]);
+  }, [loadAnnouncements]);
 
   const loadArchivedAnnouncements = async () => {
     setArchivedLoading(true);

@@ -18,8 +18,10 @@ export default function History() {
   const [activities, setActivities] = useState([]);
   const [loadingActivities, setLoadingActivities] = useState(true);
   const [tableMessage, setTableMessage] = useState('');
+  const adminId = currentUser?.admin_id || '';
+
   const loadActivities = useCallback(async () => {
-    if (!currentUser?.admin_id) {
+    if (!adminId) {
       setActivities([]);
       setLoadingActivities(false);
       return;
@@ -28,7 +30,7 @@ export default function History() {
     setLoadingActivities(true);
     setTableMessage('');
 
-    const { data, error } = await getPersonnelActivityLogs(currentUser.admin_id);
+    const { data, error } = await getPersonnelActivityLogs(adminId);
     if (error) {
       setTableMessage(`Failed to load audit logs: ${error}`);
       setActivities([]);
@@ -37,10 +39,13 @@ export default function History() {
     }
 
     setLoadingActivities(false);
-  }, [currentUser?.admin_id]);
+  }, [adminId]);
 
   useEffect(() => {
-    loadActivities();
+    const timeoutId = window.setTimeout(() => {
+      void loadActivities();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
   }, [loadActivities]);
 
   useEffect(() => {

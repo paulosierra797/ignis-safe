@@ -6,7 +6,7 @@ import PageHeader from './PageHeader';
 import { formatStatusLabel } from '../utils/statusUtils';
 import {
   getReportAttachments,
-  getIntelUnitSubmittedReports,
+  getAdminSubmittedReports,
   updateReportStatus
 } from '../utils/reportsService';
 import './AdminReports.css';
@@ -280,7 +280,7 @@ export default function AdminReports() {
     setLoading(true);
     setMessage({ type: '', text: '' });
 
-    const { data, error } = await getIntelUnitSubmittedReports();
+    const { data, error } = await getAdminSubmittedReports();
     if (error) {
       setReports([]);
       setMessage({ type: 'error', text: `Failed to load reports: ${error}` });

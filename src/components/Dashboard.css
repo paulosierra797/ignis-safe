@@ -628,23 +628,11 @@
   background: linear-gradient(180deg, #F99D2D 0%, #d97706 100%);
 }
 
-.sidebar--intel-unit {
-  background: linear-gradient(180deg, #F99D2D 0%, #d97706 100%);
-}
-
 .sidebar--personnel .nav-item.active {
   color: #92400e;
 }
 
-.sidebar--intel-unit .nav-item.active {
-  color: #92400e;
-}
-
 .sidebar--personnel .section-title {
-  color: rgba(255, 255, 255, 0.75);
-}
-
-.sidebar--intel-unit .section-title {
   color: rgba(255, 255, 255, 0.75);
 }
 

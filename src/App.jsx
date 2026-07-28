@@ -99,30 +99,29 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/confirm-signup" element={<ConfirmSignupPage />} />
               <Route path="/personnel" element={<Navigate to="/personnel/operations" replace />} />
-              <Route path="/personnel/profile" element={<ProtectedRoute><PersonnelProfile /></ProtectedRoute>} />
-              <Route path="/personnel/operations" element={<ProtectedRoute><PersonnelOperations /></ProtectedRoute>} />
-              <Route path="/personnel/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/dashboard/profile" element={<ProtectedRoute><AdminProfile /></ProtectedRoute>} />
-              <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+              <Route path="/personnel/profile" element={<ProtectedRoute allowedRoles={['personnel']}><PersonnelProfile /></ProtectedRoute>} />
+              <Route path="/personnel/operations" element={<ProtectedRoute allowedRoles={['personnel']}><PersonnelOperations /></ProtectedRoute>} />
+              <Route path="/personnel/history" element={<ProtectedRoute allowedRoles={['personnel']}><History /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/profile" element={<ProtectedRoute allowedRoles={['admin']}><AdminProfile /></ProtectedRoute>} />
+              <Route path="/reports" element={<ProtectedRoute allowedRoles={['personnel']}><Reports /></ProtectedRoute>} />
         
-              <Route path="/attendance-admin" element={<ProtectedRoute><AttendanceAdmin /></ProtectedRoute>} />
-              <Route path="/attendance-personnel" element={<ProtectedRoute><AttendancePersonnel /></ProtectedRoute>} />
+              <Route path="/attendance-admin" element={<ProtectedRoute allowedRoles={['admin']}><AttendanceAdmin /></ProtectedRoute>} />
+              <Route path="/attendance-personnel" element={<ProtectedRoute allowedRoles={['personnel']}><AttendancePersonnel /></ProtectedRoute>} />
               <Route path="/attendance-login" element={<AttendanceLogin />} />
               <Route path="/attendance-scan" element={<AttendanceScan />} />
               <Route path="/attendance-confirm" element={<AttendanceConfirm />} />
-              <Route path="/dashboard/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-              <Route path="/dashboard/assessment-questions" element={<ProtectedRoute requiredPermission="manage_users"><AssessmentQuestions /></ProtectedRoute>} />
-              <Route path="/dashboard/learning-materials" element={ <ProtectedRoute><LearningMaterials /></ProtectedRoute>}/>
-              <Route path="/dashboard/chart" element={<ProtectedRoute><Chart /></ProtectedRoute>} />
-              <Route path="/dashboard/accounts" element={<ProtectedRoute requiredPermission="view_accounts"><Accounts /></ProtectedRoute>} />
-              <Route path="/dashboard/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
-              <Route path="/dashboard/users" element={<ProtectedRoute requiredPermission="manage_users"><Progress /></ProtectedRoute>} />
-              <Route path="/dashboard/progress" element={<ProtectedRoute requiredPermission="view_progress"><Progress /></ProtectedRoute>} />
-              <Route path="/dashboard/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
-              <Route path="/dashboard/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
-              <Route path="/personnel/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
-              <Route path="/intel-unit/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
+              <Route path="/dashboard/analytics" element={<ProtectedRoute allowedRoles={['admin']}><Analytics /></ProtectedRoute>} />
+              <Route path="/dashboard/assessment-questions" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="manage_users"><AssessmentQuestions /></ProtectedRoute>} />
+              <Route path="/dashboard/learning-materials" element={<ProtectedRoute allowedRoles={['admin']}><LearningMaterials /></ProtectedRoute>} />
+              <Route path="/dashboard/chart" element={<ProtectedRoute allowedRoles={['admin']}><Chart /></ProtectedRoute>} />
+              <Route path="/dashboard/accounts" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="view_accounts"><Accounts /></ProtectedRoute>} />
+              <Route path="/dashboard/reports" element={<ProtectedRoute allowedRoles={['admin']}><AdminReports /></ProtectedRoute>} />
+              <Route path="/dashboard/users" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="manage_users"><Progress /></ProtectedRoute>} />
+              <Route path="/dashboard/progress" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="view_progress"><Progress /></ProtectedRoute>} />
+              <Route path="/dashboard/audit-logs" element={<ProtectedRoute allowedRoles={['admin']}><AuditLogs /></ProtectedRoute>} />
+              <Route path="/dashboard/announcements" element={<ProtectedRoute allowedRoles={['admin']}><Announcements /></ProtectedRoute>} />
+              <Route path="/personnel/announcements" element={<ProtectedRoute allowedRoles={['personnel']}><Announcements /></ProtectedRoute>} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
             </Routes>

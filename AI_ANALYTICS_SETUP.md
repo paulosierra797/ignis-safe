@@ -14,10 +14,9 @@ In your root `.env.local`:
 
 ```env
 VITE_ANALYTICS_API_URL=http://localhost:8000
-VITE_ANALYTICS_API_KEY=your-optional-shared-secret
 ```
 
-If you do not want API key auth for now, leave `VITE_ANALYTICS_API_KEY` empty and do not set `ANALYTICS_API_KEY` in backend.
+The frontend automatically sends the signed-in administrator's Supabase access token.
 
 ## 2) Configure backend env
 
@@ -26,7 +25,6 @@ Copy `analytics_api/.env.example` to `analytics_api/.env` and set:
 ```env
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-ANALYTICS_API_KEY=your-optional-shared-secret
 FRONTEND_ORIGINS=http://localhost:5173
 ```
 
@@ -69,4 +67,4 @@ Free-first deployment options:
 
 - Keep `SUPABASE_SERVICE_ROLE_KEY` only in backend env.
 - Restrict CORS with `FRONTEND_ORIGINS`.
-- Use `ANALYTICS_API_KEY` and matching `VITE_ANALYTICS_API_KEY`.
+- Keep admin analytics and account-management endpoints protected by Supabase bearer-token validation.

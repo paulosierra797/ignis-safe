@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { useUser } from '../context/UserContext';
@@ -31,9 +31,9 @@ export default function UserAnnouncements() {
   const [message, setMessage] = useState({ type: '', text: '' });
 
   const role = String(currentUser?.role || '').toLowerCase();
-  const sidebarVariant = role === 'personnel' ? 'personnel' : role === 'intel-unit' ? 'intel-unit' : 'admin';
+  const sidebarVariant = role === 'personnel' ? 'personnel' : 'admin';
 
-  const loadAnnouncements = async () => {
+  const loadAnnouncements = useCallback(async () => {
     const { data, error } = await getAnnouncementsForUser(currentUser);
     if (error) {
       setMessage({ type: 'error', text: `Failed to load announcements: ${error}` });
@@ -42,7 +42,7 @@ export default function UserAnnouncements() {
     }
 
     setAnnouncements(data || []);
-  };
+  }, [currentUser]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -55,7 +55,7 @@ export default function UserAnnouncements() {
     if (currentUser?.admin_id) {
       initialize();
     }
-  }, [currentUser]);
+  }, [currentUser, loadAnnouncements]);
 
   const filteredAnnouncements = useMemo(() => {
     if (!searchQuery.trim()) {

@@ -2,7 +2,6 @@ import { supabase } from './supabaseClient';
 import { getUsersFromProfiles } from './usersService';
 
 const ANALYTICS_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
-const ANALYTICS_API_KEY = String(import.meta.env.VITE_ANALYTICS_API_KEY || '');
 const MAX_SESSION_DURATION_SECONDS = Number(import.meta.env.VITE_MAX_SESSION_DURATION_SECONDS || 7200);
 const MAX_APP_SESSION_DURATION_SECONDS = Number(
   import.meta.env.VITE_MAX_APP_SESSION_DURATION_SECONDS || 86400,
@@ -36,13 +35,18 @@ const DEFAULT_CHARTS_DATA = {
 const callAnalyticsApi = async (endpoint, payload = null) => {
   if (!ANALYTICS_API_URL) return null;
 
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const accessToken = sessionData?.session?.access_token;
+  if (!accessToken) {
+    throw new Error('Please sign in as an administrator to view analytics.');
+  }
+
   const headers = {
     'Content-Type': 'application/json',
+    Authorization: `Bearer ${accessToken}`,
   };
-
-  if (ANALYTICS_API_KEY) {
-    headers['x-analytics-api-key'] = ANALYTICS_API_KEY;
-  }
 
   const response = await fetch(`${ANALYTICS_API_URL}${endpoint}`, {
     method: payload ? 'POST' : 'GET',

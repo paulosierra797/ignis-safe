@@ -389,7 +389,7 @@ export default function ContentManagement() {
             <div className="announcement-card composer-card">
               <h2>Create Announcement</h2>
               <form className="announcement-form" onSubmit={handleSubmitAnnouncement}>
-                <div className="form-row two-col">
+                <div className="announcement-form-grid">
                   <div className="form-field">
                     <label htmlFor="announcementTitle">Title</label>
                     <input
@@ -419,21 +419,21 @@ export default function ContentManagement() {
                       ))}
                     </select>
                   </div>
-                </div>
 
-                {formData.audience_type === 'specific_personnel' && (
-                  <div className="form-row">
-                    <PersonnelPicker
-                      id="contentAnnouncementPersonnel"
-                      personnel={recipients}
-                      selectedIds={formData.target_personnel_ids}
-                      onChange={(nextIds) => setFormData((prev) => ({
-                        ...prev,
-                        target_personnel_ids: nextIds
-                      }))}
-                    />
-                  </div>
-                )}
+                  {formData.audience_type === 'specific_personnel' && (
+                    <div className="personnel-picker-section">
+                      <PersonnelPicker
+                        id="contentAnnouncementPersonnel"
+                        personnel={recipients}
+                        selectedIds={formData.target_personnel_ids}
+                        onChange={(nextIds) => setFormData((prev) => ({
+                          ...prev,
+                          target_personnel_ids: nextIds
+                        }))}
+                      />
+                    </div>
+                  )}
+                </div>
 
                 <div className="form-row">
                   <div className="form-field">

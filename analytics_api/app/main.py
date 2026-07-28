@@ -1210,43 +1210,39 @@ def build_module_recommendations(data: Dict[str, Any]) -> List[Dict[str, Any]]:
         if avg_score >= 80:
             level = "excellent"
             color = "green"
-            emoji = "✅"
         elif avg_score >= 65:
             level = "good"
             color = "blue"
-            emoji = "👍"
         elif avg_score >= 50:
             level = "moderate"
             color = "orange"
-            emoji = "⚠️"
         else:
             level = "low"
             color = "red"
-            emoji = "🚨"
         
         # Generate AI recommendations based on performance
         recommendations_text = []
         
         if avg_score >= 80:
-            recommendations_text.append("✓ Module is performing well — consider using as a template for other modules")
+            recommendations_text.append("Keep the current lesson structure and reuse its strongest approach in weaker modules")
             if pass_rate < 100:
-                recommendations_text.append(f"• {100 - pass_rate}% of learners need support — review edge cases")
+                remaining = round_value(100 - pass_rate, 1)
+                recommendations_text.append(f"Review the questions missed by the remaining {remaining}% of learners")
         elif avg_score >= 65:
-            recommendations_text.append("• Add more interactive examples to reinforce concepts")
-            recommendations_text.append("• Consider adding practice questions between sections")
+            recommendations_text.append("Add one worked example after each difficult concept")
+            recommendations_text.append("Insert short practice checks between lesson sections")
             if pass_rate < 80:
-                recommendations_text.append("• Extend practice time for struggling learners")
+                recommendations_text.append("Give struggling learners additional guided practice before the final assessment")
         elif avg_score >= 50:
-            recommendations_text.append("🔴 Content may be too advanced — simplify explanations")
-            recommendations_text.append("• Break module into smaller, focused segments")
-            recommendations_text.append("• Add prerequisite knowledge review section")
-            recommendations_text.append("• Increase simulation/practice opportunities")
+            recommendations_text.append("Rewrite complex explanations using shorter steps and plain-language examples")
+            recommendations_text.append("Break long lessons into smaller sections with one learning goal each")
+            recommendations_text.append("Add a short prerequisite review before the main lesson")
+            recommendations_text.append("Increase guided simulation and practice opportunities")
         else:
-            recommendations_text.append("🔴 URGENT: Module requires significant revision")
-            recommendations_text.append("• Completely rewrite confusing sections")
-            recommendations_text.append("• Add detailed visual aids and step-by-step walkthroughs")
-            recommendations_text.append("• Create guided simulation with hints")
-            recommendations_text.append("• Consider splitting into multiple modules")
+            recommendations_text.append("Review the lowest-performing topics and rewrite unclear explanations first")
+            recommendations_text.append("Add a visual, step-by-step walkthrough for each critical procedure")
+            recommendations_text.append("Provide guided practice with hints before independent simulation")
+            recommendations_text.append("Split the module if it currently covers several unrelated learning goals")
         
         recommendations.append({
             "moduleId": module_id,
@@ -1256,7 +1252,6 @@ def build_module_recommendations(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             "attemptCount": stats["attempts_count"],
             "level": level,
             "color": color,
-            "emoji": emoji,
             "recommendations": recommendations_text,
         })
     

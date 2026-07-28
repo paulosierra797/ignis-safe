@@ -1280,50 +1280,45 @@ export const getModuleRecommendations = async () => {
 
         let level = 'excellent';
         let color = 'green';
-        let emoji = '✅';
 
         if (avgScore < 80) {
           level = 'good';
           color = 'blue';
-          emoji = '👍';
         }
 
         if (avgScore < 65) {
           level = 'moderate';
           color = 'orange';
-          emoji = '⚠️';
         }
 
         if (avgScore < 50) {
           level = 'low';
           color = 'red';
-          emoji = '🚨';
         }
 
         const recommendationsText = [];
 
         if (avgScore >= 80) {
-          recommendationsText.push('✓ Module is performing well — consider using as a template for other modules');
+          recommendationsText.push('Keep the current lesson structure and reuse its strongest approach in weaker modules');
           if (passRate < 100) {
-            recommendationsText.push(`• ${100 - passRate}% of learners need support — review edge cases`);
+            recommendationsText.push(`Review the questions missed by the remaining ${round(100 - passRate, 1)}% of learners`);
           }
         } else if (avgScore >= 65) {
-          recommendationsText.push('• Add more interactive examples to reinforce concepts');
-          recommendationsText.push('• Consider adding practice questions between sections');
+          recommendationsText.push('Add one worked example after each difficult concept');
+          recommendationsText.push('Insert short practice checks between lesson sections');
           if (passRate < 80) {
-            recommendationsText.push('• Extend practice time for struggling learners');
+            recommendationsText.push('Give struggling learners additional guided practice before the final assessment');
           }
         } else if (avgScore >= 50) {
-          recommendationsText.push('🔴 Content may be too advanced — simplify explanations');
-          recommendationsText.push('• Break module into smaller, focused segments');
-          recommendationsText.push('• Add prerequisite knowledge review section');
-          recommendationsText.push('• Increase simulation/practice opportunities');
+          recommendationsText.push('Rewrite complex explanations using shorter steps and plain-language examples');
+          recommendationsText.push('Break long lessons into smaller sections with one learning goal each');
+          recommendationsText.push('Add a short prerequisite review before the main lesson');
+          recommendationsText.push('Increase guided simulation and practice opportunities');
         } else {
-          recommendationsText.push('🔴 URGENT: Module requires significant revision');
-          recommendationsText.push('• Completely rewrite confusing sections');
-          recommendationsText.push('• Add detailed visual aids and step-by-step walkthroughs');
-          recommendationsText.push('• Create guided simulation with hints');
-          recommendationsText.push('• Consider splitting into multiple modules');
+          recommendationsText.push('Review the lowest-performing topics and rewrite unclear explanations first');
+          recommendationsText.push('Add a visual, step-by-step walkthrough for each critical procedure');
+          recommendationsText.push('Provide guided practice with hints before independent simulation');
+          recommendationsText.push('Split the module if it currently covers several unrelated learning goals');
         }
 
         return {
@@ -1334,7 +1329,6 @@ export const getModuleRecommendations = async () => {
           attemptCount: stats.attemptsCount,
           level,
           color,
-          emoji,
           recommendations: recommendationsText,
         };
       })

@@ -4,20 +4,99 @@ const REPORTS_TABLE = 'reports';
 const STORAGE_BUCKET = 'report_files';
 const REPORT_REVIEW_TABLE = 'report_reviews';
 const MAX_REPORT_ATTACHMENTS = 5;
+const ALLOWED_REPORT_EXTENSIONS = new Set([
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+  'txt',
+  'csv',
+  'jpg',
+  'jpeg',
+  'png',
+  'webp',
+  'gif',
+  'bmp',
+  'heic',
+  'heif'
+]);
+const ALLOWED_REPORT_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'text/plain',
+  'text/csv',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'image/bmp',
+  'image/heic',
+  'image/heif'
+]);
+
+export const REPORT_ATTACHMENT_ACCEPT = [
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
+  '.txt',
+  '.csv',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.webp',
+  '.gif',
+  '.bmp',
+  '.heic',
+  '.heif'
+].join(',');
+
+export const REPORT_ATTACHMENT_FORMATS_LABEL = 'PDF, Word, Excel, PowerPoint, TXT, CSV, and image files';
 
 const formatRole = (role = '') => String(role || '').toLowerCase().trim();
 
-export const uploadReportPdf = async (userId, fileName, blob) => {
+const getFileExtension = (fileName = '') => {
+  const match = /\.([a-zA-Z0-9]+)$/.exec(String(fileName || ''));
+  return match ? match[1].toLowerCase() : '';
+};
+
+export const isAllowedReportAttachment = (file) => {
+  if (!file) return false;
+
+  const extension = getFileExtension(file.name);
+  const mimeType = String(file.type || '').trim().toLowerCase();
+  return ALLOWED_REPORT_EXTENSIONS.has(extension)
+    && (!mimeType || ALLOWED_REPORT_MIME_TYPES.has(mimeType));
+};
+
+const sanitizeReportFileName = (fileName = '') =>
+  String(fileName || 'report-attachment')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .slice(0, 140);
+
+export const uploadReportAttachment = async (userId, fileName, blob) => {
   try {
     const safeUserId = userId || 'unknown-user';
-    const safeName = fileName || `report-${Date.now()}.pdf`;
+    const safeName = sanitizeReportFileName(fileName || `report-${Date.now()}`);
     const filePath = `${safeUserId}/${Date.now()}-${safeName}`;
+    const contentType = String(blob?.type || '').trim().toLowerCase() || 'application/octet-stream';
 
     const { error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(filePath, blob, {
-        contentType: 'application/pdf',
-        upsert: true
+        contentType,
+        upsert: false
       });
 
     if (uploadError) throw uploadError;
@@ -42,7 +121,9 @@ export const getReportAttachments = (report = {}) => {
     .map((attachment) => ({
       file_name: String(attachment?.file_name || attachment?.name || '').trim(),
       file_url: String(attachment?.file_url || attachment?.url || '').trim(),
-      file_path: String(attachment?.file_path || attachment?.path || '').trim()
+      file_path: String(attachment?.file_path || attachment?.path || '').trim(),
+      mime_type: String(attachment?.mime_type || '').trim(),
+      size_bytes: Number(attachment?.size_bytes || 0)
     }))
     .filter((attachment) => attachment.file_name && attachment.file_url);
 
@@ -64,6 +145,7 @@ export const submitInvestigationReport = async ({
   title,
   category,
   reportPayload,
+  attachmentFiles = [],
   pdfFiles = [],
   pdfBlob,
   pdfFileName,
@@ -76,30 +158,46 @@ export const submitInvestigationReport = async ({
       return { data: null, error: 'Missing user id for report submission.' };
     }
 
-    const filesToUpload = Array.isArray(pdfFiles) && pdfFiles.length > 0
-      ? pdfFiles.map((file) => ({
+    const selectedAttachments = Array.isArray(attachmentFiles) && attachmentFiles.length > 0
+      ? attachmentFiles
+      : pdfFiles;
+    const filesToUpload = Array.isArray(selectedAttachments) && selectedAttachments.length > 0
+      ? selectedAttachments.map((file) => ({
         blob: file,
-        fileName: file?.name || 'uploaded-report.pdf'
+        fileName: file?.name || 'uploaded-report'
       }))
       : pdfBlob
         ? [{ blob: pdfBlob, fileName: pdfFileName || 'uploaded-report.pdf' }]
         : [];
 
     if (filesToUpload.length === 0) {
-      return { data: null, error: 'At least one PDF attachment is required.' };
+      return { data: null, error: 'At least one report attachment is required.' };
     }
 
     if (filesToUpload.length > MAX_REPORT_ATTACHMENTS) {
       return {
         data: null,
-        error: `A report can include up to ${MAX_REPORT_ATTACHMENTS} PDF attachments.`
+        error: `A report can include up to ${MAX_REPORT_ATTACHMENTS} attachments.`
+      };
+    }
+
+    const unsupportedFile = filesToUpload.find(({ blob, fileName }) => (
+      !isAllowedReportAttachment({
+        name: fileName,
+        type: blob?.type || ''
+      })
+    ));
+    if (unsupportedFile) {
+      return {
+        data: null,
+        error: `Unsupported attachment format: ${unsupportedFile.fileName}.`
       };
     }
 
     const uploadedAttachments = [];
 
     for (const file of filesToUpload) {
-      const upload = await uploadReportPdf(createdBy, file.fileName, file.blob);
+      const upload = await uploadReportAttachment(createdBy, file.fileName, file.blob);
       if (upload.error) {
         if (uploadedAttachments.length > 0) {
           await supabase.storage
@@ -112,7 +210,9 @@ export const submitInvestigationReport = async ({
       uploadedAttachments.push({
         file_name: file.fileName,
         file_url: upload.data.publicUrl,
-        file_path: upload.data.filePath
+        file_path: upload.data.filePath,
+        mime_type: String(file.blob?.type || '').trim().toLowerCase(),
+        size_bytes: Number(file.blob?.size || 0)
       });
     }
 

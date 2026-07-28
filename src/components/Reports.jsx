@@ -8,7 +8,10 @@ import { useUser } from '../context/UserContext';
 import {
   submitInvestigationReport,
   getPersonnelReportHistory,
-  getReportAttachments
+  getReportAttachments,
+  isAllowedReportAttachment,
+  REPORT_ATTACHMENT_ACCEPT,
+  REPORT_ATTACHMENT_FORMATS_LABEL
 } from '../utils/reportsService';
 import { logPersonnelActivity } from '../utils/activityLogService';
 import { formatStatusLabel } from '../utils/statusUtils';
@@ -30,7 +33,7 @@ const formatDateTime = (value) => {
 
 const getFileType = (fileName) => {
   const match = /\.([a-zA-Z0-9]+)$/.exec(fileName || '');
-  return match ? match[1].toUpperCase() : 'PDF';
+  return match ? match[1].toUpperCase() : 'FILE';
 };
 
 const MAX_REPORT_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
@@ -204,23 +207,20 @@ export default function Reports() {
 
   const handleClearHistoryFilters = () => setHistoryFilters({ ...EMPTY_HISTORY_FILTERS });
 
-  const isPdfFile = (file) => {
-    if (!file) return false;
-    const fileName = file.name || '';
-    return fileName.toLowerCase().endsWith('.pdf') || String(file.type || '').toLowerCase().includes('pdf');
-  };
-
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files || []);
     event.target.value = '';
 
-    if (files.some((file) => !isPdfFile(file))) {
-      setMessage({ type: 'error', text: 'Only PDF files are accepted. Please select files in PDF format.' });
+    if (files.some((file) => !isAllowedReportAttachment(file))) {
+      setMessage({
+        type: 'error',
+        text: `Unsupported file format. Accepted formats: ${REPORT_ATTACHMENT_FORMATS_LABEL}.`
+      });
       return;
     }
 
     if (files.some((file) => file.size > MAX_REPORT_FILE_SIZE_BYTES)) {
-      setMessage({ type: 'error', text: 'Each PDF must be 20MB or smaller.' });
+      setMessage({ type: 'error', text: 'Each attachment must be 20MB or smaller.' });
       return;
     }
 
@@ -235,7 +235,7 @@ export default function Reports() {
     });
 
     if (uniqueFiles.length > MAX_REPORT_ATTACHMENTS) {
-      setMessage({ type: 'error', text: `You can attach up to ${MAX_REPORT_ATTACHMENTS} PDF files.` });
+      setMessage({ type: 'error', text: `You can attach up to ${MAX_REPORT_ATTACHMENTS} files.` });
       return;
     }
 
@@ -260,22 +260,25 @@ export default function Reports() {
     }
 
     if (selectedFiles.length === 0) {
-      setMessage({ type: 'error', text: 'Please choose at least one PDF file to upload.' });
+      setMessage({ type: 'error', text: 'Please choose at least one file to upload.' });
       return;
     }
 
     if (selectedFiles.length > MAX_REPORT_ATTACHMENTS) {
-      setMessage({ type: 'error', text: `You can attach up to ${MAX_REPORT_ATTACHMENTS} PDF files.` });
+      setMessage({ type: 'error', text: `You can attach up to ${MAX_REPORT_ATTACHMENTS} files.` });
       return;
     }
 
-    if (selectedFiles.some((file) => !isPdfFile(file))) {
-      setMessage({ type: 'error', text: 'Only PDF files are accepted.' });
+    if (selectedFiles.some((file) => !isAllowedReportAttachment(file))) {
+      setMessage({
+        type: 'error',
+        text: `Unsupported file format. Accepted formats: ${REPORT_ATTACHMENT_FORMATS_LABEL}.`
+      });
       return;
     }
 
     if (selectedFiles.some((file) => file.size > MAX_REPORT_FILE_SIZE_BYTES)) {
-      setMessage({ type: 'error', text: 'Each PDF must be 20MB or smaller.' });
+      setMessage({ type: 'error', text: 'Each attachment must be 20MB or smaller.' });
       return;
     }
 
@@ -291,7 +294,7 @@ export default function Reports() {
           source: 'file_upload',
           original_file_names: selectedFiles.map((file) => file.name)
         },
-        pdfFiles: selectedFiles,
+        attachmentFiles: selectedFiles,
         createdBy: currentUser.admin_id,
         createdByName: currentUser?.name || currentUser?.email || 'Personnel'
       });
@@ -341,8 +344,8 @@ export default function Reports() {
             <h2>Submit Administrative Report</h2>
             <p className="create-report-description">
               Submit completed official reports directly to the administrator for review and recordkeeping.
-              Only PDF files related to administrative reporting are accepted. Other file types or unrelated
-              documents must not be allowed.
+              Attach up to five relevant administrative report files using the supported document, spreadsheet,
+              presentation, text, or image formats.
             </p>
           </div>
 
@@ -355,23 +358,23 @@ export default function Reports() {
                 value={reportTitle}
                 onChange={(event) => setReportTitle(event.target.value)}
                 placeholder="Enter report title"
-                rows={2}
+                rows={5}
                 maxLength={200}
               />
             </div>
 
             <div className="report-upload-field">
-              <label htmlFor="report-file" className="report-upload-label">Upload PDF Files</label>
+              <label htmlFor="report-file" className="report-upload-label">Upload Files</label>
               <input
                 id="report-file"
                 type="file"
                 className="report-upload-input"
-                accept=".pdf,application/pdf"
+                accept={REPORT_ATTACHMENT_ACCEPT}
                 multiple
                 onChange={handleFileChange}
               />
               <p className="report-upload-hint">
-                PDF format only. Up to {MAX_REPORT_ATTACHMENTS} files, maximum 20MB each.
+                {REPORT_ATTACHMENT_FORMATS_LABEL}. Up to {MAX_REPORT_ATTACHMENTS} files, maximum 20MB each.
               </p>
             </div>
 
@@ -562,7 +565,7 @@ export default function Reports() {
       <UnsavedChangesPrompt
         when={hasUnsavedReport}
         title="Leave without submitting?"
-        message="Your report title or attached PDF files have not been submitted. Are you sure you want to leave this page?"
+        message="Your report title or attached files have not been submitted. Are you sure you want to leave this page?"
         stayLabel="Stay on Reports"
       />
     </div>

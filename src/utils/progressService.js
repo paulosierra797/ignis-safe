@@ -125,7 +125,7 @@ export const getProgressPageData = async () => {
     ] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, username, created_at, updated_at')
+        .select('id, first_name, last_name, email, username, avatar_url, completed_simulations, last_simulation, registration_status, app_language_code, terms_accepted, terms_accepted_at, created_at, updated_at')
         .order('created_at', { ascending: false }),
       supabase
         .from('modules')
@@ -221,6 +221,14 @@ export const getProgressPageData = async () => {
           profile.email ||
           'User',
         email: profile.email || '-',
+        username: profile.username || '-',
+        avatarUrl: profile.avatar_url || null,
+        registrationStatus: profile.registration_status || 'Registered',
+        appLanguageCode: profile.app_language_code || 'en',
+        termsAccepted: profile.terms_accepted === true,
+        termsAcceptedAt: profile.terms_accepted_at || null,
+        completedSimulations: toNumber(profile.completed_simulations, 0),
+        lastSimulation: profile.last_simulation || 'Not recorded',
         moduleProgress: `${completedModules}/${totalModules} Modules`,
         overallPercent,
         lastActivityAt: normalizedLastActivityAt,

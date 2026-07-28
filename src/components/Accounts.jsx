@@ -2,6 +2,16 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom';
 import { useBlocker } from 'react-router-dom';
 import { FaArchive, FaChevronDown, FaSearch, FaTimes, FaUndo } from 'react-icons/fa';
+import {
+  FiBriefcase,
+  FiCalendar,
+  FiClock,
+  FiEdit3,
+  FiMail,
+  FiPhone,
+  FiShield,
+  FiUser,
+} from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
@@ -65,6 +75,26 @@ const getPersonnelInitials = (account) => {
   return `${first}${last}`.toUpperCase() || 'P';
 };
 
+const formatAccountDateTime = (value) => {
+  if (!value) return 'Not recorded';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Not recorded';
+
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+};
+
+const getPersonnelAccountType = (account) =>
+  account?.is_personnel_workspace_profile
+    ? 'Personnel workspace profile'
+    : 'Personnel account';
+
 function PersonnelAvatar({ account, className = '' }) {
   if (account?.avatar_url) {
     return (
@@ -82,6 +112,167 @@ function PersonnelAvatar({ account, className = '' }) {
     </span>
   );
 }
+
+function PersonnelProfileModal({
+  account,
+  onClose,
+  onEdit,
+  isOnLeave,
+  formatLeaveDate,
+}) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim()
+    || account.email
+    || 'Personnel';
+  const normalizedStatus = String(account.status || 'Inactive').toLowerCase().replace(/\s+/g, '-');
+  const leaveActive = isOnLeave(account);
+  const lastActivity = account.last_login || account.updated_at || account.created_at;
+
+  return (
+    <div
+      className="accounts-modal-overlay personnel-profile-overlay"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        className="accounts-modal personnel-profile-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="personnel-profile-title"
+      >
+        <div className="accounts-modal-header personnel-profile-header">
+          <div>
+            <span>Personnel Account</span>
+            <h3 id="personnel-profile-title">Profile Overview</h3>
+            <p>Read-only personnel information and account activity.</p>
+          </div>
+          <CloseButton onClick={onClose} label="Close personnel profile" />
+        </div>
+
+        <div className="personnel-profile-body">
+          <div className="personnel-profile-identity">
+            <div className="personnel-profile-avatar">
+              {account.avatar_url ? (
+                <img src={account.avatar_url} alt="" />
+              ) : (
+                <span aria-hidden="true">{getPersonnelInitials(account)}</span>
+              )}
+            </div>
+            <div className="personnel-profile-identity-copy">
+              <span>{getPersonnelAccountType(account)}</span>
+              <h4>{accountName}</h4>
+              <p><FiMail aria-hidden="true" />{account.email || 'No email recorded'}</p>
+            </div>
+            <span className={`status-pill ${normalizedStatus}`}>
+              {formatStatusLabel(account.status, 'Inactive')}
+            </span>
+          </div>
+
+          <div className="personnel-profile-section">
+            <h4><FiUser aria-hidden="true" />Contact Information</h4>
+            <div className="personnel-profile-detail-grid">
+              <div className="personnel-profile-detail">
+                <FiMail aria-hidden="true" />
+                <div>
+                  <span>Email Address</span>
+                  <strong>{account.email || 'Not recorded'}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiPhone aria-hidden="true" />
+                <div>
+                  <span>Contact Number</span>
+                  <strong>{account.contact_number || 'Not recorded'}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="personnel-profile-section">
+            <h4><FiBriefcase aria-hidden="true" />Service Information</h4>
+            <div className="personnel-profile-detail-grid">
+              <div className="personnel-profile-detail">
+                <FiShield aria-hidden="true" />
+                <div>
+                  <span>Rank Designation</span>
+                  <strong>{account.rank || 'Not recorded'}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiUser aria-hidden="true" />
+                <div>
+                  <span>Workspace Role</span>
+                  <strong>{formatStatusLabel(account.role, 'Personnel')}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiBriefcase aria-hidden="true" />
+                <div>
+                  <span>Profile Type</span>
+                  <strong>{getPersonnelAccountType(account)}</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="personnel-profile-section">
+            <h4><FiClock aria-hidden="true" />Account Activity</h4>
+            <div className="personnel-profile-detail-grid">
+              <div className="personnel-profile-detail">
+                <FiClock aria-hidden="true" />
+                <div>
+                  <span>Last Activity</span>
+                  <strong>{formatAccountDateTime(lastActivity)}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiCalendar aria-hidden="true" />
+                <div>
+                  <span>Account Created</span>
+                  <strong>{formatAccountDateTime(account.created_at)}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiCalendar aria-hidden="true" />
+                <div>
+                  <span>Leave Status</span>
+                  <strong>
+                    {leaveActive
+                      ? `${formatLeaveDate(account.leave_start_date)} to ${formatLeaveDate(account.leave_end_date)}`
+                      : 'Not on leave'}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="accounts-modal-footer personnel-profile-footer">
+          <button type="button" className="cancel-btn" onClick={onClose}>Close</button>
+          <button type="button" className="save-btn" onClick={onEdit}>
+            <FiEdit3 aria-hidden="true" />
+            Edit Details
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 const isAlreadyRegisteredInviteError = (error) => {
   const normalizedError = String(error || '').toLowerCase();
   return (normalizedError.includes('already') && normalizedError.includes('registered'))
@@ -1397,6 +1588,8 @@ export default function Accounts() {
     });
   };
 
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [selectedProfileAccount, setSelectedProfileAccount] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 const [selectedEditAccount, setSelectedEditAccount] = useState(null);
 const [editFormData, setEditFormData] = useState({
@@ -1407,6 +1600,16 @@ const [editFormData, setEditFormData] = useState({
   rank: '',
   contact_number: ''
 });
+const openProfileModal = (account) => {
+  setSelectedProfileAccount(account);
+  setIsProfileModalOpen(true);
+};
+
+const closeProfileModal = () => {
+  setIsProfileModalOpen(false);
+  setSelectedProfileAccount(null);
+};
+
 const openEditModal = (account) => {
   setSelectedEditAccount(account);
   setEditFormData({
@@ -2622,12 +2825,15 @@ const permissions = getDefaultPermissions(formData.role);
 
   const getAccountActions = (account) => [
     ...(isPersonnelAccount(account)
+      ? [{ key: 'view-profile', label: 'View Profile', onSelect: () => openProfileModal(account) }]
+      : []),
+    ...(isPersonnelAccount(account)
       ? [{ key: 'set-leave', label: 'Set Leave', onSelect: () => openLeaveModal(account) }]
       : []),
     ...(isPersonnelAccount(account) && isOnLeave(account)
       ? [{ key: 'clear-leave', label: 'Clear Leave', onSelect: () => handleClearLeaveDate(account) }]
       : []),
-    { key: 'edit', label: 'Edit', onSelect: () => openEditModal(account) },
+    { key: 'edit', label: 'Edit Details', onSelect: () => openEditModal(account) },
     ...(String(account.role || '').trim().toLowerCase() !== 'admin'
       && !account.is_personnel_workspace_profile
       ? [{
@@ -3545,6 +3751,20 @@ const permissions = getDefaultPermissions(formData.role);
           </div>
         )}
         </section>
+
+        {isProfileModalOpen && selectedProfileAccount && (
+          <PersonnelProfileModal
+            account={selectedProfileAccount}
+            onClose={closeProfileModal}
+            onEdit={() => {
+              const account = selectedProfileAccount;
+              closeProfileModal();
+              openEditModal(account);
+            }}
+            isOnLeave={isOnLeave}
+            formatLeaveDate={formatLeaveDate}
+          />
+        )}
 
         {isEditModalOpen && (
   <div className="accounts-modal-overlay" role="dialog">

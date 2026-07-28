@@ -115,10 +115,10 @@ function App() {
               <Route path="/dashboard/assessment-questions" element={<ProtectedRoute requiredPermission="manage_users"><AssessmentQuestions /></ProtectedRoute>} />
               <Route path="/dashboard/learning-materials" element={ <ProtectedRoute><LearningMaterials /></ProtectedRoute>}/>
               <Route path="/dashboard/chart" element={<ProtectedRoute><Chart /></ProtectedRoute>} />
-              <Route path="/dashboard/accounts" element={<ProtectedRoute><Accounts /></ProtectedRoute>} />
+              <Route path="/dashboard/accounts" element={<ProtectedRoute requiredPermission="view_accounts"><Accounts /></ProtectedRoute>} />
               <Route path="/dashboard/reports" element={<ProtectedRoute><AdminReports /></ProtectedRoute>} />
-              <Route path="/dashboard/users" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
-              <Route path="/dashboard/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
+              <Route path="/dashboard/users" element={<ProtectedRoute requiredPermission="manage_users"><Progress /></ProtectedRoute>} />
+              <Route path="/dashboard/progress" element={<ProtectedRoute requiredPermission="view_progress"><Progress /></ProtectedRoute>} />
               <Route path="/dashboard/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
               <Route path="/dashboard/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
               <Route path="/personnel/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />

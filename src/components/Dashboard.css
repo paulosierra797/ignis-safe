@@ -667,6 +667,7 @@
 }
 
 .nav-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -732,8 +733,101 @@
   color: white;
 }
 
+.personnel-nudge-notification {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 950;
+  width: min(390px, calc(100vw - 2rem));
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 34px;
+  align-items: start;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid #fbbf24;
+  border-left: 5px solid #d97706;
+  border-radius: 8px;
+  background: #fff;
+  color: #422006;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.24);
+}
+
+.personnel-nudge-notification-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.personnel-nudge-notification-content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.personnel-nudge-notification-content > span {
+  color: #b45309;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.personnel-nudge-notification-content strong {
+  color: #1e293b;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.personnel-nudge-notification-content p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.personnel-nudge-notification-content button {
+  width: fit-content;
+  margin-top: 0.4rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid #d97706;
+  border-radius: 7px;
+  background: #f59e0b;
+  color: #422006;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.personnel-nudge-notification-close {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  color: #92400e;
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.personnel-nudge-notification-close:hover {
+  color: #78350f;
+  background: #fef3c7;
+  border-color: #fbbf24;
+}
+
 .sidebar--collapsed .nav-badge {
-  display: none;
+  position: absolute;
+  top: 0.35rem;
+  right: 0.55rem;
+  display: inline-flex;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 0.3rem;
+  font-size: 0.62rem;
 }
 
 .sidebar--collapsed {
@@ -860,6 +954,12 @@ body.sidebar-collapsed .nav-section {
     z-index: 1550;
     border: none;
     touch-action: none;
+  }
+
+  .personnel-nudge-notification {
+    right: 0.75rem;
+    bottom: 0.75rem;
+    width: calc(100vw - 1.5rem);
   }
 
   /* Lock the page and its main content container behind the mobile

@@ -12,6 +12,7 @@ const ANNOUNCEMENT_NUDGE_ACTIVITY_TYPE = 'announcement_acknowledgement_nudge';
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 const ATTACHMENT_UPLOAD_TIMEOUT_MS = 120000;
+const ANNOUNCEMENT_NUDGE_COOLDOWN_MS = 5000;
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
 export const MAX_ANNOUNCEMENT_WORDS = 500;
 
@@ -510,11 +511,29 @@ export const nudgeAnnouncementPersonnel = async (
       throw new Error('Select at least one pending personnel to nudge.');
     }
 
+    const cooldownStartedAt = new Date(Date.now() - ANNOUNCEMENT_NUDGE_COOLDOWN_MS).toISOString();
+    const { data: recentNudges, error: recentNudgesError } = await supabase
+      .from(PERSONNEL_ACTIVITY_LOGS_TABLE)
+      .select('personnel_id, performed_at')
+      .eq('activity_type', ANNOUNCEMENT_NUDGE_ACTIVITY_TYPE)
+      .eq('announcement_id', announcementId)
+      .in('personnel_id', recipients)
+      .gte('performed_at', cooldownStartedAt);
+
+    if (recentNudgesError) throw recentNudgesError;
+
+    const coolingDownIds = new Set((recentNudges || []).map((row) => row.personnel_id));
+    const availableRecipients = recipients.filter((personnelId) => !coolingDownIds.has(personnelId));
+
+    if (availableRecipients.length === 0) {
+      throw new Error('Please wait 5 seconds before sending another reminder.');
+    }
+
     const safeTitle = String(announcementTitle || 'this announcement').trim().slice(0, 120);
     const details = `Please review and acknowledge "${safeTitle}".`;
     const { data, error } = await supabase
       .from(PERSONNEL_ACTIVITY_LOGS_TABLE)
-      .insert(recipients.map((personnelId) => ({
+      .insert(availableRecipients.map((personnelId) => ({
         personnel_id: personnelId,
         activity_type: ANNOUNCEMENT_NUDGE_ACTIVITY_TYPE,
         action: 'Acknowledgement Reminder',
@@ -536,21 +555,25 @@ export const nudgeAnnouncementPersonnel = async (
       actorName: currentUser.name || currentUser.email || 'Admin User',
       action: 'Announcement Reminder Sent',
       actionType: 'notify',
-      details: `Sent an acknowledgement reminder to ${recipients.length} personnel for "${safeTitle}".`,
+      details: `Sent an acknowledgement reminder to ${availableRecipients.length} personnel for "${safeTitle}".`,
       status: 'SUCCESS',
       metadata: {
         announcementId,
-        personnelIds: recipients
+        personnelIds: availableRecipients
       }
     });
 
     emitDataChanged('announcements', {
       announcementId,
       action: 'nudged',
-      personnelIds: recipients
+      personnelIds: availableRecipients
     });
 
-    return { data: data || [], error: null };
+    return {
+      data: data || [],
+      skippedPersonnelIds: Array.from(coolingDownIds),
+      error: null
+    };
   } catch (error) {
     console.error('Error sending announcement reminder:', error);
     return { data: [], error: error.message };
@@ -638,13 +661,36 @@ export const getPendingAcknowledgementCount = async (currentUser) => {
       return { data: { pendingCount: 0 }, error: announcementError };
     }
 
-    const pendingCount = (announcements || []).filter((row) =>
+    const pendingAnnouncements = (announcements || []).filter((row) =>
       row.audience_type === 'specific_personnel' &&
       row.target_personnel_ids.includes(personnelId) &&
       !row.acknowledged_by_current_user
-    ).length;
+    );
+    const pendingNudges = (announcements || [])
+      .filter((row) =>
+        !row.acknowledged_by_current_user &&
+        row.latest_acknowledgement_nudge_at
+      )
+      .sort((left, right) =>
+        new Date(right.latest_acknowledgement_nudge_at).getTime() -
+        new Date(left.latest_acknowledgement_nudge_at).getTime()
+      );
 
-    return { data: { pendingCount }, error: null };
+    return {
+      data: {
+        pendingCount: pendingAnnouncements.length,
+        pendingNudgeCount: pendingNudges.length,
+        latestNudge: pendingNudges[0]
+          ? {
+              announcementId: pendingNudges[0].announcement_id,
+              title: pendingNudges[0].title,
+              message: pendingNudges[0].acknowledgement_nudge_message,
+              sentAt: pendingNudges[0].latest_acknowledgement_nudge_at
+            }
+          : null
+      },
+      error: null
+    };
   } catch (error) {
     console.error('Error loading pending acknowledgements:', error);
     return { data: { pendingCount: 0 }, error: error.message };

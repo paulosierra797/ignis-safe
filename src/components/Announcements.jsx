@@ -134,7 +134,7 @@ export default function Announcements() {
   const [restoringId, setRestoringId] = useState('');
   const [acknowledgementModalId, setAcknowledgementModalId] = useState('');
   const [nudgingIds, setNudgingIds] = useState(() => new Set());
-  const [nudgedIds, setNudgedIds] = useState(() => new Set());
+  const [nudgeCooldownUntilById, setNudgeCooldownUntilById] = useState(() => new Map());
   const ITEMS_PER_PAGE = 3;
   const [formData, setFormData] = useState(() => {
     const draft = readAnnouncementDraft();
@@ -644,14 +644,20 @@ export default function Announcements() {
     const announcement = announcements.find(
       (row) => row.announcement_id === acknowledgementModalId
     );
-    const requestedIds = Array.from(new Set(personnelIds || [])).filter(Boolean);
+    const currentTime = Date.now();
+    const requestedIds = Array.from(new Set(personnelIds || []))
+      .filter(Boolean)
+      .filter((personnelId) => (nudgeCooldownUntilById.get(personnelId) || 0) <= currentTime);
 
-    if (!announcement || requestedIds.length === 0) return;
+    if (!announcement || requestedIds.length === 0) {
+      setMessage({ type: 'error', text: 'Please wait 5 seconds before nudging again.' });
+      return;
+    }
 
     setNudgingIds((prev) => new Set([...prev, ...requestedIds]));
     setMessage({ type: '', text: '' });
 
-    const { error } = await nudgeAnnouncementPersonnel(
+    const { data, error } = await nudgeAnnouncementPersonnel(
       currentUser,
       announcement.announcement_id,
       announcement.title,
@@ -669,10 +675,16 @@ export default function Announcements() {
       return;
     }
 
-    setNudgedIds((prev) => new Set([...prev, ...requestedIds]));
+    const sentIds = (data || []).map((row) => row.personnel_id);
+    const cooldownUntil = Date.now() + 5000;
+    setNudgeCooldownUntilById((prev) => {
+      const next = new Map(prev);
+      sentIds.forEach((personnelId) => next.set(personnelId, cooldownUntil));
+      return next;
+    });
     setMessage({
       type: 'success',
-      text: `Reminder sent to ${requestedIds.length} personnel.`
+      text: `Reminder sent to ${sentIds.length} personnel.`
     });
   };
 
@@ -1042,7 +1054,6 @@ export default function Announcements() {
                         className="announcement-acknowledgement-link"
                         onClick={() => {
                           setAcknowledgementModalId(announcement.announcement_id);
-                          setNudgedIds(new Set());
                         }}
                         aria-label={`View acknowledgement list for ${announcement.title}`}
                       >
@@ -1253,7 +1264,7 @@ export default function Announcements() {
           onClose={() => setAcknowledgementModalId('')}
           onNudge={handleNudgePersonnel}
           nudgingIds={nudgingIds}
-          nudgedIds={nudgedIds}
+          cooldownUntilById={nudgeCooldownUntilById}
         />
       )}
 

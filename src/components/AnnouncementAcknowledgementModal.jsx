@@ -29,12 +29,13 @@ export default function AnnouncementAcknowledgementModal({
   onClose,
   onNudge,
   nudgingIds,
-  nudgedIds
+  cooldownUntilById
 }) {
   const acknowledged = announcement?.acknowledgement_personnel?.acknowledged || EMPTY_PERSONNEL;
   const pending = announcement?.acknowledgement_personnel?.pending || EMPTY_PERSONNEL;
   const [activeTab, setActiveTab] = useState(pending.length > 0 ? 'pending' : 'acknowledged');
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -51,6 +52,15 @@ export default function AnnouncementAcknowledgementModal({
     };
   }, [onClose]);
 
+  useEffect(() => {
+    const hasActiveCooldown = Array.from(cooldownUntilById.values())
+      .some((cooldownUntil) => cooldownUntil > Date.now());
+    if (!hasActiveCooldown) return undefined;
+
+    const intervalId = window.setInterval(() => setCurrentTime(Date.now()), 250);
+    return () => window.clearInterval(intervalId);
+  }, [cooldownUntilById]);
+
   const visiblePersonnel = useMemo(() => {
     const source = activeTab === 'acknowledged' ? acknowledged : pending;
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -65,7 +75,13 @@ export default function AnnouncementAcknowledgementModal({
     );
   }, [acknowledged, activeTab, pending, searchQuery]);
 
-  const personnelLeftToNudge = pending.filter((person) => !nudgedIds.has(person.personnel_id));
+  const personnelLeftToNudge = pending.filter(
+    (person) => (cooldownUntilById.get(person.personnel_id) || 0) <= currentTime
+  );
+  const cooldownSeconds = pending
+    .map((person) => Math.ceil(((cooldownUntilById.get(person.personnel_id) || 0) - currentTime) / 1000))
+    .filter((seconds) => seconds > 0);
+  const shortestCooldown = cooldownSeconds.length > 0 ? Math.min(...cooldownSeconds) : 0;
   const isNudgingAll = personnelLeftToNudge.length > 0 &&
     personnelLeftToNudge.every((person) => nudgingIds.has(person.personnel_id));
 
@@ -163,7 +179,7 @@ export default function AnnouncementAcknowledgementModal({
               {isNudgingAll
                 ? 'Sending...'
                 : personnelLeftToNudge.length === 0
-                  ? 'All Nudged'
+                  ? `Wait ${shortestCooldown}s`
                   : `Nudge All (${personnelLeftToNudge.length})`}
             </button>
           </div>
@@ -181,7 +197,10 @@ export default function AnnouncementAcknowledgementModal({
           ) : (
             visiblePersonnel.map((person) => {
               const isNudging = nudgingIds.has(person.personnel_id);
-              const wasNudged = nudgedIds.has(person.personnel_id);
+              const remainingCooldown = Math.max(
+                0,
+                Math.ceil(((cooldownUntilById.get(person.personnel_id) || 0) - currentTime) / 1000)
+              );
 
               return (
                 <div key={person.personnel_id} className="acknowledgement-personnel-row">
@@ -205,12 +224,16 @@ export default function AnnouncementAcknowledgementModal({
                   ) : (
                     <button
                       type="button"
-                      className={`acknowledgement-nudge-button${wasNudged ? ' is-sent' : ''}`}
+                      className={`acknowledgement-nudge-button${remainingCooldown > 0 ? ' is-sent' : ''}`}
                       onClick={() => onNudge([person.personnel_id])}
-                      disabled={isNudging || wasNudged}
+                      disabled={isNudging || remainingCooldown > 0}
                     >
                       <FiBell aria-hidden="true" />
-                      {isNudging ? 'Sending...' : wasNudged ? 'Nudged' : 'Nudge'}
+                      {isNudging
+                        ? 'Sending...'
+                        : remainingCooldown > 0
+                          ? `Wait ${remainingCooldown}s`
+                          : 'Nudge'}
                     </button>
                   )}
                 </div>

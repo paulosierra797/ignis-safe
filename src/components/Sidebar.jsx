@@ -16,6 +16,7 @@ import {
   FaUsers
 } from 'react-icons/fa';
 import inlogo from '../assets/inLOGO.png';
+import CloseButton from './CloseButton';
 import './Dashboard.css';
 import { useUser } from '../context/UserContext';
 import { useLayout } from '../context/LayoutContext';
@@ -38,6 +39,12 @@ export default function Sidebar({ variant = 'admin' }) {
   const { isSidebarCollapsed, isMobileSidebarOpen, closeMobileSidebar } = useLayout();
   const [pendingProfileChangeRequests, setPendingProfileChangeRequests] = useState(0);
   const [hasPendingAnnouncementAck, setHasPendingAnnouncementAck] = useState(false);
+  const [pendingAnnouncementNudges, setPendingAnnouncementNudges] = useState(0);
+  const [latestAnnouncementNudge, setLatestAnnouncementNudge] = useState(null);
+  const [dismissedNudgeKey, setDismissedNudgeKey] = useState(() => {
+    if (typeof sessionStorage === 'undefined') return '';
+    return sessionStorage.getItem('ignis-safe:dismissed-announcement-nudge') || '';
+  });
   const [showAckRequiredModal, setShowAckRequiredModal] = useState(false);
 
   const menuItems = [
@@ -84,21 +91,29 @@ export default function Sidebar({ variant = 'admin' }) {
   useEffect(() => {
     const role = String(currentUser?.role || '').toLowerCase();
 
-    if (variant !== 'personnel' || role !== 'personnel' || !currentUser?.admin_id) {
+    if (variant !== 'personnel' || !currentUser?.admin_id) {
       setHasPendingAnnouncementAck(false);
+      setPendingAnnouncementNudges(0);
+      setLatestAnnouncementNudge(null);
       return undefined;
     }
 
     let isMounted = true;
+    const effectiveUser = role === 'admin'
+      ? { ...currentUser, role: 'personnel' }
+      : currentUser;
 
     const loadPendingAck = async () => {
-      const { data } = await getPendingAcknowledgementCount(currentUser);
+      const { data } = await getPendingAcknowledgementCount(effectiveUser);
       if (isMounted) {
         setHasPendingAnnouncementAck((data?.pendingCount || 0) > 0);
+        setPendingAnnouncementNudges(data?.pendingNudgeCount || 0);
+        setLatestAnnouncementNudge(data?.latestNudge || null);
       }
     };
 
     loadPendingAck();
+    const intervalId = window.setInterval(loadPendingAck, 5000);
 
     const handleDataChanged = (event) => {
       const scope = event?.detail?.scope || '';
@@ -111,6 +126,7 @@ export default function Sidebar({ variant = 'admin' }) {
 
     return () => {
       isMounted = false;
+      window.clearInterval(intervalId);
       window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
     };
   }, [variant, currentUser]);
@@ -151,6 +167,13 @@ export default function Sidebar({ variant = 'admin' }) {
     }
   };
 
+  const handleDismissNudge = () => {
+    if (!latestAnnouncementNudge) return;
+    const nudgeKey = `${latestAnnouncementNudge.announcementId}:${latestAnnouncementNudge.sentAt}`;
+    setDismissedNudgeKey(nudgeKey);
+    sessionStorage.setItem('ignis-safe:dismissed-announcement-nudge', nudgeKey);
+  };
+
   const appManagementItems = [
     { id: 'analytics', icon: FaChartLine, label: 'Analytics', path: '/dashboard/analytics', permission: 'view_analytics' },
     { id: 'users', icon: FaUserCog, label: 'Users', path: '/dashboard/users', permission: 'manage_users' },
@@ -161,7 +184,13 @@ export default function Sidebar({ variant = 'admin' }) {
 
   const personnelMenuItems = [
     { id: 'operations', icon: FaCalendarCheck, label: 'Shift Schedule', path: '/personnel/operations' },
-    { id: 'announcements', icon: FaBell, label: 'Announcements', path: '/personnel/announcements' },
+    {
+      id: 'announcements',
+      icon: FaBell,
+      label: 'Announcements',
+      path: '/personnel/announcements',
+      badge: pendingAnnouncementNudges
+    },
     { id: 'attendance-personnel', icon: FaCalendarCheck, label: 'Attendance', path: '/attendance-personnel' },
     { id: 'reports', icon: FaFileAlt, label: 'Reports', path: '/reports' },
     { id: 'history', icon: FaHistory, label: 'Audit Logs', path: '/personnel/history' }
@@ -240,6 +269,29 @@ export default function Sidebar({ variant = 'admin' }) {
         )}
       </nav>
       </aside>
+
+      {variant === 'personnel' &&
+        latestAnnouncementNudge &&
+        dismissedNudgeKey !== `${latestAnnouncementNudge.announcementId}:${latestAnnouncementNudge.sentAt}` && (
+        <aside className="personnel-nudge-notification" role="status" aria-live="polite">
+          <div className="personnel-nudge-notification-icon" aria-hidden="true">
+            <FaBell />
+          </div>
+          <div className="personnel-nudge-notification-content">
+            <span>Announcement Reminder</span>
+            <strong>Kindly acknowledge &quot;{latestAnnouncementNudge.title}&quot;.</strong>
+            <p>An administrator is waiting for your acknowledgement.</p>
+            <button type="button" onClick={handleReturnToAnnouncement}>
+              View Announcement
+            </button>
+          </div>
+          <CloseButton
+            className="personnel-nudge-notification-close"
+            onClick={handleDismissNudge}
+            label="Dismiss announcement reminder"
+          />
+        </aside>
+      )}
 
       {showAckRequiredModal && (
         <div className="ack-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="ackModalTitle">

@@ -39,6 +39,7 @@ import {
   assignPersonnelToShiftBulk,
   getShiftAssignmentsForPeriod,
   removeShiftAssignment,
+  removeShiftAssignmentsForTypes,
   getPersonnelForDate
 } from '../utils/personnelOperationsService';
 import {
@@ -2511,7 +2512,7 @@ const permissions = getDefaultPermissions(formData.role);
     }
   };
 
-  const saveShiftSchedule = async (payload) => {
+  const saveShiftSchedule = async (payload, { clearedShiftTypes = [] } = {}) => {
     setShiftMessage({ type: '', text: '' });
     setIsShiftSaving(true);
 
@@ -2529,6 +2530,27 @@ const permissions = getDefaultPermissions(formData.role);
       return;
     }
 
+    let removedAssignmentCount = 0;
+    if (clearedShiftTypes.length) {
+      const {
+        removedCount,
+        error: clearAssignmentsError
+      } = await removeShiftAssignmentsForTypes(clearedShiftTypes);
+
+      if (clearAssignmentsError) {
+        setShiftSchedule(payload);
+        await loadShiftSummary(shiftSummaryMonth);
+        setShiftMessage({
+          type: 'error',
+          text: `Shift dates were cleared, but assigned personnel could not be removed: ${clearAssignmentsError}`
+        });
+        setIsShiftSaving(false);
+        return;
+      }
+
+      removedAssignmentCount = removedCount;
+    }
+
     setShiftSchedule(payload);
     await loadShiftSummary(shiftSummaryMonth);
 
@@ -2540,13 +2562,20 @@ const permissions = getDefaultPermissions(formData.role);
       details: `Updated shift schedule. Shift A dates: ${payload.shift_a_dates.join(', ')}. Shift B dates: ${payload.shift_b_dates.join(', ')}.`,
       metadata: {
         shift_a_dates: payload.shift_a_dates,
-        shift_b_dates: payload.shift_b_dates
+        shift_b_dates: payload.shift_b_dates,
+        cleared_shift_types: clearedShiftTypes,
+        removed_assignment_count: removedAssignmentCount
       }
     }).catch((logError) => {
       console.warn('Unable to write admin activity log:', logError);
     });
 
-    setShiftMessage({ type: 'success', text: 'Shift schedule saved successfully.' });
+    setShiftMessage({
+      type: 'success',
+      text: clearedShiftTypes.length
+        ? `Shift schedule cleared. ${removedAssignmentCount} personnel assignment${removedAssignmentCount === 1 ? '' : 's'} removed.`
+        : 'Shift schedule saved successfully.'
+    });
     setIsShiftSaving(false);
 
     setTimeout(() => {
@@ -2561,10 +2590,17 @@ const permissions = getDefaultPermissions(formData.role);
       shift_a_dates: getCurrentShiftDates(shiftSelection.shift_a_dates),
       shift_b_dates: getCurrentShiftDates(shiftSelection.shift_b_dates)
     };
-    const clearedShifts = [
-      payload.shift_a_dates.length ? null : 'Shift A',
-      payload.shift_b_dates.length ? null : 'Shift B'
+    const clearedShiftTypes = [
+      getCurrentShiftDates(shiftSchedule.shift_a_dates).length > 0
+        && payload.shift_a_dates.length === 0
+        ? 'A'
+        : null,
+      getCurrentShiftDates(shiftSchedule.shift_b_dates).length > 0
+        && payload.shift_b_dates.length === 0
+        ? 'B'
+        : null
     ].filter(Boolean);
+    const clearedShifts = clearedShiftTypes.map((shiftType) => `Shift ${shiftType}`);
 
     if (clearedShifts.length) {
       const clearTarget = clearedShifts.length === 2
@@ -2573,9 +2609,9 @@ const permissions = getDefaultPermissions(formData.role);
 
       setPendingConfirmAction({
         action: 'save-cleared-shift-schedule',
-        payload: { schedule: payload },
+        payload: { schedule: payload, clearedShiftTypes },
         title: 'Clear Shift Dates?',
-        message: `${clearTarget} ${clearedShifts.length === 2 ? 'have' : 'has'} no selected duty dates. Saving will clear ${clearedShifts.length === 2 ? 'both shift schedules' : `${clearTarget}'s schedule`}. Are you sure you want to continue?`,
+        message: `Clearing ${clearTarget} will remove all personnel assignments for ${clearedShifts.length === 2 ? 'these shifts' : 'this shift'}. Those personnel will disappear from the calendar, on-duty lists, and dashboard. This action cannot be undone. Are you sure you want to continue?`,
         confirmLabel: 'Clear and Save'
       });
       setIsConfirmActionModalOpen(true);
@@ -2780,7 +2816,9 @@ const permissions = getDefaultPermissions(formData.role);
     }
 
     if (pendingConfirmAction.action === 'save-cleared-shift-schedule') {
-      await saveShiftSchedule(pendingConfirmAction.payload.schedule);
+      await saveShiftSchedule(pendingConfirmAction.payload.schedule, {
+        clearedShiftTypes: pendingConfirmAction.payload.clearedShiftTypes
+      });
     }
 
     if (pendingConfirmAction.action === 'archive-request-history') {

@@ -606,20 +606,32 @@ export const getShiftAssignmentSummaryForDate = async (dateIso) => {
       return { data: null, error: 'Missing date.' };
     }
 
-    const [personnelResult, assignmentResult] = await Promise.all([
+    const [configResult, personnelResult, assignmentResult] = await Promise.all([
+      getShiftScheduleConfig(),
       getAllUsers({ includePersonnelWorkspaceProfiles: true }),
       getShiftAssignmentsForPeriod({ startDate: dateIso, endDate: dateIso })
     ]);
 
+    if (configResult.error) return { data: null, error: configResult.error };
     if (personnelResult.error) return { data: null, error: personnelResult.error };
     if (assignmentResult.error) return { data: null, error: assignmentResult.error };
 
+    const shiftADates = new Set(configResult.data?.shift_a_dates || []);
+    const shiftBDates = new Set(configResult.data?.shift_b_dates || []);
+    const activeShiftTypes = new Set([
+      shiftADates.has(dateIso) ? 'A' : null,
+      shiftBDates.has(dateIso) ? 'B' : null
+    ].filter(Boolean));
     const personnelRows = (Array.isArray(personnelResult.data) ? personnelResult.data : [])
       .filter((personnel) => String(personnel.role || '').toLowerCase() === 'personnel');
     const personnelById = new Map(personnelRows.map((personnel) => [personnel.admin_id, personnel]));
     const assignments = Array.isArray(assignmentResult.data) ? assignmentResult.data : [];
 
     const buildShiftList = (shiftType) => {
+      if (!activeShiftTypes.has(shiftType)) {
+        return [];
+      }
+
       const personnelIds = new Set(
         assignments
           .filter((assignment) => String(assignment.shift_type || '').toUpperCase() === shiftType)
@@ -812,6 +824,44 @@ export const removeShiftAssignment = async (assignmentId) => {
   } catch (error) {
     console.error('Error removing shift assignment:', error);
     return { data: null, error: error.message };
+  }
+};
+
+export const removeShiftAssignmentsForTypes = async (shiftTypes) => {
+  try {
+    const normalizedShiftTypes = Array.from(new Set(
+      (Array.isArray(shiftTypes) ? shiftTypes : [])
+        .map((shiftType) => String(shiftType || '').trim().toUpperCase())
+        .filter((shiftType) => ['A', 'B'].includes(shiftType))
+    ));
+
+    if (!normalizedShiftTypes.length) {
+      return { data: [], removedCount: 0, error: null };
+    }
+
+    const { data, error } = await supabase
+      .from(PERSONNEL_SHIFT_ASSIGNMENTS_TABLE)
+      .delete()
+      .in('shift_type', normalizedShiftTypes)
+      .select('assignment_id, shift_type');
+
+    if (error) throw error;
+
+    const removedAssignments = data || [];
+    emitDataChanged('dashboard', {
+      action: 'shift_clear',
+      shift_types: normalizedShiftTypes,
+      removed_count: removedAssignments.length
+    });
+
+    return {
+      data: removedAssignments,
+      removedCount: removedAssignments.length,
+      error: null
+    };
+  } catch (error) {
+    console.error('Error clearing shift assignments:', error);
+    return { data: [], removedCount: 0, error: error.message };
   }
 };
 

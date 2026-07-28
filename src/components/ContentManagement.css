@@ -575,3 +575,152 @@
     min-width: 0;
   }
 }
+
+/* =========================================================
+   CREATE ANNOUNCEMENT — AUTHORITATIVE FORM LAYOUT
+   Keep these rules in ContentManagement.css because this
+   component owns the Title, Audience, and picker alignment.
+   ========================================================= */
+
+.composer-card .announcement-form-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  column-gap: 1.5rem !important;
+  row-gap: 1.5rem !important;
+  align-items: start !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  box-sizing: border-box;
+}
+
+.composer-card .announcement-form-grid > .form-field {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+.composer-card .announcement-form-grid > .form-field input,
+.composer-card .announcement-form-grid > .form-field select {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/*
+  This element is a direct child of the two-column form grid.
+  It must span both columns so the PersonnelPicker can create
+  one card under Title and one card under Audience.
+*/
+.composer-card .announcement-form-grid > .personnel-picker-section {
+  grid-column: 1 / -1 !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+.personnel-picker-section-heading {
+  width: 100%;
+  margin: 0 0 1rem;
+}
+
+.personnel-picker-section-heading h3 {
+  margin: 0 0 0.35rem;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.personnel-picker-section-heading h3 span {
+  color: #dc2626;
+}
+
+.personnel-picker-section-heading p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/*
+  The picker uses exactly the same two equal columns and the
+  same gap as the Title and Audience fields.
+*/
+.composer-card
+  .announcement-form-grid
+  > .personnel-picker-section
+  > .personnel-picker-two-col {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  column-gap: 1.5rem !important;
+  row-gap: 0 !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  box-sizing: border-box;
+}
+
+.composer-card
+  .announcement-form-grid
+  > .personnel-picker-section
+  > .personnel-picker-two-col
+  > .personnel-picker-left,
+.composer-card
+  .announcement-form-grid
+  > .personnel-picker-section
+  > .personnel-picker-two-col
+  > .personnel-picker-right {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 560px !important;
+  align-self: stretch !important;
+  box-sizing: border-box;
+}
+
+/* Stack the form and picker safely on smaller screens. */
+@media (max-width: 1024px) {
+  .composer-card .announcement-form-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    column-gap: 0 !important;
+    row-gap: 1rem !important;
+  }
+
+  .composer-card .announcement-form-grid > .personnel-picker-section {
+    grid-column: 1 !important;
+  }
+
+  .composer-card
+    .announcement-form-grid
+    > .personnel-picker-section
+    > .personnel-picker-two-col {
+    grid-template-columns: minmax(0, 1fr) !important;
+    column-gap: 0 !important;
+    row-gap: 1rem !important;
+  }
+
+  .composer-card
+    .announcement-form-grid
+    > .personnel-picker-section
+    > .personnel-picker-two-col
+    > .personnel-picker-left {
+    height: min(460px, 50vh) !important;
+  }
+
+  .composer-card
+    .announcement-form-grid
+    > .personnel-picker-section
+    > .personnel-picker-two-col
+    > .personnel-picker-right {
+    height: min(320px, 38vh) !important;
+  }
+}
+

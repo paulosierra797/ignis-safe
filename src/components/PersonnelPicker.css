@@ -648,3 +648,12 @@
     font-size: 0.68rem;
   }
 }
+
+/* Parent pages may control the grid columns, but the picker
+   and both cards must always be allowed to fill those columns. */
+.personnel-picker-two-col,
+.personnel-picker-left,
+.personnel-picker-right {
+  max-width: none;
+}
+

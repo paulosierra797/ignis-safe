@@ -422,6 +422,15 @@ export default function ContentManagement() {
 
                   {formData.audience_type === 'specific_personnel' && (
                     <div className="personnel-picker-section">
+                      <div className="personnel-picker-section-heading">
+                        <h3>
+                          Select Personnel <span aria-hidden="true">*</span>
+                        </h3>
+                        <p>
+                          Choose one or more personnel to receive this announcement.
+                        </p>
+                      </div>
+
                       <PersonnelPicker
                         id="contentAnnouncementPersonnel"
                         personnel={recipients}

@@ -81,6 +81,47 @@ alter table public.announcements enable row level security;
 alter table public.announcement_acknowledgments enable row level security;
 alter table public.announcement_recipients enable row level security;
 
+-- RLS on announcements and announcement_recipients used to reference each
+-- other directly (announcements_select_authenticated queried
+-- announcement_recipients, while announcement_recipients_insert_admin
+-- queried announcements). Because each read re-triggers the other table's
+-- RLS policies, this two-table cycle made Postgres raise "infinite
+-- recursion detected in policy for relation announcement_recipients" as
+-- soon as an admin tried to insert recipients (i.e. submit the Create
+-- Announcement form). These SECURITY DEFINER helpers read the referenced
+-- table directly, bypassing its RLS, so neither policy re-enters
+-- announcement_recipients' own policy evaluation.
+create schema if not exists private;
+
+create or replace function private.is_announcement_recipient(_announcement_id uuid)
+returns boolean
+language sql
+stable security definer
+set search_path to ''
+as $$
+  select exists (
+    select 1
+    from public.announcement_recipients ar
+    where ar.announcement_id = _announcement_id
+      and ar.personnel_id = (select auth.uid())
+  );
+$$;
+
+create or replace function private.is_own_specific_announcement(_announcement_id uuid)
+returns boolean
+language sql
+stable security definer
+set search_path to ''
+as $$
+  select exists (
+    select 1
+    from public.announcements an
+    where an.announcement_id = _announcement_id
+      and an.audience_type = 'specific_personnel'
+      and an.created_by = (select auth.uid())
+  );
+$$;
+
 drop policy if exists "announcements_select_public" on public.announcements;
 create policy "announcements_select_public"
 on public.announcements
@@ -118,12 +159,7 @@ using (
     and audience_type = 'specific_personnel'
     and (
       target_personnel_id = auth.uid()
-      or exists (
-        select 1
-        from public.announcement_recipients ar
-        where ar.announcement_id = announcements.announcement_id
-          and ar.personnel_id = auth.uid()
-      )
+      or private.is_announcement_recipient(announcements.announcement_id)
     )
   )
 );
@@ -213,13 +249,7 @@ with check (
     where target_user.admin_id = personnel_id
       and lower(target_user.role) = 'personnel'
   )
-  and exists (
-    select 1
-    from public.announcements an
-    where an.announcement_id = announcement_recipients.announcement_id
-      and an.audience_type = 'specific_personnel'
-      and an.created_by = auth.uid()
-  )
+  and private.is_own_specific_announcement(announcement_recipients.announcement_id)
 );
 
 drop policy if exists "announcement_recipients_delete_admin" on public.announcement_recipients;

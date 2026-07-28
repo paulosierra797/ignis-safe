@@ -1,8 +1,8 @@
 .personnel-picker-two-col {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(240px, 0.65fr);
-  gap: 0.75rem;
-  align-items: start;
+  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.75fr);
+  gap: 1rem;
+  align-items: stretch;
   width: 100%;
   font-family: 'Poppins', sans-serif;
   box-sizing: border-box;
@@ -27,6 +27,8 @@
   padding: 0.7rem;
   background: #ffffff;
   min-width: 0;
+  height: 460px;
+  box-sizing: border-box;
 }
 
 .personnel-picker-search {
@@ -37,6 +39,7 @@
   border-radius: 8px;
   padding: 0.55rem 0.7rem;
   color: #94a3b8;
+  flex: none;
 }
 
 .personnel-picker-search > svg {
@@ -71,6 +74,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
+  flex: none;
 }
 
 .personnel-picker-toolbar-actions {
@@ -109,6 +113,7 @@
   font-size: 0.78rem;
   color: #64748b;
   padding: 0 0.1rem;
+  flex: none;
 }
 
 .personnel-picker-list-meta strong {
@@ -120,7 +125,8 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  max-height: 238px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden auto;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -269,7 +275,8 @@
   border-radius: 10px;
   background: #f8fafc;
   min-width: 0;
-  max-height: 342px;
+  height: 460px;
+  box-sizing: border-box;
   overflow: hidden;
 }
 
@@ -281,6 +288,7 @@
   padding: 0.65rem 0.75rem;
   border-bottom: 1px solid #e2e8f0;
   background: #ffffff;
+  flex: none;
 }
 
 .personnel-picker-right-header h5 {
@@ -309,7 +317,8 @@
   flex-direction: column;
   gap: 0.3rem;
   padding: 0.5rem;
-  max-height: 286px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -399,8 +408,11 @@
     grid-template-columns: 1fr;
   }
 
-  .personnel-picker-checkbox-list,
-  .personnel-picker-right-list {
-    max-height: 220px;
+  .personnel-picker-left {
+    height: min(420px, 48vh);
+  }
+
+  .personnel-picker-right {
+    height: min(300px, 38vh);
   }
 }

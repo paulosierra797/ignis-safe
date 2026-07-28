@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
-import { FiArchive } from 'react-icons/fi';
+import { FiArchive, FiBell, FiUsers } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
+import AnnouncementAcknowledgementModal from './AnnouncementAcknowledgementModal';
 import LandingContentEditor from './LandingContentEditor';
 import PersonnelPicker from './PersonnelPicker';
 import { useUser } from '../context/UserContext';
@@ -16,6 +17,7 @@ import {
   archiveAnnouncement,
   restoreAnnouncement,
   getArchivedAnnouncements,
+  nudgeAnnouncementPersonnel,
   MAX_ANNOUNCEMENT_WORDS,
   countAnnouncementWords
 } from '../utils/announcementsService';
@@ -130,6 +132,9 @@ export default function Announcements() {
   const [archivedAnnouncements, setArchivedAnnouncements] = useState([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
   const [restoringId, setRestoringId] = useState('');
+  const [acknowledgementModalId, setAcknowledgementModalId] = useState('');
+  const [nudgingIds, setNudgingIds] = useState(() => new Set());
+  const [nudgedIds, setNudgedIds] = useState(() => new Set());
   const ITEMS_PER_PAGE = 3;
   const [formData, setFormData] = useState(() => {
     const draft = readAnnouncementDraft();
@@ -372,6 +377,13 @@ export default function Announcements() {
     return () => window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
   }, [loadAnnouncements]);
 
+  useEffect(() => {
+    if (isAdmin) return undefined;
+
+    const intervalId = window.setInterval(loadAnnouncements, 20000);
+    return () => window.clearInterval(intervalId);
+  }, [isAdmin, loadAnnouncements]);
+
   const loadArchivedAnnouncements = async () => {
     setArchivedLoading(true);
     const { data, error } = await getArchivedAnnouncements(currentUser);
@@ -438,6 +450,9 @@ export default function Announcements() {
   const totalPages = Math.max(1, Math.ceil(filteredAnnouncements.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedAnnouncements = filteredAnnouncements.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const acknowledgementModalAnnouncement = announcements.find(
+    (row) => row.announcement_id === acknowledgementModalId
+  );
 
   const handleSubmitAnnouncement = async (event) => {
     event.preventDefault();
@@ -623,6 +638,42 @@ export default function Announcements() {
     setArchivedAnnouncements((prev) => prev.filter((row) => row.announcement_id !== announcementId));
     setMessage({ type: 'success', text: 'Announcement restored.' });
     await loadAnnouncements();
+  };
+
+  const handleNudgePersonnel = async (personnelIds) => {
+    const announcement = announcements.find(
+      (row) => row.announcement_id === acknowledgementModalId
+    );
+    const requestedIds = Array.from(new Set(personnelIds || [])).filter(Boolean);
+
+    if (!announcement || requestedIds.length === 0) return;
+
+    setNudgingIds((prev) => new Set([...prev, ...requestedIds]));
+    setMessage({ type: '', text: '' });
+
+    const { error } = await nudgeAnnouncementPersonnel(
+      currentUser,
+      announcement.announcement_id,
+      announcement.title,
+      requestedIds
+    );
+
+    setNudgingIds((prev) => {
+      const next = new Set(prev);
+      requestedIds.forEach((personnelId) => next.delete(personnelId));
+      return next;
+    });
+
+    if (error) {
+      setMessage({ type: 'error', text: `Unable to send reminder: ${error}` });
+      return;
+    }
+
+    setNudgedIds((prev) => new Set([...prev, ...requestedIds]));
+    setMessage({
+      type: 'success',
+      text: `Reminder sent to ${requestedIds.length} personnel.`
+    });
   };
 
   const toggleAnnouncementExpanded = (announcementId) => {
@@ -986,10 +1037,19 @@ export default function Announcements() {
                   )}
                   <div className="announcement-meta">
                     {isAdmin && announcement.acknowledgement_summary?.totalRecipients > 0 && (
-                      <span>
+                      <button
+                        type="button"
+                        className="announcement-acknowledgement-link"
+                        onClick={() => {
+                          setAcknowledgementModalId(announcement.announcement_id);
+                          setNudgedIds(new Set());
+                        }}
+                        aria-label={`View acknowledgement list for ${announcement.title}`}
+                      >
+                        <FiUsers aria-hidden="true" />
                         Acknowledged: {announcement.acknowledgement_summary.acknowledgedCount}/
                         {announcement.acknowledgement_summary.totalRecipients}
-                      </span>
+                      </button>
                     )}
                     {!isAdmin && (
                       <span className={`announcement-ack-status ${announcement.acknowledged_by_current_user ? 'acknowledged' : 'pending'}`}>
@@ -999,9 +1059,21 @@ export default function Announcements() {
                     <span>{formatDate(announcement.created_at)}</span>
                   </div>
 
-                  {isAdmin && announcement.pending_personnel?.length > 0 && (
-                    <div className="announcement-pending-by">
-                      Pending acknowledgement by: {announcement.pending_personnel.join(', ')}
+                  {!isAdmin &&
+                    !announcement.acknowledged_by_current_user &&
+                    announcement.latest_acknowledgement_nudge_at && (
+                    <div className="announcement-nudge-notice" role="status">
+                      <FiBell aria-hidden="true" />
+                      <div>
+                        <strong>Reminder from Admin</strong>
+                        <span>{announcement.acknowledgement_nudge_message}</span>
+                        <small>
+                          Sent {formatDate(announcement.latest_acknowledgement_nudge_at)}
+                          {announcement.acknowledgement_nudge_count > 1
+                            ? ` | ${announcement.acknowledgement_nudge_count} reminders received`
+                            : ''}
+                        </small>
+                      </div>
                     </div>
                   )}
 
@@ -1173,6 +1245,16 @@ export default function Announcements() {
             </div>
           </div>
         </div>
+      )}
+
+      {isAdmin && acknowledgementModalAnnouncement && (
+        <AnnouncementAcknowledgementModal
+          announcement={acknowledgementModalAnnouncement}
+          onClose={() => setAcknowledgementModalId('')}
+          onNudge={handleNudgePersonnel}
+          nudgingIds={nudgingIds}
+          nudgedIds={nudgedIds}
+        />
       )}
 
       {hasPendingAnnouncementExit && (

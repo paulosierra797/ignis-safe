@@ -7,6 +7,8 @@ const ANNOUNCEMENTS_TABLE = 'announcements';
 const ANNOUNCEMENT_ATTACHMENTS_BUCKET = 'announcement_attachments';
 const ANNOUNCEMENT_ACK_TABLE = 'announcement_acknowledgments';
 const ANNOUNCEMENT_RECIPIENTS_TABLE = 'announcement_recipients';
+const PERSONNEL_ACTIVITY_LOGS_TABLE = 'personnel_activity_logs';
+const ANNOUNCEMENT_NUDGE_ACTIVITY_TYPE = 'announcement_acknowledgement_nudge';
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 const ATTACHMENT_UPLOAD_TIMEOUT_MS = 120000;
@@ -356,22 +358,56 @@ export const getAnnouncementsForUser = async (currentUser) => {
     const announcementIds = announcements.map((row) => row.announcement_id);
 
     if (role === 'personnel' && userId) {
-      const { data: ackRows, error: ackError } = await supabase
-        .from(ANNOUNCEMENT_ACK_TABLE)
-        .select('announcement_id, acknowledged_at')
-        .eq('personnel_id', userId)
-        .in('announcement_id', announcementIds);
+      const [ackResult, nudgeResult] = await Promise.all([
+        supabase
+          .from(ANNOUNCEMENT_ACK_TABLE)
+          .select('announcement_id, acknowledged_at')
+          .eq('personnel_id', userId)
+          .in('announcement_id', announcementIds),
+        supabase
+          .from(PERSONNEL_ACTIVITY_LOGS_TABLE)
+          .select('log_id, announcement_id, details, performed_at')
+          .eq('personnel_id', userId)
+          .eq('activity_type', ANNOUNCEMENT_NUDGE_ACTIVITY_TYPE)
+          .in('announcement_id', announcementIds)
+          .order('performed_at', { ascending: false })
+      ]);
 
-      if (ackError) throw ackError;
+      if (ackResult.error) throw ackResult.error;
+      if (nudgeResult.error) throw nudgeResult.error;
 
-      const ackByAnnouncement = new Map((ackRows || []).map((row) => [row.announcement_id, row.acknowledged_at]));
+      const ackByAnnouncement = new Map(
+        (ackResult.data || []).map((row) => [row.announcement_id, row.acknowledged_at])
+      );
+      const nudgeByAnnouncement = new Map();
+
+      (nudgeResult.data || []).forEach((row) => {
+        const current = nudgeByAnnouncement.get(row.announcement_id);
+        if (!current) {
+          nudgeByAnnouncement.set(row.announcement_id, {
+            count: 1,
+            latestAt: row.performed_at,
+            message: row.details || 'An administrator reminded you to review this announcement.'
+          });
+          return;
+        }
+
+        current.count += 1;
+      });
 
       return {
-        data: announcements.map((row) => ({
-          ...row,
-          acknowledged_by_current_user: ackByAnnouncement.has(row.announcement_id),
-          acknowledged_at: ackByAnnouncement.get(row.announcement_id) || null
-        })),
+        data: announcements.map((row) => {
+          const nudge = nudgeByAnnouncement.get(row.announcement_id);
+
+          return {
+            ...row,
+            acknowledged_by_current_user: ackByAnnouncement.has(row.announcement_id),
+            acknowledged_at: ackByAnnouncement.get(row.announcement_id) || null,
+            acknowledgement_nudge_count: nudge?.count || 0,
+            latest_acknowledgement_nudge_at: nudge?.latestAt || null,
+            acknowledgement_nudge_message: nudge?.message || ''
+          };
+        }),
         error: null
       };
     }
@@ -381,60 +417,64 @@ export const getAnnouncementsForUser = async (currentUser) => {
         getAllUsers({ includePersonnelWorkspaceProfiles: true }),
         supabase
           .from(ANNOUNCEMENT_ACK_TABLE)
-          .select('announcement_id, personnel_id')
+          .select('announcement_id, personnel_id, acknowledged_at')
           .in('announcement_id', announcementIds)
       ]);
 
       if (personnelResult.error) throw personnelResult.error;
       if (ackResult.error) throw ackResult.error;
 
-      const activePersonnel = (personnelResult.data || [])
-        .filter((row) => String(row.role || '').toLowerCase() === 'personnel')
+      const allPersonnel = (personnelResult.data || [])
+        .filter((row) => String(row.role || '').toLowerCase() === 'personnel');
+      const activePersonnel = allPersonnel
         .filter((row) => row.status === 'Active');
       const activePersonnelIds = new Set(activePersonnel.map((row) => row.admin_id));
-      const personnelNameById = new Map(
-        activePersonnel.map((row) => [
-          row.admin_id,
-          [row.rank, row.first_name, row.last_name].filter(Boolean).join(' ').trim() || row.email || 'Personnel'
-        ])
-      );
+      const personnelById = new Map(allPersonnel.map((row) => [row.admin_id, row]));
       const ackMap = new Map();
 
       (ackResult.data || []).forEach((row) => {
-        if (!activePersonnelIds.has(row.personnel_id)) return;
-        const existing = ackMap.get(row.announcement_id) || new Set();
-        existing.add(row.personnel_id);
+        const existing = ackMap.get(row.announcement_id) || new Map();
+        existing.set(row.personnel_id, row.acknowledged_at);
         ackMap.set(row.announcement_id, existing);
       });
 
       return {
         data: announcements.map((row) => {
-          const acknowledgedIds = ackMap.get(row.announcement_id) || new Set();
-          const acknowledgedCount = acknowledgedIds.size;
-          const totalRecipients = row.audience_type === 'all_personnel'
-            ? activePersonnelIds.size
+          const acknowledgements = ackMap.get(row.announcement_id) || new Map();
+          const recipientIds = row.audience_type === 'all_personnel'
+            ? Array.from(activePersonnelIds)
             : row.audience_type === 'specific_personnel'
-              ? row.target_personnel_ids.length
-              : 0;
+              ? row.target_personnel_ids
+              : [];
+          const recipientDetails = recipientIds.map((personnelId, index) => {
+            const personnel = personnelById.get(personnelId);
+            const fallbackName = row.target_personnel_names[index] || 'Personnel';
 
-          let pendingPersonnel = [];
-          if (row.audience_type === 'all_personnel') {
-            pendingPersonnel = activePersonnel
-              .filter((person) => !acknowledgedIds.has(person.admin_id))
-              .map((person) => personnelNameById.get(person.admin_id));
-          } else if (row.audience_type === 'specific_personnel' && row.target_personnel_ids.length) {
-            pendingPersonnel = row.target_personnel_ids
-              .filter((personnelId) => !acknowledgedIds.has(personnelId))
-              .map((personnelId, index) => personnelNameById.get(personnelId) || row.target_personnel_names[index] || 'Personnel');
-          }
+            return {
+              personnel_id: personnelId,
+              name: personnel
+                ? [personnel.first_name, personnel.last_name].filter(Boolean).join(' ').trim() || personnel.email || 'Personnel'
+                : fallbackName,
+              rank: personnel?.rank || '',
+              email: personnel?.email || '',
+              status: personnel?.status || '',
+              acknowledged_at: acknowledgements.get(personnelId) || null
+            };
+          });
+          const acknowledgedPersonnel = recipientDetails.filter((person) => person.acknowledged_at);
+          const pendingPersonnelDetails = recipientDetails.filter((person) => !person.acknowledged_at);
 
           return {
             ...row,
             acknowledgement_summary: {
-              acknowledgedCount,
-              totalRecipients
+              acknowledgedCount: acknowledgedPersonnel.length,
+              totalRecipients: recipientDetails.length
             },
-            pending_personnel: pendingPersonnel
+            acknowledgement_personnel: {
+              acknowledged: acknowledgedPersonnel,
+              pending: pendingPersonnelDetails
+            },
+            pending_personnel: pendingPersonnelDetails.map((person) => person.name)
           };
         }),
         error: null
@@ -447,6 +487,72 @@ export const getAnnouncementsForUser = async (currentUser) => {
     };
   } catch (error) {
     console.error('Error fetching announcements:', error);
+    return { data: [], error: error.message };
+  }
+};
+
+export const nudgeAnnouncementPersonnel = async (
+  currentUser,
+  announcementId,
+  announcementTitle,
+  personnelIds
+) => {
+  try {
+    if (normalizeRole(currentUser?.role) !== 'admin') {
+      throw new Error('Only admin users can send acknowledgement reminders.');
+    }
+
+    const recipients = Array.from(
+      new Set((Array.isArray(personnelIds) ? personnelIds : []).filter(Boolean))
+    );
+
+    if (!announcementId || recipients.length === 0) {
+      throw new Error('Select at least one pending personnel to nudge.');
+    }
+
+    const safeTitle = String(announcementTitle || 'this announcement').trim().slice(0, 120);
+    const details = `Please review and acknowledge "${safeTitle}".`;
+    const { data, error } = await supabase
+      .from(PERSONNEL_ACTIVITY_LOGS_TABLE)
+      .insert(recipients.map((personnelId) => ({
+        personnel_id: personnelId,
+        activity_type: ANNOUNCEMENT_NUDGE_ACTIVITY_TYPE,
+        action: 'Acknowledgement Reminder',
+        details,
+        status: 'NOTICE',
+        announcement_id: announcementId,
+        metadata: {
+          announcement_id: announcementId,
+          announcement_title: safeTitle,
+          nudged_by: currentUser.admin_id
+        }
+      })))
+      .select('personnel_id, performed_at');
+
+    if (error) throw error;
+
+    await logAdminActivity({
+      actorId: currentUser.admin_id,
+      actorName: currentUser.name || currentUser.email || 'Admin User',
+      action: 'Announcement Reminder Sent',
+      actionType: 'notify',
+      details: `Sent an acknowledgement reminder to ${recipients.length} personnel for "${safeTitle}".`,
+      status: 'SUCCESS',
+      metadata: {
+        announcementId,
+        personnelIds: recipients
+      }
+    });
+
+    emitDataChanged('announcements', {
+      announcementId,
+      action: 'nudged',
+      personnelIds: recipients
+    });
+
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error('Error sending announcement reminder:', error);
     return { data: [], error: error.message };
   }
 };

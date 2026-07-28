@@ -1,10 +1,82 @@
+/* =========================================================
+   CREATE ANNOUNCEMENT — PERSONNEL PICKER
+   ========================================================= */
+
+.announcement-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 1.5rem;
+  row-gap: 1.5rem;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.announcement-form-grid > * {
+  min-width: 0;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/*
+  The personnel picker must be a direct child of
+  .announcement-form-grid so it can span both columns.
+*/
+.personnel-picker-section {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.personnel-picker-heading {
+  margin-bottom: 0.9rem;
+}
+
+.personnel-picker-heading label {
+  display: block;
+  margin: 0 0 0.35rem;
+  color: #0f172a;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.personnel-picker-heading label span {
+  color: #dc2626;
+}
+
+.personnel-picker-subtitle {
+  margin: 0 0 0.6rem;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+/* =========================================================
+   TWO-COLUMN PERSONNEL PICKER
+   ========================================================= */
+
 .personnel-picker-two-col {
   display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.75fr);
-  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
   align-items: stretch;
   width: 100%;
-  font-family: 'Poppins', sans-serif;
+  min-width: 0;
+  font-family: "Poppins", sans-serif;
   box-sizing: border-box;
 }
 
@@ -18,34 +90,48 @@
   opacity: 0.7;
 }
 
+/* =========================================================
+   LEFT CARD — PERSONNEL LIST
+   ========================================================= */
+
 .personnel-picker-left {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  height: 560px;
+  padding: 1rem;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 0.7rem;
   background: #ffffff;
-  min-width: 0;
-  height: 460px;
   box-sizing: border-box;
+  overflow: hidden;
 }
+
+/* =========================================================
+   SEARCH FIELD
+   ========================================================= */
 
 .personnel-picker-search {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.75rem 1rem;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  padding: 0.55rem 0.7rem;
+  background: #ffffff;
   color: #94a3b8;
-  flex: none;
+  box-sizing: border-box;
 }
 
 .personnel-picker-search > svg {
   flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
 }
 
 .personnel-picker-search:focus-within {
@@ -54,104 +140,149 @@
 }
 
 .personnel-picker-two-col .personnel-picker-search input {
-  width: auto;
+  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   min-height: 0;
+  margin: 0;
   padding: 0;
   border: none;
   border-radius: 0;
   outline: none;
-  flex: 1;
-  font-family: inherit;
-  font-size: 0.85rem;
-  color: #334155;
   background: transparent;
+  color: #334155;
   box-shadow: none;
+  font-family: inherit;
+  font-size: 0.95rem;
 }
+
+.personnel-picker-two-col .personnel-picker-search input::placeholder {
+  color: #94a3b8;
+}
+
+/* =========================================================
+   TOOLBAR
+   ========================================================= */
 
 .personnel-picker-toolbar {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem;
-  flex: none;
+  width: 100%;
+  min-width: 0;
 }
 
 .personnel-picker-toolbar-actions {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .personnel-picker-toolbar-actions button {
+  flex: 0 0 auto;
+  padding: 0.45rem 0.9rem;
   border: 1px solid #cbd5e1;
+  border-radius: 6px;
   background: #f8fafc;
   color: #334155;
-  border-radius: 6px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.76rem;
-  font-weight: 700;
   font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .personnel-picker-toolbar-actions button:hover:not(:disabled) {
-  background: #fef2f2;
   border-color: #fecaca;
+  background: #fef2f2;
   color: #b91c1c;
 }
 
 .personnel-picker-toolbar-actions button:disabled {
-  cursor: not-allowed;
   opacity: 0.5;
+  cursor: not-allowed;
 }
+
+/* =========================================================
+   PERSONNEL COUNT
+   ========================================================= */
 
 .personnel-picker-list-meta {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.78rem;
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0 0.15rem;
   color: #64748b;
-  padding: 0 0.1rem;
-  flex: none;
+  font-size: 0.85rem;
+  box-sizing: border-box;
 }
 
 .personnel-picker-list-meta strong {
   color: #b91c1c;
   font-weight: 700;
+  white-space: nowrap;
 }
+
+/* =========================================================
+   PERSONNEL CHECKBOX LIST
+   ========================================================= */
 
 .personnel-picker-checkbox-list {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 0;
-  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
   min-height: 0;
-  overflow: hidden auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   background: #ffffff;
+  box-sizing: border-box;
   scrollbar-gutter: stable;
 }
 
 .personnel-picker-empty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
   padding: 0.8rem;
-  text-align: center;
-  font-size: 0.82rem;
   color: #64748b;
+  font-size: 0.82rem;
+  text-align: center;
 }
 
 .personnel-picker-checkbox-item {
   display: grid;
-  grid-template-columns: 18px 32px minmax(0, 1fr);
+  grid-template-columns: 20px 40px minmax(0, 1fr);
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.75rem;
+  width: 100%;
   min-width: 0;
-  min-height: 54px;
-  padding: 0.45rem 0.6rem;
+  min-height: 66px;
+  padding: 0.65rem 0.9rem;
   border-bottom: 1px solid #eef2f6;
+  background: #ffffff;
+  box-sizing: border-box;
   cursor: pointer;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .personnel-picker-checkbox-item:last-child {
@@ -168,12 +299,12 @@
 }
 
 .personnel-picker-checkbox-item.is-unavailable {
-  cursor: not-allowed;
   opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .personnel-picker-checkbox-item.is-unavailable:hover {
-  background: none;
+  background: #ffffff;
 }
 
 .personnel-picker-two-col .personnel-picker-checkbox-input {
@@ -188,33 +319,39 @@
   padding: 0;
   border-radius: 3px;
   accent-color: #b91c1c;
-  cursor: pointer;
   box-shadow: none;
+  cursor: pointer;
 }
 
-.personnel-picker-checkbox-item.is-unavailable .personnel-picker-checkbox-input {
+.personnel-picker-checkbox-item.is-unavailable
+  .personnel-picker-checkbox-input {
   cursor: not-allowed;
 }
 
+/* =========================================================
+   PERSONNEL INFORMATION
+   ========================================================= */
+
 .personnel-picker-checkbox-info {
-  flex: 1;
-  min-width: 0;
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.75rem;
+  min-width: 0;
 }
 
 .personnel-picker-avatar {
   display: inline-flex;
+  flex: 0 0 40px;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: #eef2f6;
   color: #475467;
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   font-weight: 800;
 }
 
@@ -225,15 +362,16 @@
 
 .personnel-picker-checkbox-identity {
   display: grid;
+  flex: 1 1 auto;
   gap: 0.05rem;
   min-width: 0;
 }
 
 .personnel-picker-checkbox-name {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #334155;
   overflow: hidden;
+  color: #334155;
+  font-size: 0.95rem;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -241,147 +379,184 @@
 .personnel-picker-checkbox-identity small {
   overflow: hidden;
   color: #7b8798;
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* =========================================================
+   STATUS BADGES
+   ========================================================= */
+
 .personnel-picker-status-badge {
   flex: 0 0 auto;
-  font-size: 0.68rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.02em;
-  border-radius: 999px;
-  padding: 0.18rem 0.55rem;
+  white-space: nowrap;
 }
 
 .personnel-picker-status-badge.is-active {
-  color: #166534;
-  background: #f0fdf4;
   border: 1px solid #86efac;
+  background: #f0fdf4;
+  color: #166534;
 }
 
 .personnel-picker-status-badge.is-inactive {
-  color: #64748b;
-  background: #f1f5f9;
   border: 1px solid #e2e8f0;
+  background: #f1f5f9;
+  color: #64748b;
 }
+
+/* =========================================================
+   RIGHT CARD — SELECTED PERSONNEL
+   ========================================================= */
 
 .personnel-picker-right {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  height: 560px;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: #f8fafc;
-  min-width: 0;
-  height: 460px;
   box-sizing: border-box;
   overflow: hidden;
 }
 
 .personnel-picker-right-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.65rem 0.75rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.85rem 1rem;
   border-bottom: 1px solid #e2e8f0;
   background: #ffffff;
-  flex: none;
+  box-sizing: border-box;
 }
 
 .personnel-picker-right-header h5 {
+  min-width: 0;
   margin: 0;
-  font-size: 0.8rem;
-  font-weight: 700;
+  overflow: hidden;
   color: #334155;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .personnel-picker-right-header span {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #ffffff;
-  background: #b91c1c;
-  border-radius: 999px;
-  min-width: 22px;
-  height: 22px;
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  padding: 0 0.4rem;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: #b91c1c;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-sizing: border-box;
 }
+
+/* =========================================================
+   SELECTED PERSONNEL LIST
+   ========================================================= */
 
 .personnel-picker-right-list {
   display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  padding: 0.5rem;
   flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
   min-height: 0;
+  padding: 0.75rem;
+  overflow-x: hidden;
   overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.personnel-picker-right-list .personnel-picker-empty {
+  flex: 1 1 auto;
 }
 
 .personnel-picker-right-item {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 0.45rem;
-  background: #ffffff;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0.65rem 0.8rem;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 0.45rem 0.55rem;
+  background: #ffffff;
+  box-sizing: border-box;
 }
 
 .personnel-picker-right-avatar {
   display: inline-flex;
-  flex: 0 0 28px;
+  flex: 0 0 34px;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: #fee4e2;
   color: #b42318;
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   font-weight: 800;
 }
 
 .personnel-picker-right-identity {
   display: grid;
-  flex: 1;
-  gap: 0.05rem;
+  flex: 1 1 auto;
+  gap: 0.1rem;
   min-width: 0;
 }
 
 .personnel-picker-right-identity strong,
 .personnel-picker-right-identity small {
-  font-size: 0.82rem;
-  color: #334155;
   overflow: hidden;
+  color: #334155;
+  font-size: 0.9rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .personnel-picker-right-identity small {
   color: #7b8798;
-  font-size: 0.66rem;
+  font-size: 0.75rem;
   font-weight: 400;
 }
 
 .personnel-picker-right-item button {
-  flex: 0 0 auto;
   display: inline-flex;
+  flex: 0 0 26px;
   align-items: center;
   justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin: 0;
+  padding: 0;
   border: none;
+  border-radius: 999px;
   background: rgba(185, 28, 28, 0.12);
   color: #b91c1c;
-  border-radius: 999px;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  font-size: 0.7rem;
+  font-family: inherit;
+  font-size: 0.78rem;
   cursor: pointer;
 }
 
@@ -390,29 +565,86 @@
 }
 
 .personnel-picker-right-item button:disabled {
-  cursor: not-allowed;
   opacity: 0.5;
+  cursor: not-allowed;
 }
+
+/* =========================================================
+   ERROR STATE
+   ========================================================= */
 
 .personnel-picker-error-text {
+  margin-top: 0.5rem;
   color: #dc2626;
+  font-size: 0.85rem;
 }
 
-.personnel-picker-subtitle {
-  margin: 0 0 0.6rem;
-  color: #64748b;
-}
+/* =========================================================
+   RESPONSIVE LAYOUT
+   ========================================================= */
 
-@media (max-width: 720px) {
+@media (max-width: 900px) {
+  .announcement-form-grid {
+    grid-template-columns: 1fr;
+    column-gap: 0;
+    row-gap: 1rem;
+  }
+
+  .personnel-picker-section {
+    grid-column: 1;
+  }
+
   .personnel-picker-two-col {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
   .personnel-picker-left {
-    height: min(420px, 48vh);
+    height: min(460px, 50vh);
   }
 
   .personnel-picker-right {
-    height: min(300px, 38vh);
+    height: min(320px, 38vh);
+  }
+}
+
+@media (max-width: 600px) {
+  .personnel-picker-left {
+    height: min(430px, 55vh);
+    padding: 0.8rem;
+  }
+
+  .personnel-picker-right {
+    height: min(300px, 40vh);
+  }
+
+  .personnel-picker-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .personnel-picker-toolbar-actions {
+    width: 100%;
+  }
+
+  .personnel-picker-toolbar-actions button {
+    flex: 1 1 0;
+  }
+
+  .personnel-picker-checkbox-item {
+    grid-template-columns: 20px 36px minmax(0, 1fr);
+    gap: 0.6rem;
+    padding: 0.6rem 0.7rem;
+  }
+
+  .personnel-picker-avatar {
+    flex-basis: 36px;
+    width: 36px;
+    height: 36px;
+  }
+
+  .personnel-picker-status-badge {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.68rem;
   }
 }

@@ -1,11 +1,76 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './Header.css';
 import logo from '../assets/bfp_dasma.png';
 import { Link } from 'react-router-dom';
-import { FiMenu, FiX } from 'react-icons/fi';
+import { FiLogIn, FiMenu, FiX } from 'react-icons/fi';
+
+const NAV_ITEMS = [
+  { id: 'home', label: 'Home' },
+  { id: 'announcements', label: 'Announcements' },
+  { id: 'about', label: 'About' },
+  { id: 'process', label: 'Online Application' },
+  { id: 'contact', label: 'Contact Us' },
+  { id: 'faq', label: 'FAQ' }
+];
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('home');
+
+  useEffect(() => {
+    let animationFrameId = 0;
+
+    const updateActiveSection = () => {
+      const marker = window.scrollY + 150;
+      let currentSection = NAV_ITEMS[0].id;
+
+      NAV_ITEMS.forEach(({ id }) => {
+        const section = document.getElementById(id);
+        if (section && section.offsetTop <= marker) {
+          currentSection = id;
+        }
+      });
+
+      setActiveSection(currentSection);
+    };
+
+    const handleScroll = () => {
+      window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = window.requestAnimationFrame(updateActiveSection);
+    };
+
+    updateActiveSection();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [menuOpen]);
+
+  const handleSectionClick = (sectionId) => {
+    setActiveSection(sectionId);
+    setMenuOpen(false);
+  };
 
   return (
     <header className="header">
@@ -29,15 +94,31 @@ export default function Header() {
           {menuOpen ? <FiX aria-hidden="true" /> : <FiMenu aria-hidden="true" />}
         </button>
 
-        <nav id="landing-navigation" className={`nav ${menuOpen ? 'active' : ''}`} aria-label="Main navigation">
-          <a href="#home" onClick={() => setMenuOpen(false)}>Home</a>
-          <a href="#announcements" onClick={() => setMenuOpen(false)}>Announcements</a>
-          <a href="#about" onClick={() => setMenuOpen(false)}>About</a>
-          <a href="#contact" onClick={() => setMenuOpen(false)}>Contact Us</a>
-          <a href="#faq" onClick={() => setMenuOpen(false)}>FAQ</a>
+        {menuOpen && (
+          <button
+            type="button"
+            className="landing-nav-backdrop"
+            aria-label="Close navigation menu"
+            onClick={() => setMenuOpen(false)}
+          />
+        )}
 
-          <Link className="landing-login-link" to="/login" onClick={() => setMenuOpen(false)}>
-            <button className="login-btn">Login</button>
+        <nav id="landing-navigation" className={`nav ${menuOpen ? 'active' : ''}`} aria-label="Main navigation">
+          {NAV_ITEMS.map((item) => (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              className={activeSection === item.id ? 'is-active' : ''}
+              aria-current={activeSection === item.id ? 'location' : undefined}
+              onClick={() => handleSectionClick(item.id)}
+            >
+              {item.label}
+            </a>
+          ))}
+
+          <Link className="landing-login-link login-btn" to="/login" onClick={() => setMenuOpen(false)}>
+            <FiLogIn aria-hidden="true" />
+            Login
           </Link>
         </nav>
       </div>

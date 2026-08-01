@@ -34,7 +34,7 @@ export const DEFAULT_LANDING_CONTENT = {
   },
   process: {
     english: {
-      title: 'STEPS TO PROCESS YOUR FSIC & FSEC ONLINE APPLICATION',
+      title: 'Fire Safety Inspection Certificate (FSIC) & Fire Safety Evaluation Clearance (FSEC) Online Application',
       processSteps: [
         {
           title: 'ACCOUNT CREATION PROCESS',
@@ -72,7 +72,7 @@ export const DEFAULT_LANDING_CONTENT = {
       ]
     },
     tagalog: {
-      title: 'MGA HAKBANG SA PAGPROSESO NG IYONG FSIC & FSEC ONLINE APPLICATION',
+      title: 'Online Application para sa Fire Safety Inspection Certificate (FSIC) at Fire Safety Evaluation Clearance (FSEC)',
       processSteps: [
         {
           title: 'PROSESO NG PAGGAWA NG ACCOUNT',

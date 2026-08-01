@@ -31,7 +31,7 @@ const PERSONNEL_ANNOUNCEMENTS_PATH = '/personnel/announcements';
 // lets us restore it before paint instead of snapping back to the top.
 const sidebarScrollPositions = {};
 
-export default function Sidebar({ variant = 'admin' }) {
+export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { currentUser, hasPermission } = useUser();
@@ -152,11 +152,23 @@ export default function Sidebar({ variant = 'admin' }) {
   };
 
   const handleNavItemClick = (event, item) => {
-    if (variant !== 'personnel' || !hasPendingAnnouncementAck) return;
-    if (item.path === PERSONNEL_ANNOUNCEMENTS_PATH) return;
+    if (
+      variant === 'personnel' &&
+      hasPendingAnnouncementAck &&
+      item.path !== PERSONNEL_ANNOUNCEMENTS_PATH
+    ) {
+      event.preventDefault();
+      setShowAckRequiredModal(true);
+      return;
+    }
 
-    event.preventDefault();
-    setShowAckRequiredModal(true);
+    if (onNavigationRequest && location.pathname !== item.path) {
+      event.preventDefault();
+      onNavigationRequest({
+        to: item.path,
+        action: () => navigate(item.path)
+      });
+    }
   };
 
   const handleReturnToAnnouncement = () => {
@@ -258,6 +270,7 @@ export default function Sidebar({ variant = 'admin' }) {
                   <Link
                     to={item.path}
                     className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+                    onClick={(event) => handleNavItemClick(event, item)}
                   >
                     <span className="nav-icon">{React.createElement(item.icon, { 'aria-hidden': true })}</span>
                     <span className="nav-label">{item.label}</span>

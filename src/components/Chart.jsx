@@ -894,7 +894,7 @@ export default function Chart() {
 
   return (
     <div className="chart-container">
-      <Sidebar />
+      <Sidebar onNavigationRequest={handleHeaderNavigationRequest} />
 
       <div className="chart-main">
         <PageHeader

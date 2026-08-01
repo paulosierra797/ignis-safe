@@ -101,7 +101,7 @@ const buildAvatarPlaceholder = (name = '') => {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
-const initialOrgData = {
+export const initialOrgData = {
   top: {
     id: 'chief-1',
     name: 'FCINSP Michael John V Escano',
@@ -241,7 +241,7 @@ const normalizeNode = (node = {}) => {
   return normalized;
 };
 
-const normalizeOrgData = (data) => {
+export const normalizeOrgData = (data) => {
   if (!data || !data.top || !data.second || !Array.isArray(data.departments)) {
     return initialOrgData;
   }
@@ -346,7 +346,7 @@ const buildSuccessSummary = (changes) =>
     };
   });
 
-const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
+export const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
   const fallbackAvatar = useMemo(() => buildAvatarPlaceholder(node.name), [node.name]);
   const fileInputRef = useRef(null);
   const [failedAvatarSrc, setFailedAvatarSrc] = useState(null);

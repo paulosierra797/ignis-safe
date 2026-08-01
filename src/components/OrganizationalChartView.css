@@ -1,0 +1,59 @@
+.org-chart-page {
+  padding: clamp(3rem, 5vw, 5rem) 0;
+  min-height: calc(100vh - 76px - 200px);
+  background:
+    radial-gradient(circle at 8% 24%, rgba(185, 28, 28, 0.065), transparent 24%),
+    radial-gradient(circle at 94% 86%, rgba(245, 158, 11, 0.055), transparent 25%),
+    repeating-linear-gradient(45deg, rgba(127, 29, 29, 0.014) 0 1px, transparent 1px 28px),
+    #ffffff;
+}
+
+.org-chart-page-container {
+  width: min(calc(100% - 4rem), 1376px);
+  margin: 0 auto;
+}
+
+.org-chart-page-header {
+  margin: 0 0 1.75rem;
+}
+
+.org-chart-page-eyebrow {
+  margin: 0 0 0.4rem;
+  color: #9a3412;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.org-chart-page-header h2 {
+  width: fit-content;
+  margin: 0 0 0.6rem;
+  color: #a8171c;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.org-chart-page-header h2::after {
+  content: '';
+  width: 52px;
+  height: 4px;
+  margin-top: 0.7rem;
+  display: block;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b91c1c, #f59e0b);
+}
+
+.org-chart-page-note {
+  max-width: 720px;
+  margin: 0;
+  color: #526071;
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+@media (max-width: 767px) {
+  .org-chart-page-container {
+    width: calc(100% - 2rem);
+  }
+}

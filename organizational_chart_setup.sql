@@ -10,12 +10,16 @@ CREATE TABLE IF NOT EXISTS organizational_chart (
 
 ALTER TABLE organizational_chart ENABLE ROW LEVEL SECURITY;
 
+-- Public landing page shows a read-only view of the chart, so anon must be able to read it too.
+GRANT SELECT ON TABLE organizational_chart TO anon;
+
 DROP POLICY IF EXISTS "Allow authenticated read org chart" ON organizational_chart;
-CREATE POLICY "Allow authenticated read org chart"
+DROP POLICY IF EXISTS "Allow public read org chart" ON organizational_chart;
+CREATE POLICY "Allow public read org chart"
 ON organizational_chart
 FOR SELECT
-TO authenticated
-USING (true);
+TO anon, authenticated
+USING (config_key = 'main');
 
 DROP POLICY IF EXISTS "Allow authenticated write org chart" ON organizational_chart;
 CREATE POLICY "Allow authenticated write org chart"

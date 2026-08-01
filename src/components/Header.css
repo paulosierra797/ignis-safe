@@ -75,6 +75,22 @@
   outline: none;
 }
 
+.nav > a.active:not(.landing-login-link) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.nav > a.active:not(.landing-login-link)::after {
+  content: '';
+  position: absolute;
+  left: 0.75rem;
+  right: 0.75rem;
+  bottom: 0.32rem;
+  height: 2px;
+  border-radius: 2px;
+  background: #ffffff;
+}
+
 .landing-login-link {
   margin-left: 0.45rem;
   text-decoration: none;

@@ -29,6 +29,7 @@ import AdminProfile from './components/AdminProfile';
 import History from './components/History';
 import PersonnelOperations from './components/PersonnelOperations';
 import AdminReports from './components/AdminReports';
+import OrganizationalChartView from './components/OrganizationalChartView';
 import TermsPage from './components/TermsPage';
 import PrivacyPage from './components/PrivacyPage';
 import ConfirmSignupPage from './components/ConfirmSignupPage';
@@ -122,6 +123,7 @@ function App() {
               <Route path="/dashboard/audit-logs" element={<ProtectedRoute allowedRoles={['admin']}><AuditLogs /></ProtectedRoute>} />
               <Route path="/dashboard/announcements" element={<ProtectedRoute allowedRoles={['admin']}><Announcements /></ProtectedRoute>} />
               <Route path="/personnel/announcements" element={<ProtectedRoute allowedRoles={['personnel']}><Announcements /></ProtectedRoute>} />
+              <Route path="/organizational-chart" element={<OrganizationalChartView />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
             </Routes>

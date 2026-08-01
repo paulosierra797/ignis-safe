@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import './Header.css';
 import logo from '../assets/bfp_dasma.png';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { FiLogIn, FiMenu, FiX } from 'react-icons/fi';
 
 const NAV_ITEMS = [
@@ -16,8 +16,12 @@ const NAV_ITEMS = [
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('home');
+  const location = useLocation();
+  const isLandingPage = location.pathname === '/';
 
   useEffect(() => {
+    if (!isLandingPage) return undefined;
+
     let animationFrameId = 0;
 
     const updateActiveSection = () => {
@@ -48,7 +52,7 @@ export default function Header() {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
     };
-  }, []);
+  }, [isLandingPage]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -72,14 +76,16 @@ export default function Header() {
     setMenuOpen(false);
   };
 
+  const sectionHref = (sectionId) => `${isLandingPage ? '' : '/'}#${sectionId}`;
+
   return (
     <header className="header">
       <div className="header-container">
-        <a className="landing-brand" href="#home" onClick={() => setMenuOpen(false)}>
-          <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="landing-brand-logo" />
+        <a className="landing-brand" href={sectionHref('home')} onClick={() => setMenuOpen(false)}>
+          <img src={logo} alt="BFP Dasmarinas City Fire Station seal" className="landing-brand-logo" />
           <div className="landing-brand-text">
             <h4>BUREAU OF FIRE PROTECTION</h4>
-            <h4>DASMARIÑAS CITY FIRE STATION</h4>
+            <h4>DASMARINAS CITY FIRE STATION</h4>
           </div>
         </a>
 
@@ -107,14 +113,23 @@ export default function Header() {
           {NAV_ITEMS.map((item) => (
             <a
               key={item.id}
-              href={`#${item.id}`}
-              className={activeSection === item.id ? 'is-active' : ''}
-              aria-current={activeSection === item.id ? 'location' : undefined}
+              href={sectionHref(item.id)}
+              className={isLandingPage && activeSection === item.id ? 'is-active' : ''}
+              aria-current={isLandingPage && activeSection === item.id ? 'location' : undefined}
               onClick={() => handleSectionClick(item.id)}
             >
               {item.label}
             </a>
           ))}
+
+          <Link
+            to="/organizational-chart"
+            className={location.pathname === '/organizational-chart' ? 'is-active' : ''}
+            aria-current={location.pathname === '/organizational-chart' ? 'page' : undefined}
+            onClick={() => setMenuOpen(false)}
+          >
+            Organizational Chart
+          </Link>
 
           <Link className="landing-login-link login-btn" to="/login" onClick={() => setMenuOpen(false)}>
             <FiLogIn aria-hidden="true" />

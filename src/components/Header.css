@@ -153,7 +153,7 @@
   display: none;
 }
 
-@media (max-width: 920px) {
+@media (max-width: 1180px) {
   .header-container {
     min-height: 68px;
     padding: 0.5rem 1rem;

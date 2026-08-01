@@ -813,7 +813,7 @@ export default function Announcements() {
           <div className="announcement-card composer-card">
             <h2>Create Announcement</h2>
             <form className="announcement-form" onSubmit={handleSubmitAnnouncement}>
-              <div className="form-row two-col">
+              <div className="announcement-recipient-grid">
                 <div className="form-field">
                   <label htmlFor="announcementTitle">Title <span className="required-asterisk">*</span></label>
                   <input
@@ -850,15 +850,14 @@ export default function Announcements() {
                     ))}
                   </select>
                 </div>
-              </div>
 
-              {formData.audience_type === 'specific_personnel' && (
-                <div className="form-row">
-                  <div className="form-field">
+                {formData.audience_type === 'specific_personnel' && (
+                  <div className="form-field announcement-personnel-picker-field">
                     <label htmlFor="targetPersonnel">Select Personnel <span className="required-asterisk">*</span></label>
                     <p className="form-help-text personnel-picker-subtitle">
                       Choose one or more personnel to receive this announcement.
                     </p>
+
                     <PersonnelPicker
                       id="targetPersonnel"
                       personnel={recipients}
@@ -871,19 +870,21 @@ export default function Announcements() {
                       }}
                       error={personnelSelectionError}
                     />
+
                     {personnelSelectionError && (
                       <small className="form-help-text personnel-picker-error-text">
                         {personnelSelectionError}
                       </small>
                     )}
+
                     {recipients.length === 0 && (
                       <small className="form-help-text" style={{ color: '#dc2626' }}>
                         No active personnel available. Refresh page or contact admin.
                       </small>
                     )}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               <div className="form-row">
                 <div className="form-field announcement-message-field">

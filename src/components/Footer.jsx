@@ -1,12 +1,15 @@
 import './Footer.css'
 import logo from '../assets/bfp_dasma.png'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { FiFacebook, FiMail, FiPhone } from 'react-icons/fi'
 import { useLandingContent } from '../context/LandingContentContext'
 
 export default function Footer() {
   const { content } = useLandingContent()
+  const location = useLocation()
   const currentYear = new Date().getFullYear()
+  const isLandingPage = location.pathname === '/'
+  const sectionHref = (sectionId) => `${isLandingPage ? '' : '/'}#${sectionId}`
 
   return (
     <footer className="footer">
@@ -25,12 +28,12 @@ export default function Footer() {
         <nav className="footer-navigation" aria-label="Footer navigation">
           <h4>Explore</h4>
           <div className="footer-nav-links">
-            <a href="#home">Home</a>
-            <a href="#announcements">Announcements</a>
-            <a href="#about">About</a>
-            <a href="#process">Online Application</a>
-            <a href="#contact">Contact Us</a>
-            <a href="#faq">FAQ</a>
+            <a href={sectionHref('home')}>Home</a>
+            <a href={sectionHref('announcements')}>Announcements</a>
+            <a href={sectionHref('about')}>About</a>
+            <a href={sectionHref('process')}>Online Application</a>
+            <a href={sectionHref('contact')}>Contact Us</a>
+            <a href={sectionHref('faq')}>FAQ</a>
           </div>
         </nav>
 

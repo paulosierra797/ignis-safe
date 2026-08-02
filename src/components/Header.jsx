@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import './Header.css';
 import logo from '../assets/bfp_dasma.png';
 import { Link, useLocation } from 'react-router-dom';
@@ -17,6 +17,8 @@ export default function Header() {
   const [activeSection, setActiveSection] = useState('home');
   const location = useLocation();
   const isLandingPage = location.pathname === '/';
+  const suppressObserverRef = useRef(false);
+  const suppressTimeoutRef = useRef(null);
 
   useEffect(() => {
     if (!isLandingPage) return undefined;
@@ -29,6 +31,10 @@ export default function Header() {
 
     const observer = new IntersectionObserver(
       (entries) => {
+        // While a nav click is smooth-scrolling the page, the observer fires for
+        // every section that scrolls past the detection band, which would flash
+        // the wrong link active until the scroll settles. Ignore it until then.
+        if (suppressObserverRef.current) return;
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setActiveSection(entry.target.id);
@@ -41,6 +47,24 @@ export default function Header() {
     sections.forEach((section) => observer.observe(section));
     return () => observer.disconnect();
   }, [isLandingPage]);
+
+  useEffect(() => () => clearTimeout(suppressTimeoutRef.current), []);
+
+  const handleNavLinkClick = (id) => {
+    setActiveSection(id);
+    setMenuOpen(false);
+
+    suppressObserverRef.current = true;
+    clearTimeout(suppressTimeoutRef.current);
+
+    const resumeObserver = () => {
+      suppressObserverRef.current = false;
+      window.removeEventListener('scrollend', resumeObserver);
+    };
+    window.addEventListener('scrollend', resumeObserver);
+    // Fallback in case `scrollend` doesn't fire (unsupported browser, no scroll needed).
+    suppressTimeoutRef.current = setTimeout(resumeObserver, 1500);
+  };
 
   return (
     <header className="header">
@@ -71,10 +95,7 @@ export default function Header() {
               href={`#${id}`}
               className={isLandingPage && activeSection === id ? 'active' : ''}
               aria-current={isLandingPage && activeSection === id ? 'true' : undefined}
-              onClick={() => {
-                setActiveSection(id);
-                setMenuOpen(false);
-              }}
+              onClick={() => handleNavLinkClick(id)}
             >
               {label}
             </a>

@@ -101,6 +101,8 @@ const buildAvatarPlaceholder = (name = '') => {
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
+// Shared with the public read-only organizational chart.
+// eslint-disable-next-line react-refresh/only-export-components
 export const initialOrgData = {
   top: {
     id: 'chief-1',
@@ -241,6 +243,7 @@ const normalizeNode = (node = {}) => {
   return normalized;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const normalizeOrgData = (data) => {
   if (!data || !data.top || !data.second || !Array.isArray(data.departments)) {
     return initialOrgData;
@@ -894,7 +897,7 @@ export default function Chart() {
 
   return (
     <div className="chart-container">
-      <Sidebar />
+      <Sidebar onNavigationRequest={handleHeaderNavigationRequest} />
 
       <div className="chart-main">
         <PageHeader

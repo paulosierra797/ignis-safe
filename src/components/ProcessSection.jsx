@@ -9,12 +9,15 @@ export default function ProcessSection() {
   const currentContent = isTagalog ? landingContent.process.tagalog : landingContent.process.english
 
   return (
-    <section className="process">
+    <section className="process" id="process">
       <div className="process-container">
         <div className="process-heading-row">
           <div>
-            <p className="landing-section-eyebrow">Online application guide</p>
+            <p className="landing-section-eyebrow">Step-by-step processing guide</p>
             <h2>{currentContent.title}</h2>
+            <p className="process-heading-description">
+              Follow the required account, application, payment, and document-release steps.
+            </p>
           </div>
           <button
             type="button"

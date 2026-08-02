@@ -18,7 +18,7 @@ export default function Header() {
   const [activeSection, setActiveSection] = useState('home');
   const location = useLocation();
   const isLandingPage = location.pathname === '/';
-  const suppressObserverRef = useRef(false);
+  const suppressTrackingRef = useRef(false);
   const suppressTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -27,32 +27,20 @@ export default function Header() {
     let animationFrameId = 0;
 
     const updateActiveSection = () => {
+      // While a nav click is smooth-scrolling the page toward its target section,
+      // skip updates so the indicator doesn't flash through every section it
+      // scrolls past before settling on the one that was actually clicked.
+      if (suppressTrackingRef.current) return;
+
       const marker = window.scrollY + 150;
       let currentSection = NAV_ITEMS[0].id;
 
-<<<<<<< HEAD
-    const observer = new IntersectionObserver(
-      (entries) => {
-        // While a nav click is smooth-scrolling the page, the observer fires for
-        // every section that scrolls past the detection band, which would flash
-        // the wrong link active until the scroll settles. Ignore it until then.
-        if (suppressObserverRef.current) return;
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveSection(entry.target.id);
-          }
-        });
-      },
-      { rootMargin: '-45% 0px -50% 0px', threshold: 0 }
-    );
-=======
       NAV_ITEMS.forEach(({ id }) => {
         const section = document.getElementById(id);
         if (section && section.offsetTop <= marker) {
           currentSection = id;
         }
       });
->>>>>>> 5da7b85bc3c1f36776317c70bb5e8b90f10c6f07
 
       setActiveSection(currentSection);
     };
@@ -73,26 +61,6 @@ export default function Header() {
     };
   }, [isLandingPage]);
 
-<<<<<<< HEAD
-  useEffect(() => () => clearTimeout(suppressTimeoutRef.current), []);
-
-  const handleNavLinkClick = (id) => {
-    setActiveSection(id);
-    setMenuOpen(false);
-
-    suppressObserverRef.current = true;
-    clearTimeout(suppressTimeoutRef.current);
-
-    const resumeObserver = () => {
-      suppressObserverRef.current = false;
-      window.removeEventListener('scrollend', resumeObserver);
-    };
-    window.addEventListener('scrollend', resumeObserver);
-    // Fallback in case `scrollend` doesn't fire (unsupported browser, no scroll needed).
-    suppressTimeoutRef.current = setTimeout(resumeObserver, 1500);
-  };
-
-=======
   useEffect(() => {
     if (!menuOpen) return undefined;
 
@@ -110,14 +78,26 @@ export default function Header() {
     };
   }, [menuOpen]);
 
+  useEffect(() => () => clearTimeout(suppressTimeoutRef.current), []);
+
   const handleSectionClick = (sectionId) => {
     setActiveSection(sectionId);
     setMenuOpen(false);
+
+    suppressTrackingRef.current = true;
+    clearTimeout(suppressTimeoutRef.current);
+
+    const resumeTracking = () => {
+      suppressTrackingRef.current = false;
+      window.removeEventListener('scrollend', resumeTracking);
+    };
+    window.addEventListener('scrollend', resumeTracking);
+    // Fallback in case `scrollend` doesn't fire (unsupported browser, no scroll needed).
+    suppressTimeoutRef.current = setTimeout(resumeTracking, 1500);
   };
 
   const sectionHref = (sectionId) => `${isLandingPage ? '' : '/'}#${sectionId}`;
 
->>>>>>> 5da7b85bc3c1f36776317c70bb5e8b90f10c6f07
   return (
     <header className="header">
       <div className="header-container">
@@ -152,19 +132,11 @@ export default function Header() {
         <nav id="landing-navigation" className={`nav ${menuOpen ? 'active' : ''}`} aria-label="Main navigation">
           {NAV_ITEMS.map((item) => (
             <a
-<<<<<<< HEAD
-              key={id}
-              href={`#${id}`}
-              className={isLandingPage && activeSection === id ? 'active' : ''}
-              aria-current={isLandingPage && activeSection === id ? 'true' : undefined}
-              onClick={() => handleNavLinkClick(id)}
-=======
               key={item.id}
               href={sectionHref(item.id)}
               className={isLandingPage && activeSection === item.id ? 'is-active' : ''}
               aria-current={isLandingPage && activeSection === item.id ? 'location' : undefined}
               onClick={() => handleSectionClick(item.id)}
->>>>>>> 5da7b85bc3c1f36776317c70bb5e8b90f10c6f07
             >
               {item.label}
             </a>

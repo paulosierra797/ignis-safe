@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import './App.css'
 import Header from './components/Header'
 import HeroSection from './components/HeroSection'
@@ -38,6 +39,16 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { LandingContentProvider } from './context/LandingContentContext';
 import { LayoutProvider } from './context/LayoutContext';
 import AppSessionTracker from './components/AppSessionTracker';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
 
 function LandingPage() {
   const location = useLocation();
@@ -95,6 +106,7 @@ function App() {
       <LayoutProvider>
         <LandingContentProvider>
           <div className="app">
+            <ScrollToTop />
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />

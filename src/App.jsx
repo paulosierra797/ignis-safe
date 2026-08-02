@@ -41,11 +41,56 @@ import { LayoutProvider } from './context/LayoutContext';
 import AppSessionTracker from './components/AppSessionTracker';
 
 function ScrollToTop() {
-  const { pathname } = useLocation();
+  const { pathname, hash } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+    if (!hash) {
+      window.scrollTo(0, 0);
+      return undefined;
+    }
+
+    // Cross-page nav links (e.g. from /organizational-chart) land here with a
+    // section hash after routing to the homepage. Sections above the target
+    // (like Announcements) load their content async and grow taller once it
+    // arrives, shifting everything below — so wait for the target's position
+    // to stop moving before scrolling to it, instead of racing that layout
+    // shift with a one-shot scroll. scroll-margin-top on the section elements
+    // keeps them clear of the sticky header once we land.
+    const id = hash.slice(1);
+    let cancelled = false;
+    let timeoutId = null;
+    let lastOffsetTop = null;
+    let stableChecks = 0;
+    const deadline = Date.now() + 1500;
+
+    const waitForStableLayout = () => {
+      if (cancelled) return;
+
+      const target = document.getElementById(id);
+      if (!target) {
+        window.scrollTo(0, 0);
+        return;
+      }
+
+      const timedOut = Date.now() > deadline;
+      stableChecks = target.offsetTop === lastOffsetTop ? stableChecks + 1 : 0;
+      lastOffsetTop = target.offsetTop;
+
+      if (stableChecks >= 2 || timedOut) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+
+      timeoutId = setTimeout(waitForStableLayout, 120);
+    };
+
+    waitForStableLayout();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [pathname, hash]);
 
   return null;
 }

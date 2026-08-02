@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './Header.css';
 import logo from '../assets/bfp_dasma.png';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiLogIn, FiMenu, FiX } from 'react-icons/fi';
 
 const NAV_ITEMS = [
@@ -15,11 +15,36 @@ const NAV_ITEMS = [
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('home');
   const location = useLocation();
+  const [activeSection, setActiveSection] = useState(() => {
+    // Seed the indicator from the URL hash on first render so a cross-page
+    // nav link (which mounts this Header fresh with a target hash already
+    // in place) doesn't briefly show "Home" before the scroll effect runs.
+    const initialHashId = location.hash ? location.hash.slice(1) : null;
+    return initialHashId && NAV_ITEMS.some((item) => item.id === initialHashId)
+      ? initialHashId
+      : 'home';
+  });
+  const navigate = useNavigate();
   const isLandingPage = location.pathname === '/';
   const suppressTrackingRef = useRef(false);
   const suppressTimeoutRef = useRef(null);
+  // Hash present the moment this Header instance mounts — set when a
+  // cross-page nav link routes here with a target section in the URL.
+  const initialHashRef = useRef(location.hash);
+
+  const suppressTrackingUntilScrollEnd = useCallback(() => {
+    suppressTrackingRef.current = true;
+    clearTimeout(suppressTimeoutRef.current);
+
+    const resumeTracking = () => {
+      suppressTrackingRef.current = false;
+      window.removeEventListener('scrollend', resumeTracking);
+    };
+    window.addEventListener('scrollend', resumeTracking);
+    // Fallback in case `scrollend` doesn't fire (unsupported browser, no scroll needed).
+    suppressTimeoutRef.current = setTimeout(resumeTracking, 1500);
+  }, []);
 
   useEffect(() => {
     if (!isLandingPage) return undefined;
@@ -50,7 +75,17 @@ export default function Header() {
       animationFrameId = window.requestAnimationFrame(updateActiveSection);
     };
 
-    updateActiveSection();
+    const initialHashId = initialHashRef.current ? initialHashRef.current.slice(1) : null;
+    if (initialHashId && NAV_ITEMS.some((item) => item.id === initialHashId)) {
+      // Arrived here via a cross-page nav link — the router's own scroll
+      // effect is about to animate to this section, so keep the indicator
+      // (already seeded from the hash above) pinned instead of letting the
+      // scroll-driven heuristic below race it.
+      suppressTrackingUntilScrollEnd();
+    } else {
+      updateActiveSection();
+    }
+
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll);
 
@@ -59,7 +94,7 @@ export default function Header() {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('resize', handleScroll);
     };
-  }, [isLandingPage]);
+  }, [isLandingPage, suppressTrackingUntilScrollEnd]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
@@ -80,20 +115,21 @@ export default function Header() {
 
   useEffect(() => () => clearTimeout(suppressTimeoutRef.current), []);
 
-  const handleSectionClick = (sectionId) => {
-    setActiveSection(sectionId);
+  const handleSectionClick = (event, sectionId) => {
     setMenuOpen(false);
 
-    suppressTrackingRef.current = true;
-    clearTimeout(suppressTimeoutRef.current);
+    if (!isLandingPage) {
+      // Not on the landing page: hand off to the router so it mounts the
+      // homepage first, then let the hash-scroll effect there take it from
+      // there instead of relying on the browser's native (and unreliable,
+      // pre-hydration) anchor-scroll for a full page navigation.
+      event.preventDefault();
+      navigate({ pathname: '/', hash: `#${sectionId}` });
+      return;
+    }
 
-    const resumeTracking = () => {
-      suppressTrackingRef.current = false;
-      window.removeEventListener('scrollend', resumeTracking);
-    };
-    window.addEventListener('scrollend', resumeTracking);
-    // Fallback in case `scrollend` doesn't fire (unsupported browser, no scroll needed).
-    suppressTimeoutRef.current = setTimeout(resumeTracking, 1500);
+    setActiveSection(sectionId);
+    suppressTrackingUntilScrollEnd();
   };
 
   const sectionHref = (sectionId) => `${isLandingPage ? '' : '/'}#${sectionId}`;
@@ -101,7 +137,7 @@ export default function Header() {
   return (
     <header className="header">
       <div className="header-container">
-        <a className="landing-brand" href={sectionHref('home')} onClick={() => setMenuOpen(false)}>
+        <a className="landing-brand" href={sectionHref('home')} onClick={(event) => handleSectionClick(event, 'home')}>
           <img src={logo} alt="BFP Dasmarinas City Fire Station seal" className="landing-brand-logo" />
           <div className="landing-brand-text">
             <h4>BUREAU OF FIRE PROTECTION</h4>
@@ -136,7 +172,7 @@ export default function Header() {
               href={sectionHref(item.id)}
               className={isLandingPage && activeSection === item.id ? 'is-active' : ''}
               aria-current={isLandingPage && activeSection === item.id ? 'location' : undefined}
-              onClick={() => handleSectionClick(item.id)}
+              onClick={(event) => handleSectionClick(event, item.id)}
             >
               {item.label}
             </a>

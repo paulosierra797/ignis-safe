@@ -67,6 +67,75 @@ const toNumericPersonnelId = (value, fallbackSeed = '') => {
   return Math.abs(hash) + 1;
 };
 
+const buildOfficerFromAuthUser = async (authUser) => {
+  if (!authUser?.id || !authUser?.email) {
+    return null;
+  }
+
+  const accountEmail = authUser.email.toLowerCase();
+  const fallbackOfficer = personnelDatabase.find((p) => p.email.toLowerCase() === accountEmail);
+
+  const [adminResult, workspaceResult] = await Promise.all([
+    supabase
+      .from('admin')
+      .select('*')
+      .eq('admin_id', authUser.id)
+      .maybeSingle(),
+    supabase
+      .from('personnel_workspace_profiles')
+      .select('*')
+      .eq('admin_id', authUser.id)
+      .maybeSingle()
+  ]);
+
+  if (adminResult.error || workspaceResult.error) {
+    return null;
+  }
+
+  const adminProfile = adminResult.data || null;
+  const workspaceProfile = workspaceResult.data || null;
+  const accountRole = String(adminProfile?.role || '').trim().toLowerCase();
+  const accountStatus = String(adminProfile?.status || '').trim().toLowerCase();
+
+  if (accountRole !== 'personnel' || (accountStatus && accountStatus !== 'active')) {
+    return null;
+  }
+
+  const personnelProfile = workspaceProfile || adminProfile;
+  const personnelName = `${personnelProfile?.first_name || ''} ${personnelProfile?.last_name || ''}`.trim();
+
+  const derivedOfficer = {
+    admin_id: authUser.id,
+    id: toNumericPersonnelId(
+      Number.isInteger(adminProfile?.id) ? adminProfile.id : fallbackOfficer?.id,
+      accountEmail
+    ),
+
+    name:
+      personnelName ||
+      personnelProfile?.name ||
+      authUser.user_metadata?.name ||
+      fallbackOfficer?.name ||
+      accountEmail.split('@')[0],
+
+    rank:
+      personnelProfile?.rank ||
+      authUser.user_metadata?.rank ||
+      fallbackOfficer?.rank ||
+      'Personnel',
+
+    email: personnelProfile?.email || accountEmail,
+
+    avatarUrl:
+      personnelProfile?.avatar_url ||
+      authUser.user_metadata?.avatar_url ||
+      null,
+    is_personnel_workspace_profile: Boolean(workspaceProfile)
+  };
+
+  return normalizeOfficerProfile(derivedOfficer);
+};
+
 // QR Session Management
 export const generateQRSession = async (stationId = 'DEFAULT') => {
   const { data, error } = await supabase.rpc('create_attendance_qr_session', {
@@ -162,57 +231,30 @@ export const authenticatePersonnel = async (email, password) => {
     return null;
   }
 
-  const authUser = data.user;
-  const accountEmail = authUser.email.toLowerCase();
-  const fallbackOfficer = personnelDatabase.find((p) => p.email.toLowerCase() === accountEmail);
-
-  const [adminResult, workspaceResult] = await Promise.all([
-    supabase
-      .from('admin')
-      .select('*')
-      .eq('admin_id', authUser.id)
-      .maybeSingle(),
-    supabase
-      .from('personnel_workspace_profiles')
-      .select('*')
-      .eq('admin_id', authUser.id)
-      .maybeSingle()
-  ]);
-  const adminProfile = adminResult.data || null;
-  const workspaceProfile = workspaceResult.data || null;
-  const personnelProfile = workspaceProfile || adminProfile;
-  const personnelName = `${personnelProfile?.first_name || ''} ${personnelProfile?.last_name || ''}`.trim();
-
- const derivedOfficer = {
-  admin_id: authUser.id,   // ADD THIS
-  id: toNumericPersonnelId(
-    Number.isInteger(adminProfile?.id) ? adminProfile.id : fallbackOfficer?.id,
-    accountEmail
-  ),
-
-  name:
-    personnelName ||
-    personnelProfile?.name ||
-    authUser.user_metadata?.name ||
-    fallbackOfficer?.name ||
-    accountEmail.split('@')[0],
-
-  rank:
-    personnelProfile?.rank ||
-    authUser.user_metadata?.rank ||
-    fallbackOfficer?.rank ||
-    'Personnel',
-
-  email: personnelProfile?.email || accountEmail,
-
-  avatarUrl:
-    personnelProfile?.avatar_url ||
-    authUser.user_metadata?.avatar_url ||
-    null,
-  is_personnel_workspace_profile: Boolean(workspaceProfile)
+  return buildOfficerFromAuthUser(data.user);
 };
 
-  return normalizeOfficerProfile(derivedOfficer);
+export const getActivePersonnelSession = async () => {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+  if (sessionError || !sessionData?.session) {
+    clearAuthToken();
+    return null;
+  }
+
+  const { data, error } = await supabase.auth.getUser();
+
+  if (error || !data?.user) {
+    clearAuthToken();
+    return null;
+  }
+
+  const officer = await buildOfficerFromAuthUser(data.user);
+  if (!officer) {
+    clearAuthToken();
+  }
+
+  return officer;
 };
 
 export const saveAuthToken = (officer) => {

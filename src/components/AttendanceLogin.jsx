@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { authenticatePersonnel, saveAuthToken } from '../utils/attendanceService';
+import { authenticatePersonnel, getActivePersonnelSession, saveAuthToken } from '../utils/attendanceService';
 import { validateQRSession } from '../utils/attendanceService';
 import ignisSafeLogo from '../assets/Logo1.png';
 
@@ -12,12 +12,16 @@ const AttendanceLogin = () => {
   const navigate = useNavigate();
 const [searchParams] = useSearchParams();
 const sessionId = searchParams.get("station");
+const buildConfirmUrl = useCallback((attendanceSessionId) =>
+  `/attendance-confirm?auth=${encodeURIComponent(attendanceSessionId)}&station=${encodeURIComponent(sessionId || '')}`,
+[sessionId]);
  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [qrValid, setQrValid] = useState(false);
 
   const handleLogin = async (e) => {
@@ -44,37 +48,68 @@ const sessionId = searchParams.get("station");
     // Authenticate
     const officer = await authenticatePersonnel(email, password);
     if (officer) {
-     saveAuthToken(officer);
+      const token = saveAuthToken(officer);
       setEmail('');
       setPassword('');
-      navigate(`/attendance-scan?station=${encodeURIComponent(sessionId)}`);
+      navigate(buildConfirmUrl(token.sessionId), { replace: true });
     } else {
-      setError('Invalid account email or password. Please try again.');
+      setError('Invalid personnel account email or password. Please try again.');
     }
 
     setIsLoading(false);
   };
  useEffect(() => {
-  const checkQR = async () => {
-    if (!sessionId) {
-      setError("Invalid QR session");
-      setQrValid(false);
-      return;
+  let isCancelled = false;
+
+  const checkQRAndSession = async () => {
+    setIsCheckingSession(true);
+
+    try {
+      if (!sessionId) {
+        setError("Invalid QR session");
+        setQrValid(false);
+        setIsCheckingSession(false);
+        return;
+      }
+
+      const result = await validateQRSession(sessionId);
+
+      if (isCancelled) return;
+
+      if (!result.valid) {
+        setError(result.reason);
+        setQrValid(false);
+        setIsCheckingSession(false);
+        return;
+      }
+
+      setQrValid(true);
+      setError('');
+
+      const officer = await getActivePersonnelSession();
+      if (isCancelled) return;
+
+      if (officer) {
+        const token = saveAuthToken(officer);
+        navigate(buildConfirmUrl(token.sessionId), { replace: true });
+        return;
+      }
+
+      setIsCheckingSession(false);
+    } catch {
+      if (!isCancelled) {
+        setError('Could not validate the QR session. Please try again.');
+        setQrValid(false);
+        setIsCheckingSession(false);
+      }
     }
-
-    const result = await validateQRSession(sessionId);
-
-    if (!result.valid) {
-      setError(result.reason);
-      setQrValid(false);
-      return;
-    }
-
-    setQrValid(true);
   };
 
-  checkQR();
-}, [sessionId]);
+  checkQRAndSession();
+  return () => {
+    isCancelled = true;
+  };
+}, [buildConfirmUrl, navigate, sessionId]);
   
 
   return (
@@ -96,7 +131,16 @@ const sessionId = searchParams.get("station");
 
         <section className="login-card" aria-label="Personnel attendance login form">
 
-          <form className="login-form" onSubmit={handleLogin}>
+          {isCheckingSession ? (
+            <div className="login-form">
+              <div className="pin-hint">Checking your active personnel session...</div>
+            </div>
+          ) : !qrValid ? (
+            <div className="login-form">
+              {error && <div className="error-message">{error}</div>}
+            </div>
+          ) : (
+            <form className="login-form" onSubmit={handleLogin}>
             <div className="form-group">
               <label htmlFor="email-input" className="form-label">
                 Account Email
@@ -148,15 +192,18 @@ const sessionId = searchParams.get("station");
             <button
               type="submit"
               className="login-btn"
-              disabled={isLoading || !email.trim() || !password}
+              disabled={isLoading || isCheckingSession || !qrValid || !email.trim() || !password}
             >
               {isLoading ? 'Logging in...' : 'Login & Continue'}
             </button>
           </form>
+          )}
 
-          <div className="login-footer">
-            Only you can mark attendance with your credentials. Your account password is required for every session.
-          </div>
+          {!isCheckingSession && qrValid && (
+            <div className="login-footer">
+              Only you can mark attendance with your credentials. Your account password is required for every session.
+            </div>
+          )}
         </section>
       </div>
     </div>

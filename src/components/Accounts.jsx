@@ -594,6 +594,16 @@ export default function Accounts() {
     nextParams.set('tab', tabKey);
     setSearchParams(nextParams, { replace: true });
   };
+  const hasMountedAccountsTabRef = useRef(false);
+  useEffect(() => {
+    if (!hasMountedAccountsTabRef.current) {
+      hasMountedAccountsTabRef.current = true;
+      return;
+    }
+
+    const activePanel = document.getElementById(`accounts-tabpanel-${activeAccountsTab}`);
+    activePanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [activeAccountsTab]);
   const [accounts, setAccounts] = useState([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

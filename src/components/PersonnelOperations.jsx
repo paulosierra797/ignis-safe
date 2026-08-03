@@ -357,9 +357,9 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
 
         <div className="personnel-ops-grid">
           <section className="ops-card schedule-card">
-            <div className="my-shift-banner">
-              <span className="my-shift-label">Your Shift:</span>
-              <span className={`my-shift-value my-shift-${myShiftType ? myShiftType.toLowerCase() : 'none'}`}>
+            <div className="my-shift-card">
+              <span className="my-shift-card-label">Your Assigned Shift</span>
+              <span className={`my-shift-card-value my-shift-${myShiftType ? myShiftType.toLowerCase() : 'none'}`}>
                 {myShiftLabel}
               </span>
             </div>

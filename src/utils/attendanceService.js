@@ -212,10 +212,11 @@ export const isSessionValid = (session) => {
 
 export const getExpiryTime = (expiresAt) => {
   const now = new Date().getTime();
-  const remaining = expiresAt - now;
+  const remaining = Math.max(0, expiresAt - now);
   const hours = Math.floor(remaining / (1000 * 60 * 60));
   const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-  return { hours, minutes, remaining };
+  const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+  return { hours, minutes, seconds, remaining };
 };
 
 // Personnel Database

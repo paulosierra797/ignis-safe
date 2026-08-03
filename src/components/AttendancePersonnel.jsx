@@ -179,7 +179,7 @@ const AttendancePersonnel = () => {
                 <div className="qr-expiry">
                   {expiryInfo && expiryInfo.remaining > 0 ? (
                     <span className="qr-expiry-text">
-                      Expires in {expiryInfo.hours}h {expiryInfo.minutes}m
+                      Expires in {expiryInfo.hours}h {expiryInfo.minutes}m {expiryInfo.seconds}s
                     </span>
                   ) : (
                     <span>QR expired</span>

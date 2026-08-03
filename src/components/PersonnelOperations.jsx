@@ -1,11 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { useUser } from '../context/UserContext';
 import {
   getPersonnelLeaveRequest,
   submitPersonnelLeaveRequest,
-  getPersonnelShiftSchedule
+  getPersonnelShiftSchedule,
+  getPersonnelForDate,
+  getPersonnelShiftAssignments
 } from '../utils/personnelOperationsService';
 import { getManilaToday } from '../utils/dateUtils';
 import { logPersonnelActivity } from '../utils/activityLogService';
@@ -79,6 +81,12 @@ export default function PersonnelOperations() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [myShiftAssignments, setMyShiftAssignments] = useState([]);
+  const [selectedDayIso, setSelectedDayIso] = useState(null);
+  const [dayDetailLoading, setDayDetailLoading] = useState(false);
+  const [dayDetailError, setDayDetailError] = useState('');
+  const [dayDetailData, setDayDetailData] = useState({ onDuty: [], onLeave: [] });
+  const dayDetailRequestIdRef = useRef(0);
 
   const loadPageData = useCallback(async () => {
     if (!currentUser?.admin_id) {
@@ -102,12 +110,13 @@ const lastDay = new Date(
   0
 );
 
-const [leaveRes, scheduleRes] = await Promise.all([
+const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
   getPersonnelLeaveRequest(currentUser.admin_id),
   getPersonnelShiftSchedule({
     startDate: firstDay,
     endDate: lastDay
-  })
+  }),
+  getPersonnelShiftAssignments(currentUser.admin_id)
 ]);
 
     if (leaveRes.error) {
@@ -129,6 +138,10 @@ const [leaveRes, scheduleRes] = await Promise.all([
         shiftA: scheduleRes.data?.totalShiftADates || 0,
         shiftB: scheduleRes.data?.totalShiftBDates || 0
       });
+    }
+
+    if (!myAssignmentsRes.error) {
+      setMyShiftAssignments(myAssignmentsRes.data || []);
     }
 
     setLoading(false);
@@ -168,6 +181,35 @@ const [leaveRes, scheduleRes] = await Promise.all([
     [shiftRows]
   );
 
+  // A personnel's shift type is an explicit A/B assignment range, independent
+  // of whether today happens to be an active duty day for that range - so we
+  // resolve it from their assignment records rather than from a single day's
+  // schedule row.
+  const myShiftType = useMemo(() => {
+    if (!myShiftAssignments.length) {
+      return null;
+    }
+
+    const today = getManilaToday();
+    const current = myShiftAssignments.find(
+      (assignment) => assignment.start_date <= today && assignment.end_date >= today
+    );
+    if (current) {
+      return current.shift_type;
+    }
+
+    const upcoming = myShiftAssignments
+      .filter((assignment) => assignment.start_date > today)
+      .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
+    if (upcoming) {
+      return upcoming.shift_type;
+    }
+
+    return myShiftAssignments[0].shift_type;
+  }, [myShiftAssignments]);
+
+  const myShiftLabel = myShiftType === 'A' ? 'Shift A' : myShiftType === 'B' ? 'Shift B' : 'Not Yet Assigned';
+
   const calendarLabel = useMemo(
     () =>
       calendarMonth.toLocaleDateString('en-US', {
@@ -182,6 +224,51 @@ const [leaveRes, scheduleRes] = await Promise.all([
   const handleCalendarMonthShift = (offset) => {
     setCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + offset, 1));
   };
+
+  const openDayDetail = useCallback(async (isoDate) => {
+    const requestId = dayDetailRequestIdRef.current + 1;
+    dayDetailRequestIdRef.current = requestId;
+
+    setSelectedDayIso(isoDate);
+    setDayDetailLoading(true);
+    setDayDetailError('');
+    setDayDetailData({ onDuty: [], onLeave: [] });
+
+    const { data, error } = await getPersonnelForDate(isoDate);
+    if (requestId !== dayDetailRequestIdRef.current) {
+      return;
+    }
+
+    if (error) {
+      setDayDetailError(error);
+    } else {
+      setDayDetailData({ onDuty: data?.onDuty || [], onLeave: data?.onLeave || [] });
+    }
+
+    setDayDetailLoading(false);
+  }, []);
+
+  const closeDayDetail = useCallback(() => {
+    dayDetailRequestIdRef.current += 1;
+    setSelectedDayIso(null);
+    setDayDetailError('');
+    setDayDetailData({ onDuty: [], onLeave: [] });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDayIso) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        closeDayDetail();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedDayIso, closeDayDetail]);
 
   const todayDutySummary = useMemo(() => {
     if (!shiftRows.length) {
@@ -318,7 +405,14 @@ const [leaveRes, scheduleRes] = await Promise.all([
               </span>
             </div>
 
-            <p className="ops-caption">Duty schedule calendar. Use the arrows to browse other months.</p>
+            <div className="my-shift-banner">
+              <span className="my-shift-label">Your Shift:</span>
+              <span className={`my-shift-value my-shift-${myShiftType ? myShiftType.toLowerCase() : 'none'}`}>
+                {myShiftLabel}
+              </span>
+            </div>
+
+            <p className="ops-caption">Duty schedule calendar. Click any date to see who else is scheduled with you.</p>
 
             <div className="shift-summary-line">
               <span>Shift A dates configured: {shiftTotals.shiftA}</span>
@@ -385,21 +479,40 @@ const [leaveRes, scheduleRes] = await Promise.all([
 
                   const isoDate = toIsoDate(dayDate);
                   const row = shiftRowsByDate.get(isoDate);
-                  const onDuty = row?.onDutyCount || 0;
+                  const onDutyPersonnel = row?.onDutyPersonnel || [];
+                  const onLeavePersonnel = row?.onLeavePersonnel || [];
                   const onLeave = row?.onLeaveCount || 0;
                   const hasData = Boolean(row);
-                  const isMineOnDuty = Boolean(row?.onDutyPersonnel?.some((p) => p.admin_id === currentUser?.admin_id));
-                  // Display-only: past dates are visually disabled here but the
-                  // underlying schedule data is never modified.
+                  const isMineOnDuty = Boolean(onDutyPersonnel.some((p) => p.admin_id === currentUser?.admin_id));
+                  const isMineOnLeave = Boolean(onLeavePersonnel.some((p) => p.admin_id === currentUser?.admin_id));
+                  const myDayStatus = isMineOnDuty ? 'On Duty' : isMineOnLeave ? 'On Leave' : 'Off Duty';
+                  const myDayStatusClass = isMineOnDuty
+                    ? 'calendar-stat-duty'
+                    : isMineOnLeave
+                      ? 'calendar-stat-leave'
+                      : 'calendar-stat-off';
+                  // Past dates are visually muted here but remain clickable so
+                  // personnel can still look back at who they were scheduled with.
                   const isPastDate = isoDate < todayIso;
                   const isToday = isoDate === todayIso;
                   const shiftTagClass = row ? row.shift.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '';
+                  const visibleOnDutyPersonnel = onDutyPersonnel.slice(0, 3);
+                  const remainingOnDutyCount = onDutyPersonnel.length - visibleOnDutyPersonnel.length;
 
                   return (
                     <div
                       key={isoDate}
                       className={`shift-calendar-day-card ${hasData ? 'has-data' : ''} ${isMineOnDuty ? 'mine' : ''} ${isPastDate ? 'is-past-date' : ''} ${isToday ? 'today' : ''}`}
-                      aria-disabled={isPastDate}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`${row?.displayDate || isoDate}: ${row?.shift || 'Off Duty'}. You: ${myDayStatus}. View details.`}
+                      onClick={() => openDayDetail(isoDate)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          openDayDetail(isoDate);
+                        }
+                      }}
                     >
                       <div className="shift-calendar-day-top">
                         <span className="shift-calendar-day-number">{dayDate.getDate()}</span>
@@ -412,9 +525,34 @@ const [leaveRes, scheduleRes] = await Promise.all([
 
                       {row ? (
                         <div className="shift-calendar-day-body">
+                          <div className="shift-calendar-personnel-block">
+                            <strong>On Duty With</strong>
+                            {onDutyPersonnel.length ? (
+                              <div className="schedule-personnel-list">
+                                {visibleOnDutyPersonnel.map((person) => {
+                                  const isSelf = person.admin_id === currentUser?.admin_id;
+                                  return (
+                                    <span
+                                      key={person.admin_id}
+                                      className={`personnel-badge ${isSelf ? 'personnel-badge-mine' : 'personnel-badge-duty'}`}
+                                      title={person.name}
+                                    >
+                                      {isSelf ? 'You' : person.name}
+                                    </span>
+                                  );
+                                })}
+                                {remainingOnDutyCount > 0 && (
+                                  <span className="personnel-badge personnel-badge-duty">+{remainingOnDutyCount} more</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="schedule-empty-inline">No one scheduled</span>
+                            )}
+                          </div>
+
                           <div className="calendar-stats">
-                            <span className="calendar-stat calendar-stat-duty">On Duty: {onDuty}</span>
-                            <span className="calendar-stat calendar-stat-leave">On Leave: {onLeave}</span>
+                            <span className={`calendar-stat ${myDayStatusClass}`}>You: {myDayStatus}</span>
+                            <span className="shift-count-text">On Leave: {onLeave}</span>
                           </div>
                         </div>
                       ) : (
@@ -500,6 +638,112 @@ const [leaveRes, scheduleRes] = await Promise.all([
         {message.text && (
           <div className={`ops-page-message ops-page-message-${message.type}`}>
             {message.text}
+          </div>
+        )}
+
+        {selectedDayIso && (
+          <div
+            className="personnel-modal-overlay"
+            role="presentation"
+            onClick={closeDayDetail}
+          >
+            <div
+              className="personnel-modal personnel-day-detail-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Shift details for ${formatDate(selectedDayIso)}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="personnel-modal-header">
+                <h3>{formatDate(selectedDayIso)}</h3>
+                <button
+                  type="button"
+                  className="personnel-modal-close"
+                  onClick={closeDayDetail}
+                  aria-label="Close day detail"
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div className="personnel-modal-body">
+                {dayDetailLoading ? (
+                  <p className="schedule-empty-inline">Loading details for this date...</p>
+                ) : dayDetailError ? (
+                  <div className="ops-page-message ops-page-message-error">
+                    Unable to load details for this date: {dayDetailError}
+                  </div>
+                ) : (
+                  <>
+                    <div className="day-detail-summary">
+                      <p>
+                        <strong>Shift:</strong> {shiftRowsByDate.get(selectedDayIso)?.shift || 'Off Duty'}
+                      </p>
+                      <p>
+                        <strong>Your Status:</strong>{' '}
+                        {dayDetailData.onDuty.some((person) => person.admin_id === currentUser?.admin_id)
+                          ? 'On Duty'
+                          : dayDetailData.onLeave.some((person) => person.admin_id === currentUser?.admin_id)
+                            ? 'On Leave'
+                            : 'Off Duty'}
+                      </p>
+                    </div>
+
+                    <div className="day-detail-section">
+                      <h4>On Duty ({dayDetailData.onDuty.length})</h4>
+                      {dayDetailData.onDuty.length === 0 ? (
+                        <p className="schedule-empty-inline">No personnel on duty for this date.</p>
+                      ) : (
+                        <ul className="day-detail-personnel-list">
+                          {dayDetailData.onDuty.map((person) => {
+                            const isSelf = person.admin_id === currentUser?.admin_id;
+                            return (
+                              <li key={person.admin_id} className={isSelf ? 'is-self' : ''}>
+                                <span>
+                                  {person.name}
+                                  {isSelf && <span className="personnel-badge personnel-badge-mine">You</span>}
+                                </span>
+                                <span className="day-detail-personnel-meta">
+                                  {[
+                                    person.rank && person.rank !== '-' ? person.rank : null,
+                                    person.time_in ? `In ${person.time_in}` : null,
+                                    person.time_out ? `Out ${person.time_out}` : null
+                                  ].filter(Boolean).join(' · ') || '-'}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="day-detail-section">
+                      <h4>On Leave ({dayDetailData.onLeave.length})</h4>
+                      {dayDetailData.onLeave.length === 0 ? (
+                        <p className="schedule-empty-inline">No personnel on leave for this date.</p>
+                      ) : (
+                        <ul className="day-detail-personnel-list">
+                          {dayDetailData.onLeave.map((person) => {
+                            const isSelf = person.admin_id === currentUser?.admin_id;
+                            return (
+                              <li key={person.admin_id} className={isSelf ? 'is-self' : ''}>
+                                <span>
+                                  {person.name}
+                                  {isSelf && <span className="personnel-badge personnel-badge-mine">You</span>}
+                                </span>
+                                <span className="day-detail-personnel-meta">
+                                  {formatDate(person.leave_start_date)} - {formatDate(person.leave_end_date)}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

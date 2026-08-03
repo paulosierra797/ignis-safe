@@ -275,6 +275,40 @@
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
 }
 
+.my-shift-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  background: #111827;
+}
+
+.my-shift-label {
+  color: #d1d5db;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.my-shift-value {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.my-shift-value.my-shift-a {
+  color: #fb923c;
+}
+
+.my-shift-value.my-shift-b {
+  color: #60a5fa;
+}
+
+.my-shift-value.my-shift-none {
+  color: #9ca3af;
+}
+
 .shift-summary-line {
   display: flex;
   flex-wrap: wrap;
@@ -408,6 +442,15 @@
   gap: 0.35rem;
   box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
   overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.shift-calendar-day-card:hover,
+.shift-calendar-day-card:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.1);
+  outline: none;
 }
 
 .shift-calendar-day-card.has-data {
@@ -425,13 +468,12 @@
   background: #fff8ec;
 }
 
-/* Display-only disabled state for past dates. Purely visual — schedule
-   data for these dates is never modified here. */
+/* Past dates are muted but stay clickable — personnel can still open the
+   day-detail panel to review who they were scheduled with. */
 .shift-calendar-day-card.is-past-date {
-  pointer-events: none;
-  cursor: not-allowed;
-  opacity: 0.55;
-  filter: grayscale(1);
+  cursor: pointer;
+  opacity: 0.72;
+  filter: grayscale(0.72);
   background: #f3f4f6;
   border-color: #e5e7eb;
 }
@@ -516,6 +558,11 @@
 
 .calendar-stat-leave {
   color: #dc2626;
+  font-weight: 600;
+}
+
+.calendar-stat-off {
+  color: #6b7280;
   font-weight: 600;
 }
 
@@ -817,4 +864,129 @@
     border:2px solid #f59e0b;
     background:#fff8ec;
 }
+}
+
+.personnel-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.personnel-modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+}
+
+.personnel-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  background: #fff;
+}
+
+.personnel-modal-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #111827;
+}
+
+.personnel-modal-close {
+  border: none;
+  background: #f3f4f6;
+  color: #374151;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.personnel-modal-close:hover {
+  background: #e5e7eb;
+}
+
+.personnel-modal-body {
+  padding: 1.1rem 1.25rem 1.4rem;
+}
+
+.day-detail-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0.7rem 0.85rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.day-detail-summary p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.day-detail-section + .day-detail-section {
+  margin-top: 1.1rem;
+}
+
+.day-detail-section h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.92rem;
+  color: #111827;
+}
+
+.day-detail-personnel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.day-detail-personnel-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  color: #1f2937;
+}
+
+.day-detail-personnel-list li.is-self {
+  border-color: rgba(16, 185, 129, 0.5);
+  background: #ecfdf5;
+}
+
+.day-detail-personnel-list li span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.day-detail-personnel-meta {
+  color: #6b7280;
+  font-size: 0.8rem;
+  white-space: nowrap;
 }

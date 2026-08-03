@@ -608,8 +608,14 @@
   cursor: pointer;
 }
 
-.announcement-archive-button:hover {
+.announcement-archive-button:hover:not(:disabled) {
   background: #fef2f2;
+}
+
+.announcement-archive-button:disabled {
+  border-color: #d1d5db;
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 
 .announcement-confirm-modal-overlay {

@@ -613,6 +613,15 @@ export default function Announcements() {
   const handleArchiveAnnouncement = async () => {
     if (!archiveModalId) return;
 
+    if (!isAdmin) {
+      const targetAnnouncement = announcements.find((row) => row.announcement_id === archiveModalId);
+      if (!targetAnnouncement?.acknowledged_by_current_user) {
+        setMessage({ type: 'error', text: 'Please acknowledge this announcement before archiving it.' });
+        setArchiveModalId('');
+        return;
+      }
+    }
+
     setArchiving(true);
     const { error } = isAdmin
       ? await archiveAnnouncement(currentUser, archiveModalId)
@@ -1133,6 +1142,12 @@ export default function Announcements() {
                           type="button"
                           className="announcement-archive-button"
                           onClick={() => setArchiveModalId(announcement.announcement_id)}
+                          disabled={!announcement.acknowledged_by_current_user}
+                          title={
+                            announcement.acknowledged_by_current_user
+                              ? undefined
+                              : 'Please acknowledge this announcement before archiving it.'
+                          }
                         >
                           Archive
                         </button>

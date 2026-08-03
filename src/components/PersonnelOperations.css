@@ -650,6 +650,19 @@
   height: 100%;
 }
 
+.shift-calendar-day-other-shift {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.schedule-other-shift-label {
+  color: #9ca3af;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .shift-table-wrap {
   overflow-x: auto;
   border: 1px solid #e5e7eb;

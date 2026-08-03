@@ -450,6 +450,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
                   const isoDate = toIsoDate(dayDate);
                   const row = shiftRowsByDate.get(isoDate);
                   const isRestricted = Boolean(row?.restricted);
+                  const hasShift = Boolean(row && row.shift !== 'Off Duty');
                   const onDutyPersonnel = isRestricted ? [] : (row?.onDutyPersonnel || []);
                   const onLeavePersonnel = isRestricted ? [] : (row?.onLeavePersonnel || []);
                   const hasData = Boolean(row);
@@ -474,7 +475,9 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
                       tabIndex={0}
                       aria-label={
                         isRestricted
-                          ? `${row?.displayDate || isoDate}: ${row?.shift}. No Shift Scheduled. View details.`
+                          ? hasShift
+                            ? `${row?.displayDate || isoDate}: ${row?.shift}. View details.`
+                            : `${row?.displayDate || isoDate}: No Shift Scheduled. View details.`
                           : `${row?.displayDate || isoDate}: ${row?.shift || 'Off Duty'}. You: ${myDayStatus}. View details.`
                       }
                       onClick={() => openDayDetail(isoDate)}
@@ -496,9 +499,15 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
 
                       {row ? (
                         isRestricted ? (
-                          <div className="shift-calendar-day-body shift-calendar-day-restricted">
-                            <span className="schedule-empty-inline">No Shift Scheduled</span>
-                          </div>
+                          hasShift ? (
+                            <div className="shift-calendar-day-body shift-calendar-day-other-shift">
+                              <span className="schedule-other-shift-label">{row.shift}</span>
+                            </div>
+                          ) : (
+                            <div className="shift-calendar-day-body shift-calendar-day-restricted">
+                              <span className="schedule-empty-inline">No Shift Scheduled</span>
+                            </div>
+                          )
                         ) : (
                           <div className="shift-calendar-day-body">
                             {onDutyPersonnel.length > 0 && (

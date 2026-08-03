@@ -112,6 +112,17 @@ const buildConfirmUrl = useCallback((attendanceSessionId) =>
 }, [buildConfirmUrl, navigate, sessionId]);
   
 
+  if (isCheckingSession) {
+    return (
+      <div className="attendance-login-page">
+        <div className="attendance-session-check" role="status" aria-live="polite">
+          <div className="attendance-session-check-spinner" aria-hidden="true" />
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="attendance-login-page">
       <div className="attendance-login-shell">
@@ -131,11 +142,7 @@ const buildConfirmUrl = useCallback((attendanceSessionId) =>
 
         <section className="login-card" aria-label="Personnel attendance login form">
 
-          {isCheckingSession ? (
-            <div className="login-form">
-              <div className="pin-hint">Checking your active personnel session...</div>
-            </div>
-          ) : !qrValid ? (
+          {!qrValid ? (
             <div className="login-form">
               {error && <div className="error-message">{error}</div>}
             </div>
@@ -192,14 +199,14 @@ const buildConfirmUrl = useCallback((attendanceSessionId) =>
             <button
               type="submit"
               className="login-btn"
-              disabled={isLoading || isCheckingSession || !qrValid || !email.trim() || !password}
+              disabled={isLoading || !qrValid || !email.trim() || !password}
             >
               {isLoading ? 'Logging in...' : 'Login & Continue'}
             </button>
           </form>
           )}
 
-          {!isCheckingSession && qrValid && (
+          {qrValid && (
             <div className="login-footer">
               Only you can mark attendance with your credentials. Your account password is required for every session.
             </div>

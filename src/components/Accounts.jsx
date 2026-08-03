@@ -3496,7 +3496,6 @@ const permissions = getDefaultPermissions(formData.role);
                 <div>
                   <h4>Pending Profile Change Requests</h4>
                 </div>
-                <span className="leave-request-pending-badge">{pendingProfileChangeRequestCount} pending</span>
               </div>
 
               <div className="account-directory-group-body">

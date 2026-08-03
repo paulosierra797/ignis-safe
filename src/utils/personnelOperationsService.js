@@ -42,6 +42,33 @@ const isDateWithinInclusiveRange = (date, startDate, endDate) => {
   return date >= startDate && date <= endDate;
 };
 
+// A personnel's shift type is an explicit A/B assignment range, independent of
+// whether today happens to be an active duty day for that range - so this
+// resolves it from their assignment records (current, else next upcoming,
+// else earliest) rather than from a single day's schedule row.
+export const resolveCurrentShiftType = (assignments) => {
+  if (!Array.isArray(assignments) || assignments.length === 0) {
+    return null;
+  }
+
+  const today = getManilaToday();
+  const current = assignments.find(
+    (assignment) => assignment.start_date <= today && assignment.end_date >= today
+  );
+  if (current) {
+    return current.shift_type;
+  }
+
+  const upcoming = assignments
+    .filter((assignment) => assignment.start_date > today)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
+  if (upcoming) {
+    return upcoming.shift_type;
+  }
+
+  return assignments[0].shift_type;
+};
+
 const updatePersonnelLeaveState = async (personnelId, updates) => {
   const { data: workspaceProfile, error: workspaceError } = await supabase
     .from(PERSONNEL_WORKSPACE_TABLE)
@@ -394,7 +421,8 @@ export const rejectLeaveRequest = async ({ requestId, rejectedBy, rejectionReaso
 
 export const getPersonnelShiftSchedule = async ({
   startDate,
-  endDate
+  endDate,
+  viewerPersonnelId
 }) => {
   try {
     const start = new Date(startDate);
@@ -407,13 +435,14 @@ export const getPersonnelShiftSchedule = async ({
       Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
     const scheduleStartDate = toIsoDate(start);
     const scheduleEndDate = toIsoDate(end);
-    const [configResult, personnelResult, assignmentResult] = await Promise.all([
+    const [configResult, personnelResult, assignmentResult, viewerAssignmentResult] = await Promise.all([
       getShiftScheduleConfig(),
       getAllUsers({ includePersonnelWorkspaceProfiles: true }),
       getShiftAssignmentsForPeriod({
         startDate: scheduleStartDate,
         endDate: scheduleEndDate
-      })
+      }),
+      viewerPersonnelId ? getPersonnelShiftAssignments(viewerPersonnelId) : Promise.resolve({ data: [], error: null })
     ]);
 
     if (configResult.error) {
@@ -433,6 +462,20 @@ export const getPersonnelShiftSchedule = async ({
       .filter((personnel) => String(personnel.role || '').toLowerCase() === 'personnel');
     const assignments = Array.isArray(assignmentResult.data) ? assignmentResult.data : [];
     const personnelById = new Map(personnelRows.map((personnel) => [personnel.admin_id, personnel]));
+    const viewerShiftType = resolveCurrentShiftType(viewerAssignmentResult.data || []);
+
+    // Personnel on leave aren't tied to a shift by a duty assignment for the
+    // day they're absent, so their own shift is resolved from whatever
+    // assignment(s) they hold within the visible period.
+    const personnelShiftTypes = new Map();
+    assignments.forEach((assignment) => {
+      const type = String(assignment.shift_type || '').toUpperCase();
+      if (!type) return;
+      if (!personnelShiftTypes.has(assignment.personnel_id)) {
+        personnelShiftTypes.set(assignment.personnel_id, new Set());
+      }
+      personnelShiftTypes.get(assignment.personnel_id).add(type);
+    });
 
     const shiftA = new Set(config?.shift_a_dates || []);
     const shiftB = new Set(config?.shift_b_dates || []);
@@ -447,9 +490,48 @@ export const getPersonnelShiftSchedule = async ({
       const hasB = shiftB.has(isoDate);
       const shiftTypes = [hasA ? 'A' : null, hasB ? 'B' : null].filter(Boolean);
 
+      let shift = 'Off Duty';
+      if (hasA && hasB) {
+        shift = 'Shift A & B';
+      } else if (hasA) {
+        shift = 'Shift A';
+      } else if (hasB) {
+        shift = 'Shift B';
+      }
+
+      // Admin/management callers omit viewerPersonnelId and see the full
+      // roster for both shifts; only a personnel viewer's own page is scoped
+      // to their assigned shift.
+      const canViewDetails = !viewerPersonnelId
+        || (Boolean(viewerShiftType) && shiftTypes.includes(viewerShiftType));
+      const dayLabel = targetDate.toLocaleDateString('en-US', { weekday: 'short' });
+      const displayDate = targetDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
+      if (!canViewDetails) {
+        rows.push({
+          date: isoDate,
+          dayLabel,
+          displayDate,
+          shift,
+          onDutyPersonnel: [],
+          onLeavePersonnel: [],
+          onDutyCount: null,
+          onLeaveCount: null,
+          restricted: true
+        });
+        continue;
+      }
+
+      const visibleShiftTypes = viewerPersonnelId ? [viewerShiftType] : shiftTypes;
+
       const onLeavePersonnel = personnelRows
         .filter((personnel) => String(personnel.status || '').toLowerCase() === 'on leave')
         .filter((personnel) => isDateWithinInclusiveRange(isoDate, personnel.leave_start_date, personnel.leave_end_date))
+        .filter((personnel) => !viewerPersonnelId || personnelShiftTypes.get(personnel.admin_id)?.has(viewerShiftType))
         .map((personnel) => ({
           admin_id: personnel.admin_id,
           name: formatPersonnelName(personnel)
@@ -458,7 +540,7 @@ export const getPersonnelShiftSchedule = async ({
       const leavePersonnelIds = new Set(onLeavePersonnel.map((personnel) => personnel.admin_id));
 
       const onDutyPersonnel = assignments
-        .filter((assignment) => shiftTypes.includes(String(assignment.shift_type || '').toUpperCase()))
+        .filter((assignment) => visibleShiftTypes.includes(String(assignment.shift_type || '').toUpperCase()))
         .filter((assignment) => isDateWithinInclusiveRange(isoDate, assignment.start_date, assignment.end_date))
         .map((assignment) => personnelById.get(assignment.personnel_id) || null)
         .filter((personnel) => personnel && !leavePersonnelIds.has(personnel.admin_id))
@@ -470,28 +552,16 @@ export const getPersonnelShiftSchedule = async ({
       const uniqueOnDutyPersonnel = Array.from(new Map(onDutyPersonnel.map((personnel) => [personnel.admin_id, personnel])).values());
       const uniqueOnLeavePersonnel = Array.from(new Map(onLeavePersonnel.map((personnel) => [personnel.admin_id, personnel])).values());
 
-      let shift = 'Off Duty';
-      if (hasA && hasB) {
-        shift = 'Shift A & B';
-      } else if (hasA) {
-        shift = 'Shift A';
-      } else if (hasB) {
-        shift = 'Shift B';
-      }
-
       rows.push({
         date: isoDate,
-        dayLabel: targetDate.toLocaleDateString('en-US', { weekday: 'short' }),
-        displayDate: targetDate.toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric'
-        }),
+        dayLabel,
+        displayDate,
         shift,
         onDutyPersonnel: uniqueOnDutyPersonnel,
         onLeavePersonnel: uniqueOnLeavePersonnel,
         onDutyCount: uniqueOnDutyPersonnel.length,
-        onLeaveCount: uniqueOnLeavePersonnel.length
+        onLeaveCount: uniqueOnLeavePersonnel.length,
+        restricted: false
       });
     }
 
@@ -518,20 +588,21 @@ const formatAttendanceTime = (value) => {
   }
 };
 
-export const getPersonnelForDate = async (dateIso) => {
+export const getPersonnelForDate = async (dateIso, viewerPersonnelId) => {
   try {
     if (!dateIso) {
       return { data: null, error: 'Missing date.' };
     }
 
-    const [configResult, personnelResult, assignmentResult, attendanceResult] = await Promise.all([
+    const [configResult, personnelResult, assignmentResult, attendanceResult, viewerAssignmentResult] = await Promise.all([
       getShiftScheduleConfig(),
       getAllUsers({ includePersonnelWorkspaceProfiles: true }),
       getShiftAssignmentsForPeriod({ startDate: dateIso, endDate: dateIso }),
       supabase
         .from('attendance_records')
         .select('personnel_id, time_in, time_out')
-        .eq('attendance_date', dateIso)
+        .eq('attendance_date', dateIso),
+      viewerPersonnelId ? getPersonnelShiftAssignments(viewerPersonnelId) : Promise.resolve({ data: [], error: null })
     ]);
 
     if (configResult.error) return { data: null, error: configResult.error };
@@ -543,6 +614,7 @@ export const getPersonnelForDate = async (dateIso) => {
       .filter((personnel) => String(personnel.role || '').toLowerCase() === 'personnel');
     const personnelById = new Map(personnelRows.map((personnel) => [personnel.admin_id, personnel]));
     const assignments = Array.isArray(assignmentResult.data) ? assignmentResult.data : [];
+    const viewerShiftType = resolveCurrentShiftType(viewerAssignmentResult.data || []);
 
     const attendanceByPersonnelId = new Map(
       (attendanceResult.data || []).map((row) => [row.personnel_id, row])
@@ -554,9 +626,47 @@ export const getPersonnelForDate = async (dateIso) => {
     const hasB = shiftB.has(dateIso);
     const shiftTypes = [hasA ? 'A' : null, hasB ? 'B' : null].filter(Boolean);
 
+    // The viewer's own on-duty/on-leave status for this date is not personnel
+    // detail belonging to someone else, so it is always resolved - even on a
+    // date that belongs to the other shift and is otherwise restricted.
+    const viewerIsOnLeave = personnelRows.some(
+      (personnel) => personnel.admin_id === viewerPersonnelId
+        && String(personnel.status || '').toLowerCase() === 'on leave'
+        && isDateWithinInclusiveRange(dateIso, personnel.leave_start_date, personnel.leave_end_date)
+    );
+    const viewerIsOnDuty = !viewerIsOnLeave && assignments.some(
+      (assignment) => assignment.personnel_id === viewerPersonnelId
+        && shiftTypes.includes(String(assignment.shift_type || '').toUpperCase())
+        && isDateWithinInclusiveRange(dateIso, assignment.start_date, assignment.end_date)
+    );
+    const viewerStatus = viewerIsOnLeave ? 'On Leave' : viewerIsOnDuty ? 'On Duty' : 'Off Duty';
+
+    // Admin/management callers omit viewerPersonnelId and see the full
+    // roster for both shifts; only a personnel viewer's own page is scoped
+    // to their assigned shift.
+    const canViewDetails = !viewerPersonnelId
+      || (Boolean(viewerShiftType) && shiftTypes.includes(viewerShiftType));
+
+    if (!canViewDetails) {
+      return {
+        data: { date: dateIso, onDuty: [], onLeave: [], viewerStatus, restricted: true },
+        error: null
+      };
+    }
+
+    const visibleShiftTypes = viewerPersonnelId ? [viewerShiftType] : shiftTypes;
+
+    const personnelShiftTypes = new Map();
+    assignments.forEach((assignment) => {
+      const type = String(assignment.shift_type || '').toUpperCase();
+      if (!type) return;
+      personnelShiftTypes.set(assignment.personnel_id, type);
+    });
+
     const onLeave = personnelRows
       .filter((personnel) => String(personnel.status || '').toLowerCase() === 'on leave')
       .filter((personnel) => isDateWithinInclusiveRange(dateIso, personnel.leave_start_date, personnel.leave_end_date))
+      .filter((personnel) => !viewerPersonnelId || personnelShiftTypes.get(personnel.admin_id) === viewerShiftType)
       .map((personnel) => ({
         admin_id: personnel.admin_id,
         name: formatPersonnelName(personnel),
@@ -570,7 +680,7 @@ export const getPersonnelForDate = async (dateIso) => {
 
     const onDutyPersonnelIds = new Set(
       assignments
-        .filter((assignment) => shiftTypes.includes(String(assignment.shift_type || '').toUpperCase()))
+        .filter((assignment) => visibleShiftTypes.includes(String(assignment.shift_type || '').toUpperCase()))
         .filter((assignment) => isDateWithinInclusiveRange(dateIso, assignment.start_date, assignment.end_date))
         .map((assignment) => assignment.personnel_id)
     );
@@ -591,7 +701,7 @@ export const getPersonnelForDate = async (dateIso) => {
       });
 
     return {
-      data: { date: dateIso, onDuty, onLeave },
+      data: { date: dateIso, onDuty, onLeave, viewerStatus, restricted: false },
       error: null
     };
   } catch (error) {

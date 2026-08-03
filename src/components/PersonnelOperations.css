@@ -602,6 +602,13 @@
   font-style: italic;
 }
 
+.shift-calendar-day-restricted {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
 .shift-table-wrap {
   overflow-x: auto;
   border: 1px solid #e5e7eb;

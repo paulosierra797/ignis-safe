@@ -736,13 +736,24 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           <div className="modal confirm-changes-modal">
             <h3>Confirm Changes</h3>
             <p>Are you sure you want to save these changes?</p>
-            <ul className="confirm-changes-list">
+            <div className="confirm-changes-table">
+              <div className="confirm-changes-table-header">
+                <span className="confirm-changes-col-heading confirm-changes-col-heading--before">Before</span>
+                <span className="confirm-changes-col-heading confirm-changes-col-heading--after">After</span>
+              </div>
               {confirmModal.changes.map((change) => (
-                <li key={change.label}>
-                  <strong>{change.label}:</strong> {change.oldValue} → {change.newValue}
-                </li>
+                <div className="confirm-changes-row" key={change.label}>
+                  <div className="confirm-changes-col confirm-changes-col--before">
+                    <span className="confirm-changes-field-name">{change.label}</span>
+                    <span className="confirm-changes-value">{change.oldValue}</span>
+                  </div>
+                  <div className="confirm-changes-col confirm-changes-col--after">
+                    <span className="confirm-changes-field-name">{change.label}</span>
+                    <span className="confirm-changes-value">{change.newValue}</span>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
             <div className="modal-actions">
               <button
                 type="button"

@@ -466,8 +466,9 @@
 }
 
 .confirm-changes-modal {
-  width: 480px;
-  max-height: 85vh;
+  width: min(760px, 94vw);
+  max-width: 94vw;
+  max-height: 88vh;
 }
 
 .confirm-changes-modal h3 {
@@ -477,26 +478,98 @@
   color: #111827;
 }
 
-.confirm-changes-list {
+.confirm-changes-table {
   width: 100%;
   margin: 0;
-  padding: 0.85rem 1rem;
-  list-style: none;
   text-align: left;
-  background: #f9fafb;
+  background: #e5e7eb;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  max-height: 50vh;
+  gap: 1px;
+  max-height: 60vh;
   overflow-y: auto;
 }
 
-.confirm-changes-list li {
-  font-size: 0.88rem;
+.confirm-changes-table-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.confirm-changes-col-heading {
+  padding: 0.6rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: #f3f4f6;
+}
+
+.confirm-changes-col-heading--before {
+  color: #b91c1c;
+}
+
+.confirm-changes-col-heading--after {
+  color: #15803d;
+}
+
+.confirm-changes-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+}
+
+.confirm-changes-col {
+  background: #ffffff;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.confirm-changes-field-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.confirm-changes-value {
+  font-size: 0.9rem;
   color: #1f2937;
+  white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.confirm-changes-col--before .confirm-changes-value {
+  color: #7f1d1d;
+}
+
+.confirm-changes-col--after .confirm-changes-value {
+  color: #14532d;
+}
+
+@media (max-width: 640px) {
+  .confirm-changes-modal {
+    width: 100%;
+  }
+
+  .confirm-changes-table-header,
+  .confirm-changes-row {
+    grid-template-columns: 1fr;
+  }
+
+  .confirm-changes-col--after {
+    border-top: 2px solid #e5e7eb;
+  }
 }
 
 .cancel-btn {

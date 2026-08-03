@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useSearchParams, useNavigate } from 'react-router-dom';
 import { loadFaceModels } from '../utils/loadFaceModels';
 import { getFaceByAdminId } from '../utils/attendanceService';
@@ -12,7 +12,8 @@ import {
   isAuthValid,
   getStationGeo,
   recordAttendance,
-  saveAuthToken
+  saveAuthToken,
+  getAttendanceStatus
 } from '../utils/attendanceService';
 import { logPersonnelActivity } from '../utils/activityLogService';
 
@@ -31,6 +32,9 @@ const AttendanceConfirm = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmStatus, setConfirmStatus] = useState(null);
   const [authError, setAuthError] = useState('');
+  const [attendanceStatus, setAttendanceStatus] = useState(null);
+  const [attendanceStatusError, setAttendanceStatusError] = useState('');
+  const [isAttendanceStatusLoading, setIsAttendanceStatusLoading] = useState(false);
   const faceDebug = [];
   const [verificationPhotoBlob, setVerificationPhotoBlob] = useState(null);
   const [verifiedStationId, setVerifiedStationId] = useState(null);
@@ -48,6 +52,40 @@ const AttendanceConfirm = () => {
   const hasPendingVerification = Boolean(mode || geoLocation || verificationPhotoBlob) &&
     confirmStatus?.type !== 'success';
   const navigationBlocker = useBlocker(hasPendingVerification && !isProcessing);
+  const timeInDisabled = isAttendanceStatusLoading || !attendanceStatus?.canTimeIn;
+  const timeOutDisabled = isAttendanceStatusLoading || !attendanceStatus?.canTimeOut;
+  const attendanceCompleted = attendanceStatus?.state === 'completed';
+
+  const refreshAttendanceStatus = useCallback(async ({ officer = authenticatedOfficer, stationId = verifiedStationId } = {}) => {
+    if (!officer?.admin_id || !stationId) return null;
+
+    setIsAttendanceStatusLoading(true);
+    setAttendanceStatusError('');
+
+    try {
+      const nextStatus = await getAttendanceStatus({
+        shiftId: stationId,
+        qrSessionId
+      });
+      setAttendanceStatus(nextStatus);
+      setStatus(nextStatus.message || 'Select Time In or Time Out to continue.');
+
+      setMode((currentMode) => {
+        if (!nextStatus.canTimeIn && currentMode === 'in') return '';
+        if (!nextStatus.canTimeOut && currentMode === 'out') return '';
+        return currentMode;
+      });
+
+      return nextStatus;
+    } catch (error) {
+      const message = error.message || 'Unable to load attendance status.';
+      setAttendanceStatusError(message);
+      setStatus(message);
+      return null;
+    } finally {
+      setIsAttendanceStatusLoading(false);
+    }
+  }, [authenticatedOfficer, qrSessionId, verifiedStationId]);
 
   useEffect(() => {
     if (!hasPendingVerification) return undefined;
@@ -98,7 +136,10 @@ useEffect(() => {
 
 useEffect(() => {
   const checkSession = async () => {
-    if (!qrSessionId) return;
+    if (!qrSessionId) {
+      setAuthError('Invalid QR session');
+      return;
+    }
 
     const result = await validateQRSession(qrSessionId);
 
@@ -113,6 +154,14 @@ useEffect(() => {
 
   checkSession();
 }, [navigate, qrSessionId]);
+
+useEffect(() => {
+  if (!authenticatedOfficer?.admin_id || !verifiedStationId || authError) return;
+  void refreshAttendanceStatus({
+    officer: authenticatedOfficer,
+    stationId: verifiedStationId
+  });
+}, [authError, authenticatedOfficer, refreshAttendanceStatus, verifiedStationId]);
   
   const handleRequestLocation = async () => {
     setIsProcessing(true);
@@ -287,6 +336,14 @@ const handleVerifyFace = async () => {
       setStatus('Authentication error. Please login again.');
       return;
     }
+    if (mode === 'in' && timeInDisabled) {
+      setStatus('Your attendance for this action has already been recorded.');
+      return;
+    }
+    if (mode === 'out' && timeOutDisabled) {
+      setStatus(attendanceStatus?.message || 'Time Out is not available yet.');
+      return;
+    }
     if (!geoLocation) {
       setStatus('Please share your location for verification.');
       return;
@@ -315,6 +372,14 @@ const handleVerifyFace = async () => {
     setConfirmStatus(null);
 
     try {
+      const latestStatus = await refreshAttendanceStatus();
+      if (mode === 'in' && !latestStatus?.canTimeIn) {
+        throw new Error('Your attendance for this action has already been recorded.');
+      }
+      if (mode === 'out' && !latestStatus?.canTimeOut) {
+        throw new Error(latestStatus?.message || 'Time Out is not available yet.');
+      }
+
      const { record, action } = await recordAttendance({
   officer: authenticatedOfficer,
   mode,
@@ -344,6 +409,7 @@ const handleVerifyFace = async () => {
           ? `Time Out recorded at ${record.timeOut}.`
           : `Confirmed ${mode === 'in' ? `Time In at ${record.timeIn}` : `Time Out at ${record.timeOut}`}.`
       );
+      await refreshAttendanceStatus();
 
       if (authenticatedOfficer.admin_id) {
         void logPersonnelActivity({
@@ -354,11 +420,12 @@ const handleVerifyFace = async () => {
         });
       }
     } catch (error) {
+      const message = error.message || 'Unable to save attendance. Please try again.';
       setConfirmStatus({
         type: 'error',
-        message: `Attendance save failed: ${error.message}`
+        message
       });
-      setStatus('Unable to save attendance. Please try again.');
+      setStatus(message);
     } finally {
       setIsProcessing(false);
     }
@@ -406,6 +473,49 @@ const handleVerifyFace = async () => {
               </div>
             </div>
 
+            <div className={`attendance-status-card ${attendanceCompleted ? 'completed' : ''}`}>
+              <div>
+                <span className="attendance-status-label">Attendance Status</span>
+                <strong>
+                  {isAttendanceStatusLoading
+                    ? 'Checking Supabase...'
+                    : attendanceStatus?.message || 'No attendance record found.'}
+                </strong>
+              </div>
+              {attendanceStatus?.record && (
+                <div className="attendance-status-times">
+                  <span>Time In: {attendanceStatus.record.timeIn || '--'}</span>
+                  <span>Time Out: {attendanceStatus.record.timeOut || '--'}</span>
+                </div>
+              )}
+              {attendanceStatusError && (
+                <div className="attendance-status-error">{attendanceStatusError}</div>
+              )}
+            </div>
+
+            {attendanceCompleted ? (
+              <div className="attendance-completed-card">
+                <h2>Attendance completed for today.</h2>
+                <div className="attendance-completed-times">
+                  <div>
+                    <span>Recorded Time In</span>
+                    <strong>{attendanceStatus.record?.timeIn || '--'}</strong>
+                  </div>
+                  <div>
+                    <span>Recorded Time Out</span>
+                    <strong>{attendanceStatus.record?.timeOut || '--'}</strong>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="attendance-history-btn"
+                  onClick={() => navigate('/attendance-personnel?history=1')}
+                >
+                  View Attendance History
+                </button>
+              </div>
+            ) : (
+              <>
             <div className="confirm-section">
               <label className="section-label">Face Verification</label>
               <button
@@ -455,6 +565,7 @@ const handleVerifyFace = async () => {
                 type="button"
                 className={`confirm-btn ${mode === 'in' ? 'active' : ''}`}
                 onClick={() => setMode('in')}
+                disabled={timeInDisabled}
               >
                 TIME IN
               </button>
@@ -462,6 +573,7 @@ const handleVerifyFace = async () => {
                 type="button"
                 className={`confirm-btn alt ${mode === 'out' ? 'active' : ''}`}
                 onClick={() => setMode('out')}
+                disabled={timeOutDisabled}
               >
                 TIME OUT
               </button>
@@ -471,7 +583,7 @@ const handleVerifyFace = async () => {
               type="button" 
               className="confirm-submit" 
               onClick={handleConfirm}
-              disabled={!authenticatedOfficer || !geoLocation || !authenticatedOfficer.faceVerified || !verificationPhotoBlob || isProcessing}
+              disabled={!authenticatedOfficer || !mode || !geoLocation || !authenticatedOfficer.faceVerified || !verificationPhotoBlob || isProcessing || (mode === 'in' && timeInDisabled) || (mode === 'out' && timeOutDisabled)}
             >
               {isProcessing ? 'Saving...' : 'Confirm Attendance'}
             </button>
@@ -487,6 +599,8 @@ const handleVerifyFace = async () => {
             <div className="confirm-footer">
               Your face, location, and attendance details are verified and logged instantly. Only you can mark attendance with this session.
             </div>
+              </>
+            )}
 
             {showAttendanceConfirmation && (
               <div className="attendance-confirm-overlay" role="presentation">

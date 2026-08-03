@@ -6,7 +6,9 @@ import PageHeader from './PageHeader';
 import {
   generateQRSession,
   getActiveQRSession,
-  getExpiryTime
+  getExpiryTime,
+  getAttendanceStatus,
+  getMyAttendanceHistory
 } from '../utils/attendanceService';
 import './AttendancePersonnel.css';
 
@@ -15,6 +17,10 @@ const AttendancePersonnel = () => {
   const [currentSession, setCurrentSession] = useState(null);
   const [expiryInfo, setExpiryInfo] = useState(null);
   const [copyMessage, setCopyMessage] = useState('');
+  const [todayStatus, setTodayStatus] = useState(null);
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [historyError, setHistoryError] = useState('');
+  const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [searchParams] = useSearchParams();
 
   const stationId = searchParams.get('station') || 'DEFAULT';
@@ -78,6 +84,40 @@ const AttendancePersonnel = () => {
 
     return () => window.clearInterval(interval);
   }, [currentSession, handleRefreshQR]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadAttendanceOverview = async () => {
+      setIsHistoryLoading(true);
+      setHistoryError('');
+
+      try {
+        const [status, history] = await Promise.all([
+          getAttendanceStatus({ shiftId: stationId }),
+          getMyAttendanceHistory(20)
+        ]);
+
+        if (!isCancelled) {
+          setTodayStatus(status);
+          setAttendanceHistory(history);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setHistoryError(error.message || 'Could not load attendance history.');
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsHistoryLoading(false);
+        }
+      }
+    };
+
+    void loadAttendanceOverview();
+    return () => {
+      isCancelled = true;
+    };
+  }, [stationId]);
 
   const handleCopyLink = async () => {
     try {
@@ -169,6 +209,54 @@ const AttendancePersonnel = () => {
               </div>
               {copyMessage && <div className="qr-feedback">{copyMessage}</div>}
             </div>
+          </div>
+
+          <div className="attendance-list-table-container" id="attendance-history">
+            <div className="table-header">
+              <div>
+                <h3>My Attendance</h3>
+                <p className="attendance-history-summary">
+                  {todayStatus?.message || 'Checking today\'s attendance status...'}
+                </p>
+              </div>
+            </div>
+
+            <table className="attendance-list-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Shift</th>
+                  <th>Time In</th>
+                  <th>Time Out</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isHistoryLoading ? (
+                  <tr>
+                    <td colSpan="5" className="empty-state">Loading attendance history...</td>
+                  </tr>
+                ) : historyError ? (
+                  <tr>
+                    <td colSpan="5" className="empty-state">{historyError}</td>
+                  </tr>
+                ) : attendanceHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="empty-state">No attendance records yet.</td>
+                  </tr>
+                ) : (
+                  attendanceHistory.map((record) => (
+                    <tr key={record.id}>
+                      <td>{record.date}</td>
+                      <td>{record.shiftId}</td>
+                      <td>{record.timeIn || '--'}</td>
+                      <td>{record.timeOut || '--'}</td>
+                      <td>{record.timeIn && record.timeOut ? 'Completed' : 'Time In recorded'}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

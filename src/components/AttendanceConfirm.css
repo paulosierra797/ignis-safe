@@ -127,6 +127,72 @@
   text-align: center;
 }
 
+.attendance-status-card,
+.attendance-completed-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.attendance-status-card.completed {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.attendance-status-card strong,
+.attendance-completed-card h2 {
+  display: block;
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.attendance-status-label,
+.attendance-completed-times span {
+  color: #6b7078;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.attendance-status-times,
+.attendance-completed-times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.attendance-status-times span,
+.attendance-completed-times div {
+  padding: 10px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.attendance-status-error {
+  color: var(--error);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.attendance-history-btn {
+  min-height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: var(--steel);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .auth-error {
   padding: 12px 14px;
   background: rgba(239, 68, 68, 0.1);
@@ -247,9 +313,14 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.confirm-btn:hover {
+.confirm-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   border-color: rgba(0, 0, 0, 0.2);
+}
+
+.confirm-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .confirm-btn.active {
@@ -418,6 +489,11 @@
 @media (max-width: 480px) {
   .confirm-card {
     padding: 22px;
+  }
+
+  .attendance-status-times,
+  .attendance-completed-times {
+    grid-template-columns: 1fr;
   }
 
   .attendance-confirm-dialog-actions {

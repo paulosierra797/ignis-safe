@@ -44,14 +44,10 @@ const sessionId = searchParams.get("station");
     // Authenticate
     const officer = await authenticatePersonnel(email, password);
     if (officer) {
-      saveAuthToken(officer);
+     saveAuthToken(officer);
       setEmail('');
       setPassword('');
-     navigate("/attendance-scan", {
-  state: {
-    session: { session_id: sessionId }
-  }
-});
+      navigate(`/attendance-scan?station=${encodeURIComponent(sessionId)}`);
     } else {
       setError('Invalid account email or password. Please try again.');
     }

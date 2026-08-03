@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getManilaToday } from './dateUtils';
 
 
 export const getFaceByAdminId = async (adminId) => {
@@ -253,6 +254,7 @@ export const isAuthValid = () => {
 
 const ATTENDANCE_VERIFICATION_BUCKET = 'attendance_verifications';
 const SIGNED_PHOTO_URL_TTL_SECONDS = 10 * 60;
+const DUPLICATE_ATTENDANCE_MESSAGE = 'Your attendance for this action has already been recorded.';
 
 const toFiniteNumber = (value) => {
   const number = Number(value);
@@ -296,6 +298,8 @@ const buildVerificationFields = ({ officer, mode, location, verification, photoP
   };
 };
 
+const normalizeShiftId = (shiftId) => String(shiftId || 'DEFAULT').trim() || 'DEFAULT';
+
 const uploadAttendanceVerificationPhoto = async ({ officer, attendanceId, mode, photoBlob }) => {
   if (!photoBlob || !officer?.admin_id) {
     throw new Error('A current verification photo and authenticated personnel ID are required.');
@@ -332,6 +336,9 @@ const mapAttendanceRow = (row) => {
   return {
     id: row.id,
     personnelId: row.personnel_id,
+    personnelUserId: row.personnel_user_id || '',
+    shiftId: row.shift_id || row.station_id || 'DEFAULT',
+    qrSessionId: row.qr_session_id || '',
     name: row.name,
     rank: row.rank,
     date: rowDate ? formatDateDisplay(rowDate) : '',
@@ -402,109 +409,60 @@ export const getAttendanceRecords = async () => {
   }));
 };
 
+export const getAttendanceStatus = async ({ shiftId = 'DEFAULT', qrSessionId } = {}) => {
+  const { data, error } = await supabase.rpc('get_own_attendance_status', {
+    p_shift_id: normalizeShiftId(shiftId),
+    p_qr_session_id: qrSessionId || null
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Failed to load attendance status.');
+  }
+
+  const record = data?.record ? mapAttendanceRow(data.record) : null;
+  return {
+    state: data?.state || 'none',
+    attendanceDate: data?.attendance_date || getManilaToday(),
+    shiftId: data?.shift_id || normalizeShiftId(shiftId),
+    canTimeIn: Boolean(data?.can_time_in),
+    canTimeOut: Boolean(data?.can_time_out),
+    message: data?.message || '',
+    record
+  };
+};
+
+export const getMyAttendanceHistory = async (limit = 20) => {
+  const { data, error } = await supabase
+    .from('attendance_records')
+    .select('*')
+    .order('attendance_date', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw new Error(error.message || 'Failed to load attendance history.');
+  }
+
+  return (data || []).map(mapAttendanceRow);
+};
+
 export const recordAttendance = async ({ officer, mode, location, qrSessionId, verification }) => {
   const now = new Date();
-  const dateIso = now.toISOString().slice(0, 10);
-  const signature = `${officer.name} (QR Verified)`;
+  const dateIso = getManilaToday();
   let uploadedPhotoPath = null;
+  const shiftId = normalizeShiftId(verification?.stationId);
 
-  if (mode === 'in') {
-    const { data: openRows, error: openRowsError } = await supabase
-      .from('attendance_records')
-      .select('*')
-      .eq('personnel_id', officer.id)
-      .not('time_in', 'is', null)
-      .is('time_out', null)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    if (openRowsError) {
-      throw new Error(openRowsError.message);
-    }
-
-    if (openRows && openRows.length > 0) {
-      throw new Error(
-        'Time In is already recorded and not yet timed out.'
-      );
-    }
+  if (!qrSessionId) {
+    throw new Error('Invalid QR session');
   }
 
-
-  if (mode === 'out') {
-    const { data: openRows, error: openRowsError } = await supabase
-      .from('attendance_records')
-      .select('*')
-      .eq('personnel_id', officer.id)
-      .eq('attendance_date', dateIso)
-      .is('time_out', null)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-
-    if (openRowsError) {
-      throw new Error(openRowsError.message);
-    }
-
-
-    if (openRows && openRows.length > 0) {
-      uploadedPhotoPath = await uploadAttendanceVerificationPhoto({
-        officer,
-        attendanceId: openRows[0].id,
-        mode,
-        photoBlob: verification?.photoBlob
-      });
-
-      const verificationFields = buildVerificationFields({
-        officer,
-        mode,
-        location,
-        verification,
-        photoPath: uploadedPhotoPath
-      });
-
-      const { data: updatedRow, error: updateError } = await supabase
-        .from('attendance_records')
-        .update({
-          time_out: now.toISOString(),
-          signature,
-          updated_at: now.toISOString(),
-          ...verificationFields
-        })
-        .eq('id', openRows[0].id)
-        .select()
-        .single();
-
-
-      if (updateError) {
-        await removeAttendanceVerificationPhoto(uploadedPhotoPath);
-        throw new Error(updateError.message);
-      }
-
-
-      // ✅ Disable QR after successful timeout
-      if (qrSessionId) {
-        await consumeQRSession(qrSessionId);
-      }
-
-
-      return {
-        record: mapAttendanceRow(updatedRow),
-        action: 'updated'
-      };
-    }
-  }
-
-
-
-  // CREATE NEW ATTENDANCE
-
-  const attendanceId = crypto.randomUUID();
   uploadedPhotoPath = await uploadAttendanceVerificationPhoto({
     officer,
-    attendanceId,
+    attendanceId: crypto.randomUUID(),
     mode,
     photoBlob: verification?.photoBlob
   });
+
   const verificationFields = buildVerificationFields({
     officer,
     mode,
@@ -513,56 +471,35 @@ export const recordAttendance = async ({ officer, mode, location, qrSessionId, v
     photoPath: uploadedPhotoPath
   });
 
-  const payload = {
-    id: attendanceId,
-    personnel_id: officer.id,
-    name: officer.name,
-    rank: officer.rank,
+  const { data, error } = await supabase.rpc('record_attendance_action', {
+    p_mode: mode,
+    p_shift_id: shiftId,
+    p_qr_session_id: qrSessionId,
+    p_location: {
+      latitude: location?.latitude ?? null,
+      longitude: location?.longitude ?? null,
+      accuracy: location?.accuracy ?? null,
+      attendance_date: dateIso
+    },
+    p_verification: {
+      ...verificationFields,
+      recorded_at: now.toISOString()
+    },
+    p_photo_path: uploadedPhotoPath
+  });
 
-    attendance_date: dateIso,
-
-    time_in: mode === 'in'
-      ? now.toISOString()
-      : null,
-
-    time_out: mode === 'out'
-      ? now.toISOString()
-      : null,
-
-    signature,
-
-    ...verificationFields,
-
-    created_at: now.toISOString(),
-    updated_at: now.toISOString()
-  };
-
-
-  const { data: insertedRow, error: insertError } =
-    await supabase
-      .from('attendance_records')
-      .insert([payload])
-      .select()
-      .single();
-
-
-  if (insertError) {
+  if (error) {
     await removeAttendanceVerificationPhoto(uploadedPhotoPath);
-    throw new Error(insertError.message);
+    const message = error.message?.includes(DUPLICATE_ATTENDANCE_MESSAGE)
+      ? DUPLICATE_ATTENDANCE_MESSAGE
+      : error.message || 'Failed to save attendance.';
+    throw new Error(message);
   }
-
-
-
-  // ✅ Disable QR after successful attendance creation
-  if (qrSessionId) {
-    await consumeQRSession(qrSessionId);
-  }
-
-
 
   return {
-    record: mapAttendanceRow(insertedRow),
-    action: 'created'
+    record: mapAttendanceRow(data.record),
+    action: data.action || (mode === 'out' ? 'updated' : 'created'),
+    status: data.status || null
   };
 };
 

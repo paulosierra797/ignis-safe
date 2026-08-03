@@ -378,6 +378,13 @@
   font-size: 18px;
 }
 
+.attendance-history-summary {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .export-btn {
   border: none;
   background: var(--ember);

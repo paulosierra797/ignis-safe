@@ -289,6 +289,17 @@ using (
   personnel_id = auth.uid()
 );
 
+-- personnel_id = auth.uid() plus the announcement-visibility check below
+-- already restrict inserts to the caller's own row for announcements they
+-- can see, so no separate admin.role = 'personnel' gate is needed (that
+-- gate previously blocked the Personnel Workspace preview, where an admin
+-- browsing /personnel routes gets a JS-only role override while
+-- admin.role stays 'admin'). The subquery must correlate with
+-- announcement_acknowledgments.announcement_id explicitly: writing the
+-- unqualified column name here resolves to the subquery's own `an` alias
+-- instead (both have an announcement_id column), which compiles to the
+-- tautology `an.announcement_id = an.announcement_id` and silently breaks
+-- the audience check.
 drop policy if exists "announcement_ack_insert_personnel_own" on public.announcement_acknowledgments;
 create policy "announcement_ack_insert_personnel_own"
 on public.announcement_acknowledgments
@@ -298,14 +309,9 @@ with check (
   personnel_id = auth.uid()
   and exists (
     select 1
-    from public.admin actor
-    where actor.admin_id = auth.uid()
-      and lower(actor.role) = 'personnel'
-  )
-  and exists (
-    select 1
     from public.announcements an
-    where an.announcement_id = announcement_id
+    where an.announcement_id = announcement_acknowledgments.announcement_id
+      and an.is_archived = false
       and (
         an.audience_type = 'all_personnel'
         or (

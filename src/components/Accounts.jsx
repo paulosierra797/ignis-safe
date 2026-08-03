@@ -3144,7 +3144,6 @@ const permissions = getDefaultPermissions(formData.role);
                 <div>
                   <h4>Pending Leave Requests</h4>
                 </div>
-                <span className="leave-request-pending-badge">{pendingLeaveRequests.length} pending</span>
               </div>
 
               <div className="account-directory-group-body">

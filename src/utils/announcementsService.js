@@ -7,6 +7,7 @@ const ANNOUNCEMENTS_TABLE = 'announcements';
 const ANNOUNCEMENT_ATTACHMENTS_BUCKET = 'announcement_attachments';
 const ANNOUNCEMENT_ACK_TABLE = 'announcement_acknowledgments';
 const ANNOUNCEMENT_RECIPIENTS_TABLE = 'announcement_recipients';
+const ANNOUNCEMENT_PERSONNEL_ARCHIVE_TABLE = 'announcement_personnel_archives';
 const PERSONNEL_ACTIVITY_LOGS_TABLE = 'personnel_activity_logs';
 const ANNOUNCEMENT_NUDGE_ACTIVITY_TYPE = 'announcement_acknowledgement_nudge';
 const MAX_ATTACHMENTS = 5;
@@ -359,7 +360,7 @@ export const getAnnouncementsForUser = async (currentUser) => {
     const announcementIds = announcements.map((row) => row.announcement_id);
 
     if (role === 'personnel' && userId) {
-      const [ackResult, nudgeResult] = await Promise.all([
+      const [ackResult, nudgeResult, personnelArchiveResult] = await Promise.all([
         supabase
           .from(ANNOUNCEMENT_ACK_TABLE)
           .select('announcement_id, acknowledged_at')
@@ -371,11 +372,17 @@ export const getAnnouncementsForUser = async (currentUser) => {
           .eq('personnel_id', userId)
           .eq('activity_type', ANNOUNCEMENT_NUDGE_ACTIVITY_TYPE)
           .in('announcement_id', announcementIds)
-          .order('performed_at', { ascending: false })
+          .order('performed_at', { ascending: false }),
+        supabase
+          .from(ANNOUNCEMENT_PERSONNEL_ARCHIVE_TABLE)
+          .select('announcement_id')
+          .eq('personnel_id', userId)
+          .in('announcement_id', announcementIds)
       ]);
 
       if (ackResult.error) throw ackResult.error;
       if (nudgeResult.error) throw nudgeResult.error;
+      if (personnelArchiveResult.error) throw personnelArchiveResult.error;
 
       const ackByAnnouncement = new Map(
         (ackResult.data || []).map((row) => [row.announcement_id, row.acknowledged_at])
@@ -396,19 +403,29 @@ export const getAnnouncementsForUser = async (currentUser) => {
         current.count += 1;
       });
 
-      return {
-        data: announcements.map((row) => {
-          const nudge = nudgeByAnnouncement.get(row.announcement_id);
+      // Personnel-archived announcements are hidden from this account's own
+      // active feed (and therefore from its pending-acknowledgement badge
+      // count) without touching the global is_archived flag other
+      // recipients and the admin view rely on.
+      const personnelArchivedIds = new Set(
+        (personnelArchiveResult.data || []).map((row) => row.announcement_id)
+      );
 
-          return {
-            ...row,
-            acknowledged_by_current_user: ackByAnnouncement.has(row.announcement_id),
-            acknowledged_at: ackByAnnouncement.get(row.announcement_id) || null,
-            acknowledgement_nudge_count: nudge?.count || 0,
-            latest_acknowledgement_nudge_at: nudge?.latestAt || null,
-            acknowledgement_nudge_message: nudge?.message || ''
-          };
-        }),
+      return {
+        data: announcements
+          .filter((row) => !personnelArchivedIds.has(row.announcement_id))
+          .map((row) => {
+            const nudge = nudgeByAnnouncement.get(row.announcement_id);
+
+            return {
+              ...row,
+              acknowledged_by_current_user: ackByAnnouncement.has(row.announcement_id),
+              acknowledged_at: ackByAnnouncement.get(row.announcement_id) || null,
+              acknowledgement_nudge_count: nudge?.count || 0,
+              latest_acknowledgement_nudge_at: nudge?.latestAt || null,
+              acknowledgement_nudge_message: nudge?.message || ''
+            };
+          }),
         error: null
       };
     }
@@ -898,6 +915,174 @@ export const getArchivedAnnouncements = async (currentUser) => {
     return { data: await mergeAnnouncementRecipients(archived), error: null };
   } catch (error) {
     console.error('Error fetching archived announcements:', error);
+    return { data: [], error: error.message };
+  }
+};
+
+export const archivePersonnelAnnouncement = async (currentUser, announcementId) => {
+  try {
+    const role = normalizeRole(currentUser?.role);
+    const personnelId = currentUser?.admin_id;
+
+    if (role !== 'personnel') {
+      throw new Error('Only personnel can archive their own announcements.');
+    }
+
+    if (!personnelId || !announcementId) {
+      throw new Error('Missing personnel or announcement id.');
+    }
+
+    const { error } = await supabase
+      .from(ANNOUNCEMENT_PERSONNEL_ARCHIVE_TABLE)
+      .upsert(
+        {
+          announcement_id: announcementId,
+          personnel_id: personnelId,
+          archived_at: new Date().toISOString()
+        },
+        {
+          onConflict: 'announcement_id,personnel_id',
+          ignoreDuplicates: false
+        }
+      );
+
+    if (error) throw error;
+
+    await logPersonnelActivity({
+      personnelId,
+      activityType: 'announcement_archived',
+      action: 'Announcement Archived',
+      details: 'Archived an announcement from their personal feed.',
+      status: 'SUCCESS',
+      announcementId,
+      metadata: { announcement_id: announcementId }
+    });
+
+    emitDataChanged('announcements', { announcementId, personnelId, action: 'personnel_archived' });
+
+    return { data: { announcementId }, error: null };
+  } catch (error) {
+    console.error('Error archiving announcement for personnel:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const restorePersonnelAnnouncement = async (currentUser, announcementId) => {
+  try {
+    const role = normalizeRole(currentUser?.role);
+    const personnelId = currentUser?.admin_id;
+
+    if (role !== 'personnel') {
+      throw new Error('Only personnel can restore their own announcements.');
+    }
+
+    if (!personnelId || !announcementId) {
+      throw new Error('Missing personnel or announcement id.');
+    }
+
+    const { error } = await supabase
+      .from(ANNOUNCEMENT_PERSONNEL_ARCHIVE_TABLE)
+      .delete()
+      .eq('announcement_id', announcementId)
+      .eq('personnel_id', personnelId);
+
+    if (error) throw error;
+
+    await logPersonnelActivity({
+      personnelId,
+      activityType: 'announcement_restored',
+      action: 'Announcement Restored',
+      details: 'Restored an announcement to their active feed.',
+      status: 'SUCCESS',
+      announcementId,
+      metadata: { announcement_id: announcementId }
+    });
+
+    emitDataChanged('announcements', { announcementId, personnelId, action: 'personnel_restored' });
+
+    return { data: { announcementId }, error: null };
+  } catch (error) {
+    console.error('Error restoring announcement for personnel:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+export const getArchivedAnnouncementsForPersonnel = async (currentUser) => {
+  try {
+    const role = normalizeRole(currentUser?.role);
+    const personnelId = currentUser?.admin_id;
+
+    if (role !== 'personnel' || !personnelId) {
+      return { data: [], error: 'Only personnel can view their archived announcements.' };
+    }
+
+    const { data: archiveRows, error: archiveError } = await supabase
+      .from(ANNOUNCEMENT_PERSONNEL_ARCHIVE_TABLE)
+      .select('announcement_id, archived_at')
+      .eq('personnel_id', personnelId)
+      .order('archived_at', { ascending: false });
+
+    if (archiveError) throw archiveError;
+
+    if (!archiveRows || archiveRows.length === 0) {
+      return { data: [], error: null };
+    }
+
+    const personnelArchivedAtByAnnouncement = new Map(
+      archiveRows.map((row) => [row.announcement_id, row.archived_at])
+    );
+    const announcementIds = archiveRows.map((row) => row.announcement_id);
+
+    const [{ data, error }, ackResult] = await Promise.all([
+      supabase
+        .from(ANNOUNCEMENTS_TABLE)
+        .select(`
+          announcement_id,
+          title,
+          content,
+          attachments,
+          audience_type,
+          target_personnel_id,
+          created_by,
+          created_at,
+          is_archived,
+          archived_at,
+          archived_by,
+          creator:admin!announcements_created_by_fkey(first_name, last_name, rank, email),
+          target:admin!announcements_target_personnel_id_fkey(first_name, last_name, rank, email)
+        `)
+        .in('announcement_id', announcementIds),
+      supabase
+        .from(ANNOUNCEMENT_ACK_TABLE)
+        .select('announcement_id, acknowledged_at')
+        .eq('personnel_id', personnelId)
+        .in('announcement_id', announcementIds)
+    ]);
+
+    if (error) throw error;
+    if (ackResult.error) throw ackResult.error;
+
+    let announcements = (data || []).map(mapAnnouncement);
+    announcements = await mergeAnnouncementRecipients(announcements);
+
+    const ackByAnnouncement = new Map(
+      (ackResult.data || []).map((row) => [row.announcement_id, row.acknowledged_at])
+    );
+
+    const merged = announcements.map((row) => ({
+      ...row,
+      acknowledged_by_current_user: ackByAnnouncement.has(row.announcement_id),
+      acknowledged_at: ackByAnnouncement.get(row.announcement_id) || null,
+      personnel_archived_at: personnelArchivedAtByAnnouncement.get(row.announcement_id) || null
+    }));
+
+    merged.sort((left, right) =>
+      new Date(right.personnel_archived_at || 0).getTime() - new Date(left.personnel_archived_at || 0).getTime()
+    );
+
+    return { data: merged, error: null };
+  } catch (error) {
+    console.error('Error fetching archived announcements for personnel:', error);
     return { data: [], error: error.message };
   }
 };

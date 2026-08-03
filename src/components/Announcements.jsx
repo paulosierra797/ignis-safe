@@ -17,6 +17,9 @@ import {
   archiveAnnouncement,
   restoreAnnouncement,
   getArchivedAnnouncements,
+  archivePersonnelAnnouncement,
+  restorePersonnelAnnouncement,
+  getArchivedAnnouncementsForPersonnel,
   nudgeAnnouncementPersonnel,
   MAX_ANNOUNCEMENT_WORDS,
   countAnnouncementWords
@@ -386,7 +389,9 @@ export default function Announcements() {
 
   const loadArchivedAnnouncements = async () => {
     setArchivedLoading(true);
-    const { data, error } = await getArchivedAnnouncements(currentUser);
+    const { data, error } = isAdmin
+      ? await getArchivedAnnouncements(currentUser)
+      : await getArchivedAnnouncementsForPersonnel(effectiveUser);
     if (error) {
       setMessage({ type: 'error', text: `Failed to load archived announcements: ${error}` });
     } else {
@@ -609,7 +614,9 @@ export default function Announcements() {
     if (!archiveModalId) return;
 
     setArchiving(true);
-    const { error } = await archiveAnnouncement(currentUser, archiveModalId);
+    const { error } = isAdmin
+      ? await archiveAnnouncement(currentUser, archiveModalId)
+      : await archivePersonnelAnnouncement(effectiveUser, archiveModalId);
     setArchiving(false);
 
     if (error) {
@@ -627,7 +634,9 @@ export default function Announcements() {
     if (!announcementId) return;
 
     setRestoringId(announcementId);
-    const { error } = await restoreAnnouncement(currentUser, announcementId);
+    const { error } = isAdmin
+      ? await restoreAnnouncement(currentUser, announcementId)
+      : await restorePersonnelAnnouncement(effectiveUser, announcementId);
     setRestoringId('');
 
     if (error) {
@@ -981,7 +990,24 @@ export default function Announcements() {
           <div className="announcement-card list-card">
           <div className="list-card-header">
             <h2>{isAdmin ? 'Sent Announcements' : 'Announcement Feed'}</h2>
-            <span className="announcement-count">{filteredAnnouncements.length} item(s)</span>
+            <div className="list-card-header-actions">
+              {!isAdmin && (
+                <button
+                  type="button"
+                  className={`archive-list-button${archivedOpen ? ' is-open' : ''}`}
+                  onClick={toggleArchivedPanel}
+                  aria-expanded={archivedOpen}
+                  aria-controls="announcementArchiveList"
+                >
+                  <FiArchive aria-hidden="true" />
+                  Archived Announcements
+                  {archivedLoaded && (
+                    <span className="archive-list-count">{archivedAnnouncements.length}</span>
+                  )}
+                </button>
+              )}
+              <span className="announcement-count">{filteredAnnouncements.length} item(s)</span>
+            </div>
           </div>
 
           {loading ? (
@@ -1089,15 +1115,28 @@ export default function Announcements() {
                     </div>
                   )}
 
-                  {!isAdmin && !announcement.acknowledged_by_current_user && (
-                    <div className="announcement-ack-action">
-                      <button
-                        type="button"
-                        onClick={() => handleAcknowledgeAnnouncement(announcement.announcement_id)}
-                        disabled={acknowledgingId === announcement.announcement_id}
-                      >
-                        {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}
-                      </button>
+                  {!isAdmin && (
+                    <div className="announcement-action-row">
+                      {!announcement.acknowledged_by_current_user && (
+                        <div className="announcement-ack-action">
+                          <button
+                            type="button"
+                            onClick={() => handleAcknowledgeAnnouncement(announcement.announcement_id)}
+                            disabled={acknowledgingId === announcement.announcement_id}
+                          >
+                            {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}
+                          </button>
+                        </div>
+                      )}
+                      <div className="announcement-archive-action">
+                        <button
+                          type="button"
+                          className="announcement-archive-button"
+                          onClick={() => setArchiveModalId(announcement.announcement_id)}
+                        >
+                          Archive
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -1143,7 +1182,7 @@ export default function Announcements() {
 
       </div>
 
-      {isAdmin && isAnnouncementTab && archivedOpen && (
+      {(isAdmin ? isAnnouncementTab : true) && archivedOpen && (
         <div
           className="archive-list-modal-overlay"
           onMouseDown={(event) => {
@@ -1161,7 +1200,8 @@ export default function Announcements() {
               <div>
                 <span>Announcement records</span>
                 <h2 id="announcementArchiveTitle">
-                  Archive List{archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}
+                  {isAdmin ? 'Archive List' : 'Archived Announcements'}
+                  {archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}
                 </h2>
               </div>
               <CloseButton
@@ -1212,7 +1252,20 @@ export default function Announcements() {
                         </div>
                       )}
                       <div className="announcement-meta">
-                        <span>Archived {formatDate(announcement.archived_at)}{announcement.archived_by_name ? ` by ${announcement.archived_by_name}` : ''}</span>
+                        {isAdmin ? (
+                          <span>
+                            Archived {formatDate(announcement.archived_at)}
+                            {announcement.archived_by_name ? ` by ${announcement.archived_by_name}` : ''}
+                          </span>
+                        ) : (
+                          <>
+                            <span className={`announcement-ack-status ${announcement.acknowledged_by_current_user ? 'acknowledged' : 'pending'}`}>
+                              {announcement.acknowledged_by_current_user ? 'Acknowledged' : 'Pending acknowledgment'}
+                            </span>
+                            <span>Posted {formatDate(announcement.created_at)}</span>
+                            <span>Archived {formatDate(announcement.personnel_archived_at)}</span>
+                          </>
+                        )}
                       </div>
                       <div className="archived-restore-action">
                         <button
@@ -1235,8 +1288,8 @@ export default function Announcements() {
       {archiveModalId && (
         <div className="announcement-confirm-modal-overlay">
           <div className="announcement-confirm-modal-card">
-            <h3>Archive Announcement</h3>
-            <p>Are you sure you want to archive this announcement? It will be removed from the active list but remains stored and can be restored later.</p>
+            <h3>Archive this announcement?</h3>
+            <p>You can restore it later from Archived Announcements.</p>
             <div className="announcement-confirm-modal-actions">
               <button
                 type="button"

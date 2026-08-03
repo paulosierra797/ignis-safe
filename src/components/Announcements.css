@@ -348,6 +348,18 @@
   font-weight: 600;
 }
 
+.list-card-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.list-card-header-actions .archive-list-button {
+  min-height: 38px;
+  padding: 0.5rem 0.85rem;
+}
+
 .announcement-list {
   display: grid;
   gap: 0.8rem;
@@ -567,6 +579,19 @@
 .announcement-nudge-notice small {
   color: #a16207;
   font-size: 0.7rem;
+}
+
+.announcement-action-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.65rem;
+}
+
+.announcement-action-row .announcement-ack-action,
+.announcement-action-row .announcement-archive-action {
+  margin-top: 0;
 }
 
 .announcement-archive-action {
@@ -1083,6 +1108,20 @@
   }
 
   .announcement-ack-action button {
+    width: 100%;
+  }
+
+  .announcement-action-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .announcement-action-row .announcement-archive-action {
+    width: 100%;
+  }
+
+  .announcement-action-row .announcement-archive-action .announcement-archive-button {
     width: 100%;
   }
 }

@@ -17,12 +17,16 @@
   order: 1;
 }
 
-.accounts-main > .shift-summary-card {
+.accounts-main > .accounts-tabs-wrap {
   order: 2;
 }
 
-.accounts-main > .accounts-directory-section {
+.accounts-main > .shift-summary-card {
   order: 3;
+}
+
+.accounts-main > .accounts-directory-section {
+  order: 4;
 }
 
 .accounts-main > .accounts-directory-section.leave-requests-section {
@@ -30,7 +34,69 @@
 }
 
 .accounts-main > .accounts-directory-section.profile-request-section {
-  order: 5;
+  order: 4;
+}
+
+.accounts-tabs-wrap {
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.accounts-tabs {
+  display: flex;
+  gap: 0.4rem;
+  border-bottom: 1px solid #e5e7eb;
+  min-width: max-content;
+}
+
+.accounts-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  background: transparent;
+  padding: 0.75rem 1.1rem;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.accounts-tab:hover {
+  color: #1f2937;
+}
+
+.accounts-tab.is-active {
+  color: #b91c1c;
+  border-bottom-color: #b91c1c;
+}
+
+.accounts-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .accounts-tab {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.88rem;
+  }
 }
 .leave-approval-mobile-list,
 .profile-request-mobile-list,

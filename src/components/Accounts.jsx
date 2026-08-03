@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useBlocker } from 'react-router-dom';
+import { useBlocker, useSearchParams } from 'react-router-dom';
 import { FaArchive, FaChevronDown, FaSearch, FaTimes, FaUndo } from 'react-icons/fa';
 import {
   FiBriefcase,
@@ -59,6 +59,12 @@ const contactNumberRegex = /^09\d{9}$/;
 const ADD_PERSONNEL_TIMEOUT_MS = 30000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const REQUEST_PREVIEW_LIMIT = 3;
+const ACCOUNTS_TABS = [
+  { key: 'personnel', label: 'Personnel List' },
+  { key: 'leave-requests', label: 'Leave Requests' },
+  { key: 'profile-changes', label: 'Profile Change Requests' }
+];
+const ACCOUNTS_TAB_KEYS = ACCOUNTS_TABS.map((tab) => tab.key);
 const ACCOUNT_PAGE_SIZE = 10;
 const EMPTY_PERSONNEL_FORM = {
   first_name: '',
@@ -579,6 +585,15 @@ function AccountDirectoryGroup({
 
 export default function Accounts() {
   const { currentUser } = useUser();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeAccountsTab = ACCOUNTS_TAB_KEYS.includes(searchParams.get('tab'))
+    ? searchParams.get('tab')
+    : 'personnel';
+  const setActiveAccountsTab = (tabKey) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', tabKey);
+    setSearchParams(nextParams, { replace: true });
+  };
   const [accounts, setAccounts] = useState([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -2951,6 +2966,36 @@ const permissions = getDefaultPermissions(formData.role);
           </div>
         </div>
 
+        <div className="accounts-tabs-wrap">
+          <div className="accounts-tabs" role="tablist" aria-label="Personnel module sections">
+            {ACCOUNTS_TABS.map((tab) => {
+              const badgeCount = tab.key === 'leave-requests'
+                ? pendingLeaveRequests.length
+                : tab.key === 'profile-changes'
+                  ? pendingProfileChangeRequestCount
+                  : 0;
+
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  role="tab"
+                  id={`accounts-tab-${tab.key}`}
+                  aria-selected={activeAccountsTab === tab.key}
+                  aria-controls={`accounts-tabpanel-${tab.key}`}
+                  className={`accounts-tab${activeAccountsTab === tab.key ? ' is-active' : ''}`}
+                  onClick={() => setActiveAccountsTab(tab.key)}
+                >
+                  <span>{tab.label}</span>
+                  {badgeCount > 0 && (
+                    <span className="accounts-tab-badge">{badgeCount}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="shift-summary-card">
           <div className="shift-summary-calendar-header">
             <button
@@ -3068,7 +3113,13 @@ const permissions = getDefaultPermissions(formData.role);
           </div>
         </div>
 
-        <section className="accounts-directory-section leave-requests-section" aria-labelledby="leave-requests-title">
+        {activeAccountsTab === 'leave-requests' && (
+        <section
+          className="accounts-directory-section leave-requests-section"
+          aria-labelledby="leave-requests-title"
+          id="accounts-tabpanel-leave-requests"
+          role="tabpanel"
+        >
           <div className="accounts-directory-header">
             <div>
               <p className="accounts-directory-eyebrow">Personnel leave</p>
@@ -3413,8 +3464,15 @@ const permissions = getDefaultPermissions(formData.role);
             </div>
           </div>
         </section>
+        )}
 
-        <section className="accounts-directory-section profile-request-section" aria-labelledby="profile-requests-title">
+        {activeAccountsTab === 'profile-changes' && (
+        <section
+          className="accounts-directory-section profile-request-section"
+          aria-labelledby="profile-requests-title"
+          id="accounts-tabpanel-profile-changes"
+          role="tabpanel"
+        >
           <div className="accounts-directory-header">
             <div>
               <p className="accounts-directory-eyebrow">Personnel profile</p>
@@ -3715,8 +3773,15 @@ const permissions = getDefaultPermissions(formData.role);
             </div>
           </div>
         </section>
+        )}
 
-        <section className="accounts-directory-section" aria-labelledby="personnel-directory-title">
+        {activeAccountsTab === 'personnel' && (
+        <section
+          className="accounts-directory-section"
+          aria-labelledby="personnel-directory-title"
+          id="accounts-tabpanel-personnel"
+          role="tabpanel"
+        >
           <div className="accounts-directory-header">
             <div>
               <p className="accounts-directory-eyebrow">Personnel directory</p>
@@ -3833,6 +3898,7 @@ const permissions = getDefaultPermissions(formData.role);
           </div>
         )}
         </section>
+        )}
 
         {isProfileModalOpen && selectedProfileAccount && (
           <PersonnelProfileModal

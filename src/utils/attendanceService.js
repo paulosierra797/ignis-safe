@@ -97,7 +97,22 @@ const buildOfficerFromAuthUser = async (authUser) => {
   const accountRole = String(adminProfile?.role || '').trim().toLowerCase();
   const accountStatus = String(adminProfile?.status || '').trim().toLowerCase();
 
-  if (accountRole !== 'personnel' || (accountStatus && accountStatus !== 'active')) {
+  // Admin accounts can also carry a personnel_workspace_profiles row so they
+  // can mark their own attendance (see getPersonnelWorkspaceProfile in
+  // usersService.js) - accept that combination the same way the rest of the
+  // app does, instead of only ever accepting accountRole === 'personnel'.
+  const isPersonnelAccount = accountRole === 'personnel';
+  const isAdminActingAsPersonnel = accountRole === 'admin' && Boolean(workspaceProfile);
+
+  if (!isPersonnelAccount && !isAdminActingAsPersonnel) {
+    return null;
+  }
+
+  const activeStatus = isAdminActingAsPersonnel
+    ? String(workspaceProfile?.status || '').trim().toLowerCase()
+    : accountStatus;
+
+  if (activeStatus && activeStatus !== 'active') {
     return null;
   }
 

@@ -292,6 +292,11 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
       return;
     }
 
+    if (hasPendingLeaveRequest) {
+      setMessage({ type: 'error', text: 'You already have a pending leave request awaiting admin approval.' });
+      return;
+    }
+
     if (!leaveForm.startDate || !leaveForm.endDate) {
       setMessage({ type: 'error', text: 'Please provide both leave start and end dates.' });
       return;
@@ -351,6 +356,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
   };
 
   const requestStatus = String(leaveRequest.latest_request?.status || '').toLowerCase();
+  const hasPendingLeaveRequest = requestStatus === 'pending';
   const badgeLabel = requestStatus
     ? requestStatus === 'pending'
       ? 'Pending Approval'
@@ -616,7 +622,18 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
               </div>
             </div>
 
-            <button className="ops-primary-btn" type="button" onClick={handleSubmitLeave} disabled={leaveSaving || loading}>
+            {hasPendingLeaveRequest && (
+              <p className="leave-pending-notice">
+                You already have a pending leave request awaiting admin approval.
+              </p>
+            )}
+
+            <button
+              className="ops-primary-btn"
+              type="button"
+              onClick={handleSubmitLeave}
+              disabled={leaveSaving || loading || hasPendingLeaveRequest}
+            >
               {leaveSaving ? 'Submitting...' : 'Submit Leave Request'}
             </button>
 

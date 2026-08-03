@@ -119,20 +119,18 @@ useEffect(() => {
 
     if (!token || !isAuthValid()) {
       setAuthError('Session expired. Redirecting to login...');
-      const redirectUrl = `${window.location.pathname}${window.location.search}`;
-      setTimeout(() => navigate(`/attendance-login?redirect=${encodeURIComponent(redirectUrl)}`), 1200);
+      setTimeout(() => navigate(`/attendance-login?station=${encodeURIComponent(qrSessionId || '')}`), 1200);
       return;
     }
 
     if (authSessionId && token.sessionId !== authSessionId) {
       setAuthError('Invalid session token. Please login again.');
-      const redirectUrl = `${window.location.pathname}${window.location.search}`;
-      setTimeout(() => navigate(`/attendance-login?redirect=${encodeURIComponent(redirectUrl)}`), 1200);
+      setTimeout(() => navigate(`/attendance-login?station=${encodeURIComponent(qrSessionId || '')}`), 1200);
       return;
     }
 
     setAuthenticatedOfficer(token);
-  }, [authSessionId, navigate]);
+  }, [authSessionId, navigate, qrSessionId]);
 
 useEffect(() => {
   const checkSession = async () => {

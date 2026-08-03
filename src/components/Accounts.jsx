@@ -3068,11 +3068,25 @@ const permissions = getDefaultPermissions(formData.role);
           </div>
         </div>
 
-        <div className="leave-approval-card">
-          <div className="leave-approval-header">
-            <h3>Pending Leave Requests</h3>
-            <span>{pendingLeaveRequests.length} pending</span>
+        <section className="accounts-directory-section leave-requests-section" aria-labelledby="leave-requests-title">
+          <div className="accounts-directory-header">
+            <div>
+              <p className="accounts-directory-eyebrow">Personnel leave</p>
+              <h3 id="leave-requests-title">Leave Requests</h3>
+            </div>
+            <span className="accounts-directory-count">{pendingLeaveRequests.length} pending</span>
           </div>
+
+          <div className="leave-requests-groups">
+            <div className="account-directory-group leave-request-group leave-request-group-pending">
+              <div className="account-directory-group-header">
+                <div>
+                  <h4>Pending Leave Requests</h4>
+                </div>
+                <span className="leave-request-pending-badge">{pendingLeaveRequests.length} pending</span>
+              </div>
+
+              <div className="account-directory-group-body">
 
           {pendingRequestMessage && (
             <div className="leave-approval-message">{pendingRequestMessage}</div>
@@ -3199,25 +3213,30 @@ const permissions = getDefaultPermissions(formData.role);
             label="leave requests"
             onToggle={() => toggleRequestSection('pendingLeave')}
           />
-        </div>
-
-        <div className="leave-approval-card leave-history-card">
-          <div className="leave-approval-header">
-            <h3>Leave Request History</h3>
-            <div className="request-history-heading-actions">
-              <span>
-                {visibleLeaveRequestHistory.length} of {filteredLeaveRequestHistory.length} shown
-              </span>
-              <button
-                type="button"
-                className="request-archive-list-button"
-                onClick={() => openRequestArchive('leave')}
-              >
-                <FaArchive aria-hidden="true" />
-                Archive List
-              </button>
+              </div>
             </div>
-          </div>
+
+            <div className="account-directory-group leave-request-group leave-request-group-history leave-history-card">
+              <div className="account-directory-group-header">
+                <div>
+                  <h4>Leave Request History</h4>
+                </div>
+                <div className="request-history-heading-actions">
+                  <span>
+                    {visibleLeaveRequestHistory.length} of {filteredLeaveRequestHistory.length} shown
+                  </span>
+                  <button
+                    type="button"
+                    className="request-archive-list-button"
+                    onClick={() => openRequestArchive('leave')}
+                  >
+                    <FaArchive aria-hidden="true" />
+                    Archive List
+                  </button>
+                </div>
+              </div>
+
+              <div className="account-directory-group-body">
 
           <div className="request-history-toolbar">
             <select
@@ -3390,7 +3409,10 @@ const permissions = getDefaultPermissions(formData.role);
             label="history entries"
             onToggle={() => toggleRequestSection('leaveHistory')}
           />
-        </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div className="profile-request-card">
           <div className="leave-approval-header">

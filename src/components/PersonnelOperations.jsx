@@ -170,14 +170,6 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
     };
   }, [loadPageData]);
 
-  const todaySchedule = useMemo(() => {
-    if (!shiftRows.length) {
-      return 'No shift schedule available today';
-    }
-
-    return shiftRows[0].shift;
-  }, [shiftRows]);
-
   const shiftRowsByDate = useMemo(
     () => new Map(shiftRows.map((row) => [row.date, row])),
     [shiftRows]
@@ -254,22 +246,6 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [selectedDayIso, closeDayDetail]);
-
-  const todayDutySummary = useMemo(() => {
-    if (!shiftRows.length) {
-      return null;
-    }
-
-    const [todayRow] = shiftRows;
-    if (!todayRow || todayRow.restricted) {
-      return null;
-    }
-
-    return {
-      onDutyCount: todayRow.onDutyCount || 0,
-      onLeaveCount: todayRow.onLeaveCount || 0
-    };
-  }, [shiftRows]);
 
   const todayIso = getManilaToday();
   const minEndDate = leaveForm.startDate ? laterIso(todayIso, leaveForm.startDate) : todayIso;
@@ -381,19 +357,6 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
 
         <div className="personnel-ops-grid">
           <section className="ops-card schedule-card">
-            <div className="ops-card-header">
-              <h2>Shift Schedule</h2>
-              <span className="shift-chip">
-                Today: {todaySchedule}
-                {todayDutySummary && (
-                  <span className="schedule-count-inline">
-                    {' '}
-                    · Duty {todayDutySummary.onDutyCount} · Leave {todayDutySummary.onLeaveCount}
-                  </span>
-                )}
-              </span>
-            </div>
-
             <div className="my-shift-banner">
               <span className="my-shift-label">Your Shift:</span>
               <span className={`my-shift-value my-shift-${myShiftType ? myShiftType.toLowerCase() : 'none'}`}>
@@ -471,16 +434,10 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
                   const isRestricted = Boolean(row?.restricted);
                   const onDutyPersonnel = isRestricted ? [] : (row?.onDutyPersonnel || []);
                   const onLeavePersonnel = isRestricted ? [] : (row?.onLeavePersonnel || []);
-                  const onLeave = row?.onLeaveCount;
                   const hasData = Boolean(row);
                   const isMineOnDuty = Boolean(onDutyPersonnel.some((p) => p.admin_id === currentUser?.admin_id));
                   const isMineOnLeave = Boolean(onLeavePersonnel.some((p) => p.admin_id === currentUser?.admin_id));
                   const myDayStatus = isMineOnDuty ? 'On Duty' : isMineOnLeave ? 'On Leave' : 'Off Duty';
-                  const myDayStatusClass = isMineOnDuty
-                    ? 'calendar-stat-duty'
-                    : isMineOnLeave
-                      ? 'calendar-stat-leave'
-                      : 'calendar-stat-off';
                   // Past dates are visually muted here but remain clickable so
                   // personnel can still look back at who they were scheduled with.
                   const isPastDate = isoDate < todayIso;
@@ -488,6 +445,8 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
                   const shiftTagClass = row ? row.shift.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '';
                   const visibleOnDutyPersonnel = onDutyPersonnel.slice(0, 3);
                   const remainingOnDutyCount = onDutyPersonnel.length - visibleOnDutyPersonnel.length;
+                  const visibleOnLeavePersonnel = onLeavePersonnel.slice(0, 3);
+                  const remainingOnLeaveCount = onLeavePersonnel.length - visibleOnLeavePersonnel.length;
 
                   return (
                     <div
@@ -497,7 +456,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
                       tabIndex={0}
                       aria-label={
                         isRestricted
-                          ? `${row?.displayDate || isoDate}: ${row?.shift}. Not your shift. View details.`
+                          ? `${row?.displayDate || isoDate}: ${row?.shift}. No Shift Scheduled. View details.`
                           : `${row?.displayDate || isoDate}: ${row?.shift || 'Off Duty'}. You: ${myDayStatus}. View details.`
                       }
                       onClick={() => openDayDetail(isoDate)}
@@ -520,13 +479,13 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
                       {row ? (
                         isRestricted ? (
                           <div className="shift-calendar-day-body shift-calendar-day-restricted">
-                            <span className="schedule-empty-inline">Not your shift</span>
+                            <span className="schedule-empty-inline">No Shift Scheduled</span>
                           </div>
                         ) : (
                           <div className="shift-calendar-day-body">
-                            <div className="shift-calendar-personnel-block">
-                              <strong>On Duty With</strong>
-                              {onDutyPersonnel.length ? (
+                            {onDutyPersonnel.length > 0 && (
+                              <div className="shift-calendar-personnel-block">
+                                <strong>On Duty</strong>
                                 <div className="schedule-personnel-list">
                                   {visibleOnDutyPersonnel.map((person) => {
                                     const isSelf = person.admin_id === currentUser?.admin_id;
@@ -544,15 +503,31 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
                                     <span className="personnel-badge personnel-badge-duty">+{remainingOnDutyCount} more</span>
                                   )}
                                 </div>
-                              ) : (
-                                <span className="schedule-empty-inline">No one scheduled</span>
-                              )}
-                            </div>
+                              </div>
+                            )}
 
-                            <div className="calendar-stats">
-                              <span className={`calendar-stat ${myDayStatusClass}`}>You: {myDayStatus}</span>
-                              <span className="shift-count-text">On Leave: {onLeave || 0}</span>
-                            </div>
+                            {onLeavePersonnel.length > 0 && (
+                              <div className="shift-calendar-personnel-block">
+                                <strong>On Leave</strong>
+                                <div className="schedule-personnel-list">
+                                  {visibleOnLeavePersonnel.map((person) => {
+                                    const isSelf = person.admin_id === currentUser?.admin_id;
+                                    return (
+                                      <span
+                                        key={person.admin_id}
+                                        className={`personnel-badge ${isSelf ? 'personnel-badge-mine' : 'personnel-badge-leave'}`}
+                                        title={person.name}
+                                      >
+                                        {isSelf ? 'You' : person.name}
+                                      </span>
+                                    );
+                                  })}
+                                  {remainingOnLeaveCount > 0 && (
+                                    <span className="personnel-badge personnel-badge-leave">+{remainingOnLeaveCount} more</span>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )
                       ) : (

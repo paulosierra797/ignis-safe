@@ -114,19 +114,39 @@ export const getPersonnelLeaveRequest = async (adminId) => {
     if (adminResult.error) throw adminResult.error;
     const adminRow = workspaceResult.data || adminResult.data;
 
-    const { data: latestRequestRows, error: requestError } = await supabase
+    const { data: requestRows, error: requestError } = await supabase
       .from(LEAVE_REQUESTS_TABLE)
-      .select('request_id, start_date, end_date, reason, status, rejection_reason, created_at, updated_at')
+      .select('request_id, start_date, end_date, reason, status, rejection_reason, approved_by, approved_at, created_at, updated_at')
       .eq('personnel_id', adminId)
       .eq('is_archived', false)
-      .order('created_at', { ascending: false })
-      .limit(1);
+      .order('created_at', { ascending: false });
 
     if (requestError) throw requestError;
 
-    const latestRequest = Array.isArray(latestRequestRows) && latestRequestRows.length > 0
-      ? latestRequestRows[0]
-      : null;
+    const history = Array.isArray(requestRows) ? requestRows : [];
+
+    const reviewerIds = [...new Set(history.map((row) => row.approved_by).filter(Boolean))];
+    let reviewerNameById = new Map();
+    if (reviewerIds.length > 0) {
+      const { data: reviewerRows, error: reviewerError } = await supabase
+        .from(ADMIN_TABLE)
+        .select('admin_id, first_name, last_name, email')
+        .in('admin_id', reviewerIds);
+
+      if (!reviewerError && Array.isArray(reviewerRows)) {
+        reviewerNameById = new Map(
+          reviewerRows.map((reviewer) => [
+            reviewer.admin_id,
+            [reviewer.first_name, reviewer.last_name].filter(Boolean).join(' ').trim() || reviewer.email || 'Admin'
+          ])
+        );
+      }
+    }
+
+    const historyWithReviewer = history.map((row) => ({
+      ...row,
+      reviewed_by_name: row.approved_by ? (reviewerNameById.get(row.approved_by) || null) : null
+    }));
 
     return {
       data: {
@@ -134,7 +154,8 @@ export const getPersonnelLeaveRequest = async (adminId) => {
         current_status: adminRow?.status || 'Active',
         leave_start_date: adminRow?.leave_start_date || null,
         leave_end_date: adminRow?.leave_end_date || null,
-        latest_request: latestRequest
+        latest_request: historyWithReviewer.length > 0 ? historyWithReviewer[0] : null,
+        history: historyWithReviewer
       },
       error: null
     };

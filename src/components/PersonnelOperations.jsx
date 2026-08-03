@@ -32,6 +32,22 @@ const formatDate = (value) => {
   }
 };
 
+// Timestamp columns (created_at, approved_at) already include a time
+// component, unlike the date-only columns formatDate above handles.
+const formatDateTime = (value) => {
+  if (!value) return '-';
+
+  try {
+    return new Date(value).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  } catch {
+    return value;
+  }
+};
+
 const laterIso = (a, b) => (a > b ? a : b);
 
 const toIsoDate = (date) => {
@@ -70,7 +86,8 @@ export default function PersonnelOperations() {
     current_status: 'Active',
     leave_start_date: null,
     leave_end_date: null,
-    latest_request: null
+    latest_request: null,
+    history: []
   });
   const [leaveForm, setLeaveForm] = useState({
     startDate: '',
@@ -313,7 +330,8 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
 
       setLeaveRequest((prev) => ({
         ...prev,
-        latest_request: data
+        latest_request: data,
+        history: [data, ...(prev.history || [])]
       }));
       setLeaveForm({ startDate: '', endDate: '' });
       setMessage({ type: 'success', text: 'Leave request submitted. Waiting for admin approval.' });
@@ -358,7 +376,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
         <div className="personnel-ops-grid">
           <section className="ops-card schedule-card">
             <div className="my-shift-card">
-              <span className="my-shift-card-label">Your Assigned Shift</span>
+              <span className="my-shift-card-label">Your Assigned Shift: </span>
               <span className={`my-shift-card-value my-shift-${myShiftType ? myShiftType.toLowerCase() : 'none'}`}>
                 {myShiftLabel}
               </span>
@@ -550,16 +568,6 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
 
             <p className="ops-caption">Set your leave period and submit your request for admin approval.</p>
 
-            {leaveRequest.latest_request && (
-              <div className="leave-request-meta">
-                <p><strong>Last Request:</strong> {formatDate(leaveRequest.latest_request.start_date)} to {formatDate(leaveRequest.latest_request.end_date)}</p>
-                <p><strong>Status:</strong> {formatStatusLabel(leaveRequest.latest_request.status)}</p>
-                {leaveRequest.latest_request.rejection_reason && (
-                  <p><strong>Rejection Reason:</strong> {leaveRequest.latest_request.rejection_reason}</p>
-                )}
-              </div>
-            )}
-
             <div className="leave-current-range">
               <p><strong>Current Start:</strong> {formatDate(leaveRequest.leave_start_date)}</p>
               <p><strong>Current End:</strong> {formatDate(leaveRequest.leave_end_date)}</p>
@@ -607,6 +615,45 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
             <button className="ops-primary-btn" type="button" onClick={handleSubmitLeave} disabled={leaveSaving || loading}>
               {leaveSaving ? 'Submitting...' : 'Submit Leave Request'}
             </button>
+
+            <div className="leave-history-section">
+              <h3 className="leave-history-title">Leave History</h3>
+
+              {leaveRequest.history && leaveRequest.history.length > 0 ? (
+                <div className="leave-history-list">
+                  {leaveRequest.history.map((item) => {
+                    const itemStatus = String(item.status || '').toLowerCase();
+                    return (
+                      <div key={item.request_id} className="leave-history-item">
+                        <div className="leave-history-item-header">
+                          <span className="leave-history-dates">
+                            {formatDate(item.start_date)} - {formatDate(item.end_date)}
+                          </span>
+                          <span className={`leave-status ${itemStatus}`}>
+                            {formatStatusLabel(item.status)}
+                          </span>
+                        </div>
+
+                        <div className="leave-history-item-details">
+                          <p><strong>Date Requested:</strong> {formatDateTime(item.created_at)}</p>
+                          {item.approved_at && (
+                            <p><strong>Date Reviewed:</strong> {formatDateTime(item.approved_at)}</p>
+                          )}
+                          {item.reviewed_by_name && (
+                            <p><strong>Reviewed By:</strong> {item.reviewed_by_name}</p>
+                          )}
+                          {itemStatus === 'rejected' && item.rejection_reason && (
+                            <p><strong>Rejection Reason:</strong> {item.rejection_reason}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="leave-history-empty">No leave requests yet.</p>
+              )}
+            </div>
           </section>
         </div>
 

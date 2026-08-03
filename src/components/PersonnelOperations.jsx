@@ -577,11 +577,6 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
 
             <p className="ops-caption">Set your leave period and submit your request for admin approval.</p>
 
-            <div className="leave-current-range">
-              <p><strong>Current Start:</strong> {formatDate(leaveRequest.leave_start_date)}</p>
-              <p><strong>Current End:</strong> {formatDate(leaveRequest.leave_end_date)}</p>
-            </div>
-
             <div className="leave-form-toolbar">
               <button
                 type="button"
@@ -635,16 +630,17 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
                     return (
                       <div key={item.request_id} className="leave-history-item">
                         <div className="leave-history-item-header">
-                          <span className="leave-history-dates">
-                            {formatDate(item.start_date)} - {formatDate(item.end_date)}
-                          </span>
+                          <div className="leave-history-dates">
+                            <p><strong>Current Start:</strong> {formatDate(item.start_date)}</p>
+                            <p><strong>Current End:</strong> {formatDate(item.end_date)}</p>
+                            <p><strong>Date Requested:</strong> {formatDateTime(item.created_at)}</p>
+                          </div>
                           <span className={`leave-status ${itemStatus}`}>
                             {formatStatusLabel(item.status)}
                           </span>
                         </div>
 
                         <div className="leave-history-item-details">
-                          <p><strong>Date Requested:</strong> {formatDateTime(item.created_at)}</p>
                           {item.approved_at && (
                             <p><strong>Date Reviewed:</strong> {formatDateTime(item.approved_at)}</p>
                           )}

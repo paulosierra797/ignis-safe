@@ -129,24 +129,6 @@
   color: #1d4ed8;
 }
 
-.leave-current-range {
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: #f9fafb;
-  border: 1px dashed #d1d5db;
-  border-radius: 10px;
-}
-
-.leave-current-range p {
-  margin: 0;
-  color: #374151;
-  font-size: 0.9rem;
-}
-
-.leave-current-range p + p {
-  margin-top: 0.35rem;
-}
-
 .leave-form-toolbar {
   display: flex;
   justify-content: flex-end;
@@ -284,16 +266,26 @@
 
 .leave-history-item-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 0.5rem;
 }
 
 .leave-history-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.leave-history-dates p {
+  margin: 0;
+  color: #334155;
+  font-size: 0.84rem;
+}
+
+.leave-history-dates strong {
   color: #111827;
-  font-weight: 600;
-  font-size: 0.9rem;
 }
 
 .leave-history-item-details p {

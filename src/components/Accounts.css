@@ -25,12 +25,12 @@
   order: 3;
 }
 
-.accounts-main > .profile-request-card {
+.accounts-main > .accounts-directory-section.leave-requests-section {
   order: 4;
 }
 
-.accounts-main > .accounts-directory-section.leave-requests-section {
-  order: 4;
+.accounts-main > .accounts-directory-section.profile-request-section {
+  order: 5;
 }
 .leave-approval-mobile-list,
 .profile-request-mobile-list,
@@ -539,27 +539,6 @@
   margin-bottom: 1rem;
 }
 
-.leave-approval-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.6rem;
-}
-
-.leave-approval-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  color: #1f2937;
-}
-
-.leave-approval-header span {
-  background: #fef3c7;
-  color: #92400e;
-  border-radius: 999px;
-  padding: 0.25rem 0.6rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
 
 .leave-approval-message {
   margin-bottom: 0.6rem;
@@ -636,6 +615,11 @@
   border-radius: 12px;
   padding: 1rem;
   margin-bottom: 1rem;
+}
+
+.account-directory-group.profile-request-card {
+  padding: 0;
+  margin-bottom: 0;
 }
 
 .profile-request-header-actions {
@@ -1128,6 +1112,26 @@
 }
 
 .leave-request-group .request-history-toolbar {
+  margin-bottom: 0.75rem;
+}
+
+.profile-request-group-pending {
+  border-top: 4px solid #f59e0b;
+}
+
+.profile-request-group-history {
+  border-top: 4px solid #64748b;
+}
+
+.profile-request-group .account-directory-group-body {
+  padding: 1rem;
+}
+
+.profile-request-group .leave-approval-table-wrap {
+  border-radius: 10px;
+}
+
+.profile-request-group .request-history-toolbar {
   margin-bottom: 0.75rem;
 }
 
@@ -3106,18 +3110,13 @@
     width: 100%;
   }
 
-  .leave-approval-header {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 0.6rem;
-  }
-
   .request-history-heading-actions {
     width: 100%;
     justify-content: space-between;
   }
 
-  .leave-request-group .account-directory-group-header {
+  .leave-request-group .account-directory-group-header,
+  .profile-request-group .account-directory-group-header {
     align-items: flex-start;
     flex-direction: column;
     gap: 0.6rem;

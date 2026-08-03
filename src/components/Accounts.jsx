@@ -3414,11 +3414,25 @@ const permissions = getDefaultPermissions(formData.role);
           </div>
         </section>
 
-        <div className="profile-request-card">
-          <div className="leave-approval-header">
-            <h3>Pending Profile Change Requests</h3>
-            <span>{pendingProfileChangeRequestCount} pending</span>
+        <section className="accounts-directory-section profile-request-section" aria-labelledby="profile-requests-title">
+          <div className="accounts-directory-header">
+            <div>
+              <p className="accounts-directory-eyebrow">Personnel profile</p>
+              <h3 id="profile-requests-title">Profile Change Requests</h3>
+            </div>
+            <span className="accounts-directory-count">{pendingProfileChangeRequestCount} pending</span>
           </div>
+
+          <div className="leave-requests-groups">
+            <div className="account-directory-group profile-request-group profile-request-group-pending profile-request-card">
+              <div className="account-directory-group-header">
+                <div>
+                  <h4>Pending Profile Change Requests</h4>
+                </div>
+                <span className="leave-request-pending-badge">{pendingProfileChangeRequestCount} pending</span>
+              </div>
+
+              <div className="account-directory-group-body">
 
           {profileRequestMessage && (
             <div className="leave-approval-message">{profileRequestMessage}</div>
@@ -3529,25 +3543,30 @@ const permissions = getDefaultPermissions(formData.role);
             label="profile requests"
             onToggle={() => toggleRequestSection('pendingProfile')}
           />
-        </div>
-
-        <div className="profile-request-card profile-history-card">
-          <div className="leave-approval-header">
-            <h3>Profile Change Request History</h3>
-            <div className="request-history-heading-actions">
-              <span>
-                {visibleProfileChangeHistory.length} of {filteredProfileChangeHistory.length} shown
-              </span>
-              <button
-                type="button"
-                className="request-archive-list-button"
-                onClick={() => openRequestArchive('profile')}
-              >
-                <FaArchive aria-hidden="true" />
-                Archive List
-              </button>
+              </div>
             </div>
-          </div>
+
+            <div className="account-directory-group profile-request-group profile-request-group-history profile-request-card profile-history-card">
+              <div className="account-directory-group-header">
+                <div>
+                  <h4>Profile Change Request History</h4>
+                </div>
+                <div className="request-history-heading-actions">
+                  <span>
+                    {visibleProfileChangeHistory.length} of {filteredProfileChangeHistory.length} shown
+                  </span>
+                  <button
+                    type="button"
+                    className="request-archive-list-button"
+                    onClick={() => openRequestArchive('profile')}
+                  >
+                    <FaArchive aria-hidden="true" />
+                    Archive List
+                  </button>
+                </div>
+              </div>
+
+              <div className="account-directory-group-body">
 
           <div className="request-history-toolbar">
             <select
@@ -3692,7 +3711,10 @@ const permissions = getDefaultPermissions(formData.role);
             label="history entries"
             onToggle={() => toggleRequestSection('profileHistory')}
           />
-        </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <section className="accounts-directory-section" aria-labelledby="personnel-directory-title">
           <div className="accounts-directory-header">

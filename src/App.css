@@ -3,3 +3,40 @@
   display: flex;
   flex-direction: column;
 }
+
+.expandable-text-wrap {
+  min-width: 0;
+}
+
+.expandable-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.expandable-text-expanded {
+  display: block;
+  overflow: visible;
+}
+
+.expandable-text-toggle {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #c1272d;
+  font-size: 0.8em;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.expandable-text-toggle:hover,
+.expandable-text-toggle:focus-visible {
+  color: #991b1b;
+}

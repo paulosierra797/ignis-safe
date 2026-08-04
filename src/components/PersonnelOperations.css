@@ -470,6 +470,16 @@
   margin-top: 0.3rem;
 }
 
+.leave-history-reason + .leave-history-reason,
+.leave-history-item-details p + .leave-history-reason,
+.leave-history-reason + p {
+  margin-top: 0.3rem;
+}
+
+.leave-history-reason p {
+  margin: 0;
+}
+
 .leave-history-empty {
   margin: 0;
   color: #6b7280;

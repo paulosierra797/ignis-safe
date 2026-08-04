@@ -15,6 +15,7 @@ import {
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
+import ExpandableText from './ExpandableText';
 import { supabase } from "../utils/supabaseClient";
 import './Accounts.css';
 import './AppDialog.css';
@@ -383,7 +384,11 @@ function LeaveRequestDetailsModal({
                 <FiUser aria-hidden="true" />
                 <div>
                   <span>Reason</span>
-                  <strong>{request.reason || 'Not recorded'}</strong>
+                  <ExpandableText
+                    as="strong"
+                    text={request.reason}
+                    emptyFallback={<strong>Not recorded</strong>}
+                  />
                 </div>
               </div>
               <div className="personnel-profile-detail">
@@ -447,7 +452,10 @@ function LeaveRequestDetailsModal({
                     <FiUser aria-hidden="true" />
                     <div>
                       <span>Rejection Reason</span>
-                      <strong>{request.rejection_reason || 'No reason provided.'}</strong>
+                      <ExpandableText
+                        as="strong"
+                        text={request.rejection_reason || 'No reason provided.'}
+                      />
                     </div>
                   </div>
                 )}

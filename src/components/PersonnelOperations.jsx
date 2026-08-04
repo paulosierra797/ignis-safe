@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import ExpandableText from './ExpandableText';
 import { useUser } from '../context/UserContext';
 import {
   getPersonnelLeaveRequest,
@@ -792,7 +793,12 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                   </div>
                   <div className="leave-summary-field leave-summary-field-full">
                     <span className="leave-summary-label">Reason for Leave</span>
-                    <span className="leave-summary-value">{leaveRequest.latest_request?.reason || '-'}</span>
+                    <ExpandableText
+                      as="span"
+                      className="leave-summary-value"
+                      text={leaveRequest.latest_request?.reason}
+                      emptyFallback={<span className="leave-summary-value">-</span>}
+                    />
                   </div>
                   <div className="leave-summary-field">
                     <span className="leave-summary-label">Date Submitted</span>
@@ -1061,7 +1067,10 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
 
                         <div className="leave-history-item-details">
                           {item.reason && (
-                            <p><strong>Reason for Leave:</strong> {item.reason}</p>
+                            <div className="leave-history-reason">
+                              <p><strong>Reason for Leave:</strong></p>
+                              <ExpandableText as="p" text={item.reason} />
+                            </div>
                           )}
                           {item.contact_number && (
                             <p><strong>Contact Number:</strong> {item.contact_number}</p>
@@ -1085,7 +1094,10 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                             <p><strong>Reviewed By:</strong> {item.reviewed_by_name}</p>
                           )}
                           {itemStatus === 'rejected' && (
-                            <p><strong>Rejection Reason:</strong> {item.rejection_reason || 'No reason provided.'}</p>
+                            <div className="leave-history-reason">
+                              <p><strong>Rejection Reason:</strong></p>
+                              <ExpandableText as="p" text={item.rejection_reason || 'No reason provided.'} />
+                            </div>
                           )}
                         </div>
                       </div>

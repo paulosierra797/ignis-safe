@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useBlocker, useSearchParams } from 'react-router-dom';
-import { FaArchive, FaChevronDown, FaSearch, FaTimes, FaUndo } from 'react-icons/fa';
+import { FaArchive, FaChevronDown, FaEye, FaSearch, FaTimes, FaUndo } from 'react-icons/fa';
 import {
   FiBriefcase,
   FiCalendar,
@@ -275,6 +275,197 @@ function PersonnelProfileModal({
             <FiEdit3 aria-hidden="true" />
             Edit Details
           </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function LeaveRequestDetailsModal({
+  request,
+  onClose,
+  onArchive,
+  onViewDocument,
+  formatLeaveDate,
+  formatLeaveTypeLabel,
+  formatRelieverLabel,
+  formatRequestStatus,
+  calculateLeaveDays,
+}) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const personnelName = request.personnel_name || request.personnel_id || 'Personnel';
+  const leaveDays = calculateLeaveDays(request.start_date, request.end_date);
+  const isRejected = request.status === 'rejected';
+  const isReviewed = Boolean(request.approved_at);
+
+  return (
+    <div
+      className="accounts-modal-overlay personnel-profile-overlay"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        className="accounts-modal personnel-profile-modal leave-details-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="leave-details-title"
+      >
+        <div className="accounts-modal-header personnel-profile-header">
+          <div>
+            <span>Leave Request</span>
+            <h3 id="leave-details-title">{personnelName}</h3>
+            <p>{formatLeaveTypeLabel(request)} &middot; {formatLeaveDate(request.start_date)} - {formatLeaveDate(request.end_date)}</p>
+          </div>
+          <CloseButton onClick={onClose} label="Close leave request details" />
+        </div>
+
+        <div className="personnel-profile-body">
+          <div className="personnel-profile-section">
+            <h4><FiCalendar aria-hidden="true" />Request Summary</h4>
+            <div className="personnel-profile-detail-grid">
+              <div className="personnel-profile-detail">
+                <FiUser aria-hidden="true" />
+                <div>
+                  <span>Rank</span>
+                  <strong>{request.personnel_rank || 'Not recorded'}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiCalendar aria-hidden="true" />
+                <div>
+                  <span>Number of Days</span>
+                  <strong>{leaveDays} day{leaveDays === 1 ? '' : 's'}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiClock aria-hidden="true" />
+                <div>
+                  <span>Status</span>
+                  <strong>
+                    <span className={`profile-request-status profile-request-status-${request.status}`}>
+                      {formatRequestStatus(request.status)}
+                    </span>
+                  </strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiCalendar aria-hidden="true" />
+                <div>
+                  <span>Date Requested</span>
+                  <strong>
+                    {request.created_at
+                      ? new Date(request.created_at).toLocaleDateString('en-US')
+                      : 'Not recorded'}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="personnel-profile-section">
+            <h4><FiUser aria-hidden="true" />Request Details</h4>
+            <div className="personnel-profile-detail-grid">
+              <div className="personnel-profile-detail">
+                <FiUser aria-hidden="true" />
+                <div>
+                  <span>Reason</span>
+                  <strong>{request.reason || 'Not recorded'}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiPhone aria-hidden="true" />
+                <div>
+                  <span>Contact Number</span>
+                  <strong>{request.contact_number || 'Not recorded'}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiUser aria-hidden="true" />
+                <div>
+                  <span>Reliever</span>
+                  <strong>{formatRelieverLabel(request)}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiBriefcase aria-hidden="true" />
+                <div>
+                  <span>Supporting Document</span>
+                  {request.document_url ? (
+                    <button
+                      type="button"
+                      className="leave-view-document-btn"
+                      onClick={() => onViewDocument(request)}
+                    >
+                      View Document
+                    </button>
+                  ) : (
+                    <strong>None submitted</strong>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="personnel-profile-section">
+            <h4><FiClock aria-hidden="true" />Review Information</h4>
+            <div className="personnel-profile-detail-grid">
+              <div className="personnel-profile-detail">
+                <FiCalendar aria-hidden="true" />
+                <div>
+                  <span>Date Reviewed</span>
+                  <strong>
+                    {isReviewed
+                      ? new Date(request.approved_at).toLocaleDateString('en-US')
+                      : 'Not yet reviewed'}
+                  </strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiUser aria-hidden="true" />
+                <div>
+                  <span>Reviewed By</span>
+                  <strong>{isReviewed ? (request.reviewed_by_name || 'Not recorded') : 'Not yet reviewed'}</strong>
+                </div>
+              </div>
+              {isRejected && (
+                <div className="personnel-profile-detail">
+                  <FiUser aria-hidden="true" />
+                  <div>
+                    <span>Rejection Reason</span>
+                    <strong>{request.rejection_reason || 'No reason provided.'}</strong>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="accounts-modal-footer personnel-profile-footer">
+          <button type="button" className="cancel-btn" onClick={onClose}>Close</button>
+          {request.status !== 'pending' && (
+            <button
+              type="button"
+              className="save-btn leave-details-archive-btn"
+              onClick={() => onArchive(request)}
+            >
+              <FaArchive aria-hidden="true" />
+              Archive Request
+            </button>
+          )}
         </div>
       </section>
     </div>
@@ -649,6 +840,7 @@ export default function Accounts() {
   const [leaveHistoryMessage, setLeaveHistoryMessage] = useState('');
   const [leaveHistoryStatusFilter, setLeaveHistoryStatusFilter] = useState('all');
   const [leaveHistorySearch, setLeaveHistorySearch] = useState('');
+  const [leaveHistoryDetailsRequest, setLeaveHistoryDetailsRequest] = useState(null);
   const [profileChangeRequests, setProfileChangeRequests] = useState([]);
   const [archivedProfileChangeRequests, setArchivedProfileChangeRequests] = useState([]);
   const [profileRequestsLoading, setProfileRequestsLoading] = useState(true);
@@ -830,6 +1022,14 @@ export default function Accounts() {
   const handleViewLeaveDocument = (request) => {
     if (!request?.document_url) return;
     window.open(request.document_url, '_blank', 'noopener');
+  };
+
+  const openLeaveHistoryDetails = (request) => {
+    setLeaveHistoryDetailsRequest(request);
+  };
+
+  const closeLeaveHistoryDetails = () => {
+    setLeaveHistoryDetailsRequest(null);
   };
 
   const handleClearFilters = () => {
@@ -3412,51 +3612,32 @@ const permissions = getDefaultPermissions(formData.role);
           ) : filteredLeaveRequestHistory.length === 0 ? (
             <p className="leave-approval-empty">No leave request history found.</p>
           ) : (
-            <div className="leave-approval-table-wrap">
-              <table className="leave-approval-table">
+            <div className="leave-history-table-wrap">
+              <table className="leave-history-table">
                 <thead>
                   <tr>
                     <th>Personnel</th>
                     <th>Rank</th>
                     <th>Leave Type</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
+                    <th>Leave Period</th>
                     <th>Days</th>
-                    <th>Reason</th>
-                    <th>Contact Number</th>
-                    <th>Reliever</th>
-                    <th>Document</th>
                     <th>Status</th>
                     <th>Date Requested</th>
-                    <th>Date Reviewed</th>
-                    <th>Reviewed By</th>
-                    <th>Rejection Reason</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleLeaveRequestHistory.map((request) => (
                     <tr key={request.request_id}>
-                      <td>{request.personnel_name || request.personnel_id}</td>
+                      <td className="leave-history-cell-personnel">{request.personnel_name || request.personnel_id}</td>
                       <td>{request.personnel_rank || '—'}</td>
                       <td>{formatLeaveTypeLabel(request)}</td>
-                      <td>{formatLeaveDate(request.start_date)}</td>
-                      <td>{formatLeaveDate(request.end_date)}</td>
-                      <td>{calculateLeaveDays(request.start_date, request.end_date)}</td>
-                      <td>{request.reason || '—'}</td>
-                      <td>{request.contact_number || '—'}</td>
-                      <td>{formatRelieverLabel(request)}</td>
-                      <td>
-                        {request.document_url ? (
-                          <button
-                            type="button"
-                            className="leave-view-document-btn"
-                            onClick={() => handleViewLeaveDocument(request)}
-                          >
-                            View
-                          </button>
-                        ) : '—'}
+                      <td className="leave-history-cell-period">
+                        {formatLeaveDate(request.start_date)}
+                        {' – '}
+                        {formatLeaveDate(request.end_date)}
                       </td>
+                      <td>{calculateLeaveDays(request.start_date, request.end_date)}</td>
                       <td className="profile-request-status-cell">
                         <span className={`profile-request-status profile-request-status-${request.status}`}>
                           {formatRequestStatus(request.status)}
@@ -3468,28 +3649,27 @@ const permissions = getDefaultPermissions(formData.role);
                           : '—'}
                       </td>
                       <td>
-                        {request.approved_at
-                          ? new Date(request.approved_at).toLocaleDateString('en-US')
-                          : '—'}
-                      </td>
-                      <td>{request.approved_at ? (request.reviewed_by_name || '—') : '—'}</td>
-                      <td>
-                        {request.status === 'rejected'
-                          ? (request.rejection_reason || 'No reason provided.')
-                          : '—'}
-                      </td>
-                      <td>
-                        {request.status !== 'pending' && (
+                        <div className="leave-history-row-actions">
                           <button
                             type="button"
-                            className="request-row-icon-button"
-                            onClick={() => requestArchiveHistoryItem('leave', request)}
-                            aria-label={`Archive leave request for ${request.personnel_name || 'personnel'}`}
-                            title="Archive request"
+                            className="leave-history-view-btn"
+                            onClick={() => openLeaveHistoryDetails(request)}
                           >
-                            <FaArchive aria-hidden="true" />
+                            <FaEye aria-hidden="true" />
+                            View Details
                           </button>
-                        )}
+                          {request.status !== 'pending' && (
+                            <button
+                              type="button"
+                              className="request-row-icon-button"
+                              onClick={() => requestArchiveHistoryItem('leave', request)}
+                              aria-label={`Archive leave request for ${request.personnel_name || 'personnel'}`}
+                              title="Archive request"
+                            >
+                              <FaArchive aria-hidden="true" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -3497,108 +3677,6 @@ const permissions = getDefaultPermissions(formData.role);
               </table>
             </div>
           )}
-
-          <div className="leave-history-mobile-list">
-            {visibleLeaveRequestHistory.map((request) => (
-              <div className="leave-request-card" key={request.request_id}>
-                <h3>{request.personnel_name || request.personnel_id}</h3>
-
-                <p>
-                  <strong>Rank</strong><br />
-                  {request.personnel_rank || '—'}
-                </p>
-
-                <p>
-                  <strong>Leave Type</strong><br />
-                  {formatLeaveTypeLabel(request)}
-                </p>
-
-                <p>
-                  <strong>Leave</strong><br />
-                  {formatLeaveDate(request.start_date)}
-                  {' - '}
-                  {formatLeaveDate(request.end_date)}
-                  {' '}({calculateLeaveDays(request.start_date, request.end_date)} day{calculateLeaveDays(request.start_date, request.end_date) === 1 ? '' : 's'})
-                </p>
-
-                <p>
-                  <strong>Reason</strong><br />
-                  {request.reason || '—'}
-                </p>
-
-                {request.contact_number && (
-                  <p>
-                    <strong>Contact Number</strong><br />
-                    {request.contact_number}
-                  </p>
-                )}
-
-                <p>
-                  <strong>Reliever / Shift Coverage</strong><br />
-                  {formatRelieverLabel(request)}
-                </p>
-
-                {request.document_url && (
-                  <p>
-                    <strong>Supporting Document</strong><br />
-                    <button
-                      type="button"
-                      className="leave-view-document-btn"
-                      onClick={() => handleViewLeaveDocument(request)}
-                    >
-                      View Document
-                    </button>
-                  </p>
-                )}
-
-                <p>
-                  <strong>Status</strong><br />
-                  <span className={`profile-request-status profile-request-status-${request.status}`}>
-                    {formatRequestStatus(request.status)}
-                  </span>
-                </p>
-
-                <p>
-                  <strong>Date Requested</strong><br />
-                  {request.created_at
-                    ? new Date(request.created_at).toLocaleDateString('en-US')
-                    : '—'}
-                </p>
-
-                {request.approved_at && (
-                  <p>
-                    <strong>Date Reviewed</strong><br />
-                    {new Date(request.approved_at).toLocaleDateString('en-US')}
-                  </p>
-                )}
-
-                {request.approved_at && request.reviewed_by_name && (
-                  <p>
-                    <strong>Reviewed By</strong><br />
-                    {request.reviewed_by_name}
-                  </p>
-                )}
-
-                {request.status === 'rejected' && (
-                  <p>
-                    <strong>Rejection Reason</strong><br />
-                    {request.rejection_reason || 'No reason provided.'}
-                  </p>
-                )}
-
-                {request.status !== 'pending' && (
-                  <button
-                    type="button"
-                    className="request-mobile-archive-button"
-                    onClick={() => requestArchiveHistoryItem('leave', request)}
-                  >
-                    <FaArchive aria-hidden="true" />
-                    Archive
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
           <RequestSectionToggle
             expanded={expandedRequestSections.leaveHistory}
             itemCount={filteredLeaveRequestHistory.length}
@@ -4055,6 +4133,23 @@ const permissions = getDefaultPermissions(formData.role);
             }}
             isOnLeave={isOnLeave}
             formatLeaveDate={formatLeaveDate}
+          />
+        )}
+
+        {leaveHistoryDetailsRequest && (
+          <LeaveRequestDetailsModal
+            request={leaveHistoryDetailsRequest}
+            onClose={closeLeaveHistoryDetails}
+            onArchive={(request) => {
+              closeLeaveHistoryDetails();
+              requestArchiveHistoryItem('leave', request);
+            }}
+            onViewDocument={handleViewLeaveDocument}
+            formatLeaveDate={formatLeaveDate}
+            formatLeaveTypeLabel={formatLeaveTypeLabel}
+            formatRelieverLabel={formatRelieverLabel}
+            formatRequestStatus={formatRequestStatus}
+            calculateLeaveDays={calculateLeaveDays}
           />
         )}
 

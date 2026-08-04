@@ -100,7 +100,6 @@
 }
 .leave-approval-mobile-list,
 .profile-request-mobile-list,
-.leave-history-mobile-list,
 .profile-history-mobile-list,
 .accounts-mobile-list{
     display:none;
@@ -1449,16 +1448,138 @@
   cursor: not-allowed;
 }
 
-.leave-history-card .leave-approval-table {
-  table-layout: fixed;
-  min-width: 1080px;
+/* Leave Request History: simplified table (8 columns) with a details modal
+   for the remaining fields, so headers/values never compress into
+   multi-line, letter-by-letter wrapping. Horizontal scroll is only a
+   fallback on narrow viewports. */
+.leave-history-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
 }
 
-.leave-history-card .leave-approval-table th,
-.leave-history-card .leave-approval-table td {
+.leave-history-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.leave-history-table thead {
+  background: #f8fafc;
+}
+
+.leave-history-table th,
+.leave-history-table td {
   padding: 0.75rem 0.8rem;
+  text-align: left;
   vertical-align: middle;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.82rem;
+  color: #334155;
+  white-space: normal;
+  word-break: normal;
   overflow-wrap: break-word;
+}
+
+.leave-history-table th {
+  color: #172033;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.leave-history-table th:nth-child(1),
+.leave-history-table td:nth-child(1) {
+  width: 18%;
+}
+
+.leave-history-table th:nth-child(2),
+.leave-history-table td:nth-child(2) {
+  width: 10%;
+}
+
+.leave-history-table th:nth-child(3),
+.leave-history-table td:nth-child(3) {
+  width: 13%;
+}
+
+.leave-history-table th:nth-child(4),
+.leave-history-table td:nth-child(4) {
+  width: 17%;
+}
+
+.leave-history-table th:nth-child(5),
+.leave-history-table td:nth-child(5) {
+  width: 7%;
+}
+
+.leave-history-table th:nth-child(6),
+.leave-history-table td:nth-child(6) {
+  width: 11%;
+}
+
+.leave-history-table th:nth-child(7),
+.leave-history-table td:nth-child(7) {
+  width: 12%;
+  white-space: nowrap;
+}
+
+.leave-history-table th:nth-child(8),
+.leave-history-table td:nth-child(8) {
+  width: 12%;
+}
+
+.leave-history-cell-personnel {
+  font-weight: 700;
+  color: #172033;
+}
+
+.leave-history-cell-period {
+  white-space: nowrap;
+}
+
+.leave-history-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: nowrap;
+}
+
+.leave-history-view-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid #c1272d;
+  border-radius: 999px;
+  background: #fff;
+  color: #b91c1c;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.leave-history-view-btn:hover,
+.leave-history-view-btn:focus-visible {
+  background: #fef2f2;
+  border-color: #991b1b;
+  color: #991b1b;
+  outline: none;
+}
+
+@media (max-width: 900px) {
+  .leave-history-table {
+    min-width: 900px;
+  }
+}
+
+.leave-details-modal .personnel-profile-detail strong {
+  white-space: pre-line;
 }
 
 .accounts-filters {
@@ -3324,7 +3445,6 @@
 
   .leave-approval-mobile-list,
   .profile-request-mobile-list,
-  .leave-history-mobile-list,
   .profile-history-mobile-list,
   .accounts-mobile-list {
     display: flex;
@@ -3335,6 +3455,11 @@
   .request-history-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .request-history-toolbar .request-history-search,
+  .request-history-toolbar .profile-request-status-select {
+    flex: 1 1 auto;
   }
 
   .profile-request-header-actions {

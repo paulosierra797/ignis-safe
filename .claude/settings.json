@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node run.js ' *)",
+      "Bash(node run.js \"C:\\\\Users\\\\Asus\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Asus-Downloads-WEBSITE-ignis-safe\\\\eb0c31fd-7dd6-4cf8-b7b6-d473e0dfcd6d\\\\scratchpad\\\\pw-scroll.js\")"
+    ]
+  }
+}

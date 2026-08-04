@@ -420,38 +420,40 @@ function LeaveRequestDetailsModal({
             </div>
           </div>
 
-          <div className="personnel-profile-section">
-            <h4><FiClock aria-hidden="true" />Review Information</h4>
-            <div className="personnel-profile-detail-grid">
-              <div className="personnel-profile-detail">
-                <FiCalendar aria-hidden="true" />
-                <div>
-                  <span>Date Reviewed</span>
-                  <strong>
-                    {isReviewed
-                      ? new Date(request.approved_at).toLocaleDateString('en-US')
-                      : 'Not yet reviewed'}
-                  </strong>
+          {request.status !== 'pending' && (
+            <div className="personnel-profile-section">
+              <h4><FiClock aria-hidden="true" />Review Information</h4>
+              <div className="personnel-profile-detail-grid">
+                <div className="personnel-profile-detail">
+                  <FiCalendar aria-hidden="true" />
+                  <div>
+                    <span>Date Reviewed</span>
+                    <strong>
+                      {isReviewed
+                        ? new Date(request.approved_at).toLocaleDateString('en-US')
+                        : 'Not yet reviewed'}
+                    </strong>
+                  </div>
                 </div>
-              </div>
-              <div className="personnel-profile-detail">
-                <FiUser aria-hidden="true" />
-                <div>
-                  <span>Reviewed By</span>
-                  <strong>{isReviewed ? (request.reviewed_by_name || 'Not recorded') : 'Not yet reviewed'}</strong>
-                </div>
-              </div>
-              {isRejected && (
                 <div className="personnel-profile-detail">
                   <FiUser aria-hidden="true" />
                   <div>
-                    <span>Rejection Reason</span>
-                    <strong>{request.rejection_reason || 'No reason provided.'}</strong>
+                    <span>Reviewed By</span>
+                    <strong>{isReviewed ? (request.reviewed_by_name || 'Not recorded') : 'Not yet reviewed'}</strong>
                   </div>
                 </div>
-              )}
+                {isRejected && (
+                  <div className="personnel-profile-detail">
+                    <FiUser aria-hidden="true" />
+                    <div>
+                      <span>Rejection Reason</span>
+                      <strong>{request.rejection_reason || 'No reason provided.'}</strong>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="accounts-modal-footer personnel-profile-footer">
@@ -834,6 +836,7 @@ export default function Accounts() {
   const [pendingLeaveRequests, setPendingLeaveRequests] = useState([]);
   const [pendingRequestMessage, setPendingRequestMessage] = useState('');
   const [processingRequestId, setProcessingRequestId] = useState('');
+  const [pendingLeaveDetailsRequest, setPendingLeaveDetailsRequest] = useState(null);
   const [leaveRequestHistory, setLeaveRequestHistory] = useState([]);
   const [archivedLeaveRequests, setArchivedLeaveRequests] = useState([]);
   const [leaveHistoryLoading, setLeaveHistoryLoading] = useState(true);
@@ -1030,6 +1033,19 @@ export default function Accounts() {
 
   const closeLeaveHistoryDetails = () => {
     setLeaveHistoryDetailsRequest(null);
+  };
+
+  const openPendingLeaveDetails = (request) => {
+    const target = findPersonnelAccount(request.personnel_id);
+    setPendingLeaveDetailsRequest({
+      ...request,
+      personnel_name: target ? `${target.first_name || ''} ${target.last_name || ''}`.trim() : request.personnel_id,
+      personnel_rank: target?.rank || '',
+    });
+  };
+
+  const closePendingLeaveDetails = () => {
+    setPendingLeaveDetailsRequest(null);
   };
 
   const handleClearFilters = () => {
@@ -3392,11 +3408,6 @@ const permissions = getDefaultPermissions(formData.role);
                     <th>Start Date</th>
                     <th>End Date</th>
                     <th>Days</th>
-                    <th>Reason</th>
-                    <th>Contact Number</th>
-                    <th>Reliever</th>
-                    <th>Document</th>
-                    <th>Requested</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -3413,38 +3424,32 @@ const permissions = getDefaultPermissions(formData.role);
                         <td>{formatLeaveDate(request.start_date)}</td>
                         <td>{formatLeaveDate(request.end_date)}</td>
                         <td>{calculateLeaveDays(request.start_date, request.end_date)}</td>
-                        <td>{request.reason || '-'}</td>
-                        <td>{request.contact_number || '-'}</td>
-                        <td>{formatRelieverLabel(request)}</td>
                         <td>
-                          {request.document_url ? (
+                          <div className="leave-history-row-actions">
                             <button
                               type="button"
-                              className="leave-view-document-btn"
-                              onClick={() => handleViewLeaveDocument(request)}
+                              className="leave-history-view-btn"
+                              onClick={() => openPendingLeaveDetails(request)}
                             >
-                              View
+                              View Details
                             </button>
-                          ) : '-'}
-                        </td>
-                        <td>{new Date(request.created_at).toLocaleDateString('en-US')}</td>
-                        <td>
-                          <button
-                            className="leave-approve-btn"
-                            type="button"
-                            onClick={() => handleApproveLeaveRequest(request)}
-                            disabled={isProcessing}
-                          >
-                            {isProcessing ? 'Processing...' : 'Approve'}
-                          </button>
-                          <button
-                            className="leave-reject-btn"
-                            type="button"
-                            onClick={() => handleRejectLeaveRequest(request)}
-                            disabled={isProcessing}
-                          >
-                            Reject
-                          </button>
+                            <button
+                              className="leave-approve-btn"
+                              type="button"
+                              onClick={() => handleApproveLeaveRequest(request)}
+                              disabled={isProcessing}
+                            >
+                              {isProcessing ? 'Processing...' : 'Approve'}
+                            </button>
+                            <button
+                              className="leave-reject-btn"
+                              type="button"
+                              onClick={() => handleRejectLeaveRequest(request)}
+                              disabled={isProcessing}
+                            >
+                              Reject
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -3490,42 +3495,15 @@ const permissions = getDefaultPermissions(formData.role);
           {" "}({calculateLeaveDays(request.start_date, request.end_date)} day{calculateLeaveDays(request.start_date, request.end_date) === 1 ? '' : 's'})
         </p>
 
-        <p>
-          <strong>Reason</strong><br />
-          {request.reason || '-'}
-        </p>
-
-        {request.contact_number && (
-          <p>
-            <strong>Contact Number</strong><br />
-            {request.contact_number}
-          </p>
-        )}
-
-        <p>
-          <strong>Reliever / Shift Coverage</strong><br />
-          {formatRelieverLabel(request)}
-        </p>
-
-        {request.document_url && (
-          <p>
-            <strong>Supporting Document</strong><br />
-            <button
-              type="button"
-              className="leave-view-document-btn"
-              onClick={() => handleViewLeaveDocument(request)}
-            >
-              View Document
-            </button>
-          </p>
-        )}
-
-        <p>
-          <strong>Requested</strong><br />
-          {new Date(request.created_at).toLocaleDateString()}
-        </p>
-
         <div className="leave-card-actions">
+          <button
+            type="button"
+            className="leave-history-view-btn"
+            onClick={() => openPendingLeaveDetails(request)}
+          >
+            View Details
+          </button>
+
           <button
             className="leave-approve-btn"
             onClick={() =>
@@ -4144,6 +4122,20 @@ const permissions = getDefaultPermissions(formData.role);
               closeLeaveHistoryDetails();
               requestArchiveHistoryItem('leave', request);
             }}
+            onViewDocument={handleViewLeaveDocument}
+            formatLeaveDate={formatLeaveDate}
+            formatLeaveTypeLabel={formatLeaveTypeLabel}
+            formatRelieverLabel={formatRelieverLabel}
+            formatRequestStatus={formatRequestStatus}
+            calculateLeaveDays={calculateLeaveDays}
+          />
+        )}
+
+        {pendingLeaveDetailsRequest && (
+          <LeaveRequestDetailsModal
+            request={pendingLeaveDetailsRequest}
+            onClose={closePendingLeaveDetails}
+            onArchive={() => {}}
             onViewDocument={handleViewLeaveDocument}
             formatLeaveDate={formatLeaveDate}
             formatLeaveTypeLabel={formatLeaveTypeLabel}

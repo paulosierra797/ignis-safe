@@ -1193,6 +1193,54 @@
   border-radius: 10px;
 }
 
+.leave-request-group-pending .leave-approval-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.leave-request-group-pending .leave-approval-table th:nth-child(1),
+.leave-request-group-pending .leave-approval-table td:nth-child(1) {
+  width: 16%;
+}
+
+.leave-request-group-pending .leave-approval-table th:nth-child(2),
+.leave-request-group-pending .leave-approval-table td:nth-child(2) {
+  width: 20%;
+  word-break: break-word;
+}
+
+.leave-request-group-pending .leave-approval-table th:nth-child(3),
+.leave-request-group-pending .leave-approval-table td:nth-child(3) {
+  width: 14%;
+}
+
+.leave-request-group-pending .leave-approval-table th:nth-child(4),
+.leave-request-group-pending .leave-approval-table td:nth-child(4),
+.leave-request-group-pending .leave-approval-table th:nth-child(5),
+.leave-request-group-pending .leave-approval-table td:nth-child(5) {
+  width: 11%;
+}
+
+.leave-request-group-pending .leave-approval-table th:nth-child(6),
+.leave-request-group-pending .leave-approval-table td:nth-child(6) {
+  width: 7%;
+}
+
+.leave-request-group-pending .leave-approval-table th:nth-child(7),
+.leave-request-group-pending .leave-approval-table td:nth-child(7) {
+  width: 21%;
+}
+
+.leave-request-group-pending .leave-history-row-actions {
+  flex-wrap: wrap;
+  row-gap: 0.35rem;
+}
+
+.leave-request-group-pending .leave-history-row-actions .leave-approve-btn,
+.leave-request-group-pending .leave-history-row-actions .leave-reject-btn {
+  margin-right: 0;
+}
+
 .leave-request-group .request-history-toolbar {
   margin-bottom: 0.75rem;
 }

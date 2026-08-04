@@ -3655,7 +3655,7 @@ const permissions = getDefaultPermissions(formData.role);
                             className="leave-history-view-btn"
                             onClick={() => openLeaveHistoryDetails(request)}
                           >
-                            <FaEye aria-hidden="true" />
+                        
                             View Details
                           </button>
                           {request.status !== 'pending' && (

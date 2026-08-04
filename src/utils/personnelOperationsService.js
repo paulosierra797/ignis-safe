@@ -7,6 +7,95 @@ const PERSONNEL_WORKSPACE_TABLE = 'personnel_workspace_profiles';
 const LEAVE_REQUESTS_TABLE = 'leave_requests';
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
 
+export const LEAVE_TYPES = [
+  'Vacation Leave',
+  'Sick Leave',
+  'Emergency Leave',
+  'Maternity Leave',
+  'Paternity Leave',
+  'Other'
+];
+
+export const LEAVE_TYPES_REQUIRING_DOCUMENT = new Set(['Sick Leave', 'Maternity Leave', 'Paternity Leave']);
+
+export const RELIEVER_ADMIN_ASSIGN_VALUE = '__ADMIN_ASSIGN__';
+
+const LEAVE_DOCUMENT_BUCKET = 'leave_supporting_documents';
+export const LEAVE_DOCUMENT_ACCEPT = '.pdf,.jpg,.jpeg,.png';
+export const LEAVE_DOCUMENT_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+const LEAVE_DOCUMENT_ALLOWED_EXTENSIONS = new Set(['pdf', 'jpg', 'jpeg', 'png']);
+const LEAVE_DOCUMENT_ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']);
+
+const CONTACT_NUMBER_REGEX = /^[0-9+\-\s()]{7,20}$/;
+
+export const isValidLeaveContactNumber = (value) => {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return true;
+  if (!CONTACT_NUMBER_REGEX.test(trimmed)) return false;
+  const digitCount = trimmed.replace(/[^0-9]/g, '').length;
+  return digitCount >= 7 && digitCount <= 13;
+};
+
+// Inclusive day count (a same-day leave request counts as 1 day), derived
+// from the stored dates rather than persisted so it can never go stale.
+export const calculateLeaveDays = (startDate, endDate) => {
+  if (!startDate || !endDate) return 0;
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  const diff = Math.round((end - start) / (1000 * 60 * 60 * 24)) + 1;
+  return diff > 0 ? diff : 0;
+};
+
+const getLeaveDocumentExtension = (fileName = '') => {
+  const match = /\.([a-zA-Z0-9]+)$/.exec(String(fileName || ''));
+  return match ? match[1].toLowerCase() : '';
+};
+
+export const isAllowedLeaveDocument = (file) => {
+  if (!file) return false;
+  const extension = getLeaveDocumentExtension(file.name);
+  const mimeType = String(file.type || '').trim().toLowerCase();
+  return LEAVE_DOCUMENT_ALLOWED_EXTENSIONS.has(extension)
+    && (!mimeType || LEAVE_DOCUMENT_ALLOWED_MIME_TYPES.has(mimeType));
+};
+
+const sanitizeLeaveDocumentFileName = (fileName = '') =>
+  String(fileName || 'leave-document')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .slice(0, 140);
+
+export const uploadLeaveSupportingDocument = async (personnelId, file) => {
+  try {
+    const safeName = sanitizeLeaveDocumentFileName(file?.name || `leave-document-${Date.now()}`);
+    const filePath = `${personnelId}/${Date.now()}-${safeName}`;
+    const contentType = String(file?.type || '').trim().toLowerCase() || 'application/octet-stream';
+
+    const { error: uploadError } = await supabase.storage
+      .from(LEAVE_DOCUMENT_BUCKET)
+      .upload(filePath, file, { contentType, upsert: false });
+
+    if (uploadError) throw uploadError;
+
+    const {
+      data: { publicUrl }
+    } = supabase.storage.from(LEAVE_DOCUMENT_BUCKET).getPublicUrl(filePath);
+
+    return { data: { filePath, publicUrl }, error: null };
+  } catch (error) {
+    console.error('Error uploading leave supporting document:', error);
+    return { data: null, error: error.message };
+  }
+};
+
+const removeLeaveSupportingDocument = async (filePath) => {
+  if (!filePath) return;
+  try {
+    await supabase.storage.from(LEAVE_DOCUMENT_BUCKET).remove([filePath]);
+  } catch (error) {
+    console.warn('Could not remove uploaded leave document after a failed submission:', error);
+  }
+};
+
 const emitDataChanged = (scope, detail = {}) => {
   if (typeof window === 'undefined') return;
 
@@ -69,6 +158,28 @@ export const resolveCurrentShiftType = (assignments) => {
   return assignments[0].shift_type;
 };
 
+export const getReliefCandidates = async (excludePersonnelId) => {
+  try {
+    const { data, error } = await getAllUsers({ includePersonnelWorkspaceProfiles: true });
+    if (error) throw new Error(error);
+
+    const candidates = (data || [])
+      .filter((user) => String(user.role || '').toLowerCase() === 'personnel')
+      .filter((user) => String(user.status || '').toLowerCase() === 'active')
+      .filter((user) => user.admin_id !== excludePersonnelId)
+      .map((user) => ({
+        admin_id: user.admin_id,
+        name: formatPersonnelName(user)
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return { data: candidates, error: null };
+  } catch (error) {
+    console.error('Error fetching relief candidates:', error);
+    return { data: [], error: error.message };
+  }
+};
+
 const updatePersonnelLeaveState = async (personnelId, updates) => {
   const { data: workspaceProfile, error: workspaceError } = await supabase
     .from(PERSONNEL_WORKSPACE_TABLE)
@@ -116,7 +227,7 @@ export const getPersonnelLeaveRequest = async (adminId) => {
 
     const { data: requestRows, error: requestError } = await supabase
       .from(LEAVE_REQUESTS_TABLE)
-      .select('request_id, start_date, end_date, reason, status, rejection_reason, approved_by, approved_at, created_at, updated_at')
+      .select('request_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, rejection_reason, approved_by, approved_at, created_at, updated_at')
       .eq('personnel_id', adminId)
       .eq('is_archived', false)
       .order('created_at', { ascending: false });
@@ -126,18 +237,20 @@ export const getPersonnelLeaveRequest = async (adminId) => {
     const history = Array.isArray(requestRows) ? requestRows : [];
 
     const reviewerIds = [...new Set(history.map((row) => row.approved_by).filter(Boolean))];
-    let reviewerNameById = new Map();
-    if (reviewerIds.length > 0) {
-      const { data: reviewerRows, error: reviewerError } = await supabase
+    const relieverIds = [...new Set(history.map((row) => row.reliever_id).filter(Boolean))];
+    const lookupIds = [...new Set([...reviewerIds, ...relieverIds])];
+    let nameById = new Map();
+    if (lookupIds.length > 0) {
+      const { data: lookupRows, error: lookupError } = await supabase
         .from(ADMIN_TABLE)
         .select('admin_id, first_name, last_name, email')
-        .in('admin_id', reviewerIds);
+        .in('admin_id', lookupIds);
 
-      if (!reviewerError && Array.isArray(reviewerRows)) {
-        reviewerNameById = new Map(
-          reviewerRows.map((reviewer) => [
-            reviewer.admin_id,
-            [reviewer.first_name, reviewer.last_name].filter(Boolean).join(' ').trim() || reviewer.email || 'Admin'
+      if (!lookupError && Array.isArray(lookupRows)) {
+        nameById = new Map(
+          lookupRows.map((row) => [
+            row.admin_id,
+            [row.first_name, row.last_name].filter(Boolean).join(' ').trim() || row.email || 'Admin'
           ])
         );
       }
@@ -145,7 +258,8 @@ export const getPersonnelLeaveRequest = async (adminId) => {
 
     const historyWithReviewer = history.map((row) => ({
       ...row,
-      reviewed_by_name: row.approved_by ? (reviewerNameById.get(row.approved_by) || null) : null
+      reviewed_by_name: row.approved_by ? (nameById.get(row.approved_by) || null) : null,
+      reliever_name: row.reliever_id ? (nameById.get(row.reliever_id) || null) : null
     }));
 
     return {
@@ -171,10 +285,32 @@ export const getPersonnelLeaveRequest = async (adminId) => {
   }
 };
 
-export const submitPersonnelLeaveRequest = async (adminId, { startDate, endDate, reason = '' }) => {
+export const submitPersonnelLeaveRequest = async (adminId, formValues = {}) => {
+  const {
+    leaveType,
+    otherLeaveType = '',
+    startDate,
+    endDate,
+    reason = '',
+    contactNumber = '',
+    relieverType = '',
+    relieverId = null,
+    documentFile = null
+  } = formValues;
+
+  let uploadedDocument = null;
+
   try {
     if (!adminId) {
       return { data: null, error: 'Missing personnel id.' };
+    }
+
+    if (!leaveType || !LEAVE_TYPES.includes(leaveType)) {
+      return { data: null, error: 'Please select a leave type.' };
+    }
+
+    if (leaveType === 'Other' && !String(otherLeaveType || '').trim()) {
+      return { data: null, error: 'Please specify the leave type.' };
     }
 
     if (!startDate || !endDate) {
@@ -189,6 +325,27 @@ export const submitPersonnelLeaveRequest = async (adminId, { startDate, endDate,
 
     if (endDate < startDate) {
       return { data: null, error: 'Leave end date must be on or after the start date.' };
+    }
+
+    if (!String(reason || '').trim()) {
+      return { data: null, error: 'Please provide a reason for leave.' };
+    }
+
+    if (!isValidLeaveContactNumber(contactNumber)) {
+      return { data: null, error: 'Please enter a valid contact number.' };
+    }
+
+    const requiresDocument = LEAVE_TYPES_REQUIRING_DOCUMENT.has(leaveType);
+    if (requiresDocument && !documentFile) {
+      return { data: null, error: `A supporting document is required for ${leaveType}.` };
+    }
+
+    if (documentFile && !isAllowedLeaveDocument(documentFile)) {
+      return { data: null, error: 'Unsupported file type. Please upload a PDF, JPG, JPEG, or PNG file.' };
+    }
+
+    if (documentFile && documentFile.size > LEAVE_DOCUMENT_MAX_SIZE_BYTES) {
+      return { data: null, error: 'Supporting document exceeds the 5MB size limit.' };
     }
 
     const { data: pendingRows, error: pendingError } = await supabase
@@ -207,16 +364,55 @@ export const submitPersonnelLeaveRequest = async (adminId, { startDate, endDate,
       };
     }
 
+    const { data: overlapRows, error: overlapError } = await supabase
+      .from(LEAVE_REQUESTS_TABLE)
+      .select('request_id')
+      .eq('personnel_id', adminId)
+      .eq('is_archived', false)
+      .in('status', ['pending', 'approved'])
+      .lte('start_date', endDate)
+      .gte('end_date', startDate)
+      .limit(1);
+
+    if (overlapError) throw overlapError;
+
+    if (Array.isArray(overlapRows) && overlapRows.length > 0) {
+      return {
+        data: null,
+        error: 'This leave period overlaps with an existing leave request.'
+      };
+    }
+
+    if (documentFile) {
+      const upload = await uploadLeaveSupportingDocument(adminId, documentFile);
+      if (upload.error) {
+        return { data: null, error: upload.error };
+      }
+      uploadedDocument = {
+        document_path: upload.data.filePath,
+        document_url: upload.data.publicUrl,
+        document_name: documentFile.name,
+        document_mime_type: String(documentFile.type || '').trim().toLowerCase(),
+        document_size_bytes: Number(documentFile.size || 0)
+      };
+    }
+
     const { data, error } = await supabase
       .from(LEAVE_REQUESTS_TABLE)
       .insert({
         personnel_id: adminId,
+        leave_type: leaveType,
+        other_leave_type: leaveType === 'Other' ? String(otherLeaveType || '').trim() : null,
         start_date: startDate,
         end_date: endDate,
         reason: reason || null,
-        status: 'pending'
+        contact_number: String(contactNumber || '').trim() || null,
+        reliever_type: relieverType || null,
+        reliever_id: relieverType === 'personnel' ? relieverId : null,
+        status: 'pending',
+        ...(uploadedDocument || {})
       })
-      .select('request_id, personnel_id, start_date, end_date, reason, status, created_at, updated_at')
+      .select('request_id, personnel_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, created_at, updated_at')
       .single();
 
     if (error) throw error;
@@ -226,6 +422,9 @@ export const submitPersonnelLeaveRequest = async (adminId, { startDate, endDate,
     return { data, error: null };
   } catch (error) {
     console.error('Error submitting personnel leave request:', error);
+    if (uploadedDocument) {
+      await removeLeaveSupportingDocument(uploadedDocument.document_path);
+    }
     if (error?.code === '42P01' || String(error?.message || '').toLowerCase().includes('leave_requests')) {
       return {
         data: null,
@@ -240,7 +439,7 @@ export const getPendingLeaveRequests = async () => {
   try {
     const { data, error } = await supabase
       .from(LEAVE_REQUESTS_TABLE)
-      .select('request_id, personnel_id, start_date, end_date, reason, status, created_at')
+      .select('request_id, personnel_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, created_at')
       .eq('status', 'pending')
       .eq('is_archived', false)
       .order('created_at', { ascending: true });
@@ -264,7 +463,7 @@ export const getAllLeaveRequests = async ({ archived = false } = {}) => {
     const [requestsRes, usersRes] = await Promise.all([
       supabase
         .from(LEAVE_REQUESTS_TABLE)
-        .select('request_id, personnel_id, start_date, end_date, reason, status, approved_by, approved_at, rejection_reason, created_at, updated_at, is_archived, archived_at, archived_by')
+        .select('request_id, personnel_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, approved_by, approved_at, rejection_reason, created_at, updated_at, is_archived, archived_at, archived_by')
         .eq('is_archived', archived)
         .order(archived ? 'archived_at' : 'created_at', { ascending: false }),
       getAllUsers({ includePersonnelWorkspaceProfiles: true })
@@ -293,6 +492,7 @@ export const getAllLeaveRequests = async ({ archived = false } = {}) => {
       const personnel = personnelById.get(row.personnel_id);
       const reviewer = row.approved_by ? accountById.get(row.approved_by) : null;
       const archiver = row.archived_by ? accountById.get(row.archived_by) : null;
+      const reliever = row.reliever_id ? personnelById.get(row.reliever_id) : null;
 
       return {
         ...row,
@@ -300,7 +500,8 @@ export const getAllLeaveRequests = async ({ archived = false } = {}) => {
         personnel_rank: personnel?.rank || '',
         personnel_email: personnel?.email || '',
         reviewed_by_name: reviewer ? formatUserLabel(reviewer) : null,
-        archived_by_name: archiver ? formatUserLabel(archiver) : null
+        archived_by_name: archiver ? formatUserLabel(archiver) : null,
+        reliever_name: reliever ? formatUserLabel(reliever) : null
       };
     });
 

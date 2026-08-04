@@ -40,7 +40,8 @@ import {
   getShiftAssignmentsForPeriod,
   removeShiftAssignment,
   removeShiftAssignmentsForTypes,
-  getPersonnelForDate
+  getPersonnelForDate,
+  calculateLeaveDays
 } from '../utils/personnelOperationsService';
 import {
   getAllProfileChangeRequests,
@@ -805,6 +806,30 @@ export default function Accounts() {
     } catch {
       return dateValue;
     }
+  };
+
+  const formatLeaveTypeLabel = (request) => {
+    if (!request?.leave_type) return 'Not specified';
+    if (request.leave_type === 'Other' && request.other_leave_type) {
+      return `Other - ${request.other_leave_type}`;
+    }
+    return request.leave_type;
+  };
+
+  const formatRelieverLabel = (request) => {
+    if (!request?.reliever_type) return '-';
+    if (request.reliever_type === 'admin_assign') return 'To be assigned by Admin';
+    if (request.reliever_type === 'personnel') {
+      if (request.reliever_name) return request.reliever_name;
+      const reliever = findPersonnelAccount(request.reliever_id);
+      return reliever ? `${reliever.first_name || ''} ${reliever.last_name || ''}`.trim() : 'Personnel';
+    }
+    return '-';
+  };
+
+  const handleViewLeaveDocument = (request) => {
+    if (!request?.document_url) return;
+    window.open(request.document_url, '_blank', 'noopener');
   };
 
   const handleClearFilters = () => {
@@ -3163,8 +3188,14 @@ const permissions = getDefaultPermissions(formData.role);
                   <tr>
                     <th>Personnel</th>
                     <th>Email</th>
+                    <th>Leave Type</th>
                     <th>Start Date</th>
                     <th>End Date</th>
+                    <th>Days</th>
+                    <th>Reason</th>
+                    <th>Contact Number</th>
+                    <th>Reliever</th>
+                    <th>Document</th>
                     <th>Requested</th>
                     <th>Action</th>
                   </tr>
@@ -3178,8 +3209,24 @@ const permissions = getDefaultPermissions(formData.role);
                       <tr key={request.request_id}>
                         <td>{target ? `${target.first_name || ''} ${target.last_name || ''}`.trim() : request.personnel_id}</td>
                         <td>{target?.email || '-'}</td>
+                        <td>{formatLeaveTypeLabel(request)}</td>
                         <td>{formatLeaveDate(request.start_date)}</td>
                         <td>{formatLeaveDate(request.end_date)}</td>
+                        <td>{calculateLeaveDays(request.start_date, request.end_date)}</td>
+                        <td>{request.reason || '-'}</td>
+                        <td>{request.contact_number || '-'}</td>
+                        <td>{formatRelieverLabel(request)}</td>
+                        <td>
+                          {request.document_url ? (
+                            <button
+                              type="button"
+                              className="leave-view-document-btn"
+                              onClick={() => handleViewLeaveDocument(request)}
+                            >
+                              View
+                            </button>
+                          ) : '-'}
+                        </td>
                         <td>{new Date(request.created_at).toLocaleDateString('en-US')}</td>
                         <td>
                           <button
@@ -3205,7 +3252,7 @@ const permissions = getDefaultPermissions(formData.role);
                 </tbody>
               </table>
             </div>
-            
+
           )}
           <div className="leave-approval-mobile-list">
   {visiblePendingLeaveRequests.map((request) => {
@@ -3231,11 +3278,47 @@ const permissions = getDefaultPermissions(formData.role);
         </p>
 
         <p>
+          <strong>Leave Type</strong><br />
+          {formatLeaveTypeLabel(request)}
+        </p>
+
+        <p>
           <strong>Leave</strong><br />
           {formatLeaveDate(request.start_date)}
           {" - "}
           {formatLeaveDate(request.end_date)}
+          {" "}({calculateLeaveDays(request.start_date, request.end_date)} day{calculateLeaveDays(request.start_date, request.end_date) === 1 ? '' : 's'})
         </p>
+
+        <p>
+          <strong>Reason</strong><br />
+          {request.reason || '-'}
+        </p>
+
+        {request.contact_number && (
+          <p>
+            <strong>Contact Number</strong><br />
+            {request.contact_number}
+          </p>
+        )}
+
+        <p>
+          <strong>Reliever / Shift Coverage</strong><br />
+          {formatRelieverLabel(request)}
+        </p>
+
+        {request.document_url && (
+          <p>
+            <strong>Supporting Document</strong><br />
+            <button
+              type="button"
+              className="leave-view-document-btn"
+              onClick={() => handleViewLeaveDocument(request)}
+            >
+              View Document
+            </button>
+          </p>
+        )}
 
         <p>
           <strong>Requested</strong><br />
@@ -3335,9 +3418,14 @@ const permissions = getDefaultPermissions(formData.role);
                   <tr>
                     <th>Personnel</th>
                     <th>Rank</th>
+                    <th>Leave Type</th>
                     <th>Start Date</th>
                     <th>End Date</th>
+                    <th>Days</th>
                     <th>Reason</th>
+                    <th>Contact Number</th>
+                    <th>Reliever</th>
+                    <th>Document</th>
                     <th>Status</th>
                     <th>Date Requested</th>
                     <th>Date Reviewed</th>
@@ -3351,9 +3439,24 @@ const permissions = getDefaultPermissions(formData.role);
                     <tr key={request.request_id}>
                       <td>{request.personnel_name || request.personnel_id}</td>
                       <td>{request.personnel_rank || '—'}</td>
+                      <td>{formatLeaveTypeLabel(request)}</td>
                       <td>{formatLeaveDate(request.start_date)}</td>
                       <td>{formatLeaveDate(request.end_date)}</td>
+                      <td>{calculateLeaveDays(request.start_date, request.end_date)}</td>
                       <td>{request.reason || '—'}</td>
+                      <td>{request.contact_number || '—'}</td>
+                      <td>{formatRelieverLabel(request)}</td>
+                      <td>
+                        {request.document_url ? (
+                          <button
+                            type="button"
+                            className="leave-view-document-btn"
+                            onClick={() => handleViewLeaveDocument(request)}
+                          >
+                            View
+                          </button>
+                        ) : '—'}
+                      </td>
                       <td className="profile-request-status-cell">
                         <span className={`profile-request-status profile-request-status-${request.status}`}>
                           {formatRequestStatus(request.status)}
@@ -3369,10 +3472,10 @@ const permissions = getDefaultPermissions(formData.role);
                           ? new Date(request.approved_at).toLocaleDateString('en-US')
                           : '—'}
                       </td>
-                      <td>{request.reviewed_by_name || '—'}</td>
+                      <td>{request.approved_at ? (request.reviewed_by_name || '—') : '—'}</td>
                       <td>
                         {request.status === 'rejected'
-                          ? (request.rejection_reason || '—')
+                          ? (request.rejection_reason || 'No reason provided.')
                           : '—'}
                       </td>
                       <td>
@@ -3406,16 +3509,47 @@ const permissions = getDefaultPermissions(formData.role);
                 </p>
 
                 <p>
+                  <strong>Leave Type</strong><br />
+                  {formatLeaveTypeLabel(request)}
+                </p>
+
+                <p>
                   <strong>Leave</strong><br />
                   {formatLeaveDate(request.start_date)}
                   {' - '}
                   {formatLeaveDate(request.end_date)}
+                  {' '}({calculateLeaveDays(request.start_date, request.end_date)} day{calculateLeaveDays(request.start_date, request.end_date) === 1 ? '' : 's'})
                 </p>
 
                 <p>
                   <strong>Reason</strong><br />
                   {request.reason || '—'}
                 </p>
+
+                {request.contact_number && (
+                  <p>
+                    <strong>Contact Number</strong><br />
+                    {request.contact_number}
+                  </p>
+                )}
+
+                <p>
+                  <strong>Reliever / Shift Coverage</strong><br />
+                  {formatRelieverLabel(request)}
+                </p>
+
+                {request.document_url && (
+                  <p>
+                    <strong>Supporting Document</strong><br />
+                    <button
+                      type="button"
+                      className="leave-view-document-btn"
+                      onClick={() => handleViewLeaveDocument(request)}
+                    >
+                      View Document
+                    </button>
+                  </p>
+                )}
 
                 <p>
                   <strong>Status</strong><br />
@@ -3431,22 +3565,24 @@ const permissions = getDefaultPermissions(formData.role);
                     : '—'}
                 </p>
 
-                <p>
-                  <strong>Date Reviewed</strong><br />
-                  {request.approved_at
-                    ? new Date(request.approved_at).toLocaleDateString('en-US')
-                    : '—'}
-                </p>
+                {request.approved_at && (
+                  <p>
+                    <strong>Date Reviewed</strong><br />
+                    {new Date(request.approved_at).toLocaleDateString('en-US')}
+                  </p>
+                )}
 
-                <p>
-                  <strong>Reviewed By</strong><br />
-                  {request.reviewed_by_name || '—'}
-                </p>
+                {request.approved_at && request.reviewed_by_name && (
+                  <p>
+                    <strong>Reviewed By</strong><br />
+                    {request.reviewed_by_name}
+                  </p>
+                )}
 
                 {request.status === 'rejected' && (
                   <p>
                     <strong>Rejection Reason</strong><br />
-                    {request.rejection_reason || '—'}
+                    {request.rejection_reason || 'No reason provided.'}
                   </p>
                 )}
 
@@ -5158,7 +5294,7 @@ const permissions = getDefaultPermissions(formData.role);
 
                             {requestArchiveType === 'leave' ? (
                               <p>
-                                {formatLeaveDate(request.start_date)} to {formatLeaveDate(request.end_date)}
+                                {formatLeaveTypeLabel(request)} · {formatLeaveDate(request.start_date)} to {formatLeaveDate(request.end_date)}
                                 {request.reason ? ` · ${request.reason}` : ''}
                               </p>
                             ) : (

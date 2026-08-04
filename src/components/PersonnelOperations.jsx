@@ -8,7 +8,16 @@ import {
   getPersonnelShiftSchedule,
   getPersonnelForDate,
   getPersonnelShiftAssignments,
-  resolveCurrentShiftType
+  resolveCurrentShiftType,
+  getReliefCandidates,
+  calculateLeaveDays,
+  isValidLeaveContactNumber,
+  isAllowedLeaveDocument,
+  LEAVE_TYPES,
+  LEAVE_TYPES_REQUIRING_DOCUMENT,
+  LEAVE_DOCUMENT_ACCEPT,
+  LEAVE_DOCUMENT_MAX_SIZE_BYTES,
+  RELIEVER_ADMIN_ASSIGN_VALUE
 } from '../utils/personnelOperationsService';
 import { getManilaToday } from '../utils/dateUtils';
 import { logPersonnelActivity } from '../utils/activityLogService';
@@ -75,6 +84,71 @@ const getCalendarCells = (monthDate) => {
   });
 };
 
+const EMPTY_LEAVE_FORM = {
+  leaveType: '',
+  otherLeaveType: '',
+  startDate: '',
+  endDate: '',
+  reason: '',
+  contactNumber: '',
+  relieverValue: '',
+  documentFile: null
+};
+
+const computeLeaveFormErrors = (form, todayIso) => {
+  const errors = {};
+
+  if (!form.leaveType) {
+    errors.leaveType = 'Please select a leave type.';
+  }
+
+  if (form.leaveType === 'Other' && !form.otherLeaveType.trim()) {
+    errors.otherLeaveType = 'Please specify the leave type.';
+  }
+
+  if (!form.startDate) {
+    errors.startDate = 'Leave start date is required.';
+  } else if (form.startDate < todayIso) {
+    errors.startDate = 'Leave start date cannot be in the past.';
+  }
+
+  if (!form.endDate) {
+    errors.endDate = 'Leave end date is required.';
+  } else if (form.endDate < todayIso) {
+    errors.endDate = 'Leave end date cannot be in the past.';
+  } else if (form.startDate && form.endDate < form.startDate) {
+    errors.endDate = 'Leave end date must be on or after the start date.';
+  }
+
+  if (!form.reason.trim()) {
+    errors.reason = 'Please provide a reason for leave.';
+  }
+
+  if (form.contactNumber && !isValidLeaveContactNumber(form.contactNumber)) {
+    errors.contactNumber = 'Please enter a valid contact number.';
+  }
+
+  if (LEAVE_TYPES_REQUIRING_DOCUMENT.has(form.leaveType) && !form.documentFile) {
+    errors.documentFile = `A supporting document is required for ${form.leaveType}.`;
+  }
+
+  return errors;
+};
+
+const formatRelieverLabel = (item) => {
+  if (!item || !item.reliever_type) return null;
+  if (item.reliever_type === 'admin_assign') return 'To be assigned by Admin';
+  if (item.reliever_type === 'personnel') return item.reliever_name || 'Personnel';
+  return null;
+};
+
+const formatFileSize = (bytes) => {
+  const value = Number(bytes || 0);
+  if (!value) return '';
+  if (value < 1024 * 1024) return `${Math.max(1, Math.round(value / 1024))} KB`;
+  return `${(value / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 export default function PersonnelOperations() {
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,10 +163,13 @@ export default function PersonnelOperations() {
     latest_request: null,
     history: []
   });
-  const [leaveForm, setLeaveForm] = useState({
-    startDate: '',
-    endDate: ''
-  });
+  const [leaveForm, setLeaveForm] = useState(EMPTY_LEAVE_FORM);
+  const [leaveFieldTouched, setLeaveFieldTouched] = useState({});
+  const [hasAttemptedLeaveSubmit, setHasAttemptedLeaveSubmit] = useState(false);
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
+  const [leaveSubmitError, setLeaveSubmitError] = useState('');
+  const [relieverOptions, setRelieverOptions] = useState([]);
+  const leaveDocumentInputRef = useRef(null);
   const [shiftRows, setShiftRows] = useState([]);
   const [shiftTotals, setShiftTotals] = useState({ shiftA: 0, shiftB: 0 });
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -128,20 +205,25 @@ const lastDay = new Date(
   0
 );
 
-const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
+const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all([
   getPersonnelLeaveRequest(currentUser.admin_id),
   getPersonnelShiftSchedule({
     startDate: firstDay,
     endDate: lastDay,
     viewerPersonnelId: currentUser.admin_id
   }),
-  getPersonnelShiftAssignments(currentUser.admin_id)
+  getPersonnelShiftAssignments(currentUser.admin_id),
+  getReliefCandidates(currentUser.admin_id)
 ]);
 
     if (leaveRes.error) {
       setMessage({ type: 'error', text: `Failed to load leave request: ${leaveRes.error}` });
     } else if (leaveRes.data) {
       setLeaveRequest(leaveRes.data);
+    }
+
+    if (!relieverRes.error) {
+      setRelieverOptions(relieverRes.data || []);
     }
 
     if (scheduleRes.error) {
@@ -170,6 +252,15 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
   useEffect(() => {
     loadPageData();
   }, [loadPageData]);
+
+  // Prefill the optional contact number from the personnel's own profile the
+  // first time it becomes available, without overwriting anything the user
+  // has already typed into the form.
+  useEffect(() => {
+    if (currentUser?.contact_number) {
+      setLeaveForm((prev) => (prev.contactNumber ? prev : { ...prev, contactNumber: currentUser.contact_number }));
+    }
+  }, [currentUser?.contact_number]);
 
   useEffect(() => {
     const handleFocusOrVisible = () => {
@@ -266,6 +357,40 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
 
   const todayIso = getManilaToday();
   const minEndDate = leaveForm.startDate ? laterIso(todayIso, leaveForm.startDate) : todayIso;
+  const isDocumentRequired = LEAVE_TYPES_REQUIRING_DOCUMENT.has(leaveForm.leaveType);
+  const numberOfLeaveDays = calculateLeaveDays(leaveForm.startDate, leaveForm.endDate);
+
+  const leaveFormErrors = useMemo(
+    () => computeLeaveFormErrors(leaveForm, todayIso),
+    [leaveForm, todayIso]
+  );
+  const isLeaveFormValid = Object.keys(leaveFormErrors).length === 0;
+  const hasLeaveFormEntries = Boolean(
+    leaveForm.leaveType || leaveForm.otherLeaveType || leaveForm.startDate || leaveForm.endDate
+    || leaveForm.reason || leaveForm.contactNumber || leaveForm.relieverValue || leaveForm.documentFile
+  );
+  const visibleLeaveFieldErrors = useMemo(() => {
+    const visible = {};
+    Object.keys(leaveFormErrors).forEach((field) => {
+      if (hasAttemptedLeaveSubmit || leaveFieldTouched[field]) {
+        visible[field] = leaveFormErrors[field];
+      }
+    });
+    return visible;
+  }, [leaveFormErrors, leaveFieldTouched, hasAttemptedLeaveSubmit]);
+
+  const selectedRelieverLabel = useMemo(() => {
+    if (leaveForm.relieverValue === RELIEVER_ADMIN_ASSIGN_VALUE) return 'To be assigned by Admin';
+    if (leaveForm.relieverValue) {
+      const match = relieverOptions.find((option) => option.admin_id === leaveForm.relieverValue);
+      return match?.name || 'Selected colleague';
+    }
+    return null;
+  }, [leaveForm.relieverValue, relieverOptions]);
+
+  const markLeaveFieldTouched = (name) => {
+    setLeaveFieldTouched((prev) => (prev[name] ? prev : { ...prev, [name]: true }));
+  };
 
   const handleLeaveInput = (event) => {
     const { name, value } = event.target;
@@ -276,15 +401,65 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
       if (name === 'startDate' && next.endDate && next.endDate < value) {
         next.endDate = '';
       }
+      // Switching away from Other clears the now-irrelevant specify field;
+      // switching to a type that no longer requires a document drops any
+      // previously attached (and now-optional) file's required-ness only,
+      // the file itself is left alone so the user doesn't lose a selection.
+      if (name === 'leaveType' && value !== 'Other') {
+        next.otherLeaveType = '';
+      }
       return next;
     });
   };
 
-  const handleClearLeaveDates = () => {
-    setLeaveForm((prev) => ({ ...prev, startDate: '', endDate: '' }));
+  const handleLeaveBlur = (event) => {
+    markLeaveFieldTouched(event.target.name);
   };
 
-  const handleSubmitLeave = async () => {
+  const handleLeaveDocumentChange = (event) => {
+    const file = event.target.files?.[0] || null;
+    markLeaveFieldTouched('documentFile');
+
+    if (!file) {
+      setLeaveForm((prev) => ({ ...prev, documentFile: null }));
+      return;
+    }
+
+    if (!isAllowedLeaveDocument(file)) {
+      setLeaveSubmitError('Unsupported file type. Please upload a PDF, JPG, JPEG, or PNG file.');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > LEAVE_DOCUMENT_MAX_SIZE_BYTES) {
+      setLeaveSubmitError('Supporting document exceeds the 5MB size limit.');
+      event.target.value = '';
+      return;
+    }
+
+    setLeaveSubmitError('');
+    setLeaveForm((prev) => ({ ...prev, documentFile: file }));
+  };
+
+  const handleRemoveLeaveDocument = () => {
+    setLeaveForm((prev) => ({ ...prev, documentFile: null }));
+    if (leaveDocumentInputRef.current) {
+      leaveDocumentInputRef.current.value = '';
+    }
+  };
+
+  const handleClearLeaveForm = () => {
+    setLeaveForm(EMPTY_LEAVE_FORM);
+    setLeaveFieldTouched({});
+    setHasAttemptedLeaveSubmit(false);
+    setLeaveSubmitError('');
+    if (leaveDocumentInputRef.current) {
+      leaveDocumentInputRef.current.value = '';
+    }
+  };
+
+  const handleOpenLeaveConfirm = () => {
+    setHasAttemptedLeaveSubmit(true);
     setMessage({ type: '', text: '' });
 
     if (!currentUser?.admin_id) {
@@ -292,43 +467,48 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
       return;
     }
 
-    if (hasPendingLeaveRequest) {
-      setMessage({ type: 'error', text: 'You already have a pending leave request awaiting admin approval.' });
+    if (!isLeaveFormValid) {
       return;
     }
 
-    if (!leaveForm.startDate || !leaveForm.endDate) {
-      setMessage({ type: 'error', text: 'Please provide both leave start and end dates.' });
-      return;
-    }
+    setLeaveSubmitError('');
+    setIsLeaveConfirmOpen(true);
+  };
 
-    if (leaveForm.startDate < todayIso || leaveForm.endDate < todayIso) {
-      setMessage({ type: 'error', text: 'You cannot submit a leave request for a past date.' });
-      return;
-    }
+  const closeLeaveConfirm = () => {
+    if (leaveSaving) return;
+    setIsLeaveConfirmOpen(false);
+  };
 
-    if (leaveForm.endDate < leaveForm.startDate) {
-      setMessage({ type: 'error', text: 'Leave end date must be on or after the start date.' });
-      return;
-    }
+  const handleConfirmLeaveSubmit = async () => {
+    setLeaveSubmitError('');
+
+    const relieverType = leaveForm.relieverValue === RELIEVER_ADMIN_ASSIGN_VALUE
+      ? 'admin_assign'
+      : leaveForm.relieverValue
+        ? 'personnel'
+        : '';
+    const relieverId = relieverType === 'personnel' ? leaveForm.relieverValue : null;
 
     try {
       setLeaveSaving(true);
-      const { data, error } = await submitPersonnelLeaveRequest(currentUser.admin_id, leaveForm);
+      const { data, error } = await submitPersonnelLeaveRequest(currentUser.admin_id, {
+        leaveType: leaveForm.leaveType,
+        otherLeaveType: leaveForm.otherLeaveType,
+        startDate: leaveForm.startDate,
+        endDate: leaveForm.endDate,
+        reason: leaveForm.reason,
+        contactNumber: leaveForm.contactNumber,
+        relieverType,
+        relieverId,
+        documentFile: leaveForm.documentFile
+      });
 
       if (error) {
-        if (String(error).toLowerCase().includes('leave_start_date') || String(error).toLowerCase().includes('leave_end_date')) {
-          setMessage({
-            type: 'error',
-            text: 'Leave columns are missing in the database. Run leave_dates_setup.sql first, then try again.'
-          });
-        } else if (String(error).toLowerCase().includes('leave_requests')) {
-          setMessage({
-            type: 'error',
-            text: 'Leave request table is missing. Run leave_requests_setup.sql first, then try again.'
-          });
+        if (String(error).toLowerCase().includes('leave_requests')) {
+          setLeaveSubmitError('Leave request table is missing. Run leave_requests_setup.sql first, then try again.');
         } else {
-          setMessage({ type: 'error', text: error });
+          setLeaveSubmitError(error);
         }
         return;
       }
@@ -338,18 +518,19 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
         latest_request: data,
         history: [data, ...(prev.history || [])]
       }));
-      setLeaveForm({ startDate: '', endDate: '' });
-      setMessage({ type: 'success', text: 'Leave request submitted. Waiting for admin approval.' });
+      handleClearLeaveForm();
+      setIsLeaveConfirmOpen(false);
+      setMessage({ type: 'success', text: 'Your leave request has been submitted and is awaiting admin review.' });
 
       void logPersonnelActivity({
         personnelId: currentUser.admin_id,
         activityType: 'leave_request',
         action: 'Leave Request Submitted',
-        details: `Requested leave from ${formatDate(data.start_date)} to ${formatDate(data.end_date)}.`
+        details: `Requested ${data.leave_type || 'leave'} from ${formatDate(data.start_date)} to ${formatDate(data.end_date)}.`
       });
     } catch (err) {
       console.error('Unexpected error submitting leave request:', err);
-      setMessage({ type: 'error', text: String(err?.message || err) });
+      setLeaveSubmitError(String(err?.message || err));
     } finally {
       setLeaveSaving(false);
     }
@@ -581,61 +762,277 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
               </span>
             </div>
 
-            <p className="ops-caption">Set your leave period and submit your request for admin approval.</p>
+            {hasPendingLeaveRequest ? (
+              <div className="leave-pending-summary">
+                <h3 className="leave-section-heading">Pending Leave Request</h3>
+                <div className="leave-summary-grid">
+                  <div className="leave-summary-field">
+                    <span className="leave-summary-label">Leave Type</span>
+                    <span className="leave-summary-value">{leaveRequest.latest_request?.leave_type || 'Not specified'}</span>
+                  </div>
+                  {leaveRequest.latest_request?.leave_type === 'Other' && leaveRequest.latest_request?.other_leave_type && (
+                    <div className="leave-summary-field">
+                      <span className="leave-summary-label">Specific Leave Type</span>
+                      <span className="leave-summary-value">{leaveRequest.latest_request.other_leave_type}</span>
+                    </div>
+                  )}
+                  <div className="leave-summary-field">
+                    <span className="leave-summary-label">Leave Start</span>
+                    <span className="leave-summary-value">{formatDate(leaveRequest.latest_request?.start_date)}</span>
+                  </div>
+                  <div className="leave-summary-field">
+                    <span className="leave-summary-label">Leave End</span>
+                    <span className="leave-summary-value">{formatDate(leaveRequest.latest_request?.end_date)}</span>
+                  </div>
+                  <div className="leave-summary-field">
+                    <span className="leave-summary-label">Number of Leave Days</span>
+                    <span className="leave-summary-value">
+                      {calculateLeaveDays(leaveRequest.latest_request?.start_date, leaveRequest.latest_request?.end_date)}
+                    </span>
+                  </div>
+                  <div className="leave-summary-field leave-summary-field-full">
+                    <span className="leave-summary-label">Reason for Leave</span>
+                    <span className="leave-summary-value">{leaveRequest.latest_request?.reason || '-'}</span>
+                  </div>
+                  <div className="leave-summary-field">
+                    <span className="leave-summary-label">Date Submitted</span>
+                    <span className="leave-summary-value">{formatDateTime(leaveRequest.latest_request?.created_at)}</span>
+                  </div>
+                  {leaveRequest.latest_request?.contact_number && (
+                    <div className="leave-summary-field">
+                      <span className="leave-summary-label">Contact Number</span>
+                      <span className="leave-summary-value">{leaveRequest.latest_request.contact_number}</span>
+                    </div>
+                  )}
+                  {leaveRequest.latest_request?.document_url && (
+                    <div className="leave-summary-field">
+                      <span className="leave-summary-label">Supporting Document</span>
+                      <a
+                        className="leave-summary-value leave-document-link"
+                        href={leaveRequest.latest_request.document_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {leaveRequest.latest_request.document_name || 'View document'}
+                      </a>
+                    </div>
+                  )}
+                  {formatRelieverLabel(leaveRequest.latest_request) && (
+                    <div className="leave-summary-field">
+                      <span className="leave-summary-label">Reliever / Shift Coverage</span>
+                      <span className="leave-summary-value">{formatRelieverLabel(leaveRequest.latest_request)}</span>
+                    </div>
+                  )}
+                  <div className="leave-summary-field">
+                    <span className="leave-summary-label">Status</span>
+                    <span className="leave-summary-value">{formatStatusLabel(leaveRequest.latest_request?.status)}</span>
+                  </div>
+                </div>
 
-            <div className="leave-form-toolbar">
-              <button
-                type="button"
-                className="leave-clear-dates-btn"
-                onClick={handleClearLeaveDates}
-                disabled={!leaveForm.startDate && !leaveForm.endDate}
-              >
-                Clear Dates
-              </button>
-            </div>
-
-            <div className="leave-form-grid">
-              <div className="leave-field">
-                <label htmlFor="leave-start-date">Leave Start Date</label>
-                <input
-                  id="leave-start-date"
-                  type="date"
-                  name="startDate"
-                  className="leave-date-input"
-                  min={todayIso}
-                  value={leaveForm.startDate}
-                  onChange={handleLeaveInput}
-                />
+                <p className="leave-pending-notice">
+                  Your leave request is currently awaiting admin review. You may submit another request after the current request has been reviewed.
+                </p>
               </div>
+            ) : (
+              <>
+                <p className="ops-caption">Complete the form below and submit your request for admin approval.</p>
 
-              <div className="leave-field">
-                <label htmlFor="leave-end-date">Leave End Date</label>
-                <input
-                  id="leave-end-date"
-                  type="date"
-                  name="endDate"
-                  className="leave-date-input"
-                  min={minEndDate}
-                  value={leaveForm.endDate}
-                  onChange={handleLeaveInput}
-                />
-              </div>
-            </div>
+                <div className="leave-form-grid">
+                  <div className="leave-field">
+                    <label htmlFor="leave-type">Leave Type</label>
+                    <select
+                      id="leave-type"
+                      name="leaveType"
+                      className="leave-select-input"
+                      value={leaveForm.leaveType}
+                      onChange={handleLeaveInput}
+                      onBlur={handleLeaveBlur}
+                    >
+                      <option value="">Select leave type</option>
+                      {LEAVE_TYPES.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                    {visibleLeaveFieldErrors.leaveType && (
+                      <span className="leave-field-error">{visibleLeaveFieldErrors.leaveType}</span>
+                    )}
+                  </div>
 
-            {hasPendingLeaveRequest && (
-              <p className="leave-pending-notice">
-                You already have a pending leave request awaiting admin approval.
-              </p>
+                  {leaveForm.leaveType === 'Other' && (
+                    <div className="leave-field">
+                      <label htmlFor="leave-other-type">Specify Leave Type</label>
+                      <input
+                        id="leave-other-type"
+                        type="text"
+                        name="otherLeaveType"
+                        className="leave-text-input"
+                        value={leaveForm.otherLeaveType}
+                        onChange={handleLeaveInput}
+                        onBlur={handleLeaveBlur}
+                        maxLength={100}
+                      />
+                      {visibleLeaveFieldErrors.otherLeaveType && (
+                        <span className="leave-field-error">{visibleLeaveFieldErrors.otherLeaveType}</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="leave-field">
+                    <label htmlFor="leave-start-date">Leave Start Date</label>
+                    <input
+                      id="leave-start-date"
+                      type="date"
+                      name="startDate"
+                      className="leave-date-input"
+                      min={todayIso}
+                      value={leaveForm.startDate}
+                      onChange={handleLeaveInput}
+                      onBlur={handleLeaveBlur}
+                    />
+                    {visibleLeaveFieldErrors.startDate && (
+                      <span className="leave-field-error">{visibleLeaveFieldErrors.startDate}</span>
+                    )}
+                  </div>
+
+                  <div className="leave-field">
+                    <label htmlFor="leave-end-date">Leave End Date</label>
+                    <input
+                      id="leave-end-date"
+                      type="date"
+                      name="endDate"
+                      className="leave-date-input"
+                      min={minEndDate}
+                      value={leaveForm.endDate}
+                      onChange={handleLeaveInput}
+                      onBlur={handleLeaveBlur}
+                    />
+                    {visibleLeaveFieldErrors.endDate && (
+                      <span className="leave-field-error">{visibleLeaveFieldErrors.endDate}</span>
+                    )}
+                  </div>
+
+                  <div className="leave-field">
+                    <label htmlFor="leave-days-readonly">Number of Leave Days</label>
+                    <input
+                      id="leave-days-readonly"
+                      type="text"
+                      className="leave-text-input"
+                      value={numberOfLeaveDays || ''}
+                      readOnly
+                      disabled
+                    />
+                  </div>
+
+                  <div className="leave-field">
+                    <label htmlFor="leave-contact-number">Contact Number During Leave</label>
+                    <input
+                      id="leave-contact-number"
+                      type="text"
+                      name="contactNumber"
+                      className="leave-text-input"
+                      placeholder="Optional"
+                      value={leaveForm.contactNumber}
+                      onChange={handleLeaveInput}
+                      onBlur={handleLeaveBlur}
+                      maxLength={20}
+                    />
+                    {visibleLeaveFieldErrors.contactNumber && (
+                      <span className="leave-field-error">{visibleLeaveFieldErrors.contactNumber}</span>
+                    )}
+                  </div>
+
+                  <div className="leave-field leave-field-full">
+                    <label htmlFor="leave-reason">Reason for Leave</label>
+                    <textarea
+                      id="leave-reason"
+                      name="reason"
+                      className="leave-textarea-input"
+                      rows={3}
+                      value={leaveForm.reason}
+                      onChange={handleLeaveInput}
+                      onBlur={handleLeaveBlur}
+                      maxLength={500}
+                    />
+                    {visibleLeaveFieldErrors.reason && (
+                      <span className="leave-field-error">{visibleLeaveFieldErrors.reason}</span>
+                    )}
+                  </div>
+
+                  <div className="leave-field">
+                    <label htmlFor="leave-document">
+                      Supporting Document{isDocumentRequired ? ' (Required)' : ' (Optional)'}
+                    </label>
+                    <div className="leave-document-input-row">
+                      <label className="leave-document-choose-btn" htmlFor="leave-document">
+                        Choose File
+                      </label>
+                      <input
+                        id="leave-document"
+                        ref={leaveDocumentInputRef}
+                        type="file"
+                        accept={LEAVE_DOCUMENT_ACCEPT}
+                        className="leave-document-input"
+                        onChange={handleLeaveDocumentChange}
+                      />
+                      <span className="leave-document-filename">
+                        {leaveForm.documentFile
+                          ? `${leaveForm.documentFile.name} (${formatFileSize(leaveForm.documentFile.size)})`
+                          : 'No file selected'}
+                      </span>
+                      {leaveForm.documentFile && (
+                        <button type="button" className="leave-document-remove-btn" onClick={handleRemoveLeaveDocument}>
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                    <span className="leave-field-hint">Accepted formats: PDF, JPG, JPEG, PNG (max 5MB).</span>
+                    {visibleLeaveFieldErrors.documentFile && (
+                      <span className="leave-field-error">{visibleLeaveFieldErrors.documentFile}</span>
+                    )}
+                  </div>
+
+                  <div className="leave-field">
+                    <label htmlFor="leave-reliever">Reliever / Shift Coverage</label>
+                    <select
+                      id="leave-reliever"
+                      name="relieverValue"
+                      className="leave-select-input"
+                      value={leaveForm.relieverValue}
+                      onChange={handleLeaveInput}
+                      onBlur={handleLeaveBlur}
+                    >
+                      <option value="">Optional - no reliever selected</option>
+                      <option value={RELIEVER_ADMIN_ASSIGN_VALUE}>To be assigned by Admin</option>
+                      {relieverOptions.map((option) => (
+                        <option key={option.admin_id} value={option.admin_id}>{option.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="leave-form-actions">
+                  {hasLeaveFormEntries && (
+                    <button
+                      type="button"
+                      className="leave-clear-form-btn"
+                      onClick={handleClearLeaveForm}
+                      disabled={leaveSaving}
+                    >
+                      Clear Form
+                    </button>
+                  )}
+
+                  <button
+                    className="ops-primary-btn"
+                    type="button"
+                    onClick={handleOpenLeaveConfirm}
+                    disabled={leaveSaving || loading || !isLeaveFormValid}
+                  >
+                    Submit Leave Request
+                  </button>
+                </div>
+              </>
             )}
-
-            <button
-              className="ops-primary-btn"
-              type="button"
-              onClick={handleSubmitLeave}
-              disabled={leaveSaving || loading || hasPendingLeaveRequest}
-            >
-              {leaveSaving ? 'Submitting...' : 'Submit Leave Request'}
-            </button>
 
             <div className="leave-history-section">
               <h3 className="leave-history-title">Leave History</h3>
@@ -644,13 +1041,18 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
                 <div className="leave-history-list">
                   {leaveRequest.history.map((item) => {
                     const itemStatus = String(item.status || '').toLowerCase();
+                    const relieverLabel = formatRelieverLabel(item);
                     return (
                       <div key={item.request_id} className="leave-history-item">
                         <div className="leave-history-item-header">
                           <div className="leave-history-dates">
-                            <p><strong>Current Start:</strong> {formatDate(item.start_date)}</p>
-                            <p><strong>Current End:</strong> {formatDate(item.end_date)}</p>
-                            <p><strong>Date Requested:</strong> {formatDateTime(item.created_at)}</p>
+                            <p><strong>Leave Type:</strong> {item.leave_type || 'Not specified'}</p>
+                            {item.leave_type === 'Other' && item.other_leave_type && (
+                              <p><strong>Specific Leave Type:</strong> {item.other_leave_type}</p>
+                            )}
+                            <p><strong>Leave Start:</strong> {formatDate(item.start_date)}</p>
+                            <p><strong>Leave End:</strong> {formatDate(item.end_date)}</p>
+                            <p><strong>Number of Leave Days:</strong> {calculateLeaveDays(item.start_date, item.end_date)}</p>
                           </div>
                           <span className={`leave-status ${itemStatus}`}>
                             {formatStatusLabel(item.status)}
@@ -658,14 +1060,32 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
                         </div>
 
                         <div className="leave-history-item-details">
+                          {item.reason && (
+                            <p><strong>Reason for Leave:</strong> {item.reason}</p>
+                          )}
+                          {item.contact_number && (
+                            <p><strong>Contact Number:</strong> {item.contact_number}</p>
+                          )}
+                          {item.document_url && (
+                            <p>
+                              <strong>Supporting Document:</strong>{' '}
+                              <a className="leave-document-link" href={item.document_url} target="_blank" rel="noopener noreferrer">
+                                {item.document_name || 'View document'}
+                              </a>
+                            </p>
+                          )}
+                          {relieverLabel && (
+                            <p><strong>Reliever / Shift Coverage:</strong> {relieverLabel}</p>
+                          )}
+                          <p><strong>Date Submitted:</strong> {formatDateTime(item.created_at)}</p>
                           {item.approved_at && (
                             <p><strong>Date Reviewed:</strong> {formatDateTime(item.approved_at)}</p>
                           )}
-                          {item.reviewed_by_name && (
+                          {item.approved_at && item.reviewed_by_name && (
                             <p><strong>Reviewed By:</strong> {item.reviewed_by_name}</p>
                           )}
-                          {itemStatus === 'rejected' && item.rejection_reason && (
-                            <p><strong>Rejection Reason:</strong> {item.rejection_reason}</p>
+                          {itemStatus === 'rejected' && (
+                            <p><strong>Rejection Reason:</strong> {item.rejection_reason || 'No reason provided.'}</p>
                           )}
                         </div>
                       </div>
@@ -682,6 +1102,109 @@ const [leaveRes, scheduleRes, myAssignmentsRes] = await Promise.all([
         {message.text && (
           <div className={`ops-page-message ops-page-message-${message.type}`}>
             {message.text}
+          </div>
+        )}
+
+        {isLeaveConfirmOpen && (
+          <div
+            className="personnel-modal-overlay"
+            role="presentation"
+            onClick={closeLeaveConfirm}
+          >
+            <div
+              className="personnel-modal leave-confirm-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Confirm leave request"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="personnel-modal-header">
+                <h3>Confirm Leave Request</h3>
+                <button
+                  type="button"
+                  className="personnel-modal-close"
+                  onClick={closeLeaveConfirm}
+                  aria-label="Close confirmation"
+                  disabled={leaveSaving}
+                >
+                  &times;
+                </button>
+              </div>
+
+              <div className="personnel-modal-body">
+                <div className="leave-confirm-summary">
+                  <div className="leave-summary-field">
+                    <span className="leave-summary-label">Leave Type</span>
+                    <span className="leave-summary-value">{leaveForm.leaveType}</span>
+                  </div>
+                  {leaveForm.leaveType === 'Other' && (
+                    <div className="leave-summary-field">
+                      <span className="leave-summary-label">Specific Leave Type</span>
+                      <span className="leave-summary-value">{leaveForm.otherLeaveType}</span>
+                    </div>
+                  )}
+                  <div className="leave-summary-field">
+                    <span className="leave-summary-label">Leave Start</span>
+                    <span className="leave-summary-value">{formatDate(leaveForm.startDate)}</span>
+                  </div>
+                  <div className="leave-summary-field">
+                    <span className="leave-summary-label">Leave End</span>
+                    <span className="leave-summary-value">{formatDate(leaveForm.endDate)}</span>
+                  </div>
+                  <div className="leave-summary-field">
+                    <span className="leave-summary-label">Number of Leave Days</span>
+                    <span className="leave-summary-value">{numberOfLeaveDays}</span>
+                  </div>
+                  <div className="leave-summary-field leave-summary-field-full">
+                    <span className="leave-summary-label">Reason for Leave</span>
+                    <span className="leave-summary-value">{leaveForm.reason}</span>
+                  </div>
+                  {leaveForm.contactNumber && (
+                    <div className="leave-summary-field">
+                      <span className="leave-summary-label">Contact Number</span>
+                      <span className="leave-summary-value">{leaveForm.contactNumber}</span>
+                    </div>
+                  )}
+                  {leaveForm.documentFile && (
+                    <div className="leave-summary-field">
+                      <span className="leave-summary-label">Supporting Document</span>
+                      <span className="leave-summary-value">{leaveForm.documentFile.name}</span>
+                    </div>
+                  )}
+                  {selectedRelieverLabel && (
+                    <div className="leave-summary-field">
+                      <span className="leave-summary-label">Reliever / Shift Coverage</span>
+                      <span className="leave-summary-value">{selectedRelieverLabel}</span>
+                    </div>
+                  )}
+                </div>
+
+                {leaveSubmitError && (
+                  <div className="ops-page-message ops-page-message-error leave-confirm-error">
+                    {leaveSubmitError}
+                  </div>
+                )}
+              </div>
+
+              <div className="personnel-modal-footer">
+                <button
+                  type="button"
+                  className="leave-modal-cancel-btn"
+                  onClick={closeLeaveConfirm}
+                  disabled={leaveSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="ops-primary-btn"
+                  onClick={handleConfirmLeaveSubmit}
+                  disabled={leaveSaving}
+                >
+                  {leaveSaving ? 'Submitting...' : 'Confirm and Submit'}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

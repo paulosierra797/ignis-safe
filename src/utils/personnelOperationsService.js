@@ -278,7 +278,7 @@ export const getPersonnelLeaveRequest = async (adminId) => {
     if (error?.code === '42P01' || String(error?.message || '').toLowerCase().includes('leave_requests')) {
       return {
         data: null,
-        error: 'Leave request table is missing. Run leave_requests_setup.sql first, then try again.'
+        error: 'Leave request services are temporarily unavailable. Please try again later or contact the administrator.'
       };
     }
     return { data: null, error: error.message };
@@ -428,7 +428,7 @@ export const submitPersonnelLeaveRequest = async (adminId, formValues = {}) => {
     if (error?.code === '42P01' || String(error?.message || '').toLowerCase().includes('leave_requests')) {
       return {
         data: null,
-        error: 'Leave request table is missing. Run leave_requests_setup.sql first, then try again.'
+        error: 'Leave request services are temporarily unavailable. Please try again later or contact the administrator.'
       };
     }
     return { data: null, error: error.message };
@@ -451,7 +451,7 @@ export const getPendingLeaveRequests = async () => {
     if (error?.code === '42P01' || String(error?.message || '').toLowerCase().includes('leave_requests')) {
       return {
         data: [],
-        error: 'Leave request table is missing. Run leave_requests_setup.sql first, then try again.'
+        error: 'Leave request services are temporarily unavailable. Please try again later or contact the administrator.'
       };
     }
     return { data: [], error: error.message };
@@ -511,7 +511,7 @@ export const getAllLeaveRequests = async ({ archived = false } = {}) => {
     if (error?.code === '42P01' || String(error?.message || '').toLowerCase().includes('leave_requests')) {
       return {
         data: [],
-        error: 'Leave request table is missing. Run leave_requests_setup.sql first, then try again.'
+        error: 'Leave request services are temporarily unavailable. Please try again later or contact the administrator.'
       };
     }
     return { data: [], error: error.message };

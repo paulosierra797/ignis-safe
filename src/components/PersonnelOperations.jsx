@@ -506,7 +506,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
 
       if (error) {
         if (String(error).toLowerCase().includes('leave_requests')) {
-          setLeaveSubmitError('Leave request table is missing. Run leave_requests_setup.sql first, then try again.');
+          setLeaveSubmitError('Leave request services are temporarily unavailable. Please try again later or contact the administrator.');
         } else {
           setLeaveSubmitError(error);
         }

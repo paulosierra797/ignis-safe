@@ -500,7 +500,7 @@ const toIsoDate = (date) => {
 
 const ACCOUNT_ACTION_MENU_WIDTH = 196;
 
-function AccountActionsMenu({ account, actions }) {
+function RowActionsMenu({ ariaLabel, actions }) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState(null);
   const triggerRef = useRef(null);
@@ -589,7 +589,7 @@ function AccountActionsMenu({ account, actions }) {
         ref={triggerRef}
         type="button"
         className="account-action-menu-trigger"
-        aria-label={`Open actions for ${account.first_name || ''} ${account.last_name || ''}`.trim()}
+        aria-label={ariaLabel}
         aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={handleMenuToggle}
@@ -615,7 +615,9 @@ function AccountActionsMenu({ account, actions }) {
               type="button"
               role="menuitem"
               className={`account-action-menu-item${action.destructive ? ' is-destructive' : ''}`}
+              disabled={action.disabled}
               onClick={() => {
+                if (action.disabled) return;
                 setMenuPosition(null);
                 setIsOpen(false);
                 action.onSelect();
@@ -742,7 +744,10 @@ function AccountDirectoryGroup({
                   </div>
                 </div>
 
-                <AccountActionsMenu account={account} actions={getAccountActions(account)} />
+                <RowActionsMenu
+                  ariaLabel={`Open actions for ${accountName}`}
+                  actions={getAccountActions(account)}
+                />
               </article>
             );
           })}
@@ -3426,29 +3431,29 @@ const permissions = getDefaultPermissions(formData.role);
                         <td>{calculateLeaveDays(request.start_date, request.end_date)}</td>
                         <td>
                           <div className="leave-history-row-actions">
-                            <button
-                              type="button"
-                              className="leave-history-view-btn"
-                              onClick={() => openPendingLeaveDetails(request)}
-                            >
-                              View Details
-                            </button>
-                            <button
-                              className="leave-approve-btn"
-                              type="button"
-                              onClick={() => handleApproveLeaveRequest(request)}
-                              disabled={isProcessing}
-                            >
-                              {isProcessing ? 'Processing...' : 'Approve'}
-                            </button>
-                            <button
-                              className="leave-reject-btn"
-                              type="button"
-                              onClick={() => handleRejectLeaveRequest(request)}
-                              disabled={isProcessing}
-                            >
-                              Reject
-                            </button>
+                            <RowActionsMenu
+                              ariaLabel={`Open actions for ${target ? `${target.first_name || ''} ${target.last_name || ''}`.trim() : request.personnel_id}'s leave request`}
+                              actions={[
+                                {
+                                  key: 'view',
+                                  label: 'View Details',
+                                  onSelect: () => openPendingLeaveDetails(request)
+                                },
+                                {
+                                  key: 'approve',
+                                  label: isProcessing ? 'Processing...' : 'Approve',
+                                  disabled: isProcessing,
+                                  onSelect: () => handleApproveLeaveRequest(request)
+                                },
+                                {
+                                  key: 'reject',
+                                  label: 'Reject',
+                                  destructive: true,
+                                  disabled: isProcessing,
+                                  onSelect: () => handleRejectLeaveRequest(request)
+                                }
+                              ]}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -3496,33 +3501,29 @@ const permissions = getDefaultPermissions(formData.role);
         </p>
 
         <div className="leave-card-actions">
-          <button
-            type="button"
-            className="leave-history-view-btn"
-            onClick={() => openPendingLeaveDetails(request)}
-          >
-            View Details
-          </button>
-
-          <button
-            className="leave-approve-btn"
-            onClick={() =>
-              handleApproveLeaveRequest(request)
-            }
-            disabled={isProcessing}
-          >
-            Approve
-          </button>
-
-          <button
-            className="leave-reject-btn"
-            onClick={() =>
-              handleRejectLeaveRequest(request)
-            }
-            disabled={isProcessing}
-          >
-            Reject
-          </button>
+          <RowActionsMenu
+            ariaLabel={`Open actions for ${target ? `${target.first_name || ''} ${target.last_name || ''}`.trim() : request.personnel_id}'s leave request`}
+            actions={[
+              {
+                key: 'view',
+                label: 'View Details',
+                onSelect: () => openPendingLeaveDetails(request)
+              },
+              {
+                key: 'approve',
+                label: isProcessing ? 'Processing...' : 'Approve',
+                disabled: isProcessing,
+                onSelect: () => handleApproveLeaveRequest(request)
+              },
+              {
+                key: 'reject',
+                label: 'Reject',
+                destructive: true,
+                disabled: isProcessing,
+                onSelect: () => handleRejectLeaveRequest(request)
+              }
+            ]}
+          />
         </div>
       </div>
     );
@@ -3628,25 +3629,21 @@ const permissions = getDefaultPermissions(formData.role);
                       </td>
                       <td>
                         <div className="leave-history-row-actions">
-                          <button
-                            type="button"
-                            className="leave-history-view-btn"
-                            onClick={() => openLeaveHistoryDetails(request)}
-                          >
-                        
-                            View Details
-                          </button>
-                          {request.status !== 'pending' && (
-                            <button
-                              type="button"
-                              className="request-row-icon-button"
-                              onClick={() => requestArchiveHistoryItem('leave', request)}
-                              aria-label={`Archive leave request for ${request.personnel_name || 'personnel'}`}
-                              title="Archive request"
-                            >
-                              <FaArchive aria-hidden="true" />
-                            </button>
-                          )}
+                          <RowActionsMenu
+                            ariaLabel={`Open actions for ${request.personnel_name || 'personnel'}'s leave request`}
+                            actions={[
+                              {
+                                key: 'view',
+                                label: 'View Details',
+                                onSelect: () => openLeaveHistoryDetails(request)
+                              },
+                              ...(request.status !== 'pending' ? [{
+                                key: 'archive',
+                                label: 'Archive',
+                                onSelect: () => requestArchiveHistoryItem('leave', request)
+                              }] : [])
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

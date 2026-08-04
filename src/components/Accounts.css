@@ -1280,6 +1280,14 @@
   background: #fff;
 }
 
+.leave-history-card {
+  overflow: visible;
+}
+
+.leave-history-card .account-directory-group-header {
+  border-radius: 12px 12px 0 0;
+}
+
 .account-directory-group-personnel {
   border-top: 4px solid #ea7a21;
 }
@@ -1508,7 +1516,7 @@
 
 .leave-history-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 820px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -1541,7 +1549,7 @@
 
 .leave-history-table th:nth-child(1),
 .leave-history-table td:nth-child(1) {
-  width: 18%;
+  width: 15%;
 }
 
 .leave-history-table th:nth-child(2),
@@ -1551,12 +1559,12 @@
 
 .leave-history-table th:nth-child(3),
 .leave-history-table td:nth-child(3) {
-  width: 13%;
+  width: 12%;
 }
 
 .leave-history-table th:nth-child(4),
 .leave-history-table td:nth-child(4) {
-  width: 17%;
+  width: 15%;
 }
 
 .leave-history-table th:nth-child(5),
@@ -1566,18 +1574,18 @@
 
 .leave-history-table th:nth-child(6),
 .leave-history-table td:nth-child(6) {
-  width: 11%;
+  width: 10%;
 }
 
 .leave-history-table th:nth-child(7),
 .leave-history-table td:nth-child(7) {
-  width: 12%;
+  width: 11%;
   white-space: nowrap;
 }
 
 .leave-history-table th:nth-child(8),
 .leave-history-table td:nth-child(8) {
-  width: 12%;
+  width: 20%;
 }
 
 .leave-history-cell-personnel {
@@ -1592,11 +1600,13 @@
 .leave-history-row-actions {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  flex-wrap: nowrap;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  row-gap: 0.4rem;
 }
 
-.leave-history-view-btn {
+.leave-history-view-btn,
+.leave-history-archive-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -1613,11 +1623,25 @@
 }
 
 .leave-history-view-btn:hover,
-.leave-history-view-btn:focus-visible {
+.leave-history-view-btn:focus-visible,
+.leave-history-archive-btn:hover,
+.leave-history-archive-btn:focus-visible {
   background: #fef2f2;
   border-color: #991b1b;
   color: #991b1b;
   outline: none;
+}
+
+.leave-history-archive-btn {
+  border-color: #94a3b8;
+  color: #475569;
+}
+
+.leave-history-archive-btn:hover,
+.leave-history-archive-btn:focus-visible {
+  background: #f1f5f9;
+  border-color: #64748b;
+  color: #334155;
 }
 
 @media (max-width: 900px) {
@@ -3679,6 +3703,17 @@
 .account-action-menu-item.is-destructive:focus-visible {
   background: #fef2f2;
   color: #991b1b;
+}
+
+.account-action-menu-item:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.account-action-menu-item:disabled:hover,
+.account-action-menu-item:disabled:focus-visible {
+  background: transparent;
+  color: #334155;
 }
 
 .account-card {

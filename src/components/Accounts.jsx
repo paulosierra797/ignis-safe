@@ -24,6 +24,7 @@ import {
   getAllUsers,
   deleteUser,
   logAdminActivity,
+  getPersonnelAccountHistory,
   updatePersonnelWorkspaceProfile,
   updateUser,
   getShiftScheduleConfig,
@@ -828,7 +829,8 @@ export default function Accounts() {
     pendingLeave: false,
     leaveHistory: false,
     pendingProfile: false,
-    profileHistory: false
+    profileHistory: false,
+    personnelHistory: false
   });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddExitConfirmOpen, setIsAddExitConfirmOpen] = useState(false);
@@ -862,6 +864,10 @@ export default function Accounts() {
   const [leaveHistoryStatusFilter, setLeaveHistoryStatusFilter] = useState('all');
   const [leaveHistorySearch, setLeaveHistorySearch] = useState('');
   const [leaveHistoryDetailsRequest, setLeaveHistoryDetailsRequest] = useState(null);
+  const [personnelAccountHistory, setPersonnelAccountHistory] = useState([]);
+  const [personnelHistoryLoading, setPersonnelHistoryLoading] = useState(true);
+  const [personnelHistoryActionFilter, setPersonnelHistoryActionFilter] = useState('all');
+  const [personnelHistorySearch, setPersonnelHistorySearch] = useState('');
   const [profileChangeRequests, setProfileChangeRequests] = useState([]);
   const [archivedProfileChangeRequests, setArchivedProfileChangeRequests] = useState([]);
   const [profileRequestsLoading, setProfileRequestsLoading] = useState(true);
@@ -1080,6 +1086,7 @@ export default function Accounts() {
     loadShiftSchedule();
     loadPendingLeaveRequests();
     loadLeaveRequestHistory();
+    loadPersonnelAccountHistory();
     loadProfileChangeRequests();
   }, []);
 
@@ -1311,6 +1318,19 @@ export default function Accounts() {
     setLeaveHistoryLoading(false);
   };
 
+  const loadPersonnelAccountHistory = async () => {
+    setPersonnelHistoryLoading(true);
+
+    const { data, error } = await getPersonnelAccountHistory();
+    if (error) {
+      setPersonnelAccountHistory([]);
+    } else {
+      setPersonnelAccountHistory(data || []);
+    }
+
+    setPersonnelHistoryLoading(false);
+  };
+
   const loadProfileChangeRequests = async () => {
     setProfileRequestsLoading(true);
     setProfileRequestMessage('');
@@ -1365,6 +1385,9 @@ export default function Accounts() {
         loadShiftSummary(shiftSummaryMonth);
         loadPendingLeaveRequests();
         loadLeaveRequestHistory();
+      }
+      if (!scope || scope === 'users') {
+        loadPersonnelAccountHistory();
       }
       if (!scope || scope === 'profile_change_requests') {
         loadProfileChangeRequests();
@@ -1545,6 +1568,24 @@ export default function Accounts() {
     return matchesLeaveHistorySearch(request, leaveHistorySearch.trim().toLowerCase());
   });
 
+  const matchesPersonnelHistorySearch = (entry, query) => {
+    if (!query) return true;
+
+    const haystack = [entry.accountName, entry.email, entry.role, entry.performedBy]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return haystack.includes(query);
+  };
+
+  const filteredPersonnelAccountHistory = personnelAccountHistory.filter((entry) => {
+    const matchesAction =
+      personnelHistoryActionFilter === 'all' || entry.actionKey === personnelHistoryActionFilter;
+    if (!matchesAction) return false;
+    return matchesPersonnelHistorySearch(entry, personnelHistorySearch.trim().toLowerCase());
+  });
+
   const pendingProfileChangeRequests = profileChangeRequests.filter(
     (request) => request.status === 'pending'
   );
@@ -1601,6 +1642,7 @@ export default function Accounts() {
   const visibleLeaveRequestHistory = getVisibleRequestItems(filteredLeaveRequestHistory, 'leaveHistory');
   const visiblePendingProfileChangeRequests = getVisibleRequestItems(pendingProfileChangeRequests, 'pendingProfile');
   const visibleProfileChangeHistory = getVisibleRequestItems(filteredProfileChangeHistory, 'profileHistory');
+  const visiblePersonnelAccountHistory = getVisibleRequestItems(filteredPersonnelAccountHistory, 'personnelHistory');
 
   const toggleRequestSection = (sectionKey) => {
     setExpandedRequestSections((current) => ({
@@ -1824,6 +1866,7 @@ export default function Accounts() {
         details: `Deleted account ${target?.email || adminId}${target?.role ? ` (${target.role})` : ''}.`,
         metadata: {
           deleted_admin_id: adminId,
+          deleted_name: `${target?.first_name || ''} ${target?.last_name || ''}`.trim() || null,
           deleted_email: target?.email || null,
           deleted_role: target?.role || null
         }
@@ -2081,6 +2124,7 @@ const permissions = getDefaultPermissions(formData.role);
             actionType: 'registration',
             details: `Created account for ${submittedForm.first_name} ${submittedForm.last_name} (${submittedForm.role}, ${submittedForm.rank}) - ${submittedForm.email}.`,
             metadata: {
+              created_name: `${submittedForm.first_name} ${submittedForm.last_name}`.trim(),
               created_email: submittedForm.email,
               created_role: submittedForm.role,
               created_rank: submittedForm.rank
@@ -2131,6 +2175,7 @@ const permissions = getDefaultPermissions(formData.role);
         actionType: 'registration',
         details: `Created account for ${submittedForm.first_name} ${submittedForm.last_name} (${submittedForm.role}, ${submittedForm.rank}) - ${submittedForm.email}.`,
         metadata: {
+          created_name: `${submittedForm.first_name} ${submittedForm.last_name}`.trim(),
           created_email: submittedForm.email,
           created_role: submittedForm.role,
           created_rank: submittedForm.rank
@@ -2138,7 +2183,7 @@ const permissions = getDefaultPermissions(formData.role);
       }).catch((logError) => {
         console.warn('Unable to write admin activity log:', logError);
       });
-      
+
       const createdAccount = result.data?.user;
       if (createdAccount) {
         setAccounts((previousAccounts) => [
@@ -4113,6 +4158,88 @@ const permissions = getDefaultPermissions(formData.role);
             />
           </div>
         )}
+
+        <div className="leave-requests-groups">
+          <div className="account-directory-group leave-request-group leave-request-group-history leave-history-card personnel-history-card">
+            <div className="account-directory-group-header">
+              <div>
+                <h4>Personnel List History</h4>
+              </div>
+              <div className="request-history-heading-actions">
+                <span>
+                  {visiblePersonnelAccountHistory.length} of {filteredPersonnelAccountHistory.length} shown
+                </span>
+              </div>
+            </div>
+
+            <div className="account-directory-group-body">
+
+              <div className="request-history-toolbar">
+                <select
+                  className="profile-request-status-select"
+                  value={personnelHistoryActionFilter}
+                  onChange={(event) => setPersonnelHistoryActionFilter(event.target.value)}
+                  aria-label="Filter personnel list history by action"
+                >
+                  <option value="all">All</option>
+                  <option value="added">Added</option>
+                  <option value="deleted">Deleted</option>
+                </select>
+                <input
+                  type="text"
+                  className="request-history-search"
+                  placeholder="Search by name, email, role, or admin"
+                  value={personnelHistorySearch}
+                  onChange={(event) => setPersonnelHistorySearch(event.target.value)}
+                  aria-label="Search personnel list history"
+                />
+              </div>
+
+              {personnelHistoryLoading ? (
+                <p className="leave-approval-empty">Loading personnel list history...</p>
+              ) : filteredPersonnelAccountHistory.length === 0 ? (
+                <p className="leave-approval-empty">No personnel list history found.</p>
+              ) : (
+                <div className="personnel-history-table-wrap">
+                  <table className="personnel-history-table">
+                    <thead>
+                      <tr>
+                        <th>Account Name</th>
+                        <th>Email Address</th>
+                        <th>Role</th>
+                        <th>Action</th>
+                        <th>Date &amp; Time</th>
+                        <th>Performed By</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visiblePersonnelAccountHistory.map((entry) => (
+                        <tr key={entry.id}>
+                          <td className="personnel-history-cell-name">{entry.accountName}</td>
+                          <td>{entry.email}</td>
+                          <td>{entry.role}</td>
+                          <td className="profile-request-status-cell">
+                            <span className={`profile-request-status profile-request-status-${entry.actionKey}`}>
+                              {entry.actionLabel}
+                            </span>
+                          </td>
+                          <td>{formatAccountDateTime(entry.performedAt)}</td>
+                          <td>{entry.performedBy}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <RequestSectionToggle
+                expanded={expandedRequestSections.personnelHistory}
+                itemCount={filteredPersonnelAccountHistory.length}
+                label="history entries"
+                onToggle={() => toggleRequestSection('personnelHistory')}
+              />
+            </div>
+          </div>
+        </div>
         </section>
         )}
 

@@ -675,3 +675,62 @@ export const getAdminAuditLogs = async () => {
     return { data: [], error: error.message };
   }
 };
+
+const capitalizeRoleLabel = (role) => {
+  const normalized = String(role || '').trim().toLowerCase();
+  if (!normalized) return '—';
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
+// Older log rows (written before name capture was added) don't carry
+// created_name in metadata, so recover it from the details sentence.
+const extractCreatedNameFromDetails = (details) => {
+  const match = String(details || '').match(/^Created account for (.+?) \(/);
+  return match ? match[1].trim() : '';
+};
+
+// Personnel Directory account add/delete history, sourced from
+// admin_activity_logs so it survives the underlying account being deleted.
+export const getPersonnelAccountHistory = async () => {
+  try {
+    const { data, error } = await supabase
+      .from(ADMIN_ACTIVITY_TABLE)
+      .select('log_id, admin_id, actor_name, action, details, metadata, performed_at')
+      .in('action', ['Account Created', 'Account Deleted'])
+      .order('performed_at', { ascending: false });
+
+    if (error) {
+      if (error.code === '42P01') {
+        return { data: [], error: null };
+      }
+      throw error;
+    }
+
+    const history = (data || []).map((row) => {
+      const metadata = row.metadata || {};
+      const isDeleted = row.action === 'Account Deleted';
+
+      const accountName = isDeleted
+        ? (metadata.deleted_name || '')
+        : (metadata.created_name || extractCreatedNameFromDetails(row.details));
+      const email = isDeleted ? metadata.deleted_email : metadata.created_email;
+      const role = isDeleted ? metadata.deleted_role : metadata.created_role;
+
+      return {
+        id: row.log_id,
+        accountName: accountName || '—',
+        email: email || '—',
+        role: capitalizeRoleLabel(role),
+        actionKey: isDeleted ? 'deleted' : 'added',
+        actionLabel: isDeleted ? 'Deleted' : 'Added',
+        performedAt: row.performed_at,
+        performedBy: row.actor_name || 'Admin User'
+      };
+    });
+
+    return { data: history, error: null };
+  } catch (error) {
+    console.error('Error fetching personnel account history:', error);
+    return { data: [], error: error.message };
+  }
+};

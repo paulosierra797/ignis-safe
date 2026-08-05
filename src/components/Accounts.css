@@ -750,6 +750,16 @@
   color: #991b1b;
 }
 
+.profile-request-status-added {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.profile-request-status-deleted {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .profile-request-reviewed-by {
   color: #6b7280;
   font-size: 0.8rem;
@@ -1288,6 +1298,14 @@
   border-radius: 12px 12px 0 0;
 }
 
+.personnel-history-card {
+  overflow: visible;
+}
+
+.personnel-history-card .account-directory-group-header {
+  border-radius: 12px 12px 0 0;
+}
+
 .account-directory-group-personnel {
   border-top: 4px solid #ea7a21;
 }
@@ -1647,6 +1665,89 @@
 @media (max-width: 900px) {
   .leave-history-table {
     min-width: 900px;
+  }
+}
+
+/* Personnel List History: same visual language as the leave history
+   table, sized for its own 6-column layout. */
+.personnel-history-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.personnel-history-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.personnel-history-table thead {
+  background: #f8fafc;
+}
+
+.personnel-history-table th,
+.personnel-history-table td {
+  padding: 0.75rem 0.8rem;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.82rem;
+  color: #334155;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+}
+
+.personnel-history-table th {
+  color: #172033;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.personnel-history-table th:nth-child(1),
+.personnel-history-table td:nth-child(1) {
+  width: 20%;
+}
+
+.personnel-history-table th:nth-child(2),
+.personnel-history-table td:nth-child(2) {
+  width: 22%;
+}
+
+.personnel-history-table th:nth-child(3),
+.personnel-history-table td:nth-child(3) {
+  width: 11%;
+}
+
+.personnel-history-table th:nth-child(4),
+.personnel-history-table td:nth-child(4) {
+  width: 11%;
+}
+
+.personnel-history-table th:nth-child(5),
+.personnel-history-table td:nth-child(5) {
+  width: 20%;
+  white-space: nowrap;
+}
+
+.personnel-history-table th:nth-child(6),
+.personnel-history-table td:nth-child(6) {
+  width: 16%;
+}
+
+.personnel-history-cell-name {
+  font-weight: 700;
+  color: #172033;
+}
+
+@media (max-width: 900px) {
+  .personnel-history-table {
+    min-width: 760px;
   }
 }
 

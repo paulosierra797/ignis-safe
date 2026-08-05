@@ -427,17 +427,7 @@ const mapAttendanceRow = (row) => {
   };
 };
 
-export const getAttendanceRecords = async () => {
-  const { data, error } = await supabase
-    .from('attendance_records')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    throw new Error(error.message || 'Failed to fetch attendance records');
-  }
-
-  const records = (data || []).map(mapAttendanceRow);
+const attachSignedPhotoUrls = async (records) => {
   const photoPaths = [...new Set(records
     .map((record) => record.verificationPhotoPath)
     .filter(Boolean))];
@@ -467,6 +457,20 @@ export const getAttendanceRecords = async () => {
   }));
 };
 
+export const getAttendanceRecords = async () => {
+  const { data, error } = await supabase
+    .from('attendance_records')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(error.message || 'Failed to fetch attendance records');
+  }
+
+  const records = (data || []).map(mapAttendanceRow);
+  return attachSignedPhotoUrls(records);
+};
+
 export const getAttendanceStatus = async ({ shiftId = 'DEFAULT', qrSessionId } = {}) => {
   const { data, error } = await supabase.rpc('get_own_attendance_status', {
     p_shift_id: normalizeShiftId(shiftId),
@@ -490,9 +494,19 @@ export const getAttendanceStatus = async ({ shiftId = 'DEFAULT', qrSessionId } =
 };
 
 export const getMyAttendanceHistory = async (limit = 20) => {
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !userData?.user?.id) {
+    throw new Error('You must be signed in to view your attendance history.');
+  }
+
+  // Scope explicitly by personnel_user_id (the authenticated account's id) rather than
+  // relying only on RLS - admin accounts are allowed to read every row under RLS, so an
+  // admin viewing the Personnel workspace would otherwise see everyone's attendance here.
   const { data, error } = await supabase
     .from('attendance_records')
     .select('*')
+    .eq('personnel_user_id', userData.user.id)
     .order('attendance_date', { ascending: false })
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -501,7 +515,8 @@ export const getMyAttendanceHistory = async (limit = 20) => {
     throw new Error(error.message || 'Failed to load attendance history.');
   }
 
-  return (data || []).map(mapAttendanceRow);
+  const records = (data || []).map(mapAttendanceRow);
+  return attachSignedPhotoUrls(records);
 };
 
 export const recordAttendance = async ({ officer, mode, location, qrSessionId, verification }) => {

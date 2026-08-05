@@ -3,6 +3,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import CloseButton from './CloseButton';
 import {
   generateQRSession,
   getActiveQRSession,
@@ -11,6 +12,37 @@ import {
   getMyAttendanceHistory
 } from '../utils/attendanceService';
 import './AttendancePersonnel.css';
+
+const formatDistance = (distanceMeters) => {
+  const distance = Number(distanceMeters);
+  if (!Number.isFinite(distance)) return 'Not recorded';
+  if (distance >= 1000) return `${(distance / 1000).toFixed(2)} km`;
+  return `${Math.round(distance)} m`;
+};
+
+const formatFaceMatch = (percentage) => {
+  const value = Number(percentage);
+  return Number.isFinite(value) ? `${value.toFixed(1)}%` : 'Not recorded';
+};
+
+const getVerificationLabel = (status) => {
+  if (status === 'passed') return 'Passed';
+  if (status === 'failed') return 'Failed';
+  if (status === 'partial') return 'Partial';
+  return 'Not recorded';
+};
+
+const getCheckLabel = (value) => {
+  if (value === true) return 'Passed';
+  if (value === false) return 'Failed';
+  return 'Not recorded';
+};
+
+const getAttendanceStatusLabel = (record) => {
+  if (record.timeIn && record.timeOut) return 'Completed';
+  if (record.timeIn) return 'Time In recorded';
+  return 'Not recorded';
+};
 
 const AttendancePersonnel = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,6 +53,7 @@ const AttendancePersonnel = () => {
   const [attendanceHistory, setAttendanceHistory] = useState([]);
   const [historyError, setHistoryError] = useState('');
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [selectedRecord, setSelectedRecord] = useState(null);
   const [searchParams] = useSearchParams();
 
   const stationId = searchParams.get('station') || 'DEFAULT';
@@ -30,6 +63,17 @@ const AttendancePersonnel = () => {
   const stationLink = currentSession
     ? `${baseUrl}/attendance-login?station=${currentSession.session_id}`
     : '';
+
+  useEffect(() => {
+    if (!selectedRecord) return undefined;
+
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setSelectedRecord(null);
+    };
+
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [selectedRecord]);
 
   const handleRefreshQR = useCallback(async () => {
     try {
@@ -228,21 +272,23 @@ const AttendancePersonnel = () => {
                   <th>Shift</th>
                   <th>Time In</th>
                   <th>Time Out</th>
-                  <th>Status</th>
+                  <th>Attendance Status</th>
+                  <th>Verification</th>
+                  <th>Details</th>
                 </tr>
               </thead>
               <tbody>
                 {isHistoryLoading ? (
                   <tr>
-                    <td colSpan="5" className="empty-state">Loading attendance history...</td>
+                    <td colSpan="7" className="empty-state">Loading attendance history...</td>
                   </tr>
                 ) : historyError ? (
                   <tr>
-                    <td colSpan="5" className="empty-state">{historyError}</td>
+                    <td colSpan="7" className="empty-state">{historyError}</td>
                   </tr>
                 ) : attendanceHistory.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="empty-state">No attendance records yet.</td>
+                    <td colSpan="7" className="empty-state">No attendance records yet.</td>
                   </tr>
                 ) : (
                   attendanceHistory.map((record) => (
@@ -251,7 +297,21 @@ const AttendancePersonnel = () => {
                       <td>{record.shiftId}</td>
                       <td>{record.timeIn || '--'}</td>
                       <td>{record.timeOut || '--'}</td>
-                      <td>{record.timeIn && record.timeOut ? 'Completed' : 'Time In recorded'}</td>
+                      <td>{getAttendanceStatusLabel(record)}</td>
+                      <td>
+                        <span className={`attendance-verification-badge ${record.verificationStatus}`}>
+                          {getVerificationLabel(record.verificationStatus)}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="attendance-details-btn"
+                          onClick={() => setSelectedRecord(record)}
+                        >
+                          View Details
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -259,6 +319,136 @@ const AttendancePersonnel = () => {
             </table>
           </div>
         </div>
+
+        {selectedRecord && (
+          <div
+            className="attendance-details-overlay"
+            role="presentation"
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setSelectedRecord(null);
+            }}
+          >
+            <section
+              className="attendance-details-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="myAttendanceDetailsTitle"
+            >
+              <header className="attendance-details-header">
+                <div>
+                  <span className="attendance-details-eyebrow">Attendance verification</span>
+                  <h2 id="myAttendanceDetailsTitle">{selectedRecord.name}</h2>
+                  <p>{selectedRecord.rank} · {selectedRecord.date} · Shift {selectedRecord.shiftId}</p>
+                </div>
+                <CloseButton
+                  className="attendance-details-close"
+                  onClick={() => setSelectedRecord(null)}
+                  label="Close verification details"
+                />
+              </header>
+
+              <div className="attendance-details-status-row">
+                <span className={`attendance-verification-badge large ${selectedRecord.verificationStatus}`}>
+                  Overall: {getVerificationLabel(selectedRecord.verificationStatus)}
+                </span>
+                <span className="attendance-verification-event">
+                  {getAttendanceStatusLabel(selectedRecord)}
+                </span>
+              </div>
+
+              <div className="attendance-details-grid">
+                <article className="attendance-detail-card">
+                  <h3>Attendance</h3>
+                  <dl>
+                    <div>
+                      <dt>Date</dt>
+                      <dd>{selectedRecord.date}</dd>
+                    </div>
+                    <div>
+                      <dt>Assigned shift</dt>
+                      <dd>{selectedRecord.shiftId}</dd>
+                    </div>
+                    <div>
+                      <dt>Time In</dt>
+                      <dd>{selectedRecord.timeIn || 'Not recorded'}</dd>
+                    </div>
+                    <div>
+                      <dt>Time Out</dt>
+                      <dd>{selectedRecord.timeOut || 'Not recorded'}</dd>
+                    </div>
+                  </dl>
+                </article>
+
+                <article className="attendance-detail-card">
+                  <h3>Verified Location</h3>
+                  <dl>
+                    <div>
+                      <dt>Readable address</dt>
+                      <dd>{selectedRecord.location?.address || selectedRecord.stationName || 'Not recorded'}</dd>
+                    </div>
+                    <div>
+                      <dt>Latitude</dt>
+                      <dd>{selectedRecord.location?.latitude ?? 'Not recorded'}</dd>
+                    </div>
+                    <div>
+                      <dt>Longitude</dt>
+                      <dd>{selectedRecord.location?.longitude ?? 'Not recorded'}</dd>
+                    </div>
+                    <div>
+                      <dt>GPS accuracy</dt>
+                      <dd>{Number.isFinite(Number(selectedRecord.location?.accuracy)) ? `${Math.round(Number(selectedRecord.location.accuracy))} m` : 'Not recorded'}</dd>
+                    </div>
+                    <div>
+                      <dt>Distance from station</dt>
+                      <dd>{formatDistance(selectedRecord.distanceFromStationMeters)}</dd>
+                    </div>
+                    <div>
+                      <dt>Location check</dt>
+                      <dd className={selectedRecord.locationVerificationPassed === true ? 'verification-pass' : selectedRecord.locationVerificationPassed === false ? 'verification-fail' : ''}>
+                        {getCheckLabel(selectedRecord.locationVerificationPassed)}
+                      </dd>
+                    </div>
+                  </dl>
+                </article>
+
+                <article className="attendance-detail-card">
+                  <h3>Face ID Verification</h3>
+                  <dl>
+                    <div>
+                      <dt>Face match</dt>
+                      <dd>{formatFaceMatch(selectedRecord.faceMatchPercentage)}</dd>
+                    </div>
+                    <div>
+                      <dt>Face check</dt>
+                      <dd className={selectedRecord.faceVerificationPassed === true ? 'verification-pass' : selectedRecord.faceVerificationPassed === false ? 'verification-fail' : ''}>
+                        {getCheckLabel(selectedRecord.faceVerificationPassed)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Verified at</dt>
+                      <dd>
+                        {selectedRecord.verificationRecordedAt
+                          ? new Date(selectedRecord.verificationRecordedAt).toLocaleString()
+                          : 'Not recorded'}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div className="attendance-verification-photo">
+                    {selectedRecord.verificationPhotoUrl ? (
+                      <img
+                        src={selectedRecord.verificationPhotoUrl}
+                        alt={`Verification capture for ${selectedRecord.name}`}
+                      />
+                    ) : (
+                      <div className="attendance-photo-empty">No verification photo recorded</div>
+                    )}
+                  </div>
+                </article>
+              </div>
+            </section>
+          </div>
+        )}
       </div>
     </div>
   );

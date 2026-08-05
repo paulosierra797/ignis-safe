@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useBlocker, useSearchParams } from 'react-router-dom';
-import { FaArchive, FaChevronDown, FaEye, FaSearch, FaTimes, FaUndo } from 'react-icons/fa';
+import { FaArchive, FaCheckCircle, FaChevronDown, FaEye, FaSearch, FaTimes, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import {
   FiBriefcase,
   FiCalendar,
@@ -631,7 +631,12 @@ function RowActionsMenu({ ariaLabel, actions }) {
                 action.onSelect();
               }}
             >
-              {action.label}
+              {action.icon && (
+                <span className="account-action-menu-item-icon" aria-hidden="true">
+                  {action.icon}
+                </span>
+              )}
+              <span className="account-action-menu-item-label">{action.label}</span>
             </button>
           ))}
         </div>,
@@ -3445,17 +3450,20 @@ const permissions = getDefaultPermissions(formData.role);
                                 {
                                   key: 'view',
                                   label: 'View Details',
+                                  icon: <FaEye />,
                                   onSelect: () => openPendingLeaveDetails(request)
                                 },
                                 {
                                   key: 'approve',
                                   label: isProcessing ? 'Processing...' : 'Approve',
+                                  icon: <FaCheckCircle />,
                                   disabled: isProcessing,
                                   onSelect: () => handleApproveLeaveRequest(request)
                                 },
                                 {
                                   key: 'reject',
                                   label: 'Reject',
+                                  icon: <FaTimesCircle />,
                                   destructive: true,
                                   disabled: isProcessing,
                                   onSelect: () => handleRejectLeaveRequest(request)
@@ -3515,17 +3523,20 @@ const permissions = getDefaultPermissions(formData.role);
               {
                 key: 'view',
                 label: 'View Details',
+                icon: <FaEye />,
                 onSelect: () => openPendingLeaveDetails(request)
               },
               {
                 key: 'approve',
                 label: isProcessing ? 'Processing...' : 'Approve',
+                icon: <FaCheckCircle />,
                 disabled: isProcessing,
                 onSelect: () => handleApproveLeaveRequest(request)
               },
               {
                 key: 'reject',
                 label: 'Reject',
+                icon: <FaTimesCircle />,
                 destructive: true,
                 disabled: isProcessing,
                 onSelect: () => handleRejectLeaveRequest(request)

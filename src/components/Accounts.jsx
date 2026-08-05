@@ -4546,15 +4546,15 @@ const permissions = getDefaultPermissions(formData.role);
             aria-labelledby="accountsUnsavedTitle"
             aria-describedby="accountsUnsavedDescription"
           >
-            <div className="accounts-modal accounts-unsaved-modal app-unsaved-dialog">
+            <div className="accounts-modal accounts-unsaved-modal app-unsaved-dialog accounts-personnel-unsaved-modal">
+              <CloseButton
+                className="accounts-modal-close accounts-unsaved-close"
+                onClick={handleKeepEditingAddPersonnel}
+                label="Keep editing personnel details"
+              />
               <div className="app-unsaved-icon" aria-hidden="true">!</div>
-              <div className="accounts-modal-header">
+              <div className="accounts-modal-header accounts-unsaved-header">
                 <h3 id="accountsUnsavedTitle" className="app-unsaved-title">Discard unsaved personnel details?</h3>
-                <CloseButton
-                  className="accounts-modal-close"
-                  onClick={handleKeepEditingAddPersonnel}
-                  label="Keep editing personnel details"
-                />
               </div>
 
               <div className="accounts-modal-body">

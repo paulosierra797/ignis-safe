@@ -3374,6 +3374,21 @@
   width: min(500px, 100%);
 }
 
+.accounts-personnel-unsaved-modal {
+  position: relative;
+}
+
+.accounts-personnel-unsaved-modal .accounts-unsaved-header {
+  display: block;
+}
+
+.accounts-unsaved-close.accounts-unsaved-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  margin: 0;
+}
+
 .accounts-unsaved-message {
   margin: 0;
   color: #475569;

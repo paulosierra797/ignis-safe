@@ -294,6 +294,11 @@ def load_analytics_base_data() -> Dict[str, Any]:
         for profile_id in profile_ids
     ]
 
+    # Admin/personnel accounts can also gain a `profiles` row (e.g. via mobile app login)
+    # but must never be counted as mobile app learners. Mirrors the exclusion rule used by
+    # the Users module (see getUsersFromProfiles in src/utils/usersService.js).
+    mobile_user_ids = {profile_id for profile_id in profile_ids if profile_id not in admin_map}
+
     print("Loading attempts...", flush=True)
     attempts = fetch_all_rows(
         "assessment_attempts",
@@ -345,6 +350,7 @@ def load_analytics_base_data() -> Dict[str, Any]:
 
     return {
         "users": users,
+        "mobile_user_ids": mobile_user_ids,
         "attempts": attempts,
         "answers": answers,
         "assessments": assessments,
@@ -676,6 +682,7 @@ def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, A
     topic_filter = filters.topic
 
     users = data["users"]
+    mobile_user_ids = data.get("mobile_user_ids") or set()
     attempts = data["attempts"]
     answers = data["answers"]
     assessments = data["assessments"]
@@ -685,8 +692,6 @@ def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, A
     user_by_id = {row.get("admin_id"): row for row in users}
     assessments_by_id = {row.get("id"): row for row in assessments}
     modules_by_id = {row.get("id"): row for row in modules}
-
-    has_activity_filters = bool(start_date) or (topic_filter and topic_filter != "All")
 
     filtered_attempts = []
     for attempt in attempts:
@@ -710,11 +715,19 @@ def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, A
     filtered_attempt_ids = {attempt.get("id") for attempt in filtered_attempts}
     filtered_user_ids = {attempt.get("user_id") for attempt in filtered_attempts}
 
-    users_by_people = [row for row in users if includes_by_people(row.get("status"), people_filter)]
-    users_scope = [row for row in users_by_people if row.get("admin_id") in filtered_user_ids] if has_activity_filters else users_by_people
+    # "Active Learners" must reflect mobile app learners only (excludes Admin/Personnel
+    # accounts, matching the Users module) with qualifying activity in the selected
+    # timeframe/topic, not the borrowed admin-account `status` field used elsewhere.
+    mobile_users_by_people = [
+        row
+        for row in users
+        if row.get("admin_id") in mobile_user_ids and includes_by_people(row.get("status"), people_filter)
+    ]
 
-    total_users = len(users_scope)
-    active_users = len([user for user in users_scope if str(user.get("status") or "").lower() == "active"])
+    total_users = len(mobile_users_by_people)
+    active_users = len(
+        [row for row in mobile_users_by_people if row.get("admin_id") in filtered_user_ids]
+    )
 
     questions_answered = 0
     for answer in answers:

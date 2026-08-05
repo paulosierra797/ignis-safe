@@ -676,8 +676,6 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
       return accumulator;
     }, {});
 
-    const hasActivityFilters = Boolean(startDate) || (topicFilter && topicFilter !== 'All');
-
     const filteredAttempts = attempts.filter((attempt) => {
       const assessment = assessmentsById[attempt.assessment_id];
       if (!assessment) return false;
@@ -696,15 +694,14 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
     const filteredAttemptIds = new Set(filteredAttempts.map((attempt) => attempt.id));
     const filteredUserIds = new Set(filteredAttempts.map((attempt) => attempt.user_id));
 
+    // `users` already excludes Admin/Personnel accounts (see getUsersFromProfiles in
+    // usersService.js), so "Active Learners" here reflects mobile app learners only.
+    // A learner counts as active when they have qualifying activity within the
+    // selected timeframe/topic filters, not a borrowed/hardcoded status flag.
     const usersByPeople = users.filter((row) => includesByPeople(row.status, peopleFilter));
-    const usersScope = hasActivityFilters
-      ? usersByPeople.filter((row) => filteredUserIds.has(row.admin_id))
-      : usersByPeople;
 
-    const totalUsers = usersScope.length;
-    const activeUsers = usersScope.filter(
-      (user) => String(user.status || '').toLowerCase() === 'active',
-    ).length;
+    const totalUsers = usersByPeople.length;
+    const activeUsers = usersByPeople.filter((user) => filteredUserIds.has(user.admin_id)).length;
 
     const questionsAnswered = answers.filter((answer) => {
       if (!filteredAttemptIds.has(answer.attempt_id)) return false;

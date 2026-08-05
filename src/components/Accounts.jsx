@@ -1585,6 +1585,7 @@ export default function Accounts() {
   };
 
   const filteredProfileChangeHistory = profileChangeRequests.filter((request) => {
+    if (request.status !== 'approved' && request.status !== 'rejected') return false;
     const matchesStatus =
       profileHistoryStatusFilter === 'all' || request.status === profileHistoryStatusFilter;
     if (!matchesStatus) return false;
@@ -3850,7 +3851,6 @@ const permissions = getDefaultPermissions(formData.role);
               aria-label="Filter profile change history by status"
             >
               <option value="all">All</option>
-              <option value="pending">Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
             </select>

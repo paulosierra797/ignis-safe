@@ -100,7 +100,6 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [personnelStats, setPersonnelStats] = useState({
     totalPersonnel: 0,
-    totalCapacity: 0,
     onDuty: 0,
     offDuty: 0,
     attendancePercentage: 0
@@ -393,9 +392,8 @@ if (currentKnowledge < 40) {
                 <p className="metric-label">Total Personnel</p>
                 <div className="metric-value">
                   <span className="main-number">{personnelStats.totalPersonnel}</span>
-                  <span className="sub-number">/{personnelStats.totalCapacity}</span>
                 </div>
-                <p className="metric-description">Registered personnel compared with the configured staffing capacity.</p>
+                <p className="metric-description">Overall registered personnel accounts.</p>
               </div>
             </div>
 

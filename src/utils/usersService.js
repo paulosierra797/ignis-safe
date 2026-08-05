@@ -521,8 +521,8 @@ export const getPersonnelOverviewStats = async () => {
     
     return {
       data: {
-        totalPersonnel: activePersonnel,
-        totalCapacity: totalPersonnel,
+        // Overall registered personnel count, independent of leave/attendance/shift status.
+        totalPersonnel,
         onDuty,
         offDuty,
         attendancePercentage

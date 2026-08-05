@@ -221,7 +221,7 @@ export default function Progress() {
     });
   }, [completionFilter, moduleFilter, progressRows, searchQuery]);
 
-  const usersCompleted = progressRows.filter((row) => row.overallPercent >= 100).length;
+  const totalUsers = progressRows.length;
 
   return (
     <div className="progress-container">
@@ -236,10 +236,9 @@ export default function Progress() {
 
         <div className="progress-controls">
           <div className="progress-stat-card">
-            <p>Users Completed</p>
+            <p>Total Users</p>
             <div className="progress-stat-value">
-              <span className="progress-main-value">{usersCompleted}</span>
-              <span className="progress-sub-value">/{progressRows.length}</span>
+              <span className="progress-main-value">{totalUsers}</span>
             </div>
           </div>
 

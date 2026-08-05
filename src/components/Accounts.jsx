@@ -4498,7 +4498,7 @@ const permissions = getDefaultPermissions(formData.role);
                   </div>
 
                   <div className="accounts-invite-notice">
-                    An activation link will be sent to this email address. The personnel must set a password from that link before signing in.
+                    An activation link will be sent to this email address. The user must set a password from that link before signing in.
                   </div>
 
                 </div>

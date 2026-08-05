@@ -1,14 +1,73 @@
 import os
+import time
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
-from .dependencies import require_admin, supabase
+from .dependencies import SUPABASE_SERVICE_KEY, SUPABASE_URL, require_admin, supabase
 
 
 router = APIRouter()
+
+# supabase-py's auth admin client hardcodes a short (~5s) httpx read timeout,
+# which is shorter than Supabase's own invite-email dispatch time (observed
+# ~5.3-5.4s), so `invite_user_by_email` intermittently raises "The read
+# operation timed out" even though the invite is created successfully on
+# Supabase's side. Calling the REST endpoint directly lets us use a timeout
+# with real headroom, plus retry on transient failures. Supabase's invite
+# endpoint is idempotent for an unconfirmed user (a repeat call resends the
+# same invite for the same auth user instead of creating a duplicate), so
+# retrying here cannot create duplicate accounts.
+INVITE_HTTP_TIMEOUT = httpx.Timeout(30.0, connect=10.0)
+INVITE_MAX_ATTEMPTS = 3
+INVITE_RETRY_DELAY_SECONDS = 1.5
+
+
+def _invite_user_by_email(email: str, redirect_url: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    last_error: Optional[Exception] = None
+    for attempt in range(1, INVITE_MAX_ATTEMPTS + 1):
+        try:
+            response = httpx.post(
+                f"{SUPABASE_URL}/auth/v1/invite",
+                params={"redirect_to": redirect_url},
+                headers={
+                    "apikey": SUPABASE_SERVICE_KEY,
+                    "Authorization": f"Bearer {SUPABASE_SERVICE_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={"email": email, "data": metadata},
+                timeout=INVITE_HTTP_TIMEOUT,
+            )
+        except httpx.TimeoutException as error:
+            last_error = error
+            if attempt < INVITE_MAX_ATTEMPTS:
+                time.sleep(INVITE_RETRY_DELAY_SECONDS * attempt)
+                continue
+            raise RuntimeError(
+                "The invitation service took too long to respond. Please try again."
+            ) from error
+
+        if response.status_code >= 500 and attempt < INVITE_MAX_ATTEMPTS:
+            last_error = httpx.HTTPStatusError(
+                "Supabase auth service error", request=response.request, response=response
+            )
+            time.sleep(INVITE_RETRY_DELAY_SECONDS * attempt)
+            continue
+
+        if response.status_code >= 400:
+            try:
+                body = response.json()
+                detail = body.get("msg") or body.get("message") or body.get("error_description") or response.text
+            except ValueError:
+                detail = response.text
+            raise RuntimeError(detail)
+
+        return response.json()
+
+    raise RuntimeError(str(last_error) if last_error else "Failed to invite user.")
 
 
 class CreateUserRequest(BaseModel):
@@ -122,22 +181,19 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
     redirect_url = build_invite_redirect_url(role)
 
     try:
-        auth_response = supabase.auth.admin.invite_user_by_email(
+        invited_user = _invite_user_by_email(
             email,
+            redirect_url,
             {
-                "redirect_to": redirect_url,
-                "data": {
-                    "first_name": first_name,
-                    "last_name": last_name,
-                    "role": role,
-                    "rank": rank,
-                    "contact_number": contact_number,
-                    "activation_required": True,
-                },
-            }
+                "first_name": first_name,
+                "last_name": last_name,
+                "role": role,
+                "rank": rank,
+                "contact_number": contact_number,
+                "activation_required": True,
+            },
         )
-        auth_user = getattr(auth_response, "user", None)
-        auth_user_id = getattr(auth_user, "id", None) if auth_user else None
+        auth_user_id = invited_user.get("id")
 
         if not auth_user_id:
             raise HTTPException(status_code=500, detail="Auth user was not created.")

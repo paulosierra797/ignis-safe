@@ -75,10 +75,8 @@ const validateTrustedDeviceRecord = (record, { deviceId, userId }) => {
 export default function LoginPage() {
   const navigate = useNavigate();
   const { currentUser, setCurrentUser, refreshCurrentUser } = useUser();
-  const requestedPortal = new URLSearchParams(window.location.search).get('portal');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loginPortal, setLoginPortal] = useState(requestedPortal === 'personnel' ? 'personnel' : 'admin');
   const [rememberMe, setRememberMe] = useState(false);
   const [pendingRole, setPendingRole] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -107,24 +105,6 @@ export default function LoginPage() {
     setShowConfirmPassword(!showConfirmPassword);
   };
 
-  const handlePortalChange = (portal) => {
-    if (loading || portal === loginPortal) return;
-    setLoginPortal(portal);
-    setPendingRole('');
-    setError('');
-  };
-
-  const getPortalMismatchMessage = (actualRole) => {
-    if (actualRole === 'personnel') {
-      return 'This is a personnel account. Select Personnel login to continue.';
-    }
-
-    if (actualRole === 'admin') {
-      return 'This is an admin account. Select Admin login to continue.';
-    }
-
-    return 'This account is not authorized for the selected login.';
-  };
 const normalizeRole = (role) =>
 
   String(role || "")
@@ -219,15 +199,6 @@ const handleLogin = async (e) => {
     }
 
     const authenticatedRole = normalizeRole(loginProfile?.role);
-
-    if (authenticatedRole !== loginPortal) {
-      const { error: roleSignOutError } = await supabase.auth.signOut({ scope: 'local' });
-      if (roleSignOutError) {
-        console.warn('Could not close mismatched login session:', roleSignOutError);
-      }
-      throw new Error(getPortalMismatchMessage(authenticatedRole));
-    }
-
     setPendingRole(authenticatedRole);
 
     // Password is correct. A stable device ID + secret checks whether this
@@ -248,13 +219,6 @@ const handleLogin = async (e) => {
 
       if (!refreshedUser) {
         throw new Error('Failed to load user profile.');
-      }
-
-      const trustedRole = normalizeRole(refreshedUser.role);
-      if (trustedRole !== loginPortal) {
-        await supabase.auth.signOut({ scope: 'local' });
-        setCurrentUser(null);
-        throw new Error(getPortalMismatchMessage(trustedRole));
       }
 
       logLoginIfPersonnel(refreshedUser);
@@ -477,14 +441,6 @@ const handleVerify = async (e) => {
       return;
     }
 
-    const verifiedRole = normalizeRole(refreshedUser.role);
-    if (verifiedRole !== loginPortal) {
-      await supabase.auth.signOut({ scope: 'local' });
-      setCurrentUser(null);
-      setError(getPortalMismatchMessage(verifiedRole));
-      return;
-    }
-
     logLoginIfPersonnel(refreshedUser);
 
     setAuthStep("authenticated");
@@ -516,15 +472,17 @@ useEffect(() => {
 }
 }, [currentUser, authStep, navigate]);
 
+  const displayPortal = pendingRole || 'admin';
+
   return (
-    <div className={`login-page login-page--${loginPortal}`}>
+    <div className={`login-page login-page--${displayPortal}`}>
       <button type="button" className="login-landing-back" onClick={() => navigate('/')}>
         <FaArrowLeft aria-hidden="true" />
         <span>Back to landing page</span>
       </button>
       {authStep === "otp"? (
   <>
-    <LoginBrandPanel portal={loginPortal} />
+    <LoginBrandPanel portal={displayPortal} />
 
     <div className="login-right">
       <div className="login-form-container-verify">
@@ -587,7 +545,7 @@ useEffect(() => {
 ) : 
       forgotPasswordStep === 'request' ? (
         <>
-    <LoginBrandPanel portal={loginPortal} />
+    <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
             <div className="login-form-container">
               <h1>Forgot your password?</h1>
@@ -615,7 +573,7 @@ useEffect(() => {
       </>
       ) : forgotPasswordStep === 'setPassword' ? (
         <>
-    <LoginBrandPanel portal={loginPortal} />
+    <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
             <div className="login-form-container">
               <h1>Set a password</h1>
@@ -680,7 +638,7 @@ useEffect(() => {
       </>
       ) : forgotPasswordStep === 'verifyCode' ? (
         <>
-    <LoginBrandPanel portal={loginPortal} />
+    <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
             <div className="login-form-container">
               <h1>Verify reset code</h1>
@@ -724,7 +682,7 @@ useEffect(() => {
         </>
       ) : forgotPasswordStep === 'emailSent' ? (
         <>
-    <LoginBrandPanel portal={loginPortal} />
+    <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
             <div className="login-form-container confirmation-container">
               <div className="confirmation-icon">✓</div>
@@ -739,7 +697,7 @@ useEffect(() => {
         </>
       ) : forgotPasswordStep === 'resetDone' ? (
         <>
-    <LoginBrandPanel portal={loginPortal} />
+    <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
             <div className="login-form-container confirmation-container">
               <div className="confirmation-icon">✓</div>
@@ -753,32 +711,9 @@ useEffect(() => {
         </>
       ) : (
         <>
-    <LoginBrandPanel portal={loginPortal} />
+    <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
             <div className="login-form-container">
-              <div className="login-portal-selector" aria-label="Choose login type">
-                <span className="login-portal-label">Login as</span>
-                <div className="login-portal-options" role="group" aria-label="Account type">
-                  <button
-                    type="button"
-                    className={`login-portal-option login-portal-option--admin ${loginPortal === 'admin' ? 'is-active' : ''}`}
-                    onClick={() => handlePortalChange('admin')}
-                    aria-pressed={loginPortal === 'admin'}
-                    disabled={loading}
-                  >
-                    Admin
-                  </button>
-                  <button
-                    type="button"
-                    className={`login-portal-option login-portal-option--personnel ${loginPortal === 'personnel' ? 'is-active' : ''}`}
-                    onClick={() => handlePortalChange('personnel')}
-                    aria-pressed={loginPortal === 'personnel'}
-                    disabled={loading}
-                  >
-                    Personnel
-                  </button>
-                </div>
-              </div>
               <form onSubmit={handleLogin} className="login-form">
                 <div className="form-group">
                   <label htmlFor="email">Email</label>
@@ -834,11 +769,11 @@ useEffect(() => {
                 {error && <p className="error-message">{error}</p>}
 
                 <button type="submit" className="login-button" disabled={loading}>
-                  {loading ? 'Loading...' : `Login as ${loginPortal === 'personnel' ? 'Personnel' : 'Admin'}`}
+                  {loading ? 'Loading...' : 'Login'}
                 </button>
               </form>
               <p className="login-footer">
-                {loginPortal === 'personnel' ? 'Authorized personnel only' : 'Authorized administrators only'}
+                {displayPortal === 'personnel' ? 'Authorized personnel only' : 'Authorized administrators only'}
               </p>
             </div>
            

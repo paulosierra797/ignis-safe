@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FiCheckCircle, FiEye, FiMoreHorizontal, FiXCircle } from 'react-icons/fi';
+import { FiAlertTriangle, FiCheckCircle, FiEye, FiMoreHorizontal, FiXCircle } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { formatStatusLabel } from '../utils/statusUtils';
@@ -573,22 +573,37 @@ export default function AdminReports() {
           )}
 
           {rejectModalOpen && (
-            <div className="modal-overlay">
-              <div className="modal-box">
-                <h3>Reject Report</h3>
+            <div className="reject-modal-overlay">
+              <div className="reject-modal-box" role="dialog" aria-modal="true" aria-labelledby="reject-modal-title">
+                <div className="reject-modal-header">
+                  <span className="reject-modal-icon">
+                    <FiXCircle />
+                  </span>
+                  <div>
+                    <h3 id="reject-modal-title">Reject Report</h3>
+                    <p className="reject-modal-subtitle">Optional reason for rejection</p>
+                  </div>
+                </div>
 
-                <p>Optional reason for rejection:</p>
+                <div className="reject-modal-field">
+                  <label htmlFor="reject-reason-textarea">Reason for rejection</label>
+                  <textarea
+                    id="reject-reason-textarea"
+                    value={rejectNotes}
+                    onChange={(e) => setRejectNotes(e.target.value)}
+                    placeholder="Enter reason…"
+                    rows={4}
+                  />
+                </div>
 
-                <textarea
-                  value={rejectNotes}
-                  onChange={(e) => setRejectNotes(e.target.value)}
-                  placeholder="Enter reason..."
-                  rows={4}
-                />
+                <p className="reject-modal-warning">
+                  <FiAlertTriangle />
+                  This reason may be shown in the report&apos;s status and history.
+                </p>
 
-                <div className="modal-actions">
+                <div className="reject-modal-actions">
                   <button
-                    className="modal-btn cancel-btn"
+                    className="reject-modal-btn reject-modal-cancel"
                     onClick={() => {
                       setRejectModalOpen(false);
                       setRejectNotes('');
@@ -599,7 +614,7 @@ export default function AdminReports() {
                   </button>
 
                   <button
-                    className="modal-btn confirm-btn"
+                    className="reject-modal-btn reject-modal-confirm"
                     onClick={confirmReject}
                     disabled={processingId}
                   >

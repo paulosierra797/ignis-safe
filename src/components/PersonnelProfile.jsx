@@ -35,6 +35,23 @@ const RANK_OPTIONS = [
   'FO2',
   'FO1'
 ];
+const RANK_LABELS = {
+  FDIR: 'FDIR - Fire Director',
+  DFDIR: 'DFDIR - Deputy Fire Director',
+  SSUPT: 'SSUPT - Senior Fire Superintendent',
+  SUPT: 'SUPT - Fire Superintendent',
+  CINSP: 'CINSP - Fire Chief Inspector',
+  SINSP: 'SINSP - Fire Senior Inspector',
+  INSP: 'INSP - Fire Inspector',
+  SFO4: 'SFO4 - Senior Fire Officer IV',
+  SFO3: 'SFO3 - Senior Fire Officer III',
+  SFO2: 'SFO2 - Senior Fire Officer II',
+  SFO1: 'SFO1 - Senior Fire Officer I',
+  FO3: 'FO3 - Fire Officer III',
+  FO2: 'FO2 - Fire Officer II',
+  FO1: 'FO1 - Fire Officer I'
+};
+const PHONE_NUMBER_ERROR = 'Phone number must contain exactly 11 digits.';
 const EMPTY_REQUEST_VALUES = Object.fromEntries(
   PROFILE_FIELD_OPTIONS.map((option) => [option.value, ''])
 );
@@ -248,6 +265,16 @@ const [modal, setModal] = useState({
 
   const normalizeSpaces = (value) => String(value || '').trim().replace(/\s+/g, ' ');
 
+  const requestedPhoneDigits = String(requestValues.contact_number || '');
+  const phoneError = requestedPhoneDigits && requestedPhoneDigits.length !== 11
+    ? PHONE_NUMBER_ERROR
+    : '';
+  const requestedRank = String(requestValues.rank || '');
+  const rankError = requestedRank && !RANK_OPTIONS.includes(requestedRank)
+    ? 'Please select a valid rank.'
+    : '';
+  const isRequestSubmitDisabled = isRequestSaving || Boolean(phoneError) || Boolean(rankError);
+
   const filterRequestValueForField = (fieldName, rawValue) => {
     switch (fieldName) {
       case 'first_name':
@@ -260,9 +287,9 @@ const [modal, setModal] = useState({
       case 'email':
         return String(rawValue || '').replace(/[^A-Za-z0-9@._%+-]/g, '');
       case 'contact_number':
-        return String(rawValue || '').replace(/[^0-9]/g, '');
+        return String(rawValue || '').replace(/[^0-9]/g, '').slice(0, 11);
       case 'rank':
-        return String(rawValue || '').replace(/[^A-Za-z0-9]/g, '');
+        return RANK_OPTIONS.includes(rawValue) ? rawValue : '';
       default:
         return rawValue;
     }
@@ -295,6 +322,16 @@ const [modal, setModal] = useState({
   const handleSubmitChangeRequest = async () => {
     if (isRequestSaving) return;
     setRequestMessage({ type: '', text: '' });
+
+    if (rankError) {
+      setRequestMessage({ type: 'error', text: 'Please select a valid rank.' });
+      return;
+    }
+
+    if (phoneError) {
+      setRequestMessage({ type: 'error', text: PHONE_NUMBER_ERROR });
+      return;
+    }
 
     const changes = {};
     for (const option of PROFILE_FIELD_OPTIONS) {
@@ -663,16 +700,37 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                       <span className="request-current-value">
                         Current: {getCurrentFieldValue(option.value) || '—'}
                       </span>
-                      <input
-                        id={`request-${option.value}`}
-                        type={option.value === 'email' ? 'email' : 'text'}
-                        value={requestValues[option.value] || ''}
-                        onChange={(event) => setRequestValues((current) => ({
-                          ...current,
-                          [option.value]: filterRequestValueForField(option.value, event.target.value)
-                        }))}
-                        placeholder={`New ${option.label.toLowerCase()}`}
-                      />
+                      {option.value === 'rank' ? (
+                        <select
+                          id={`request-${option.value}`}
+                          value={requestValues.rank || ''}
+                          onChange={(event) => setRequestValues((current) => ({
+                            ...current,
+                            rank: filterRequestValueForField('rank', event.target.value)
+                          }))}
+                        >
+                          <option value="">Select new rank...</option>
+                          {RANK_OPTIONS.map((code) => (
+                            <option key={code} value={code}>{RANK_LABELS[code]}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          id={`request-${option.value}`}
+                          type={option.value === 'email' ? 'email' : 'text'}
+                          inputMode={option.value === 'contact_number' ? 'numeric' : undefined}
+                          maxLength={option.value === 'contact_number' ? 11 : undefined}
+                          value={requestValues[option.value] || ''}
+                          onChange={(event) => setRequestValues((current) => ({
+                            ...current,
+                            [option.value]: filterRequestValueForField(option.value, event.target.value)
+                          }))}
+                          placeholder={`New ${option.label.toLowerCase()}`}
+                        />
+                      )}
+                      {option.value === 'contact_number' && phoneError && (
+                        <span className="request-field-error">{phoneError}</span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -699,7 +757,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                 <button type="button" className="cancel-btn" onClick={closeRequestModal} disabled={isRequestSaving}>
                   Cancel
                 </button>
-                <button type="button" className="save-btn" onClick={handleSubmitChangeRequest} disabled={isRequestSaving}>
+                <button type="button" className="save-btn" onClick={handleSubmitChangeRequest} disabled={isRequestSubmitDisabled}>
                   {isRequestSaving ? 'Submitting...' : 'Submit Request'}
                 </button>
               </div>

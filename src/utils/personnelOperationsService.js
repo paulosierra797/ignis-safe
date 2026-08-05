@@ -465,6 +465,7 @@ export const getAllLeaveRequests = async ({ archived = false } = {}) => {
         .from(LEAVE_REQUESTS_TABLE)
         .select('request_id, personnel_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, approved_by, approved_at, rejection_reason, created_at, updated_at, is_archived, archived_at, archived_by')
         .eq('is_archived', archived)
+        .neq('status', 'pending')
         .order(archived ? 'archived_at' : 'created_at', { ascending: false }),
       getAllUsers({ includePersonnelWorkspaceProfiles: true })
     ]);

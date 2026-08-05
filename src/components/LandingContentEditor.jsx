@@ -455,6 +455,8 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         <div className="landing-editor-alert">Loading latest landing content...</div>
       )}
 
+      <LandingPreview content={draft} />
+
       {!embedded && (
         <div className="landing-editor-toolbar">
           <div className="landing-editor-toolbar-info">
@@ -728,8 +730,6 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           ))}
         </SectionBlock>
       </div>
-
-      <LandingPreview content={draft} />
 
       {confirmModal.open && (
         <div className="modal-overlay" role="dialog" aria-modal="true">

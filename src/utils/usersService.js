@@ -220,41 +220,42 @@ export const getUsersFromProfiles = async () => {
     if (profileError) throw profileError;
 
     const profileIds = (profileRows || []).map((row) => row.id).filter(Boolean);
-    let adminMap = new Map();
+    let internalAccountIds = new Set();
 
     if (profileIds.length > 0) {
       const { data: adminRows, error: adminError } = await supabase
         .from('admin')
-        .select('admin_id, status, last_login, role, rank')
+        .select('admin_id')
         .in('admin_id', profileIds);
 
       if (adminError) {
         console.warn('Could not fetch admin metadata while loading profiles:', adminError);
       } else {
-        adminMap = new Map((adminRows || []).map((row) => [row.admin_id, row]));
+        internalAccountIds = new Set((adminRows || []).map((row) => row.admin_id));
       }
     }
 
-    const merged = (profileRows || []).map((profile) => {
-      const adminMeta = adminMap.get(profile.id) || {};
-      return {
-        id: profile.id,
-        name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || profile.email || 'User',
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
-        email: profile.email || '',
-        username: profile.username || '',
-        avatar_url: profile.avatar_url || null,
-        completed_simulations: profile.completed_simulations || 0,
-        last_simulation: profile.last_simulation || '-',
-        status: adminMeta.status || 'Active',
-        role: adminMeta.role || 'mobile-user',
-        rank: adminMeta.rank || '-',
-        last_login: adminMeta.last_login || profile.updated_at || profile.created_at || null,
-        created_at: profile.created_at || null,
-        updated_at: profile.updated_at || null
-      };
-    });
+    // Admin/personnel accounts can also gain a `profiles` row (e.g. via mobile app login)
+    // but must never be counted as mobile app users.
+    const mobileUserProfiles = (profileRows || []).filter((profile) => !internalAccountIds.has(profile.id));
+
+    const merged = mobileUserProfiles.map((profile) => ({
+      id: profile.id,
+      name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.username || profile.email || 'User',
+      first_name: profile.first_name || '',
+      last_name: profile.last_name || '',
+      email: profile.email || '',
+      username: profile.username || '',
+      avatar_url: profile.avatar_url || null,
+      completed_simulations: profile.completed_simulations || 0,
+      last_simulation: profile.last_simulation || '-',
+      status: 'Active',
+      role: 'mobile-user',
+      rank: '-',
+      last_login: profile.updated_at || profile.created_at || null,
+      created_at: profile.created_at || null,
+      updated_at: profile.updated_at || null
+    }));
 
     return { data: merged, error: null };
   } catch (error) {

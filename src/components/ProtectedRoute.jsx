@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { getPendingAcknowledgementCount } from '../utils/announcementsService';
+import { signOut } from '../utils/authService';
+import { supabase } from '../utils/supabaseClient';
 
 export default function ProtectedRoute({ children, requiredPermission, allowedRoles = [] }) {
   const { currentUser, loading } = useUser();
@@ -45,6 +47,25 @@ export default function ProtectedRoute({ children, requiredPermission, allowedRo
   const hasPendingAcknowledgement = acknowledgementResult.key === acknowledgementKey
     && acknowledgementResult.hasPending;
 
+  const normalizedStatus = String(currentUser?.status || '').trim().toLowerCase();
+  const isDeactivated = normalizedStatus === 'inactive' || normalizedStatus === 'suspended';
+
+  useEffect(() => {
+    if (!isDeactivated) return;
+
+    const revokeAndSignOut = async () => {
+      try {
+        await supabase.rpc('revoke_all_devices');
+      } catch (revokeError) {
+        console.warn('Could not revoke trusted devices for deactivated account:', revokeError);
+      }
+      localStorage.removeItem('user');
+      await signOut();
+    };
+
+    void revokeAndSignOut();
+  }, [isDeactivated]);
+
   if (loading) {
     return (
       <div style={{ 
@@ -59,6 +80,10 @@ export default function ProtectedRoute({ children, requiredPermission, allowedRo
   }
 
   if (!currentUser) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isDeactivated) {
     return <Navigate to="/login" replace />;
   }
 

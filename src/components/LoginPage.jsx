@@ -189,7 +189,7 @@ const handleLogin = async (e) => {
 
     const { data: loginProfile, error: profileError } = await supabase
       .from('admin')
-      .select('role')
+      .select('role, status')
       .eq('admin_id', authData.user.id)
       .maybeSingle();
 
@@ -199,6 +199,29 @@ const handleLogin = async (e) => {
     }
 
     const authenticatedRole = normalizeRole(loginProfile?.role);
+    const authenticatedStatus = String(loginProfile?.status || '').trim().toLowerCase();
+
+    // Credentials alone are not authorization. A row must exist in `admin`
+    // with a recognized role and a non-deactivated status, or this account
+    // (e.g. a mobile-app-only user with no `admin` row) must never reach the
+    // OTP step or an authenticated session, regardless of valid password.
+    const isAuthorizedBackofficeAccount = Boolean(loginProfile)
+      && (authenticatedRole === 'admin' || authenticatedRole === 'personnel')
+      && authenticatedStatus !== 'inactive'
+      && authenticatedStatus !== 'suspended';
+
+    if (!isAuthorizedBackofficeAccount) {
+      try {
+        await supabase.rpc('revoke_all_devices');
+      } catch (revokeError) {
+        console.warn('Could not revoke trusted devices for unauthorized account:', revokeError);
+      }
+      await supabase.auth.signOut({ scope: 'local' });
+      localStorage.removeItem('user');
+      setPendingRole('');
+      throw new Error('Access denied. This account is not authorized to access the Admin portal.');
+    }
+
     setPendingRole(authenticatedRole);
 
     // Password is correct. A stable device ID + secret checks whether this
@@ -400,6 +423,37 @@ const handleVerify = async (e) => {
 
     if (error) {
       setError(error.message);
+      return;
+    }
+
+    // Defense in depth: re-confirm the role/status is still authorized right
+    // after OTP verification, independent of the pre-OTP check in
+    // handleLogin, in case the account was deactivated in between.
+    const verifiedUserId = data?.user?.id || data?.session?.user?.id;
+    const { data: verifiedProfile, error: verifiedProfileError } = await supabase
+      .from('admin')
+      .select('role, status')
+      .eq('admin_id', verifiedUserId)
+      .maybeSingle();
+
+    const verifiedRole = normalizeRole(verifiedProfile?.role);
+    const verifiedStatus = String(verifiedProfile?.status || '').trim().toLowerCase();
+    const isStillAuthorized = !verifiedProfileError
+      && Boolean(verifiedProfile)
+      && (verifiedRole === 'admin' || verifiedRole === 'personnel')
+      && verifiedStatus !== 'inactive'
+      && verifiedStatus !== 'suspended';
+
+    if (!isStillAuthorized) {
+      try {
+        await supabase.rpc('revoke_all_devices');
+      } catch (revokeError) {
+        console.warn('Could not revoke trusted devices for unauthorized account:', revokeError);
+      }
+      await supabase.auth.signOut({ scope: 'local' });
+      localStorage.removeItem('user');
+      setPendingRole('');
+      setError('Access denied. This account is not authorized to access the Admin portal.');
       return;
     }
 

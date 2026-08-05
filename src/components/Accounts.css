@@ -1650,8 +1650,137 @@
   }
 }
 
+/* ---- Leave Request Details modal: cleaner, lighter redesign ---- */
+/* Scoped entirely under .leave-details-modal so the shared personnel
+   profile modal (Accounts directory) is left untouched. */
+
+.leave-details-modal.personnel-profile-modal {
+  width: min(640px, 100%);
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16);
+}
+
+.leave-details-modal .personnel-profile-header {
+  padding: 1.5rem 1.75rem 1.15rem;
+  border-bottom: 1px solid #eef1f5;
+  background: #ffffff;
+}
+
+.leave-details-modal .personnel-profile-header > div > span {
+  color: #c1272d;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+}
+
+.leave-details-modal .personnel-profile-header h3 {
+  color: #14192b;
+  font-size: 1.3rem;
+}
+
+.leave-details-modal .personnel-profile-header p {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.leave-details-modal .personnel-profile-header .app-close-button.app-close-button {
+  border-color: #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+}
+
+.leave-details-modal .personnel-profile-header .app-close-button.app-close-button:hover:not(:disabled) {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #b42318;
+}
+
+.leave-details-modal .personnel-profile-body {
+  gap: 1.1rem;
+  padding: 1.5rem 1.75rem;
+  background: #f8fafc;
+}
+
+.leave-details-modal .personnel-profile-section {
+  padding: 1.15rem 1.25rem;
+  border: 1px solid #eef1f5;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.leave-details-modal .personnel-profile-section > h4 {
+  margin: 0 0 0.75rem;
+  padding-bottom: 0;
+  border-bottom: none;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.leave-details-modal .personnel-profile-section > h4 svg {
+  color: #cbd5e1;
+}
+
+.leave-details-modal .personnel-profile-detail-grid {
+  gap: 0.6rem;
+}
+
+.leave-details-modal .personnel-profile-detail {
+  align-items: center;
+  padding: 0.7rem 0.85rem;
+  border-left: none;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.leave-details-modal .personnel-profile-detail > svg {
+  margin-top: 0;
+  color: #94a3b8;
+}
+
+.leave-details-modal .personnel-profile-detail span {
+  font-size: 0.66rem;
+}
+
 .leave-details-modal .personnel-profile-detail strong {
   white-space: pre-line;
+  font-size: 0.82rem;
+}
+
+.leave-details-modal .personnel-profile-detail--highlight {
+  border: 1px solid #f8d7d9;
+  background: #fef6f6;
+}
+
+.leave-details-modal .personnel-profile-detail--highlight > svg {
+  color: #c1272d;
+}
+
+.leave-details-modal .personnel-profile-detail--highlight strong {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #14192b;
+}
+
+.leave-details-modal .personnel-profile-footer {
+  padding: 1.05rem 1.75rem;
+  border-top: 1px solid #eef1f5;
+}
+
+@media (max-width: 640px) {
+  .leave-details-modal .personnel-profile-header {
+    padding: 1.25rem 1.25rem 1rem;
+  }
+
+  .leave-details-modal .personnel-profile-body {
+    padding: 1.1rem;
+  }
 }
 
 .accounts-filters {

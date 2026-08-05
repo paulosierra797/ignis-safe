@@ -345,14 +345,14 @@ function LeaveRequestDetailsModal({
                   <strong>{request.personnel_rank || 'Not recorded'}</strong>
                 </div>
               </div>
-              <div className="personnel-profile-detail">
+              <div className="personnel-profile-detail personnel-profile-detail--highlight">
                 <FiCalendar aria-hidden="true" />
                 <div>
                   <span>Number of Days</span>
                   <strong>{leaveDays} day{leaveDays === 1 ? '' : 's'}</strong>
                 </div>
               </div>
-              <div className="personnel-profile-detail">
+              <div className="personnel-profile-detail personnel-profile-detail--highlight">
                 <FiClock aria-hidden="true" />
                 <div>
                   <span>Status</span>
@@ -363,7 +363,7 @@ function LeaveRequestDetailsModal({
                   </strong>
                 </div>
               </div>
-              <div className="personnel-profile-detail">
+              <div className="personnel-profile-detail personnel-profile-detail--highlight">
                 <FiCalendar aria-hidden="true" />
                 <div>
                   <span>Date Requested</span>

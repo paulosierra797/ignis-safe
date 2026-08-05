@@ -650,10 +650,6 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                   const isPastDate = isoDate < todayIso;
                   const isToday = isoDate === todayIso;
                   const shiftTagClass = row ? row.shift.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') : '';
-                  const visibleOnDutyPersonnel = onDutyPersonnel.slice(0, 3);
-                  const remainingOnDutyCount = onDutyPersonnel.length - visibleOnDutyPersonnel.length;
-                  const visibleOnLeavePersonnel = onLeavePersonnel.slice(0, 3);
-                  const remainingOnLeaveCount = onLeavePersonnel.length - visibleOnLeavePersonnel.length;
 
                   return (
                     <div
@@ -701,46 +697,34 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                             {onDutyPersonnel.length > 0 && (
                               <div className="shift-calendar-personnel-block">
                                 <strong>On Duty</strong>
-                                <div className="schedule-personnel-list">
-                                  {visibleOnDutyPersonnel.map((person) => {
-                                    const isSelf = person.admin_id === currentUser?.admin_id;
-                                    return (
-                                      <span
-                                        key={person.admin_id}
-                                        className={`personnel-badge ${isSelf ? 'personnel-badge-mine' : 'personnel-badge-duty'}`}
-                                        title={person.name}
-                                      >
-                                        {isSelf ? 'You' : person.name}
-                                      </span>
-                                    );
-                                  })}
-                                  {remainingOnDutyCount > 0 && (
-                                    <span className="personnel-badge personnel-badge-duty">+{remainingOnDutyCount} more</span>
-                                  )}
-                                </div>
+                                {isMineOnDuty && <span className="personnel-badge personnel-badge-mine">You</span>}
+                                <button
+                                  type="button"
+                                  className="shift-calendar-view-duty-btn"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openDayDetail(isoDate);
+                                  }}
+                                >
+                                  View On Duty ({onDutyPersonnel.length})
+                                </button>
                               </div>
                             )}
 
                             {onLeavePersonnel.length > 0 && (
                               <div className="shift-calendar-personnel-block">
                                 <strong>On Leave</strong>
-                                <div className="schedule-personnel-list">
-                                  {visibleOnLeavePersonnel.map((person) => {
-                                    const isSelf = person.admin_id === currentUser?.admin_id;
-                                    return (
-                                      <span
-                                        key={person.admin_id}
-                                        className={`personnel-badge ${isSelf ? 'personnel-badge-mine' : 'personnel-badge-leave'}`}
-                                        title={person.name}
-                                      >
-                                        {isSelf ? 'You' : person.name}
-                                      </span>
-                                    );
-                                  })}
-                                  {remainingOnLeaveCount > 0 && (
-                                    <span className="personnel-badge personnel-badge-leave">+{remainingOnLeaveCount} more</span>
-                                  )}
-                                </div>
+                                {isMineOnLeave && <span className="personnel-badge personnel-badge-mine">You</span>}
+                                <button
+                                  type="button"
+                                  className="shift-calendar-view-duty-btn is-leave"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openDayDetail(isoDate);
+                                  }}
+                                >
+                                  View On Leave ({onLeavePersonnel.length})
+                                </button>
                               </div>
                             )}
                           </div>

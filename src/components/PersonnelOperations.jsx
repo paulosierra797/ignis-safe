@@ -619,6 +619,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                 </span>
               </div>
 
+              <div className="shift-calendar-scroll">
               <div className="shift-calendar-grid shift-calendar-weekdays">
                 {CALENDAR_WEEKDAYS.map((weekday) => (
                   <span key={weekday}>{weekday}</span>
@@ -654,7 +655,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                   return (
                     <div
                       key={isoDate}
-                      className={`shift-calendar-day-card ${hasData ? 'has-data' : ''} ${isMineOnDuty ? 'mine' : ''} ${isPastDate ? 'is-past-date' : ''} ${isToday ? 'today' : ''}`}
+                      className={`shift-calendar-day-card ${shiftTagClass} ${hasData ? 'has-data' : ''} ${isMineOnDuty ? 'mine' : ''} ${isPastDate ? 'is-past-date' : ''} ${isToday ? 'today' : ''}`}
                       role="button"
                       tabIndex={0}
                       aria-label={
@@ -694,10 +695,12 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                           )
                         ) : (
                           <div className="shift-calendar-day-body">
-                            {onDutyPersonnel.length > 0 && (
-                              <div className="shift-calendar-personnel-block">
-                                <strong>On Duty</strong>
+                            <div className="shift-calendar-personnel-block">
+                              <div className="shift-calendar-block-row">
+                                <span className="calendar-stat calendar-stat-duty">On Duty ({onDutyPersonnel.length})</span>
                                 {isMineOnDuty && <span className="personnel-badge personnel-badge-mine">You</span>}
+                              </div>
+                              {onDutyPersonnel.length > 0 ? (
                                 <button
                                   type="button"
                                   className="shift-calendar-view-duty-btn"
@@ -708,13 +711,17 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                                 >
                                   View On Duty ({onDutyPersonnel.length})
                                 </button>
-                              </div>
-                            )}
+                              ) : (
+                                <span className="shift-calendar-block-empty">No personnel</span>
+                              )}
+                            </div>
 
-                            {onLeavePersonnel.length > 0 && (
-                              <div className="shift-calendar-personnel-block">
-                                <strong>On Leave</strong>
+                            <div className="shift-calendar-personnel-block shift-calendar-personnel-block-leave">
+                              <div className="shift-calendar-block-row">
+                                <span className="calendar-stat calendar-stat-leave">On Leave ({onLeavePersonnel.length})</span>
                                 {isMineOnLeave && <span className="personnel-badge personnel-badge-mine">You</span>}
+                              </div>
+                              {onLeavePersonnel.length > 0 && (
                                 <button
                                   type="button"
                                   className="shift-calendar-view-duty-btn is-leave"
@@ -725,8 +732,8 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                                 >
                                   View On Leave ({onLeavePersonnel.length})
                                 </button>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
                         )
                       ) : (
@@ -735,6 +742,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                     </div>
                   );
                 })}
+              </div>
               </div>
             </div>
           </section>

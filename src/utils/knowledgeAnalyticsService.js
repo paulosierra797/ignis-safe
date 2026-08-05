@@ -89,23 +89,6 @@ const formatDuration = (seconds) => {
   return `${minutes}m ${String(remainingSeconds).padStart(2, '0')}s`;
 };
 
-const extractValidSessionDurations = (attempts) => {
-  return (attempts || []).reduce((accumulator, attempt) => {
-    if (!attempt?.started_at || !attempt?.submitted_at) return accumulator;
-
-    const startedAt = new Date(attempt.started_at).getTime();
-    const submittedAt = new Date(attempt.submitted_at).getTime();
-    if (!Number.isFinite(startedAt) || !Number.isFinite(submittedAt)) return accumulator;
-
-    const diffSeconds = Math.floor((submittedAt - startedAt) / 1000);
-    if (diffSeconds <= 0) return accumulator;
-    if (diffSeconds > MAX_SESSION_DURATION_SECONDS) return accumulator;
-
-    accumulator.push(diffSeconds);
-    return accumulator;
-  }, []);
-};
-
 const normalizeType = (value) =>
   String(value || '')
     .toLowerCase()
@@ -143,6 +126,34 @@ const getTimeframeStartDate = (timeframe) => {
 
 const getAttemptTimestamp = (attempt) => {
   return attempt?.submitted_at || attempt?.started_at || attempt?.created_at || null;
+};
+
+// Retakes can leave more than one attempt row per (user, assessment); only the most
+// recent one should count toward Questions Answered so duplicate attempts don't inflate it.
+const getLatestAttemptIdsPerAssessment = (attemptList) => {
+  const latestByKey = {};
+
+  (attemptList || []).forEach((attempt) => {
+    const key = `${attempt.user_id}-${attempt.assessment_id}`;
+    const time = new Date(getAttemptTimestamp(attempt) || 0).getTime();
+    const existing = latestByKey[key];
+    const existingTime = existing ? new Date(getAttemptTimestamp(existing) || 0).getTime() : -1;
+
+    if (!existing || time > existingTime) {
+      latestByKey[key] = attempt;
+    }
+  });
+
+  return new Set(Object.values(latestByKey).map((attempt) => attempt.id));
+};
+
+const getModuleProgressTimestamp = (row) => {
+  const timestamps = [row?.pre_test_completed_at, row?.simulation_completed_at, row?.post_test_completed_at]
+    .map((value) => (value ? new Date(value).getTime() : null))
+    .filter((value) => Number.isFinite(value));
+
+  if (!timestamps.length) return null;
+  return new Date(Math.max(...timestamps)).toISOString();
 };
 
 const includesByTimeframe = (isoDate, startDate) => {
@@ -241,8 +252,18 @@ const fetchAppSessions = async () => {
   throw error;
 };
 
+const dedupeAppSessions = (sessions) => {
+  const seen = new Set();
+  return (sessions || []).filter((session) => {
+    const key = `${session.admin_id}|${session.started_at}|${session.ended_at}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
 const extractValidAppSessionDurations = (sessions) => {
-  return (sessions || []).reduce((accumulator, session) => {
+  return dedupeAppSessions(sessions).reduce((accumulator, session) => {
     const storedDuration = toNumber(session.duration_seconds, 0);
     if (storedDuration > 0 && storedDuration <= MAX_APP_SESSION_DURATION_SECONDS) {
       accumulator.push(Math.floor(storedDuration));
@@ -390,6 +411,12 @@ const loadAnalyticsBaseData = async () => {
     status: user.status,
   }));
 
+  // `users` already excludes Admin/Personnel accounts (see getUsersFromProfiles), so it is
+  // the same eligible-learner population shown on Admin Dashboard > Users. Every other table
+  // is scoped to this same set of ids so every Training Performance Overview metric shares
+  // one dataset instead of silently including admin/personnel or orphaned records.
+  const mobileUserIds = new Set(users.map((user) => user.admin_id).filter(Boolean));
+
   const [
     { data: attempts, error: attemptsError },
     { data: answers, error: answersError },
@@ -420,15 +447,18 @@ const loadAnalyticsBaseData = async () => {
 
   const simulationSessions = await fetchSimulationSessions();
 
+  const eligibleAttempts = (attempts || []).filter((attempt) => mobileUserIds.has(attempt.user_id));
+  const eligibleAttemptIds = new Set(eligibleAttempts.map((attempt) => attempt.id));
+
   return {
     users: users || [],
-    attempts: attempts || [],
-    answers: answers || [],
+    attempts: eligibleAttempts,
+    answers: (answers || []).filter((answer) => eligibleAttemptIds.has(answer.attempt_id)),
     assessments: assessments || [],
     modules: modules || [],
-    moduleProgress: moduleProgress || [],
-    simulationSessions: simulationSessions || [],
-    appSessions: appSessions || [],
+    moduleProgress: (moduleProgress || []).filter((row) => mobileUserIds.has(row.user_id)),
+    simulationSessions: (simulationSessions || []).filter((row) => mobileUserIds.has(row.admin_id)),
+    appSessions: (appSessions || []).filter((row) => mobileUserIds.has(row.admin_id)),
   };
 };
 
@@ -691,8 +721,8 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
       return true;
     });
 
-    const filteredAttemptIds = new Set(filteredAttempts.map((attempt) => attempt.id));
     const filteredUserIds = new Set(filteredAttempts.map((attempt) => attempt.user_id));
+    const dedupedAttemptIds = getLatestAttemptIdsPerAssessment(filteredAttempts);
 
     // `users` already excludes Admin/Personnel accounts (see getUsersFromProfiles in
     // usersService.js), so "Active Learners" here reflects mobile app learners only.
@@ -704,7 +734,7 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
     const activeUsers = usersByPeople.filter((user) => filteredUserIds.has(user.admin_id)).length;
 
     const questionsAnswered = answers.filter((answer) => {
-      if (!filteredAttemptIds.has(answer.attempt_id)) return false;
+      if (!dedupedAttemptIds.has(answer.attempt_id)) return false;
 
       if (!includesByTimeframe(answer.created_at, startDate)) return false;
 
@@ -731,7 +761,12 @@ export const getAnalyticsDashboardStats = async (filters = {}) => {
     });
 
     const appSessionTotals = extractValidAppSessionDurations(filteredAppSessions);
-    const legacySessionTotals = appSessionTotals.length > 0 ? [] : extractValidSessionDurations(filteredAttempts);
+    // Fall back to the already-deduped per-user/module durations from buildOverviewRows
+    // (one row per learner per module) instead of raw attempts, so duplicate/retake
+    // attempt rows can't inflate the average.
+    const legacySessionTotals = appSessionTotals.length > 0
+      ? []
+      : overview.map((row) => row.durationSeconds).filter((value) => value > 0);
     const sessionTotals = appSessionTotals.length > 0 ? appSessionTotals : legacySessionTotals;
     const avgDurationSeconds = sessionTotals.length > 0
       ? sessionTotals.reduce((sum, value) => sum + value, 0) / sessionTotals.length
@@ -1029,8 +1064,32 @@ export const getAnalyticsChartsData = async (filters = {}) => {
 
     const filteredModuleProgress = (moduleProgress || []).filter((row) => {
       const moduleData = modulesById[row.module_id] || null;
-      return includesByTopic(moduleData, topicFilter);
+      const userStatus = userById[row.user_id]?.status || 'Unknown';
+
+      if (!includesByTopic(moduleData, topicFilter)) return false;
+      if (!includesByPeople(userStatus, peopleFilter)) return false;
+      if (!includesByTimeframe(getModuleProgressTimestamp(row), startDate)) return false;
+
+      return true;
     });
+
+    // Keep only the most recently updated progress row per (user, module) so duplicate
+    // rows can't skew the completion rate.
+    const dedupedModuleProgress = Object.values(
+      filteredModuleProgress.reduce((accumulator, row) => {
+        const key = `${row.user_id}-${row.module_id}`;
+        const existing = accumulator[key];
+        if (!existing) {
+          accumulator[key] = row;
+          return accumulator;
+        }
+
+        const existingTime = new Date(getModuleProgressTimestamp(existing) || 0).getTime();
+        const rowTime = new Date(getModuleProgressTimestamp(row) || 0).getTime();
+        if (rowTime > existingTime) accumulator[key] = row;
+        return accumulator;
+      }, {}),
+    );
 
     const completionAccumulator = modulesForCompletion.reduce((accumulator, moduleRow) => {
       accumulator[moduleRow.id] = {
@@ -1041,7 +1100,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       return accumulator;
     }, {});
 
-    filteredModuleProgress.forEach((row) => {
+    dedupedModuleProgress.forEach((row) => {
       const bucket = completionAccumulator[row.module_id];
       if (!bucket) return;
 

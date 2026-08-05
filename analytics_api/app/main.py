@@ -348,29 +348,67 @@ def load_analytics_base_data() -> Dict[str, Any]:
 
     print("Finished loading.", flush=True)
 
+    # Scope every table to the same eligible-learner population used for Active Learners
+    # (mobile app users only, matching Admin Dashboard > Users) so every Training
+    # Performance Overview metric is computed from one consistent dataset.
+    eligible_attempts = [row for row in attempts if row.get("user_id") in mobile_user_ids]
+    eligible_attempt_ids = {row.get("id") for row in eligible_attempts}
+    eligible_answers = [row for row in answers if row.get("attempt_id") in eligible_attempt_ids]
+    eligible_module_progress = [row for row in module_progress if row.get("user_id") in mobile_user_ids]
+
+    normalized_simulation_sessions = [
+        normalize_simulation_session_row(row) for row in simulation_sessions
+    ]
+    eligible_simulation_sessions = [
+        row for row in normalized_simulation_sessions if row.get("admin_id") in mobile_user_ids
+    ]
+
+    normalized_app_sessions = [normalize_app_session_row(row) for row in app_sessions]
+    eligible_app_sessions = [
+        row for row in normalized_app_sessions if row.get("admin_id") in mobile_user_ids
+    ]
+
     return {
         "users": users,
         "mobile_user_ids": mobile_user_ids,
-        "attempts": attempts,
-        "answers": answers,
+        "attempts": eligible_attempts,
+        "answers": eligible_answers,
         "assessments": assessments,
         "modules": modules,
-        "module_progress": module_progress,
-        "simulation_sessions": [
-            normalize_simulation_session_row(row)
-            for row in simulation_sessions
-        ],
-        "app_sessions": [
-            normalize_app_session_row(row)
-            for row in app_sessions
-        ],
+        "module_progress": eligible_module_progress,
+        "simulation_sessions": eligible_simulation_sessions,
+        "app_sessions": eligible_app_sessions,
     }
+
+
+def dedupe_app_sessions(sessions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    seen = set()
+    deduped: List[Dict[str, Any]] = []
+    for session in sessions:
+        key = (session.get("admin_id"), session.get("started_at"), session.get("ended_at"))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(session)
+    return deduped
+
+
+def get_module_progress_timestamp(row: Dict[str, Any]) -> Optional[str]:
+    timestamps = [
+        parse_iso_date(row.get("pre_test_completed_at")),
+        parse_iso_date(row.get("simulation_completed_at")),
+        parse_iso_date(row.get("post_test_completed_at")),
+    ]
+    valid = [ts for ts in timestamps if ts is not None]
+    if not valid:
+        return None
+    return max(valid).isoformat()
 
 
 def extract_valid_app_session_durations(app_sessions: List[Dict[str, Any]]) -> List[int]:
     durations: List[int] = []
 
-    for session in app_sessions:
+    for session in dedupe_app_sessions(app_sessions):
         stored_duration = int(to_number(session.get("duration_seconds"), 0))
         if 0 < stored_duration <= MAX_APP_SESSION_DURATION_SECONDS:
             durations.append(stored_duration)
@@ -712,8 +750,22 @@ def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, A
 
         filtered_attempts.append(attempt)
 
-    filtered_attempt_ids = {attempt.get("id") for attempt in filtered_attempts}
     filtered_user_ids = {attempt.get("user_id") for attempt in filtered_attempts}
+
+    # Retakes can leave more than one attempt row per (user, assessment); only the most
+    # recent one should count toward Questions Answered so duplicates don't inflate it.
+    latest_attempt_by_key: Dict[str, Dict[str, Any]] = {}
+    for attempt in filtered_attempts:
+        key = f"{attempt.get('user_id')}-{attempt.get('assessment_id')}"
+        attempt_time = parse_iso_date(get_attempt_timestamp(attempt))
+        attempt_ts = attempt_time.timestamp() if attempt_time else 0
+        existing = latest_attempt_by_key.get(key)
+        existing_time = parse_iso_date(get_attempt_timestamp(existing)) if existing else None
+        existing_ts = existing_time.timestamp() if existing_time else -1
+        if existing is None or attempt_ts > existing_ts:
+            latest_attempt_by_key[key] = attempt
+
+    deduped_attempt_ids = {attempt.get("id") for attempt in latest_attempt_by_key.values()}
 
     # "Active Learners" must reflect mobile app learners only (excludes Admin/Personnel
     # accounts, matching the Users module) with qualifying activity in the selected
@@ -731,7 +783,7 @@ def build_dashboard_stats(data: Dict[str, Any], filters: Filters) -> Dict[str, A
 
     questions_answered = 0
     for answer in answers:
-        if answer.get("attempt_id") not in filtered_attempt_ids:
+        if answer.get("attempt_id") not in deduped_attempt_ids:
             continue
         if not includes_by_timeframe(answer.get("created_at"), start_date):
             continue
@@ -906,9 +958,38 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
         key=lambda row: (to_number(row.get("module_no"), 1e9), str(row.get("title") or "")),
     )
 
-    filtered_module_progress = [
-        row for row in module_progress if includes_by_topic(modules_by_id.get(row.get("module_id")), filters.topic)
-    ]
+    filtered_module_progress = []
+    for row in module_progress:
+        module_data = modules_by_id.get(row.get("module_id"))
+        user_status = (user_by_id.get(row.get("user_id")) or {}).get("status")
+
+        if not includes_by_topic(module_data, filters.topic):
+            continue
+        if not includes_by_people(user_status, filters.people):
+            continue
+        if not includes_by_timeframe(get_module_progress_timestamp(row), start_date):
+            continue
+
+        filtered_module_progress.append(row)
+
+    # Keep only the most recently updated progress row per (user, module) so duplicate
+    # rows can't skew the completion rate.
+    deduped_module_progress_by_key: Dict[str, Dict[str, Any]] = {}
+    for row in filtered_module_progress:
+        key = f"{row.get('user_id')}-{row.get('module_id')}"
+        existing = deduped_module_progress_by_key.get(key)
+        if existing is None:
+            deduped_module_progress_by_key[key] = row
+            continue
+
+        existing_ts = parse_iso_date(get_module_progress_timestamp(existing))
+        row_ts = parse_iso_date(get_module_progress_timestamp(row))
+        existing_value = existing_ts.timestamp() if existing_ts else -1
+        row_value = row_ts.timestamp() if row_ts else -1
+        if row_value > existing_value:
+            deduped_module_progress_by_key[key] = row
+
+    filtered_module_progress = list(deduped_module_progress_by_key.values())
 
     completion_accumulator = {
         row.get("id"): {"completionSum": 0.0, "simulationDone": 0, "count": 0}

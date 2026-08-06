@@ -686,12 +686,30 @@ function ProfileRequestChanges({ request }) {
       requested_value: request?.requested_value || ''
     }];
 
+  const changedItems = changes.filter((change) => {
+    const current = (change.current_value ?? '').toString().trim();
+    const requested = (change.requested_value ?? '').toString().trim();
+    return current !== requested;
+  });
+
+  if (changedItems.length === 0) {
+    return <div className="profile-request-change-list profile-request-change-empty">No changes</div>;
+  }
+
   return (
     <div className="profile-request-change-list">
-      {changes.map((change) => (
+      {changedItems.map((change) => (
         <div className="profile-request-change-item" key={change.field_name}>
-          <strong>{change.field_label}</strong>
-          <span>{change.current_value || '—'} to {change.requested_value}</span>
+          <span className="profile-request-change-field">{change.field_label}</span>
+          <div className="profile-request-change-values">
+            <span className="profile-request-change-current" title={change.current_value || '—'}>
+              {change.current_value || '—'}
+            </span>
+            <span className="profile-request-change-arrow" aria-hidden="true">→</span>
+            <span className="profile-request-change-requested" title={change.requested_value || '—'}>
+              {change.requested_value || '—'}
+            </span>
+          </div>
         </div>
       ))}
     </div>

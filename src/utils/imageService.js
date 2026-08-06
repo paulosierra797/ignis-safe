@@ -61,11 +61,18 @@ export const uploadProfileImage = async (userId, file, { workspaceProfile = fals
       .from('profile_pic')
       .getPublicUrl(filePath);
 
-    // Update user profile with image URL
-    const { error: updateError } = await supabase
-      .from(workspaceProfile ? 'personnel_workspace_profiles' : 'admin')
-      .update({ avatar_url: publicUrl })
-      .eq('admin_id', userId);
+    // Update user profile with image URL.
+    // The `admin` table's UPDATE RLS policy only allows self-service updates
+    // for accounts with role 'admin', so personnel accounts must go through
+    // this security-definer RPC (scoped to auth.uid(), avatar_url only)
+    // instead of a direct table update, which would silently match zero
+    // rows and report success without persisting anything.
+    const { error: updateError } = workspaceProfile
+      ? await supabase
+          .from('personnel_workspace_profiles')
+          .update({ avatar_url: publicUrl })
+          .eq('admin_id', userId)
+      : await supabase.rpc('update_own_avatar', { p_avatar_url: publicUrl });
 
     if (updateError) {
       console.error('Error updating profile:', updateError);

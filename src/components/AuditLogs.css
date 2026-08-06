@@ -225,6 +225,11 @@
   color: #334155;
 }
 
+.audit-logs-no-column {
+  width: 56px;
+  text-align: center;
+}
+
 .audit-logs-action-badge {
   display: inline-block;
   padding: 0.4rem 0.85rem;
@@ -417,23 +422,32 @@
   }
 
 
+  .audit-logs-table td.audit-logs-no-column {
+    text-align: left;
+    width: 100%;
+  }
+
   .audit-logs-table td:nth-child(1)::before {
-    content:"Time";
+    content:"No.";
   }
 
   .audit-logs-table td:nth-child(2)::before {
-    content:"User";
+    content:"Time";
   }
 
   .audit-logs-table td:nth-child(3)::before {
-    content:"Action";
+    content:"User";
   }
 
   .audit-logs-table td:nth-child(4)::before {
-    content:"Details";
+    content:"Action";
   }
 
   .audit-logs-table td:nth-child(5)::before {
+    content:"Details";
+  }
+
+  .audit-logs-table td:nth-child(6)::before {
     content:"Status";
   }
 

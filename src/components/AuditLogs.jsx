@@ -159,6 +159,7 @@ export default function AuditLogs() {
           <table className="audit-logs-table">
             <thead>
               <tr>
+                <th className="audit-logs-no-column">NO.</th>
                 <th>TIMESTAMP</th>
                 <th>USER</th>
                 <th>ACTION</th>
@@ -169,19 +170,20 @@ export default function AuditLogs() {
             <tbody>
               {loadingLogs ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
                     Loading audit logs...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
                     No audit logs found matching your filters.
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log) => (
+                filteredLogs.map((log, index) => (
                   <tr key={log.id}>
+                    <td className="audit-logs-no-column">{index + 1}</td>
                     <td>{new Date(log.timestamp).toLocaleString('en-US')}</td>
                     <td>{log.user}</td>
                     <td>

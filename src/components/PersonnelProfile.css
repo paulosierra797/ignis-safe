@@ -266,7 +266,7 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
   text-align: center;
 }
 
-.profile-summary-role {
+.personnel-profile-container .profile-summary-role {
   display: inline-flex;
   align-items: center;
   justify-content: center;

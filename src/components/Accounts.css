@@ -1329,6 +1329,10 @@
   align-items: start;
 }
 
+.accounts-directory-groups + .leave-requests-groups {
+  margin-top: 2rem;
+}
+
 .account-directory-group {
   min-width: 0;
   overflow: hidden;

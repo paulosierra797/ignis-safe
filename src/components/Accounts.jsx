@@ -63,7 +63,8 @@ const ADD_PERSONNEL_TIMEOUT_MS = 30000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const REQUEST_PREVIEW_LIMIT = 3;
 const ACCOUNTS_TABS = [
-  { key: 'personnel', label: 'Personnel List' },
+  { key: 'schedule', label: 'Personnel Schedule' },
+  { key: 'personnel', label: 'Personnel Directory' },
   { key: 'leave-requests', label: 'Leave Requests' },
   { key: 'profile-changes', label: 'Profile Change Requests' }
 ];
@@ -801,7 +802,7 @@ export default function Accounts() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeAccountsTab = ACCOUNTS_TAB_KEYS.includes(searchParams.get('tab'))
     ? searchParams.get('tab')
-    : 'personnel';
+    : 'schedule';
   const setActiveAccountsTab = (tabKey) => {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set('tab', tabKey);
@@ -3269,15 +3270,21 @@ const permissions = getDefaultPermissions(formData.role);
         <div className="accounts-header">
           <h2>Personnel Accounts</h2>
           <div className="accounts-header-actions">
-            <button className="shift-schedule-btn" onClick={openShiftModal}>
-              Set Shift Dates
-            </button>
-            <button className="shift-schedule-btn" onClick={openPersonnelShiftModal}>
-              Assign Personnel
-            </button>
-            <button className="add-personnel-btn" onClick={handleOpenAddModal}>
-              Add Personnel
-            </button>
+            {activeAccountsTab === 'schedule' && (
+              <>
+                <button className="shift-schedule-btn" onClick={openShiftModal}>
+                  Set Shift Dates
+                </button>
+                <button className="shift-schedule-btn" onClick={openPersonnelShiftModal}>
+                  Assign Personnel
+                </button>
+              </>
+            )}
+            {activeAccountsTab === 'personnel' && (
+              <button className="add-personnel-btn" onClick={handleOpenAddModal}>
+                Add Personnel
+              </button>
+            )}
           </div>
         </div>
 
@@ -3311,7 +3318,13 @@ const permissions = getDefaultPermissions(formData.role);
           </div>
         </div>
 
-        <div className="shift-summary-card">
+        {activeAccountsTab === 'schedule' && (
+        <div
+          className="shift-summary-card"
+          id="accounts-tabpanel-schedule"
+          role="tabpanel"
+          aria-labelledby="accounts-tab-schedule"
+        >
           <div className="shift-summary-calendar-header">
             <button
               className="shift-calendar-nav"
@@ -3427,6 +3440,7 @@ const permissions = getDefaultPermissions(formData.role);
           </div>
           </div>
         </div>
+        )}
 
         {activeAccountsTab === 'leave-requests' && (
         <section

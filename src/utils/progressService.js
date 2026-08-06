@@ -142,7 +142,7 @@ export const getProgressPageData = async () => {
         .select('id, module_id, type, title'),
       supabase
         .from('admin')
-        .select('admin_id, status'),
+        .select('admin_id, role, status'),
     ]);
 
     if (profilesError) throw profilesError;
@@ -158,14 +158,17 @@ export const getProgressPageData = async () => {
     const safeAttempts = attempts || [];
     const safeAssessments = assessments || [];
     const safeAdminRows = adminRows || [];
-    const internalAccountIds = new Set(
-      safeAdminRows
-        .map((row) => String(row.admin_id || '').trim())
-        .filter(Boolean)
+    // Admin/Personnel accounts can also gain a `profiles` row (mobile learning
+    // access), so every profile is shown here with its account type — this is
+    // the account-level view, unlike the mobile-only counts used elsewhere.
+    const accountTypeById = new Map(
+      safeAdminRows.map((row) => {
+        const normalizedRole = String(row.role || '').trim().toLowerCase();
+        const accountType = normalizedRole === 'admin' ? 'Admin' : 'Personnel';
+        return [String(row.admin_id || '').trim(), accountType];
+      })
     );
-    const appUserProfiles = safeProfiles.filter(
-      (profile) => !internalAccountIds.has(String(profile.id || '').trim())
-    );
+    const appUserProfiles = safeProfiles;
 
     const progressByUserModule = safeModuleProgressRows.reduce((accumulator, row) => {
       accumulator[`${row.user_id}-${row.module_id}`] = row;
@@ -215,6 +218,7 @@ export const getProgressPageData = async () => {
 
       return {
         id: profile.id,
+        accountType: accountTypeById.get(String(profile.id || '').trim()) || 'Mobile User',
         name:
           `${profile.first_name || ''} ${profile.last_name || ''}`.trim() ||
           profile.username ||

@@ -1928,7 +1928,8 @@ const [editFormData, setEditFormData] = useState({
   email: '',
   role: '',
   rank: '',
-  contact_number: ''
+  contact_number: '',
+  mobile_access_enabled: false
 });
 const openProfileModal = (account) => {
   setSelectedProfileAccount(account);
@@ -1948,7 +1949,8 @@ const openEditModal = (account) => {
     email: account.email || '',
     role: account.role || '',
     rank: account.rank || '',
-    contact_number: account.contact_number || ''
+    contact_number: account.contact_number || '',
+    mobile_access_enabled: Boolean(account.mobile_access_enabled)
   });
   setIsEditModalOpen(true);
 };
@@ -1962,7 +1964,8 @@ const handleUpdatePersonnel = async () => {
     email: editFormData.email.trim(),
     role: editFormData.role,
     rank: editFormData.rank,
-    contact_number: editFormData.contact_number
+    contact_number: editFormData.contact_number,
+    mobile_access_enabled: editFormData.mobile_access_enabled
   };
   const { data: authData } = await supabase.auth.getUser();
 console.log("AUTH USER:", authData);
@@ -4402,6 +4405,25 @@ const permissions = getDefaultPermissions(formData.role);
         <option value="personnel">Personnel</option>
         <option value="admin">Admin</option>
       </select>
+    </div>
+
+
+    <div className="accounts-modal-field">
+      <label htmlFor="edit-mobile-access">Mobile Learning Access</label>
+      <label className="accounts-modal-checkbox-row" htmlFor="edit-mobile-access">
+        <input
+          id="edit-mobile-access"
+          type="checkbox"
+          checked={editFormData.mobile_access_enabled}
+          onChange={(e) =>
+            setEditFormData({
+              ...editFormData,
+              mobile_access_enabled: e.target.checked
+            })
+          }
+        />
+        Allow this account to use the mobile learning app
+      </label>
     </div>
 
 

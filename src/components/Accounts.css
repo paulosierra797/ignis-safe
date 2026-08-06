@@ -2664,6 +2664,25 @@
   background-color: #fff7f7;
 }
 
+.accounts-modal-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+}
+
+.accounts-modal-field input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border-radius: 4px;
+  accent-color: #b91c1c;
+  cursor: pointer;
+}
+
 .accounts-modal-field input.accounts-input-error:focus,
 .accounts-modal-field select.accounts-input-error:focus {
   border-color: #b91c1c;

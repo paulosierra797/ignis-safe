@@ -308,6 +308,7 @@ export default function Progress() {
               <tr>
                 <th>No.</th>
                 <th>Name</th>
+                <th>Account Type</th>
                 <th>Module Progress</th>
                 <th>Overall %</th>
                 <th>Last Activity</th>
@@ -318,13 +319,13 @@ export default function Progress() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
                     Loading progress...
                   </td>
                 </tr>
               ) : filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
                     No progress records found.
                   </td>
                 </tr>
@@ -333,6 +334,11 @@ export default function Progress() {
                   <tr key={item.id}>
                     <td>{index + 1}</td>
                     <td>{item.name}</td>
+                    <td>
+                      <span className={`progress-account-type-badge ${item.accountType.toLowerCase().replace(/\s+/g, '-')}`}>
+                        {item.accountType}
+                      </span>
+                    </td>
                     <td>{item.moduleProgress}</td>
                     <td>{item.overallPercent}%</td>
                     <td>{formatDate(item.lastActivityAt)}</td>
@@ -369,6 +375,9 @@ export default function Progress() {
           <div>
             <h3>{item.name}</h3>
             <p>{item.email}</p>
+            <span className={`progress-account-type-badge ${item.accountType.toLowerCase().replace(/\s+/g, '-')}`}>
+              {item.accountType}
+            </span>
           </div>
 
           <span className="progress-percent">
@@ -444,6 +453,9 @@ export default function Progress() {
                     <span className="progress-modal-label">USER ACCOUNT</span>
                     <h3>{selectedUser.name}</h3>
                     <p><FiMail aria-hidden="true" />{selectedUser.email}</p>
+                    <span className={`progress-account-type-badge ${selectedUser.accountType.toLowerCase().replace(/\s+/g, '-')}`}>
+                      {selectedUser.accountType}
+                    </span>
                   </div>
                   <div className="progress-modal-status-summary">
                     <span className="progress-modal-label">ACCOUNT STATUS</span>

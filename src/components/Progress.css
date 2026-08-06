@@ -517,6 +517,30 @@
   color: #475569;
 }
 
+.progress-account-type-badge {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.progress-account-type-badge.admin {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.progress-account-type-badge.personnel {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.progress-account-type-badge.mobile-user {
+  background: #f1f5f9;
+  color: #475569;
+}
+
 .progress-modal-full {
   grid-column: 1 / -1;
   margin-bottom: 1.5rem;

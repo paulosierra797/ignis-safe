@@ -219,7 +219,7 @@ const handleLogin = async (e) => {
       await supabase.auth.signOut({ scope: 'local' });
       localStorage.removeItem('user');
       setPendingRole('');
-      throw new Error('Access denied. This account is not authorized to access the Admin portal.');
+      throw new Error('Access denied. This account is not authorized to access this portal.');
     }
 
     setPendingRole(authenticatedRole);
@@ -453,7 +453,7 @@ const handleVerify = async (e) => {
       await supabase.auth.signOut({ scope: 'local' });
       localStorage.removeItem('user');
       setPendingRole('');
-      setError('Access denied. This account is not authorized to access the Admin portal.');
+      setError('Access denied. This account is not authorized to access this portal.');
       return;
     }
 

@@ -697,42 +697,45 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                           <div className="shift-calendar-day-body">
                             <div className="shift-calendar-personnel-block">
                               <div className="shift-calendar-block-row">
-                                <span className="calendar-stat calendar-stat-duty">On Duty ({onDutyPersonnel.length})</span>
+                                {onDutyPersonnel.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    className="calendar-stat calendar-stat-duty calendar-stat-clickable"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openDayDetail(isoDate);
+                                    }}
+                                  >
+                                    On Duty ({onDutyPersonnel.length})
+                                  </button>
+                                ) : (
+                                  <span className="calendar-stat calendar-stat-duty">On Duty ({onDutyPersonnel.length})</span>
+                                )}
                                 {isMineOnDuty && <span className="personnel-badge personnel-badge-mine">You</span>}
                               </div>
-                              {onDutyPersonnel.length > 0 ? (
-                                <button
-                                  type="button"
-                                  className="shift-calendar-view-duty-btn"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    openDayDetail(isoDate);
-                                  }}
-                                >
-                                  View On Duty ({onDutyPersonnel.length})
-                                </button>
-                              ) : (
+                              {onDutyPersonnel.length === 0 && (
                                 <span className="shift-calendar-block-empty">No personnel</span>
                               )}
                             </div>
 
                             <div className="shift-calendar-personnel-block shift-calendar-personnel-block-leave">
                               <div className="shift-calendar-block-row">
-                                <span className="calendar-stat calendar-stat-leave">On Leave ({onLeavePersonnel.length})</span>
+                                {onLeavePersonnel.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    className="calendar-stat calendar-stat-leave calendar-stat-clickable"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openDayDetail(isoDate);
+                                    }}
+                                  >
+                                    On Leave ({onLeavePersonnel.length})
+                                  </button>
+                                ) : (
+                                  <span className="calendar-stat calendar-stat-leave">On Leave ({onLeavePersonnel.length})</span>
+                                )}
                                 {isMineOnLeave && <span className="personnel-badge personnel-badge-mine">You</span>}
                               </div>
-                              {onLeavePersonnel.length > 0 && (
-                                <button
-                                  type="button"
-                                  className="shift-calendar-view-duty-btn is-leave"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    openDayDetail(isoDate);
-                                  }}
-                                >
-                                  View On Leave ({onLeavePersonnel.length})
-                                </button>
-                              )}
                             </div>
                           </div>
                         )

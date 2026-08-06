@@ -161,6 +161,10 @@
   grid-column: 1 / -1;
 }
 
+.leave-field-hidden {
+  visibility: hidden;
+}
+
 .leave-form-grid label {
   display: block;
   color: #1f2937;
@@ -1062,6 +1066,10 @@
   .leave-form-grid {
     grid-template-columns: 1fr;
     gap: 0.75rem;
+  }
+
+  .leave-field-hidden {
+    display: none;
   }
 
   .shift-calendar-grid{

@@ -859,24 +859,26 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                     )}
                   </div>
 
-                  {leaveForm.leaveType === 'Other' && (
-                    <div className="leave-field">
-                      <label htmlFor="leave-other-type">Specify Leave Type</label>
-                      <input
-                        id="leave-other-type"
-                        type="text"
-                        name="otherLeaveType"
-                        className="leave-text-input"
-                        value={leaveForm.otherLeaveType}
-                        onChange={handleLeaveInput}
-                        onBlur={handleLeaveBlur}
-                        maxLength={100}
-                      />
-                      {visibleLeaveFieldErrors.otherLeaveType && (
-                        <span className="leave-field-error">{visibleLeaveFieldErrors.otherLeaveType}</span>
-                      )}
-                    </div>
-                  )}
+                  <div className={`leave-field${leaveForm.leaveType === 'Other' ? '' : ' leave-field-hidden'}`}>
+                    {leaveForm.leaveType === 'Other' && (
+                      <>
+                        <label htmlFor="leave-other-type">Specify Leave Type</label>
+                        <input
+                          id="leave-other-type"
+                          type="text"
+                          name="otherLeaveType"
+                          className="leave-text-input"
+                          value={leaveForm.otherLeaveType}
+                          onChange={handleLeaveInput}
+                          onBlur={handleLeaveBlur}
+                          maxLength={100}
+                        />
+                        {visibleLeaveFieldErrors.otherLeaveType && (
+                          <span className="leave-field-error">{visibleLeaveFieldErrors.otherLeaveType}</span>
+                        )}
+                      </>
+                    )}
+                  </div>
 
                   <div className="leave-field">
                     <label htmlFor="leave-start-date">Leave Start Date</label>

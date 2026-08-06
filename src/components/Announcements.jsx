@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
-import { FiArchive, FiBell, FiUsers } from 'react-icons/fi';
+import { FiArchive, FiBell, FiUsers, FiFileText, FiCheckCircle, FiClock } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
@@ -138,6 +138,8 @@ export default function Announcements() {
   const [acknowledgementModalId, setAcknowledgementModalId] = useState('');
   const [nudgingIds, setNudgingIds] = useState(() => new Set());
   const [nudgeCooldownUntilById, setNudgeCooldownUntilById] = useState(() => new Map());
+  const lastViewedAnnouncementsAtRef = useRef(null);
+  const [unreadTrackingReady, setUnreadTrackingReady] = useState(false);
   const ITEMS_PER_PAGE = 3;
   const [formData, setFormData] = useState(() => {
     const draft = readAnnouncementDraft();
@@ -367,6 +369,23 @@ export default function Announcements() {
     initialize();
   }, [isAdmin, isPersonnelWorkspace, currentUser?.admin_id, loadAnnouncements]);
 
+  // Purely a client-side "seen this page before" marker for the unread dot —
+  // captured once per mount so cards don't flip to read mid-session as the
+  // 20s poll below brings in the same announcements again.
+  useEffect(() => {
+    if (isAdmin || typeof window === 'undefined') return;
+
+    const storageKey = `ignis-safe:announcements-last-viewed:${currentUser?.personnel_id || currentUser?.admin_id || 'guest'}`;
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      lastViewedAnnouncementsAtRef.current = stored ? new Date(stored) : new Date(0);
+      window.localStorage.setItem(storageKey, new Date().toISOString());
+    } catch {
+      lastViewedAnnouncementsAtRef.current = new Date(0);
+    }
+    setUnreadTrackingReady(true);
+  }, [isAdmin, currentUser?.personnel_id, currentUser?.admin_id]);
+
   // Announcements has no polling of its own; other tabs/users emit this
   // event (e.g. a personnel acknowledging) so an already-open admin view
   // can refresh its ack counts / pending list without a manual reload.
@@ -458,6 +477,12 @@ export default function Announcements() {
   const acknowledgementModalAnnouncement = announcements.find(
     (row) => row.announcement_id === acknowledgementModalId
   );
+
+  const isAnnouncementUnread = (announcement) => {
+    if (isAdmin || !unreadTrackingReady || !lastViewedAnnouncementsAtRef.current) return false;
+    const createdAt = new Date(announcement.created_at);
+    return !Number.isNaN(createdAt.getTime()) && createdAt > lastViewedAnnouncementsAtRef.current;
+  };
 
   const handleSubmitAnnouncement = async (event) => {
     event.preventDefault();
@@ -1027,18 +1052,28 @@ export default function Announcements() {
             <>
             <div className="announcement-list">
               {paginatedAnnouncements.map((announcement) => (
-                <article key={announcement.announcement_id} className="announcement-item">
+                <article
+                  key={announcement.announcement_id}
+                  className={`announcement-item${isAnnouncementUnread(announcement) ? ' is-unread' : ''}`}
+                >
                   <div className="announcement-item-header">
-                    <h3
-                      className={`announcement-title ${expandedIds.has(announcement.announcement_id) ? '' : 'clamped'}`}
-                      ref={(element) => {
-                        titleRefs.current[announcement.announcement_id] = element;
-                      }}
-                    >
-                      {announcement.title}
-                    </h3>
+                    <span className="announcement-title-group">
+                      {isAnnouncementUnread(announcement) && (
+                        <span className="announcement-unread-dot" aria-label="New announcement" title="New announcement" />
+                      )}
+                      <h3
+                        className={`announcement-title ${expandedIds.has(announcement.announcement_id) ? '' : 'clamped'}`}
+                        ref={(element) => {
+                          titleRefs.current[announcement.announcement_id] = element;
+                        }}
+                      >
+                        {announcement.title}
+                      </h3>
+                    </span>
                     <span className="announcement-audience">{getAudienceLabel(announcement)}</span>
                   </div>
+                  <span className="announcement-date">{formatDate(announcement.created_at)}</span>
+
                   <p
                     className={`announcement-content ${expandedIds.has(announcement.announcement_id) ? '' : 'clamped'}`}
                     ref={(element) => {
@@ -1059,52 +1094,31 @@ export default function Announcements() {
                   {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
                     <div className="announcement-attachments">
                       {announcement.attachments.map((attachment, index) => (
-                        attachment.is_image ? (
-                          <a
-                            key={`${announcement.announcement_id}-img-${index}`}
-                            className="announcement-image-link"
-                            href={attachment.file_url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <img src={attachment.file_url} alt={attachment.file_name || 'Attached image'} loading="lazy" />
-                          </a>
-                        ) : (
-                          <a
-                            key={`${announcement.announcement_id}-file-${index}`}
-                            className="announcement-file-link"
-                            href={attachment.file_url}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {attachment.file_name || 'Attachment'}
-                          </a>
-                        )
+                        <a
+                          key={`${announcement.announcement_id}-att-${index}`}
+                          className="announcement-attachment-chip"
+                          href={attachment.file_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={attachment.file_name || (attachment.is_image ? 'Attached image' : 'Attachment')}
+                        >
+                          {attachment.is_image ? (
+                            <img
+                              className="announcement-attachment-chip-thumb"
+                              src={attachment.file_url}
+                              alt=""
+                              loading="lazy"
+                            />
+                          ) : (
+                            <FiFileText className="announcement-attachment-chip-icon" aria-hidden="true" />
+                          )}
+                          <span className="announcement-attachment-chip-name">
+                            {attachment.file_name || (attachment.is_image ? 'Image' : 'Attachment')}
+                          </span>
+                        </a>
                       ))}
                     </div>
                   )}
-                  <div className="announcement-meta">
-                    {isAdmin && announcement.acknowledgement_summary?.totalRecipients > 0 && (
-                      <button
-                        type="button"
-                        className="announcement-acknowledgement-link"
-                        onClick={() => {
-                          setAcknowledgementModalId(announcement.announcement_id);
-                        }}
-                        aria-label={`View acknowledgement list for ${announcement.title}`}
-                      >
-                        <FiUsers aria-hidden="true" />
-                        Acknowledged: {announcement.acknowledgement_summary.acknowledgedCount}/
-                        {announcement.acknowledgement_summary.totalRecipients}
-                      </button>
-                    )}
-                    {!isAdmin && (
-                      <span className={`announcement-ack-status ${announcement.acknowledged_by_current_user ? 'acknowledged' : 'pending'}`}>
-                        {announcement.acknowledged_by_current_user ? 'Acknowledged' : 'Pending acknowledgment'}
-                      </span>
-                    )}
-                    <span>{formatDate(announcement.created_at)}</span>
-                  </div>
 
                   {!isAdmin &&
                     !announcement.acknowledged_by_current_user &&
@@ -1124,48 +1138,54 @@ export default function Announcements() {
                     </div>
                   )}
 
-                  {!isAdmin && (
-                    <div className="announcement-action-row">
-                      {!announcement.acknowledged_by_current_user && (
-                        <div className="announcement-ack-action">
-                          <button
-                            type="button"
-                            onClick={() => handleAcknowledgeAnnouncement(announcement.announcement_id)}
-                            disabled={acknowledgingId === announcement.announcement_id}
-                          >
-                            {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}
-                          </button>
-                        </div>
-                      )}
-                      <div className="announcement-archive-action">
+                  <div className="announcement-card-footer">
+                    {isAdmin && announcement.acknowledgement_summary?.totalRecipients > 0 && (
+                      <button
+                        type="button"
+                        className="announcement-acknowledgement-link"
+                        onClick={() => {
+                          setAcknowledgementModalId(announcement.announcement_id);
+                        }}
+                        aria-label={`View acknowledgement list for ${announcement.title}`}
+                      >
+                        <FiUsers aria-hidden="true" />
+                        Acknowledged: {announcement.acknowledgement_summary.acknowledgedCount}/
+                        {announcement.acknowledgement_summary.totalRecipients}
+                      </button>
+                    )}
+                    {!isAdmin && (
+                      <span className={`announcement-ack-status ${announcement.acknowledged_by_current_user ? 'acknowledged' : 'pending'}`}>
+                        {announcement.acknowledged_by_current_user ? <FiCheckCircle aria-hidden="true" /> : <FiClock aria-hidden="true" />}
+                        {announcement.acknowledged_by_current_user ? 'Acknowledged' : 'Pending acknowledgment'}
+                      </span>
+                    )}
+
+                    <div className="announcement-actions">
+                      {!isAdmin && !announcement.acknowledged_by_current_user && (
                         <button
                           type="button"
-                          className="announcement-archive-button"
-                          onClick={() => setArchiveModalId(announcement.announcement_id)}
-                          disabled={!announcement.acknowledged_by_current_user}
-                          title={
-                            announcement.acknowledged_by_current_user
-                              ? undefined
-                              : 'Please acknowledge this announcement before archiving it.'
-                          }
+                          className="announcement-ack-button"
+                          onClick={() => handleAcknowledgeAnnouncement(announcement.announcement_id)}
+                          disabled={acknowledgingId === announcement.announcement_id}
                         >
-                          Archive
+                          {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}
                         </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {isAdmin && (
-                    <div className="announcement-archive-action">
+                      )}
                       <button
                         type="button"
                         className="announcement-archive-button"
                         onClick={() => setArchiveModalId(announcement.announcement_id)}
+                        disabled={!isAdmin && !announcement.acknowledged_by_current_user}
+                        title={
+                          isAdmin || announcement.acknowledged_by_current_user
+                            ? undefined
+                            : 'Please acknowledge this announcement before archiving it.'
+                        }
                       >
                         Archive
                       </button>
                     </div>
-                  )}
+                  </div>
                 </article>
               ))}
             </div>

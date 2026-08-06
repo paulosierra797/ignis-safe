@@ -366,26 +366,56 @@
 }
 
 .announcement-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 230px;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  padding: 1.1rem 1.2rem;
   background: #f8fafc;
+}
+
+.announcement-item.is-unread {
+  border-color: #fca5a5;
+  background: #fffdfd;
+  box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.08);
 }
 
 .announcement-item-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.9rem;
+}
+
+.announcement-title-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.announcement-unread-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  margin-top: 0.4rem;
+  border-radius: 50%;
+  background: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
 }
 
 .announcement-item-header h3 {
   margin: 0;
   font-size: 1rem;
   color: #0f172a;
+  min-width: 0;
 }
 
 .announcement-audience {
+  flex: 0 0 auto;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -397,10 +427,17 @@
   white-space: nowrap;
 }
 
+.announcement-date {
+  display: block;
+  margin: 0.3rem 0 0;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
 .announcement-content {
-  margin: 0.7rem 0;
+  margin: 0.6rem 0 0;
   color: #334155;
-  line-height: 1.4;
+  line-height: 1.45;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -408,7 +445,7 @@
 
 .announcement-content.clamped {
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -441,8 +478,8 @@
 .announcement-attachments {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
-  margin: 0 0 0.75rem;
+  gap: 0.5rem;
+  margin: 0.65rem 0 0;
 }
 
 .announcement-image-link {
@@ -470,6 +507,46 @@
   padding: 0.35rem 0.7rem;
   font-size: 0.78rem;
   font-weight: 600;
+}
+
+.announcement-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 190px;
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: #991b1b;
+  border-radius: 999px;
+  padding: 0.3rem 0.65rem 0.3rem 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.announcement-attachment-chip:hover {
+  background: #fee2e2;
+}
+
+.announcement-attachment-chip-thumb {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.announcement-attachment-chip-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: #b91c1c;
+}
+
+.announcement-attachment-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .announcement-meta {
@@ -507,10 +584,16 @@
 .announcement-ack-status {
   display: inline-flex;
   align-items: center;
+  gap: 0.3rem;
   border-radius: 999px;
-  padding: 0.18rem 0.55rem;
+  padding: 0.22rem 0.6rem;
   font-size: 0.72rem;
   font-weight: 700;
+}
+
+.announcement-ack-status svg {
+  width: 12px;
+  height: 12px;
 }
 
 .announcement-ack-status.pending {
@@ -523,33 +606,14 @@
   color: #166534;
 }
 
-.announcement-ack-action {
-  margin-top: 0.65rem;
-}
-
-.announcement-ack-action button {
-  border: none;
-  border-radius: 8px;
-  padding: 0.48rem 0.8rem;
-  font-weight: 700;
-  background: #166534;
-  color: #fff;
-  cursor: pointer;
-}
-
-.announcement-ack-action button:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
 .announcement-nudge-notice {
   display: flex;
   align-items: flex-start;
-  gap: 0.7rem;
-  margin-top: 0.75rem;
-  padding: 0.75rem 0.85rem;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.65rem;
   border: 1px solid #fbbf24;
-  border-left: 4px solid #d97706;
+  border-left: 3px solid #d97706;
   border-radius: 8px;
   background: #fffbeb;
   color: #78350f;
@@ -557,51 +621,72 @@
 
 .announcement-nudge-notice > svg {
   flex: 0 0 auto;
-  margin-top: 0.1rem;
+  width: 14px;
+  height: 14px;
+  margin-top: 0.15rem;
 }
 
 .announcement-nudge-notice > div {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.1rem;
 }
 
 .announcement-nudge-notice strong {
-  font-size: 0.82rem;
+  font-size: 0.74rem;
 }
 
 .announcement-nudge-notice span {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   overflow-wrap: anywhere;
 }
 
 .announcement-nudge-notice small {
   color: #a16207;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
 }
 
-.announcement-action-row {
+.announcement-card-footer {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.6rem;
-  margin-top: 0.65rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
 }
 
-.announcement-action-row .announcement-ack-action,
-.announcement-action-row .announcement-archive-action {
-  margin-top: 0;
+.announcement-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-left: auto;
 }
 
-.announcement-archive-action {
-  margin-top: 0.65rem;
+.announcement-ack-button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.48rem 0.9rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: #166534;
+  color: #fff;
+  cursor: pointer;
+}
+
+.announcement-ack-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 
 .announcement-archive-button {
   border: 1px solid #dc2626;
   border-radius: 8px;
-  padding: 0.42rem 0.8rem;
+  padding: 0.46rem 0.9rem;
+  font-size: 0.82rem;
   font-weight: 700;
   background: #fff;
   color: #dc2626;
@@ -1050,7 +1135,6 @@
     overflow-wrap: break-word;
   }
 
-  .announcement-item-header,
   .announcement-meta,
   .list-card-header {
     flex-direction: column;
@@ -1109,26 +1193,19 @@
     white-space: nowrap;
   }
 
-  .announcement-ack-action {
-    width: 100%;
-  }
-
-  .announcement-ack-action button {
-    width: 100%;
-  }
-
-  .announcement-action-row {
+  .announcement-card-footer {
     flex-direction: column;
     align-items: stretch;
-    width: 100%;
   }
 
-  .announcement-action-row .announcement-archive-action {
+  .announcement-actions {
     width: 100%;
+    margin-left: 0;
   }
 
-  .announcement-action-row .announcement-archive-action .announcement-archive-button {
-    width: 100%;
+  .announcement-ack-button,
+  .announcement-actions .announcement-archive-button {
+    flex: 1 1 0;
   }
 }
 

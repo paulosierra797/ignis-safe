@@ -147,6 +147,126 @@ const formatFileSize = (bytes) => {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+// Shared two-column details layout for a single leave request record, used by
+// both the Current Leave Request card and each Leave History entry so the
+// two stay visually consistent.
+function LeaveRequestDetailsGrid({ item, isDocumentsExpanded, onToggleDocuments }) {
+  const documents = getLeaveRequestDocuments(item);
+  const statusClass = String(item?.status || '').toLowerCase();
+  const leaveTypeValue = item?.leave_type === 'Other' && item?.other_leave_type
+    ? `Other (${item.other_leave_type})`
+    : (item?.leave_type || 'Not specified');
+  const relieverLabel = formatRelieverLabel(item) || '-';
+  const showReviewInfo = Boolean(item?.approved_at || item?.reviewed_by_name);
+
+  return (
+    <div className="leave-summary-grid">
+      <div className="leave-summary-field">
+        <span className="leave-summary-label">Leave Type</span>
+        <span className="leave-summary-value">{leaveTypeValue}</span>
+      </div>
+      <div className="leave-summary-field">
+        <span className="leave-summary-label">Status</span>
+        <span className={`leave-status ${statusClass}`}>{formatStatusLabel(item?.status)}</span>
+      </div>
+
+      <div className="leave-summary-field">
+        <span className="leave-summary-label">Leave Start</span>
+        <span className="leave-summary-value">{formatDate(item?.start_date)}</span>
+      </div>
+      <div className="leave-summary-field">
+        <span className="leave-summary-label">Leave End</span>
+        <span className="leave-summary-value">{formatDate(item?.end_date)}</span>
+      </div>
+
+      <div className="leave-summary-field">
+        <span className="leave-summary-label">Number of Days</span>
+        <span className="leave-summary-value">{calculateLeaveDays(item?.start_date, item?.end_date)}</span>
+      </div>
+      <div className="leave-summary-field">
+        <span className="leave-summary-label">Date Submitted</span>
+        <span className="leave-summary-value">{formatDateTime(item?.created_at)}</span>
+      </div>
+
+      <div className="leave-summary-field">
+        <span className="leave-summary-label">Contact Number</span>
+        <span className="leave-summary-value">{item?.contact_number || '-'}</span>
+      </div>
+      <div className="leave-summary-field">
+        <span className="leave-summary-label">Reliever</span>
+        <span className="leave-summary-value">{relieverLabel}</span>
+      </div>
+
+      <div className="leave-summary-field leave-summary-field-full">
+        <span className="leave-summary-label">Reason for Leave</span>
+        <ExpandableText
+          as="span"
+          className="leave-summary-value"
+          text={item?.reason}
+          emptyFallback={<span className="leave-summary-value">-</span>}
+        />
+      </div>
+
+      <div className="leave-summary-field leave-summary-field-full">
+        <span className="leave-summary-label">Supporting Documents</span>
+        {documents.length > 0 ? (
+          <div className="leave-documents-viewer">
+            <button
+              type="button"
+              className="leave-view-files-btn"
+              onClick={() => onToggleDocuments(item.request_id)}
+              aria-expanded={isDocumentsExpanded}
+            >
+              View Files ({documents.length})
+            </button>
+            {isDocumentsExpanded && (
+              <div className="leave-document-link-list">
+                {documents.map((doc) => (
+                  <a
+                    key={doc.id}
+                    className="leave-document-link"
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {doc.name || 'View document'}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="leave-summary-value">-</span>
+        )}
+      </div>
+
+      {showReviewInfo && (
+        <>
+          <div className="leave-summary-field">
+            <span className="leave-summary-label">Date Reviewed</span>
+            <span className="leave-summary-value">{formatDateTime(item?.approved_at)}</span>
+          </div>
+          <div className="leave-summary-field">
+            <span className="leave-summary-label">Reviewed By</span>
+            <span className="leave-summary-value">{item?.reviewed_by_name || '-'}</span>
+          </div>
+        </>
+      )}
+
+      {statusClass === 'rejected' && (
+        <div className="leave-summary-field leave-summary-field-full">
+          <span className="leave-summary-label">Rejection Reason</span>
+          <ExpandableText
+            as="span"
+            className="leave-summary-value"
+            text={item?.rejection_reason || 'No reason provided.'}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PersonnelOperations() {
   const { currentUser } = useUser();
   const [searchQuery, setSearchQuery] = useState('');
@@ -167,6 +287,7 @@ export default function PersonnelOperations() {
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
   const [leaveSubmitError, setLeaveSubmitError] = useState('');
   const [relieverOptions, setRelieverOptions] = useState([]);
+  const [expandedDocumentsId, setExpandedDocumentsId] = useState(null);
   const leaveDocumentInputRef = useRef(null);
   const [shiftRows, setShiftRows] = useState([]);
   const [shiftTotals, setShiftTotals] = useState({ shiftA: 0, shiftB: 0 });
@@ -548,6 +669,17 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
     : leaveRequest.current_status || 'Active';
   const badgeClass = requestStatus || String(leaveRequest.current_status || 'active').toLowerCase().replace(/\s+/g, '-');
 
+  const leaveHistoryRecords = useMemo(
+    () => (leaveRequest.history || []).filter((item) => (
+      ['approved', 'rejected'].includes(String(item.status || '').toLowerCase())
+    )),
+    [leaveRequest.history]
+  );
+
+  const handleToggleDocuments = (requestId) => {
+    setExpandedDocumentsId((prev) => (prev === requestId ? null : requestId));
+  };
+
   return (
     <div className="personnel-ops-container">
       <Sidebar variant="personnel" />
@@ -742,80 +874,12 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
 
             {hasPendingLeaveRequest ? (
               <div className="leave-pending-summary">
-                <h3 className="leave-section-heading">Pending Leave Request</h3>
-                <div className="leave-summary-grid">
-                  <div className="leave-summary-field">
-                    <span className="leave-summary-label">Leave Type</span>
-                    <span className="leave-summary-value">{leaveRequest.latest_request?.leave_type || 'Not specified'}</span>
-                  </div>
-                  {leaveRequest.latest_request?.leave_type === 'Other' && leaveRequest.latest_request?.other_leave_type && (
-                    <div className="leave-summary-field">
-                      <span className="leave-summary-label">Specific Leave Type</span>
-                      <span className="leave-summary-value">{leaveRequest.latest_request.other_leave_type}</span>
-                    </div>
-                  )}
-                  <div className="leave-summary-field">
-                    <span className="leave-summary-label">Leave Start</span>
-                    <span className="leave-summary-value">{formatDate(leaveRequest.latest_request?.start_date)}</span>
-                  </div>
-                  <div className="leave-summary-field">
-                    <span className="leave-summary-label">Leave End</span>
-                    <span className="leave-summary-value">{formatDate(leaveRequest.latest_request?.end_date)}</span>
-                  </div>
-                  <div className="leave-summary-field">
-                    <span className="leave-summary-label">Number of Leave Days</span>
-                    <span className="leave-summary-value">
-                      {calculateLeaveDays(leaveRequest.latest_request?.start_date, leaveRequest.latest_request?.end_date)}
-                    </span>
-                  </div>
-                  <div className="leave-summary-field leave-summary-field-full">
-                    <span className="leave-summary-label">Reason for Leave</span>
-                    <ExpandableText
-                      as="span"
-                      className="leave-summary-value"
-                      text={leaveRequest.latest_request?.reason}
-                      emptyFallback={<span className="leave-summary-value">-</span>}
-                    />
-                  </div>
-                  <div className="leave-summary-field">
-                    <span className="leave-summary-label">Date Submitted</span>
-                    <span className="leave-summary-value">{formatDateTime(leaveRequest.latest_request?.created_at)}</span>
-                  </div>
-                  {leaveRequest.latest_request?.contact_number && (
-                    <div className="leave-summary-field">
-                      <span className="leave-summary-label">Contact Number</span>
-                      <span className="leave-summary-value">{leaveRequest.latest_request.contact_number}</span>
-                    </div>
-                  )}
-                  {getLeaveRequestDocuments(leaveRequest.latest_request).length > 0 && (
-                    <div className="leave-summary-field leave-summary-field-full">
-                      <span className="leave-summary-label">Supporting Document(s)</span>
-                      <span className="leave-summary-value leave-document-link-list">
-                        {getLeaveRequestDocuments(leaveRequest.latest_request).map((doc) => (
-                          <a
-                            key={doc.id}
-                            className="leave-document-link"
-                            href={doc.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            {doc.name || 'View document'}
-                          </a>
-                        ))}
-                      </span>
-                    </div>
-                  )}
-                  {formatRelieverLabel(leaveRequest.latest_request) && (
-                    <div className="leave-summary-field">
-                      <span className="leave-summary-label">Reliever / Shift Coverage</span>
-                      <span className="leave-summary-value">{formatRelieverLabel(leaveRequest.latest_request)}</span>
-                    </div>
-                  )}
-                  <div className="leave-summary-field">
-                    <span className="leave-summary-label">Status</span>
-                    <span className="leave-summary-value">{formatStatusLabel(leaveRequest.latest_request?.status)}</span>
-                  </div>
-                </div>
+                <h3 className="leave-section-heading">Current Leave Request</h3>
+                <LeaveRequestDetailsGrid
+                  item={leaveRequest.latest_request}
+                  isDocumentsExpanded={expandedDocumentsId === leaveRequest.latest_request?.request_id}
+                  onToggleDocuments={handleToggleDocuments}
+                />
 
                 <p className="leave-pending-notice">
                   Your leave request is currently awaiting admin review. You may submit another request after the current request has been reviewed.
@@ -1044,74 +1108,20 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
             <div className="leave-history-section">
               <h3 className="leave-history-title">Leave History</h3>
 
-              {leaveRequest.history && leaveRequest.history.length > 0 ? (
+              {leaveHistoryRecords.length > 0 ? (
                 <div className="leave-history-list">
-                  {leaveRequest.history.map((item) => {
-                    const itemStatus = String(item.status || '').toLowerCase();
-                    const relieverLabel = formatRelieverLabel(item);
-                    return (
-                      <div key={item.request_id} className="leave-history-item">
-                        <div className="leave-history-item-header">
-                          <div className="leave-history-dates">
-                            <p><strong>Leave Type:</strong> {item.leave_type || 'Not specified'}</p>
-                            {item.leave_type === 'Other' && item.other_leave_type && (
-                              <p><strong>Specific Leave Type:</strong> {item.other_leave_type}</p>
-                            )}
-                            <p><strong>Leave Start:</strong> {formatDate(item.start_date)}</p>
-                            <p><strong>Leave End:</strong> {formatDate(item.end_date)}</p>
-                            <p><strong>Number of Leave Days:</strong> {calculateLeaveDays(item.start_date, item.end_date)}</p>
-                          </div>
-                          <span className={`leave-status ${itemStatus}`}>
-                            {formatStatusLabel(item.status)}
-                          </span>
-                        </div>
-
-                        <div className="leave-history-item-details">
-                          {item.reason && (
-                            <div className="leave-history-reason">
-                              <p><strong>Reason for Leave:</strong></p>
-                              <ExpandableText as="p" text={item.reason} />
-                            </div>
-                          )}
-                          {item.contact_number && (
-                            <p><strong>Contact Number:</strong> {item.contact_number}</p>
-                          )}
-                          {getLeaveRequestDocuments(item).length > 0 && (
-                            <p>
-                              <strong>Supporting Document(s):</strong>{' '}
-                              {getLeaveRequestDocuments(item).map((doc, index) => (
-                                <React.Fragment key={doc.id}>
-                                  {index > 0 && ', '}
-                                  <a className="leave-document-link" href={doc.url} target="_blank" rel="noopener noreferrer">
-                                    {doc.name || 'View document'}
-                                  </a>
-                                </React.Fragment>
-                              ))}
-                            </p>
-                          )}
-                          {relieverLabel && (
-                            <p><strong>Reliever / Shift Coverage:</strong> {relieverLabel}</p>
-                          )}
-                          <p><strong>Date Submitted:</strong> {formatDateTime(item.created_at)}</p>
-                          {item.approved_at && (
-                            <p><strong>Date Reviewed:</strong> {formatDateTime(item.approved_at)}</p>
-                          )}
-                          {item.approved_at && item.reviewed_by_name && (
-                            <p><strong>Reviewed By:</strong> {item.reviewed_by_name}</p>
-                          )}
-                          {itemStatus === 'rejected' && (
-                            <div className="leave-history-reason">
-                              <p><strong>Rejection Reason:</strong></p>
-                              <ExpandableText as="p" text={item.rejection_reason || 'No reason provided.'} />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {leaveHistoryRecords.map((item) => (
+                    <div key={item.request_id} className="leave-history-item">
+                      <LeaveRequestDetailsGrid
+                        item={item}
+                        isDocumentsExpanded={expandedDocumentsId === item.request_id}
+                        onToggleDocuments={handleToggleDocuments}
+                      />
+                    </div>
+                  ))}
                 </div>
               ) : (
-                <p className="leave-history-empty">No leave requests yet.</p>
+                <p className="leave-history-empty">No approved or rejected leave requests yet.</p>
               )}
             </div>
           </section>

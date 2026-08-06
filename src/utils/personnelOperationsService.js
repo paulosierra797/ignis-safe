@@ -5,6 +5,8 @@ import { getManilaToday } from './dateUtils';
 const ADMIN_TABLE = 'admin';
 const PERSONNEL_WORKSPACE_TABLE = 'personnel_workspace_profiles';
 const LEAVE_REQUESTS_TABLE = 'leave_requests';
+const LEAVE_REQUEST_DOCUMENTS_TABLE = 'leave_request_documents';
+const LEAVE_REQUEST_DOCUMENTS_SELECT = 'leave_request_documents(document_id, document_url, document_name, document_mime_type, document_size_bytes, created_at)';
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
 
 export const LEAVE_TYPES = [
@@ -16,13 +18,12 @@ export const LEAVE_TYPES = [
   'Other'
 ];
 
-export const LEAVE_TYPES_REQUIRING_DOCUMENT = new Set(['Sick Leave', 'Maternity Leave', 'Paternity Leave']);
-
 export const RELIEVER_ADMIN_ASSIGN_VALUE = '__ADMIN_ASSIGN__';
 
 const LEAVE_DOCUMENT_BUCKET = 'leave_supporting_documents';
 export const LEAVE_DOCUMENT_ACCEPT = '.pdf,.jpg,.jpeg,.png';
 export const LEAVE_DOCUMENT_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+export const LEAVE_DOCUMENT_MAX_FILES = 5;
 const LEAVE_DOCUMENT_ALLOWED_EXTENSIONS = new Set(['pdf', 'jpg', 'jpeg', 'png']);
 const LEAVE_DOCUMENT_ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']);
 
@@ -57,6 +58,38 @@ export const isAllowedLeaveDocument = (file) => {
   const mimeType = String(file.type || '').trim().toLowerCase();
   return LEAVE_DOCUMENT_ALLOWED_EXTENSIONS.has(extension)
     && (!mimeType || LEAVE_DOCUMENT_ALLOWED_MIME_TYPES.has(mimeType));
+};
+
+// Normalizes a leave request's documents to a single list regardless of
+// source: rows already fetched via the leave_request_documents(...) embed,
+// or (for requests submitted before multi-file support existed) the legacy
+// single document_* columns still stored on leave_requests itself.
+export const getLeaveRequestDocuments = (request) => {
+  if (!request) return [];
+
+  const embedded = Array.isArray(request.leave_request_documents) ? request.leave_request_documents : [];
+  if (embedded.length > 0) {
+    return embedded
+      .slice()
+      .sort((a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')))
+      .map((doc) => ({
+        id: doc.document_id,
+        url: doc.document_url,
+        name: doc.document_name,
+        sizeBytes: doc.document_size_bytes
+      }));
+  }
+
+  if (request.document_url) {
+    return [{
+      id: request.request_id || request.document_path || 'legacy-document',
+      url: request.document_url,
+      name: request.document_name || 'Supporting document',
+      sizeBytes: request.document_size_bytes
+    }];
+  }
+
+  return [];
 };
 
 const sanitizeLeaveDocumentFileName = (fileName = '') =>
@@ -227,7 +260,7 @@ export const getPersonnelLeaveRequest = async (adminId) => {
 
     const { data: requestRows, error: requestError } = await supabase
       .from(LEAVE_REQUESTS_TABLE)
-      .select('request_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, rejection_reason, approved_by, approved_at, created_at, updated_at')
+      .select(`request_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, rejection_reason, approved_by, approved_at, created_at, updated_at, ${LEAVE_REQUEST_DOCUMENTS_SELECT}`)
       .eq('personnel_id', adminId)
       .eq('is_archived', false)
       .order('created_at', { ascending: false });
@@ -295,10 +328,11 @@ export const submitPersonnelLeaveRequest = async (adminId, formValues = {}) => {
     contactNumber = '',
     relieverType = '',
     relieverId = null,
-    documentFile = null
+    documentFiles = []
   } = formValues;
 
-  let uploadedDocument = null;
+  const files = Array.isArray(documentFiles) ? documentFiles.filter(Boolean) : [];
+  const uploadedDocuments = [];
 
   try {
     if (!adminId) {
@@ -335,17 +369,16 @@ export const submitPersonnelLeaveRequest = async (adminId, formValues = {}) => {
       return { data: null, error: 'Please enter a valid contact number.' };
     }
 
-    const requiresDocument = LEAVE_TYPES_REQUIRING_DOCUMENT.has(leaveType);
-    if (requiresDocument && !documentFile) {
-      return { data: null, error: `A supporting document is required for ${leaveType}.` };
+    if (files.length > LEAVE_DOCUMENT_MAX_FILES) {
+      return { data: null, error: `You can attach up to ${LEAVE_DOCUMENT_MAX_FILES} supporting documents.` };
     }
 
-    if (documentFile && !isAllowedLeaveDocument(documentFile)) {
+    if (files.some((file) => !isAllowedLeaveDocument(file))) {
       return { data: null, error: 'Unsupported file type. Please upload a PDF, JPG, JPEG, or PNG file.' };
     }
 
-    if (documentFile && documentFile.size > LEAVE_DOCUMENT_MAX_SIZE_BYTES) {
-      return { data: null, error: 'Supporting document exceeds the 5MB size limit.' };
+    if (files.some((file) => file.size > LEAVE_DOCUMENT_MAX_SIZE_BYTES)) {
+      return { data: null, error: 'Each supporting document must be 5MB or smaller.' };
     }
 
     const { data: pendingRows, error: pendingError } = await supabase
@@ -383,18 +416,19 @@ export const submitPersonnelLeaveRequest = async (adminId, formValues = {}) => {
       };
     }
 
-    if (documentFile) {
-      const upload = await uploadLeaveSupportingDocument(adminId, documentFile);
+    for (const file of files) {
+      const upload = await uploadLeaveSupportingDocument(adminId, file);
       if (upload.error) {
+        await Promise.all(uploadedDocuments.map((doc) => removeLeaveSupportingDocument(doc.document_path)));
         return { data: null, error: upload.error };
       }
-      uploadedDocument = {
+      uploadedDocuments.push({
         document_path: upload.data.filePath,
         document_url: upload.data.publicUrl,
-        document_name: documentFile.name,
-        document_mime_type: String(documentFile.type || '').trim().toLowerCase(),
-        document_size_bytes: Number(documentFile.size || 0)
-      };
+        document_name: file.name,
+        document_mime_type: String(file.type || '').trim().toLowerCase(),
+        document_size_bytes: Number(file.size || 0)
+      });
     }
 
     const { data, error } = await supabase
@@ -409,21 +443,35 @@ export const submitPersonnelLeaveRequest = async (adminId, formValues = {}) => {
         contact_number: String(contactNumber || '').trim() || null,
         reliever_type: relieverType || null,
         reliever_id: relieverType === 'personnel' ? relieverId : null,
-        status: 'pending',
-        ...(uploadedDocument || {})
+        status: 'pending'
       })
       .select('request_id, personnel_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, created_at, updated_at')
       .single();
 
     if (error) throw error;
 
+    let insertedDocuments = [];
+    if (uploadedDocuments.length > 0) {
+      const { data: documentRows, error: documentError } = await supabase
+        .from(LEAVE_REQUEST_DOCUMENTS_TABLE)
+        .insert(uploadedDocuments.map((doc) => ({ request_id: data.request_id, ...doc })))
+        .select('document_id, document_url, document_name, document_mime_type, document_size_bytes, created_at');
+
+      if (documentError) {
+        await Promise.all(uploadedDocuments.map((doc) => removeLeaveSupportingDocument(doc.document_path)));
+        await supabase.from(LEAVE_REQUESTS_TABLE).delete().eq('request_id', data.request_id);
+        throw documentError;
+      }
+      insertedDocuments = documentRows || [];
+    }
+
     emitDataChanged('leave_requests', { action: 'create', personnel_id: adminId });
 
-    return { data, error: null };
+    return { data: { ...data, leave_request_documents: insertedDocuments }, error: null };
   } catch (error) {
     console.error('Error submitting personnel leave request:', error);
-    if (uploadedDocument) {
-      await removeLeaveSupportingDocument(uploadedDocument.document_path);
+    if (uploadedDocuments.length > 0) {
+      await Promise.all(uploadedDocuments.map((doc) => removeLeaveSupportingDocument(doc.document_path)));
     }
     if (error?.code === '42P01' || String(error?.message || '').toLowerCase().includes('leave_requests')) {
       return {
@@ -439,7 +487,7 @@ export const getPendingLeaveRequests = async () => {
   try {
     const { data, error } = await supabase
       .from(LEAVE_REQUESTS_TABLE)
-      .select('request_id, personnel_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, created_at')
+      .select(`request_id, personnel_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, created_at, ${LEAVE_REQUEST_DOCUMENTS_SELECT}`)
       .eq('status', 'pending')
       .eq('is_archived', false)
       .order('created_at', { ascending: true });
@@ -463,7 +511,7 @@ export const getAllLeaveRequests = async ({ archived = false } = {}) => {
     const [requestsRes, usersRes] = await Promise.all([
       supabase
         .from(LEAVE_REQUESTS_TABLE)
-        .select('request_id, personnel_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, approved_by, approved_at, rejection_reason, created_at, updated_at, is_archived, archived_at, archived_by')
+        .select(`request_id, personnel_id, leave_type, other_leave_type, start_date, end_date, reason, contact_number, reliever_id, reliever_type, document_path, document_url, document_name, document_mime_type, document_size_bytes, status, approved_by, approved_at, rejection_reason, created_at, updated_at, is_archived, archived_at, archived_by, ${LEAVE_REQUEST_DOCUMENTS_SELECT}`)
         .eq('is_archived', archived)
         .neq('status', 'pending')
         .order(archived ? 'archived_at' : 'created_at', { ascending: false }),

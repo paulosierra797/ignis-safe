@@ -272,7 +272,41 @@
   background: #f3f4f6;
 }
 
+.leave-document-choose-btn.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .leave-document-filename {
+  flex: 1;
+  min-width: 0;
+  color: #4b5563;
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.leave-document-file-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.leave-document-file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+}
+
+.leave-document-file-item-name {
   flex: 1;
   min-width: 0;
   color: #4b5563;
@@ -301,6 +335,12 @@
   font-weight: 600;
   text-decoration: underline;
   overflow-wrap: anywhere;
+}
+
+.leave-document-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 /* Both leave date pickers share this class so their calendar popup trigger

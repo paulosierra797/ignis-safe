@@ -33,6 +33,7 @@ import {
 import {
   getPendingLeaveRequests,
   getAllLeaveRequests,
+  getLeaveRequestDocuments,
   archiveLeaveRequest,
   restoreLeaveRequest,
   approveLeaveRequest,
@@ -310,6 +311,7 @@ function LeaveRequestDetailsModal({
   const leaveDays = calculateLeaveDays(request.start_date, request.end_date);
   const isRejected = request.status === 'rejected';
   const isReviewed = Boolean(request.approved_at);
+  const leaveDocuments = getLeaveRequestDocuments(request);
 
   return (
     <div
@@ -410,15 +412,20 @@ function LeaveRequestDetailsModal({
               <div className="personnel-profile-detail">
                 <FiBriefcase aria-hidden="true" />
                 <div>
-                  <span>Supporting Document</span>
-                  {request.document_url ? (
-                    <button
-                      type="button"
-                      className="leave-view-document-btn"
-                      onClick={() => onViewDocument(request)}
-                    >
-                      View Document
-                    </button>
+                  <span>Supporting Document(s)</span>
+                  {leaveDocuments.length > 0 ? (
+                    <div className="leave-view-document-list">
+                      {leaveDocuments.map((doc, index) => (
+                        <button
+                          key={doc.id}
+                          type="button"
+                          className="leave-view-document-btn"
+                          onClick={() => onViewDocument(doc)}
+                        >
+                          View Document{leaveDocuments.length > 1 ? ` ${index + 1}` : ''}
+                        </button>
+                      ))}
+                    </div>
                   ) : (
                     <strong>None submitted</strong>
                   )}
@@ -1065,9 +1072,9 @@ export default function Accounts() {
     return '-';
   };
 
-  const handleViewLeaveDocument = (request) => {
-    if (!request?.document_url) return;
-    window.open(request.document_url, '_blank', 'noopener');
+  const handleViewLeaveDocument = (document) => {
+    if (!document?.url) return;
+    window.open(document.url, '_blank', 'noopener');
   };
 
   const openLeaveHistoryDetails = (request) => {

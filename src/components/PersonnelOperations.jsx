@@ -14,10 +14,11 @@ import {
   calculateLeaveDays,
   isValidLeaveContactNumber,
   isAllowedLeaveDocument,
+  getLeaveRequestDocuments,
   LEAVE_TYPES,
-  LEAVE_TYPES_REQUIRING_DOCUMENT,
   LEAVE_DOCUMENT_ACCEPT,
   LEAVE_DOCUMENT_MAX_SIZE_BYTES,
+  LEAVE_DOCUMENT_MAX_FILES,
   RELIEVER_ADMIN_ASSIGN_VALUE
 } from '../utils/personnelOperationsService';
 import { getManilaToday } from '../utils/dateUtils';
@@ -93,7 +94,7 @@ const EMPTY_LEAVE_FORM = {
   reason: '',
   contactNumber: '',
   relieverValue: '',
-  documentFile: null
+  documentFiles: []
 };
 
 const computeLeaveFormErrors = (form, todayIso) => {
@@ -127,10 +128,6 @@ const computeLeaveFormErrors = (form, todayIso) => {
 
   if (form.contactNumber && !isValidLeaveContactNumber(form.contactNumber)) {
     errors.contactNumber = 'Please enter a valid contact number.';
-  }
-
-  if (LEAVE_TYPES_REQUIRING_DOCUMENT.has(form.leaveType) && !form.documentFile) {
-    errors.documentFile = `A supporting document is required for ${form.leaveType}.`;
   }
 
   return errors;
@@ -358,7 +355,6 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
 
   const todayIso = getManilaToday();
   const minEndDate = leaveForm.startDate ? laterIso(todayIso, leaveForm.startDate) : todayIso;
-  const isDocumentRequired = LEAVE_TYPES_REQUIRING_DOCUMENT.has(leaveForm.leaveType);
   const numberOfLeaveDays = calculateLeaveDays(leaveForm.startDate, leaveForm.endDate);
 
   const leaveFormErrors = useMemo(
@@ -368,7 +364,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
   const isLeaveFormValid = Object.keys(leaveFormErrors).length === 0;
   const hasLeaveFormEntries = Boolean(
     leaveForm.leaveType || leaveForm.otherLeaveType || leaveForm.startDate || leaveForm.endDate
-    || leaveForm.reason || leaveForm.contactNumber || leaveForm.relieverValue || leaveForm.documentFile
+    || leaveForm.reason || leaveForm.contactNumber || leaveForm.relieverValue || leaveForm.documentFiles.length > 0
   );
   const visibleLeaveFieldErrors = useMemo(() => {
     const visible = {};
@@ -402,10 +398,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
       if (name === 'startDate' && next.endDate && next.endDate < value) {
         next.endDate = '';
       }
-      // Switching away from Other clears the now-irrelevant specify field;
-      // switching to a type that no longer requires a document drops any
-      // previously attached (and now-optional) file's required-ness only,
-      // the file itself is left alone so the user doesn't lose a selection.
+      // Switching away from Other clears the now-irrelevant specify field.
       if (name === 'leaveType' && value !== 'Other') {
         next.otherLeaveType = '';
       }
@@ -417,36 +410,43 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
     markLeaveFieldTouched(event.target.name);
   };
 
-  const handleLeaveDocumentChange = (event) => {
-    const file = event.target.files?.[0] || null;
-    markLeaveFieldTouched('documentFile');
+  const handleLeaveDocumentsChange = (event) => {
+    const newFiles = Array.from(event.target.files || []);
+    markLeaveFieldTouched('documentFiles');
+    event.target.value = '';
 
-    if (!file) {
-      setLeaveForm((prev) => ({ ...prev, documentFile: null }));
+    if (newFiles.length === 0) {
       return;
     }
 
-    if (!isAllowedLeaveDocument(file)) {
-      setLeaveSubmitError('Unsupported file type. Please upload a PDF, JPG, JPEG, or PNG file.');
-      event.target.value = '';
+    const invalidType = newFiles.some((file) => !isAllowedLeaveDocument(file));
+    if (invalidType) {
+      setLeaveSubmitError('Unsupported file type. Please upload PDF, JPG, JPEG, or PNG files.');
       return;
     }
 
-    if (file.size > LEAVE_DOCUMENT_MAX_SIZE_BYTES) {
-      setLeaveSubmitError('Supporting document exceeds the 5MB size limit.');
-      event.target.value = '';
+    const oversized = newFiles.some((file) => file.size > LEAVE_DOCUMENT_MAX_SIZE_BYTES);
+    if (oversized) {
+      setLeaveSubmitError('Each supporting document must be 5MB or smaller.');
       return;
     }
 
-    setLeaveSubmitError('');
-    setLeaveForm((prev) => ({ ...prev, documentFile: file }));
+    setLeaveForm((prev) => {
+      const combined = [...prev.documentFiles, ...newFiles];
+      if (combined.length > LEAVE_DOCUMENT_MAX_FILES) {
+        setLeaveSubmitError(`You can attach up to ${LEAVE_DOCUMENT_MAX_FILES} supporting documents.`);
+        return prev;
+      }
+      setLeaveSubmitError('');
+      return { ...prev, documentFiles: combined };
+    });
   };
 
-  const handleRemoveLeaveDocument = () => {
-    setLeaveForm((prev) => ({ ...prev, documentFile: null }));
-    if (leaveDocumentInputRef.current) {
-      leaveDocumentInputRef.current.value = '';
-    }
+  const handleRemoveLeaveDocument = (index) => {
+    setLeaveForm((prev) => ({
+      ...prev,
+      documentFiles: prev.documentFiles.filter((_, fileIndex) => fileIndex !== index)
+    }));
   };
 
   const handleClearLeaveForm = () => {
@@ -502,7 +502,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
         contactNumber: leaveForm.contactNumber,
         relieverType,
         relieverId,
-        documentFile: leaveForm.documentFile
+        documentFiles: leaveForm.documentFiles
       });
 
       if (error) {
@@ -787,17 +787,22 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                       <span className="leave-summary-value">{leaveRequest.latest_request.contact_number}</span>
                     </div>
                   )}
-                  {leaveRequest.latest_request?.document_url && (
-                    <div className="leave-summary-field">
-                      <span className="leave-summary-label">Supporting Document</span>
-                      <a
-                        className="leave-summary-value leave-document-link"
-                        href={leaveRequest.latest_request.document_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {leaveRequest.latest_request.document_name || 'View document'}
-                      </a>
+                  {getLeaveRequestDocuments(leaveRequest.latest_request).length > 0 && (
+                    <div className="leave-summary-field leave-summary-field-full">
+                      <span className="leave-summary-label">Supporting Document(s)</span>
+                      <span className="leave-summary-value leave-document-link-list">
+                        {getLeaveRequestDocuments(leaveRequest.latest_request).map((doc) => (
+                          <a
+                            key={doc.id}
+                            className="leave-document-link"
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {doc.name || 'View document'}
+                          </a>
+                        ))}
+                      </span>
                     </div>
                   )}
                   {formatRelieverLabel(leaveRequest.latest_request) && (
@@ -945,35 +950,52 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
 
                   <div className="leave-field">
                     <label htmlFor="leave-document">
-                      Supporting Document{isDocumentRequired ? ' (Required)' : ' (Optional)'}
+                      Supporting Document (Optional)
                     </label>
                     <div className="leave-document-input-row">
-                      <label className="leave-document-choose-btn" htmlFor="leave-document">
-                        Choose File
+                      <label
+                        className={`leave-document-choose-btn${leaveForm.documentFiles.length >= LEAVE_DOCUMENT_MAX_FILES ? ' is-disabled' : ''}`}
+                        htmlFor="leave-document"
+                      >
+                        Choose Files
                       </label>
                       <input
                         id="leave-document"
                         ref={leaveDocumentInputRef}
                         type="file"
                         accept={LEAVE_DOCUMENT_ACCEPT}
+                        multiple
+                        disabled={leaveForm.documentFiles.length >= LEAVE_DOCUMENT_MAX_FILES}
                         className="leave-document-input"
-                        onChange={handleLeaveDocumentChange}
+                        onChange={handleLeaveDocumentsChange}
                       />
                       <span className="leave-document-filename">
-                        {leaveForm.documentFile
-                          ? `${leaveForm.documentFile.name} (${formatFileSize(leaveForm.documentFile.size)})`
-                          : 'No file selected'}
+                        {leaveForm.documentFiles.length === 0
+                          ? 'No file selected'
+                          : `${leaveForm.documentFiles.length} of ${LEAVE_DOCUMENT_MAX_FILES} file(s) selected`}
                       </span>
-                      {leaveForm.documentFile && (
-                        <button type="button" className="leave-document-remove-btn" onClick={handleRemoveLeaveDocument}>
-                          Remove
-                        </button>
-                      )}
                     </div>
-                    <span className="leave-field-hint">Accepted formats: PDF, JPG, JPEG, PNG (max 5MB).</span>
-                    {visibleLeaveFieldErrors.documentFile && (
-                      <span className="leave-field-error">{visibleLeaveFieldErrors.documentFile}</span>
+                    {leaveForm.documentFiles.length > 0 && (
+                      <ul className="leave-document-file-list">
+                        {leaveForm.documentFiles.map((file, index) => (
+                          <li key={`${file.name}-${file.lastModified}-${index}`} className="leave-document-file-item">
+                            <span className="leave-document-file-item-name">
+                              {file.name} ({formatFileSize(file.size)})
+                            </span>
+                            <button
+                              type="button"
+                              className="leave-document-remove-btn"
+                              onClick={() => handleRemoveLeaveDocument(index)}
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
                     )}
+                    <span className="leave-field-hint">
+                      Accepted formats: PDF, JPG, JPEG, PNG (max 5MB each, up to {LEAVE_DOCUMENT_MAX_FILES} files).
+                    </span>
                   </div>
 
                   <div className="leave-field">
@@ -1054,12 +1076,17 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                           {item.contact_number && (
                             <p><strong>Contact Number:</strong> {item.contact_number}</p>
                           )}
-                          {item.document_url && (
+                          {getLeaveRequestDocuments(item).length > 0 && (
                             <p>
-                              <strong>Supporting Document:</strong>{' '}
-                              <a className="leave-document-link" href={item.document_url} target="_blank" rel="noopener noreferrer">
-                                {item.document_name || 'View document'}
-                              </a>
+                              <strong>Supporting Document(s):</strong>{' '}
+                              {getLeaveRequestDocuments(item).map((doc, index) => (
+                                <React.Fragment key={doc.id}>
+                                  {index > 0 && ', '}
+                                  <a className="leave-document-link" href={doc.url} target="_blank" rel="noopener noreferrer">
+                                    {doc.name || 'View document'}
+                                  </a>
+                                </React.Fragment>
+                              ))}
                             </p>
                           )}
                           {relieverLabel && (
@@ -1156,10 +1183,12 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                       <span className="leave-summary-value">{leaveForm.contactNumber}</span>
                     </div>
                   )}
-                  {leaveForm.documentFile && (
-                    <div className="leave-summary-field">
-                      <span className="leave-summary-label">Supporting Document</span>
-                      <span className="leave-summary-value">{leaveForm.documentFile.name}</span>
+                  {leaveForm.documentFiles.length > 0 && (
+                    <div className="leave-summary-field leave-summary-field-full">
+                      <span className="leave-summary-label">Supporting Document(s)</span>
+                      <span className="leave-summary-value">
+                        {leaveForm.documentFiles.map((file) => file.name).join(', ')}
+                      </span>
                     </div>
                   )}
                   {selectedRelieverLabel && (

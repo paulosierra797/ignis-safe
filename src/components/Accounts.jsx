@@ -5397,7 +5397,7 @@ const permissions = getDefaultPermissions(formData.role);
           >
             <div className="accounts-modal accounts-unsaved-modal app-unsaved-dialog">
               <div className="app-unsaved-icon" aria-hidden="true">!</div>
-              <div className="accounts-modal-header">
+              <div className="accounts-modal-header accounts-shift-unsaved-header">
                 <h3 id="shiftScheduleUnsavedTitle" className="app-unsaved-title">Discard unsaved shift dates?</h3>
               </div>
 

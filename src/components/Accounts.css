@@ -3483,6 +3483,10 @@
   display: block;
 }
 
+.accounts-shift-unsaved-header {
+  display: block;
+}
+
 .accounts-unsaved-close.accounts-unsaved-close {
   position: absolute;
   top: 1.25rem;

@@ -9,36 +9,9 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-import { wrapChartLabels } from '../utils/chartLabelUtils';
+import { shortenModuleLabels } from '../utils/chartLabelUtils';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
-const options = {
-  responsive: true,
-  plugins: {
-    legend: {
-      display: false
-    },
-    title: {
-      display: false
-    },
-  },
-  scales: {
-    y: {
-      beginAtZero: true,
-      ticks: {
-        precision: 0
-      }
-    },
-    x: {
-      ticks: {
-        autoSkip: false,
-        maxRotation: 0,
-        minRotation: 0,
-      },
-    },
-  }
-};
 
 const data = {
   labels: [],
@@ -55,10 +28,11 @@ const data = {
 };
 
 export default function PerformanceChart({ chartData }) {
+  const fullLabels = chartData?.labels?.length ? chartData.labels : data.labels;
   const liveAttempts = chartData?.attempts?.length ? chartData.attempts : data.datasets[0].data;
 
   const liveData = {
-    labels: wrapChartLabels(chartData?.labels?.length ? chartData.labels : data.labels),
+    labels: shortenModuleLabels(fullLabels),
     datasets: [
       {
         ...data.datasets[0],
@@ -75,15 +49,37 @@ export default function PerformanceChart({ chartData }) {
       <Bar
         data={liveData}
         options={{
-          ...options,
+          responsive: true,
           maintainAspectRatio: false,
-          scales: {
-            ...options.scales,
-            y: {
-              ...options.scales.y,
-              max: dynamicMax,
+          plugins: {
+            legend: {
+              display: false
             },
+            title: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                title: (items) => fullLabels[items[0]?.dataIndex] ?? ''
+              }
+            }
           },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: dynamicMax,
+              ticks: {
+                precision: 0
+              }
+            },
+            x: {
+              ticks: {
+                autoSkip: false,
+                maxRotation: 0,
+                minRotation: 0,
+              },
+            },
+          }
         }}
       />
     </div>

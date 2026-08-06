@@ -25,3 +25,6 @@ export const wrapChartLabel = (label, maxLineLength = MAX_LINE_LENGTH) => {
 
 export const wrapChartLabels = (labels, maxLineLength = MAX_LINE_LENGTH) =>
   (labels || []).map((label) => wrapChartLabel(label, maxLineLength));
+
+export const shortenModuleLabels = (labels) =>
+  (labels || []).map((_, index) => `Module ${index + 1}`);

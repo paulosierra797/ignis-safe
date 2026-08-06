@@ -643,8 +643,8 @@ try {
           >
             <div className="confirm-modal learning-materials-unsaved-modal app-unsaved-dialog">
               <div className="confirm-icon learning-materials-unsaved-icon app-unsaved-icon" aria-hidden="true">!</div>
-              <h3 id="learningMaterialsUnsavedTitle" className="app-unsaved-title">Unsaved Learning Material Changes</h3>
-              <p id="learningMaterialsUnsavedDescription" className="app-unsaved-message">
+              <h3 id="learningMaterialsUnsavedTitle" className="learning-materials-unsaved-title app-unsaved-title">Unsaved Learning Material Changes</h3>
+              <p id="learningMaterialsUnsavedDescription" className="learning-materials-unsaved-description app-unsaved-message">
                 You changed this module but have not saved it yet. What would you like to do before leaving or switching modules?
               </p>
               <div className="confirm-buttons learning-materials-unsaved-actions app-unsaved-actions">

@@ -56,40 +56,117 @@ const formatDateFilterValue = (value) => {
   return `${year}-${month}-${day}`;
 };
 
-function ReportFileNames({ report }) {
+const formatFileSize = (bytes) => {
+  const size = Number(bytes);
+  if (!size || size <= 0) return '';
+
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = size;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${unitIndex === 0 || value >= 10 ? Math.round(value) : value.toFixed(1)} ${units[unitIndex]}`;
+};
+
+function ReportAttachmentCount({ report }) {
   const attachments = getReportAttachments(report);
-  if (attachments.length === 0) return '-';
+  if (attachments.length === 0) return <span>-</span>;
+  return <span>{attachments.length} {attachments.length === 1 ? 'File' : 'Files'}</span>;
+}
+
+function ReportFileAction({ report, onViewFiles }) {
+  const attachments = getReportAttachments(report);
+  if (attachments.length === 0) return <span>-</span>;
+
+  if (attachments.length === 1) {
+    return (
+      <a
+        className="view-btn"
+        href={attachments[0].file_url}
+        target="_blank"
+        rel="noreferrer"
+        title={attachments[0].file_name}
+      >
+        Open File
+      </a>
+    );
+  }
 
   return (
-    <div className="report-history-file-list">
-      {attachments.map((attachment, index) => (
-        <span key={`${attachment.file_url}-${index}`} className="report-history-file-name">
-          {attachment.file_name}
-          <span className="report-history-file-type"> ({getFileType(attachment.file_name)})</span>
-        </span>
-      ))}
-    </div>
+    <button type="button" className="view-btn" onClick={() => onViewFiles(report)}>
+      View Files ({attachments.length})
+    </button>
   );
 }
 
-function ReportFileActions({ report }) {
+function AttachedFilesModal({ report, onClose }) {
   const attachments = getReportAttachments(report);
-  if (attachments.length === 0) return '-';
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   return (
-    <div className="report-history-file-actions">
-      {attachments.map((attachment, index) => (
-        <a
-          key={`${attachment.file_url}-${index}`}
-          className="view-btn"
-          href={attachment.file_url}
-          target="_blank"
-          rel="noreferrer"
-          title={attachment.file_name}
-        >
-          View {attachments.length > 1 ? index + 1 : ''}
-        </a>
-      ))}
+    <div className="attached-files-modal-overlay" onClick={onClose}>
+      <div
+        className="attached-files-modal-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="attached-files-modal-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="attached-files-modal-header">
+          <h3 id="attached-files-modal-title">Attached Files</h3>
+          <button
+            type="button"
+            className="attached-files-modal-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <FaTimes aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="attached-files-modal-body">
+          {attachments.length === 0 ? (
+            <p className="attached-files-modal-empty">No attachments found.</p>
+          ) : (
+            <ul className="attached-files-modal-list">
+              {attachments.map((attachment, index) => {
+                const fileSize = formatFileSize(attachment.size_bytes);
+                return (
+                  <li key={`${attachment.file_url}-${index}`} className="attached-files-modal-item">
+                    <div className="attached-files-modal-item-info">
+                      <span className="attached-files-modal-item-name" title={attachment.file_name}>
+                        {attachment.file_name}
+                      </span>
+                      <span className="attached-files-modal-item-meta">
+                        {getFileType(attachment.file_name)}
+                        {fileSize ? ` • ${fileSize}` : ''}
+                      </span>
+                    </div>
+                    <a
+                      className="view-btn"
+                      href={attachment.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={attachment.file_name}
+                    >
+                      View
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -150,6 +227,7 @@ export default function Reports() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [historyMessage, setHistoryMessage] = useState('');
   const [historyFilters, setHistoryFilters] = useState({ ...EMPTY_HISTORY_FILTERS });
+  const [filesModalReport, setFilesModalReport] = useState(null);
   const hasUnsavedReport = Boolean(reportTitle.trim() || selectedFiles.length > 0);
 
   const loadReportHistory = useCallback(async () => {
@@ -488,26 +566,28 @@ export default function Reports() {
               <table className="report-history-table">
                 <thead>
                   <tr>
+                    <th>No.</th>
                     <th>Report Title</th>
-                    <th>File</th>
+                    <th>Attachments</th>
                     <th>Date Submitted</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loadingHistory && (
                     <tr>
-                      <td colSpan="5" className="no-data">Loading report history...</td>
+                      <td colSpan="6" className="no-data">Loading report history...</td>
                     </tr>
                   )}
-                  {!loadingHistory && filteredReportHistory.map((report) => (
+                  {!loadingHistory && filteredReportHistory.map((report, index) => (
                     <tr key={report.report_id}>
+                      <td className="report-history-no-cell">{index + 1}</td>
                       <td>
                         {report.title ? <ClampedText>{report.title}</ClampedText> : '-'}
                       </td>
                       <td>
-                        <ReportFileNames report={report} />
+                        <ReportAttachmentCount report={report} />
                       </td>
                       <td>{formatDateTime(report.submitted_at || report.created_at)}</td>
                       <td>
@@ -516,18 +596,18 @@ export default function Reports() {
                         </span>
                       </td>
                       <td>
-                        <ReportFileActions report={report} />
+                        <ReportFileAction report={report} onViewFiles={setFilesModalReport} />
                       </td>
                     </tr>
                   ))}
                   {!loadingHistory && reportHistory.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="no-data">You have not submitted any reports yet.</td>
+                      <td colSpan="6" className="no-data">You have not submitted any reports yet.</td>
                     </tr>
                   )}
                   {!loadingHistory && reportHistory.length > 0 && filteredReportHistory.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="no-data">No reports match your search.</td>
+                      <td colSpan="6" className="no-data">No reports match your search.</td>
                     </tr>
                   )}
                 </tbody>
@@ -544,11 +624,11 @@ export default function Reports() {
                     </span>
                   </div>
                   <div className="report-history-card-row">
-                    <strong>Files:</strong>
-                    <ReportFileNames report={report} />
+                    <strong>Attachments:</strong>
+                    <ReportAttachmentCount report={report} />
                   </div>
                   <p><strong>Date Submitted:</strong> {formatDateTime(report.submitted_at || report.created_at)}</p>
-                  <ReportFileActions report={report} />
+                  <ReportFileAction report={report} onViewFiles={setFilesModalReport} />
                 </div>
               ))}
               {!loadingHistory && reportHistory.length === 0 && (
@@ -568,6 +648,13 @@ export default function Reports() {
         message="Your report title or attached files have not been submitted. Are you sure you want to leave this page?"
         stayLabel="Stay on Reports"
       />
+
+      {filesModalReport && (
+        <AttachedFilesModal
+          report={filesModalReport}
+          onClose={() => setFilesModalReport(null)}
+        />
+      )}
     </div>
   );
 }

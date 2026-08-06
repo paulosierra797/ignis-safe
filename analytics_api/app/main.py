@@ -155,6 +155,16 @@ def format_module_label(module_no: Any) -> str:
     return f"Module {value}" if value else "Module -"
 
 
+ACCOUNT_ACTIVITY_WINDOW = timedelta(days=7)
+
+
+def get_account_status(last_activity_at: Optional[str]) -> str:
+    last_activity = parse_iso_date(last_activity_at)
+    if not last_activity:
+        return "Inactive"
+    return "Active" if datetime.utcnow() - last_activity < ACCOUNT_ACTIVITY_WINDOW else "Inactive"
+
+
 class Filters(BaseModel):
     timeframe: str = "All-time"
     people: str = "All"
@@ -269,35 +279,29 @@ def normalize_app_session_row(row: Dict[str, Any]) -> Dict[str, Any]:
 
 def load_analytics_base_data() -> Dict[str, Any]:
     print("Loading profiles...", flush=True)
-    profiles = fetch_all_rows("profiles", "id")
+    profiles = fetch_all_rows("profiles", "id,created_at,updated_at")
 
     print("Loading admin...", flush=True)
     profile_ids = [row.get("id") for row in profiles if row.get("id")]
+    profiles_by_id = {row.get("id"): row for row in profiles}
 
     admin_rows: List[Dict[str, Any]] = []
     if profile_ids:
         admin_rows = (
             supabase.table("admin")
-            .select("admin_id,status")
+            .select("admin_id")
             .in_("admin_id", profile_ids)
             .execute()
             .data
             or []
         )
 
-    admin_map = {row.get("admin_id"): row for row in admin_rows}
-    users = [
-        {
-            "admin_id": profile_id,
-            "status": (admin_map.get(profile_id) or {}).get("status") or "Active",
-        }
-        for profile_id in profile_ids
-    ]
+    admin_ids = {row.get("admin_id") for row in admin_rows}
 
     # Admin/personnel accounts can also gain a `profiles` row (e.g. via mobile app login)
     # but must never be counted as mobile app learners. Mirrors the exclusion rule used by
     # the Users module (see getUsersFromProfiles in src/utils/usersService.js).
-    mobile_user_ids = {profile_id for profile_id in profile_ids if profile_id not in admin_map}
+    mobile_user_ids = {profile_id for profile_id in profile_ids if profile_id not in admin_ids}
 
     print("Loading attempts...", flush=True)
     attempts = fetch_all_rows(
@@ -367,6 +371,41 @@ def load_analytics_base_data() -> Dict[str, Any]:
     eligible_app_sessions = [
         row for row in normalized_app_sessions if row.get("admin_id") in mobile_user_ids
     ]
+
+    # Real per-learner "Active"/"Inactive" status derived from actual activity records
+    # (mirrors getAccountStatus in progressService.js, the same rule Admin Dashboard > Users
+    # uses), instead of a static placeholder, so the Users filter reflects true activity.
+    last_activity_by_user: Dict[str, datetime] = {}
+
+    def note_activity(user_id: Optional[str], timestamp: Optional[str]) -> None:
+        if not user_id or not timestamp:
+            return
+        parsed = parse_iso_date(timestamp)
+        if not parsed:
+            return
+        existing = last_activity_by_user.get(user_id)
+        if existing is None or parsed > existing:
+            last_activity_by_user[user_id] = parsed
+
+    for attempt in eligible_attempts:
+        note_activity(attempt.get("user_id"), get_attempt_timestamp(attempt))
+    for row in eligible_module_progress:
+        note_activity(row.get("user_id"), row.get("pre_test_completed_at"))
+        note_activity(row.get("user_id"), row.get("simulation_completed_at"))
+        note_activity(row.get("user_id"), row.get("post_test_completed_at"))
+    for row in eligible_simulation_sessions:
+        note_activity(row.get("admin_id"), row.get("completed_at"))
+    for row in eligible_app_sessions:
+        note_activity(row.get("admin_id"), row.get("ended_at") or row.get("started_at"))
+
+    users = []
+    for user_id in mobile_user_ids:
+        profile = profiles_by_id.get(user_id) or {}
+        last_activity = last_activity_by_user.get(user_id)
+        last_activity_at = (
+            last_activity.isoformat() if last_activity else profile.get("updated_at") or profile.get("created_at")
+        )
+        users.append({"admin_id": user_id, "status": get_account_status(last_activity_at)})
 
     return {
         "users": users,
@@ -1078,7 +1117,38 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
         "values": [0, 0, 0],
     }
 
-    if len(overview_rows) >= 6:
+    # Aggregate to one entry per unique learner (a learner may have a row per module)
+    # before clustering/classifying, so a single learner attempting several modules can't
+    # be counted more than once and the total can never exceed the learner count.
+    learner_metrics: Dict[str, Dict[str, float]] = {}
+    for row in overview_rows:
+        admin_id = row.get("adminId")
+        if not admin_id:
+            continue
+        bucket = learner_metrics.setdefault(
+            admin_id,
+            {"gainSum": 0.0, "preSum": 0.0, "postSum": 0.0, "completionSum": 0.0, "simulationSum": 0.0, "count": 0},
+        )
+        bucket["gainSum"] += to_number(row.get("normalizedGain"), 0)
+        bucket["preSum"] += to_number(row.get("preTestScore"), 0)
+        bucket["postSum"] += to_number(row.get("postTestScore"), 0)
+        bucket["completionSum"] += to_number(row.get("completionRate"), 0)
+        bucket["simulationSum"] += to_number(row.get("simulationScore"), 0)
+        bucket["count"] += 1
+
+    learner_rows = [
+        {
+            "normalizedGain": bucket["gainSum"] / bucket["count"],
+            "preTestScore": bucket["preSum"] / bucket["count"],
+            "postTestScore": bucket["postSum"] / bucket["count"],
+            "completionRate": bucket["completionSum"] / bucket["count"],
+            "simulationScore": bucket["simulationSum"] / bucket["count"],
+        }
+        for bucket in learner_metrics.values()
+        if bucket["count"] > 0
+    ]
+
+    if len(learner_rows) >= 6:
         features = np.array(
             [
                 [
@@ -1086,7 +1156,7 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
                     to_number(row.get("preTestScore"), 0) / 100,
                     to_number(row.get("postTestScore"), 0) / 100,
                 ]
-                for row in overview_rows
+                for row in learner_rows
             ]
         )
 
@@ -1113,9 +1183,9 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
         except Exception:
             pass
 
-    if sum(risk_distribution["values"]) == 0 and overview_rows:
+    if sum(risk_distribution["values"]) == 0 and learner_rows:
         fallback_counts = {"High": 0, "Moderate": 0, "Low": 0}
-        for row in overview_rows:
+        for row in learner_rows:
             level = classify_knowledge_risk(
                 to_number(row.get("normalizedGain"), 0),
                 to_number(row.get("completionRate"), 100),

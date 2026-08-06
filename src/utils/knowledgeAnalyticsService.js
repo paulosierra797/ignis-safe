@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { getUsersFromProfiles } from './usersService';
+import { getAccountStatus } from './progressService';
 
 const ANALYTICS_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 const MAX_SESSION_DURATION_SECONDS = Number(import.meta.env.VITE_MAX_SESSION_DURATION_SECONDS || 7200);
@@ -406,16 +407,16 @@ const loadAnalyticsBaseData = async () => {
   const { data: profileUsers, error: profileUsersError } = await getUsersFromProfiles();
   if (profileUsersError) throw new Error(profileUsersError);
 
-  const users = (profileUsers || []).map((user) => ({
-    admin_id: user.id,
-    status: user.status,
-  }));
+  const profilesById = (profileUsers || []).reduce((accumulator, user) => {
+    accumulator[user.id] = user;
+    return accumulator;
+  }, {});
 
-  // `users` already excludes Admin/Personnel accounts (see getUsersFromProfiles), so it is
-  // the same eligible-learner population shown on Admin Dashboard > Users. Every other table
-  // is scoped to this same set of ids so every Training Performance Overview metric shares
+  // Excludes Admin/Personnel accounts (see getUsersFromProfiles), so this is the same
+  // eligible-learner population shown on Admin Dashboard > Users. Every other table is
+  // scoped to this same set of ids so every Training Performance Overview metric shares
   // one dataset instead of silently including admin/personnel or orphaned records.
-  const mobileUserIds = new Set(users.map((user) => user.admin_id).filter(Boolean));
+  const mobileUserIds = new Set(Object.keys(profilesById));
 
   const [
     { data: attempts, error: attemptsError },
@@ -449,16 +450,53 @@ const loadAnalyticsBaseData = async () => {
 
   const eligibleAttempts = (attempts || []).filter((attempt) => mobileUserIds.has(attempt.user_id));
   const eligibleAttemptIds = new Set(eligibleAttempts.map((attempt) => attempt.id));
+  const eligibleModuleProgress = (moduleProgress || []).filter((row) => mobileUserIds.has(row.user_id));
+  const eligibleSimulationSessions = (simulationSessions || []).filter((row) => mobileUserIds.has(row.admin_id));
+  const eligibleAppSessions = (appSessions || []).filter((row) => mobileUserIds.has(row.admin_id));
+
+  // Real per-learner "Active"/"Inactive" status derived from actual activity records
+  // (mirrors getAccountStatus in progressService.js, the same rule Admin Dashboard > Users
+  // uses), instead of a static placeholder, so the Users filter reflects true activity.
+  const lastActivityByUser = {};
+  const noteActivity = (userId, timestamp) => {
+    if (!userId || !timestamp) return;
+    const time = new Date(timestamp).getTime();
+    if (Number.isNaN(time)) return;
+    if (!lastActivityByUser[userId] || time > lastActivityByUser[userId]) {
+      lastActivityByUser[userId] = time;
+    }
+  };
+
+  eligibleAttempts.forEach((attempt) => noteActivity(attempt.user_id, getAttemptTimestamp(attempt)));
+  eligibleModuleProgress.forEach((row) => {
+    noteActivity(row.user_id, row.pre_test_completed_at);
+    noteActivity(row.user_id, row.simulation_completed_at);
+    noteActivity(row.user_id, row.post_test_completed_at);
+  });
+  eligibleSimulationSessions.forEach((row) => noteActivity(row.admin_id, row.completed_at));
+  eligibleAppSessions.forEach((row) => noteActivity(row.admin_id, row.ended_at || row.started_at));
+
+  const users = Array.from(mobileUserIds).map((adminId) => {
+    const profile = profilesById[adminId] || {};
+    const lastActivityAt = lastActivityByUser[adminId]
+      ? new Date(lastActivityByUser[adminId]).toISOString()
+      : profile.updated_at || profile.created_at || null;
+
+    return {
+      admin_id: adminId,
+      status: getAccountStatus(lastActivityAt),
+    };
+  });
 
   return {
-    users: users || [],
+    users,
     attempts: eligibleAttempts,
     answers: (answers || []).filter((answer) => eligibleAttemptIds.has(answer.attempt_id)),
     assessments: assessments || [],
     modules: modules || [],
-    moduleProgress: (moduleProgress || []).filter((row) => mobileUserIds.has(row.user_id)),
-    simulationSessions: (simulationSessions || []).filter((row) => mobileUserIds.has(row.admin_id)),
-    appSessions: (appSessions || []).filter((row) => mobileUserIds.has(row.admin_id)),
+    moduleProgress: eligibleModuleProgress,
+    simulationSessions: eligibleSimulationSessions,
+    appSessions: eligibleAppSessions,
   };
 };
 
@@ -1232,12 +1270,29 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       }),
     };
 
-    const riskDistributionCounts = overviewRows.reduce(
-      (accumulator, row) => {
+    // Aggregate to one entry per unique learner (a learner may have a row per module)
+    // before classifying risk, so a single learner attempting several modules can't be
+    // counted more than once and the total can never exceed the learner count.
+    const riskMetricsByLearner = overviewRows.reduce((accumulator, row) => {
+      if (!accumulator[row.adminId]) {
+        accumulator[row.adminId] = { gainSum: 0, completionSum: 0, simulationSum: 0, count: 0 };
+      }
+
+      const bucket = accumulator[row.adminId];
+      bucket.gainSum += toNumber(row.normalizedGain, 0);
+      bucket.completionSum += toNumber(row.completionRate, 0);
+      bucket.simulationSum += toNumber(row.simulationScore, 0);
+      bucket.count += 1;
+
+      return accumulator;
+    }, {});
+
+    const riskDistributionCounts = Object.values(riskMetricsByLearner).reduce(
+      (accumulator, bucket) => {
         const level = classifyKnowledgeRisk({
-          normalizedGain: row.normalizedGain,
-          completionRate: row.completionRate,
-          simulationScore: row.simulationScore,
+          normalizedGain: bucket.count > 0 ? bucket.gainSum / bucket.count : 0,
+          completionRate: bucket.count > 0 ? bucket.completionSum / bucket.count : 0,
+          simulationScore: bucket.count > 0 ? bucket.simulationSum / bucket.count : 0,
         });
 
         if (level === 'high') accumulator.high += 1;

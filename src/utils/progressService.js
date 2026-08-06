@@ -47,7 +47,7 @@ const getMostRecentDate = (dates = []) => {
     .sort((a, b) => b.getTime() - a.getTime())[0] || null;
 };
 
-const getAccountStatus = (lastActivityAt) => {
+export const getAccountStatus = (lastActivityAt) => {
   if (!lastActivityAt) return 'Inactive';
 
   const lastActivityTime = new Date(lastActivityAt).getTime();

@@ -38,8 +38,6 @@ const DEFAULT_CHARTS = {
   riskDistribution: { labels: ['High', 'Moderate', 'Low'], values: [0, 0, 0] },
 };
 
-const clampPercent = (value) => Math.min(100, Math.max(0, Number(value) || 0));
-
 function AnalyticsCardHeader({ title, description, children }) {
   return (
     <div className="analytics-card-header">
@@ -210,20 +208,12 @@ const { data: chartsData } =
           <div className="analytics-stat-card">
             <div className="analytics-stat-heading">
               <span>Participation</span>
-              <h3>Active Learners</h3>
+              <h3>Total Learners</h3>
             </div>
             <div className="stat-value">
-              <span className="main-value">{isLoadingStats ? '...' : stats.activeUsers}</span>
-              <span className="sub-value">/{isLoadingStats ? '...' : stats.totalUsers}</span>
+              <span className="main-value">{isLoadingStats ? '...' : stats.totalUsers}</span>
             </div>
-            <div className="analytics-stat-meter">
-              <span
-                style={{
-                  width: `${stats.totalUsers > 0 ? clampPercent((stats.activeUsers / stats.totalUsers) * 100) : 0}%`
-                }}
-              />
-            </div>
-            <p>Active learner accounts compared with all registered learners in the selected view.</p>
+            <p>Total registered mobile app learners included in the selected filters.</p>
           </div>
           <div className="analytics-stat-card">
             <div className="analytics-stat-heading">

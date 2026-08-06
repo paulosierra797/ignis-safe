@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FiAlertTriangle, FiCheckCircle, FiEye, FiMoreHorizontal, FiXCircle } from 'react-icons/fi';
+import { FiAlertTriangle, FiCheckCircle, FiEye, FiMoreHorizontal, FiX, FiXCircle } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { formatStatusLabel } from '../utils/statusUtils';
@@ -39,6 +39,25 @@ const formatDateTime = (value) => {
   } catch {
     return value;
   }
+};
+
+const getFileType = (fileName) => {
+  const match = /\.([a-zA-Z0-9]+)$/.exec(fileName || '');
+  return match ? match[1].toUpperCase() : 'FILE';
+};
+
+const formatFileSize = (bytes) => {
+  const size = Number(bytes);
+  if (!size || size <= 0) return '';
+
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = size;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${unitIndex === 0 || value >= 10 ? Math.round(value) : value.toFixed(1)} ${units[unitIndex]}`;
 };
 
 function ClampedText({ children }) {
@@ -85,27 +104,97 @@ function ClampedText({ children }) {
   );
 }
 
-function ReportFiles({ report }) {
+function ReportFileAction({ report, onViewFiles }) {
   const attachments = getReportAttachments(report);
+  if (attachments.length === 0) return <span>-</span>;
 
-  if (attachments.length === 0) {
-    return <span>-</span>;
+  if (attachments.length === 1) {
+    return (
+      <a
+        className="action-open-file"
+        href={attachments[0].file_url}
+        target="_blank"
+        rel="noreferrer"
+        title={attachments[0].file_name}
+      >
+        Open File
+      </a>
+    );
   }
 
   return (
-    <div className="admin-report-file-list">
-      {attachments.map((attachment, index) => (
-        <a
-          key={attachment.file_path || attachment.file_url}
-          className="action-open-file"
-          href={attachment.file_url}
-          target="_blank"
-          rel="noreferrer"
-          title={attachment.file_name}
-        >
-          Open {attachments.length > 1 ? index + 1 : 'File'}
-        </a>
-      ))}
+    <button type="button" className="action-open-file" onClick={() => onViewFiles(report)}>
+      View Files ({attachments.length})
+    </button>
+  );
+}
+
+function AttachedFilesModal({ report, onClose }) {
+  const attachments = getReportAttachments(report);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div className="attached-files-modal-overlay" onClick={onClose}>
+      <div
+        className="attached-files-modal-box"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="attached-files-modal-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="attached-files-modal-header">
+          <h3 id="attached-files-modal-title">Attached Files</h3>
+          <button
+            type="button"
+            className="attached-files-modal-close"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <FiX aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="attached-files-modal-body">
+          {attachments.length === 0 ? (
+            <p className="attached-files-modal-empty">No attachments found.</p>
+          ) : (
+            <ul className="attached-files-modal-list">
+              {attachments.map((attachment, index) => {
+                const fileSize = formatFileSize(attachment.size_bytes);
+                return (
+                  <li key={`${attachment.file_url}-${index}`} className="attached-files-modal-item">
+                    <div className="attached-files-modal-item-info">
+                      <span className="attached-files-modal-item-name" title={attachment.file_name}>
+                        {attachment.file_name}
+                      </span>
+                      <span className="attached-files-modal-item-meta">
+                        {getFileType(attachment.file_name)}
+                        {fileSize ? ` • ${fileSize}` : ''}
+                      </span>
+                    </div>
+                    <a
+                      className="action-open-file"
+                      href={attachment.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={attachment.file_name}
+                    >
+                      View
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -275,6 +364,7 @@ export default function AdminReports() {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectNotes, setRejectNotes] = useState('');
   const [selectedReport, setSelectedReport] = useState(null);
+  const [filesModalReport, setFilesModalReport] = useState(null);
 
   const loadReports = async () => {
     setLoading(true);
@@ -508,7 +598,7 @@ export default function AdminReports() {
                             </span>
                           </td>
                           <td className="col-file">
-                            <ReportFiles report={report} />
+                            <ReportFileAction report={report} onViewFiles={setFilesModalReport} />
                           </td>
                           <td className="col-actions">
                             {renderReportActions(report, isBusy)}
@@ -558,7 +648,7 @@ export default function AdminReports() {
 
                         <div className="admin-report-card-field">
                           <strong>PDF Files</strong>
-                          <ReportFiles report={report} />
+                          <ReportFileAction report={report} onViewFiles={setFilesModalReport} />
                         </div>
                       </div>
 
@@ -623,6 +713,13 @@ export default function AdminReports() {
                 </div>
               </div>
             </div>
+          )}
+
+          {filesModalReport && (
+            <AttachedFilesModal
+              report={filesModalReport}
+              onClose={() => setFilesModalReport(null)}
+            />
           )}
         </div>
       </div>

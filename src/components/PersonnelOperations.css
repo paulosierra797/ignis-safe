@@ -538,10 +538,10 @@
 }
 
 .shift-calendar-panel {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  padding: 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
   overflow: hidden;
 }
 
@@ -799,7 +799,7 @@
   flex: 1;
   min-height: 0;
   justify-content: flex-start;
-  gap: 0.3rem;
+  gap: 0.22rem;
 }
 
 .calendar-stat {
@@ -822,53 +822,51 @@
   font-weight: 600;
 }
 
-.shift-calendar-personnel-block {
-  display: flex;
-  flex-direction: column;
-  gap: 0.18rem;
-  min-width: 0;
-}
-
-.shift-calendar-personnel-block-leave {
-  margin-top: auto;
-}
-
-.shift-calendar-block-row {
+.shift-calendar-stat-row {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   min-width: 0;
 }
 
-.shift-calendar-block-empty {
+.shift-calendar-stat-row-leave {
+  margin-top: auto;
+}
+
+.shift-calendar-duty-names {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  overflow: hidden;
+}
+
+.shift-calendar-duty-names span,
+.shift-calendar-duty-names strong {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  color: #334155;
   font-size: 0.66rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shift-calendar-duty-names strong {
+  color: #166534;
+}
+
+.shift-calendar-duty-names .shift-calendar-duty-empty {
   color: #94a3b8;
   font-weight: 500;
 }
 
-.shift-calendar-personnel-block,
 .schedule-empty-inline,
 .shift-count-text {
   line-height: 1.3;
-}
-
-.calendar-stat-clickable {
-  align-self: flex-start;
-  border: none;
-  background: transparent;
-  padding: 0;
-  margin: 0;
-  font: inherit;
-  text-align: left;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-
-.calendar-stat-clickable:hover,
-.calendar-stat-clickable:focus-visible {
-  opacity: 0.8;
-  outline: none;
 }
 
 .shift-count-text {

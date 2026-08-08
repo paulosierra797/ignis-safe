@@ -60,6 +60,9 @@ import { formatStatusLabel } from '../utils/statusUtils';
 
 const validPersonnelNamePattern = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
 const contactNumberRegex = /^09\d{9}$/;
+const gmailAddressRegex = /^[^\s@]+@gmail\.com$/i;
+const GMAIL_VALIDATION_ERROR = 'Please enter a valid Gmail address ending in @gmail.com.';
+const isValidGmailAddress = (value) => gmailAddressRegex.test(String(value || '').trim());
 const ADD_PERSONNEL_TIMEOUT_MS = 30000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const REQUEST_PREVIEW_LIMIT = 3;
@@ -960,7 +963,7 @@ export default function Accounts() {
     return Boolean(
       firstName &&
       lastName &&
-      String(formData.email || '').trim() &&
+      isValidGmailAddress(formData.email) &&
       formData.role &&
       selectedRank &&
       (selectedRank !== 'OTHER' || customRank) &&
@@ -1943,6 +1946,29 @@ export default function Accounts() {
     });
   };
 
+  useEffect(() => {
+    if (!isAddModalOpen) {
+      return;
+    }
+
+    const trimmedEmail = String(formData.email || '').trim();
+    const hasGmailError = !trimmedEmail || isValidGmailAddress(trimmedEmail)
+      ? false
+      : GMAIL_VALIDATION_ERROR;
+
+    setFormErrors((prev) => {
+      if (hasGmailError) {
+        return prev.email === hasGmailError ? prev : { ...prev, email: hasGmailError };
+      }
+      if (prev.email !== GMAIL_VALIDATION_ERROR) {
+        return prev;
+      }
+      const nextErrors = { ...prev };
+      delete nextErrors.email;
+      return nextErrors;
+    });
+  }, [formData.email, isAddModalOpen]);
+
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedProfileAccount, setSelectedProfileAccount] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -2048,11 +2074,16 @@ console.log("AUTH USER:", authData);
     const customRank = String(formData.rank_custom || '').trim();
     const finalRank = selectedRank === 'OTHER' ? customRank : selectedRank;
     const contactNumber = String(formData.contact_number || '').trim();
+    const trimmedEmail = String(formData.email || '').trim();
 
     const requiredErrors = {};
     if (!firstName) requiredErrors.first_name = 'First name is required.';
     if (!lastName) requiredErrors.last_name = 'Last name is required.';
-    if (!String(formData.email || '').trim()) requiredErrors.email = 'Email address is required.';
+    if (!trimmedEmail) {
+      requiredErrors.email = 'Email address is required.';
+    } else if (!isValidGmailAddress(trimmedEmail)) {
+      requiredErrors.email = GMAIL_VALIDATION_ERROR;
+    }
     if (!formData.role) requiredErrors.role = 'Role is required.';
     if (!selectedRank) requiredErrors.rank = 'Rank designation is required.';
     if (selectedRank === 'OTHER' && !customRank) requiredErrors.rank_custom = 'Custom rank is required.';
@@ -2061,7 +2092,10 @@ console.log("AUTH USER:", authData);
     setFormErrors(requiredErrors);
 
     if (Object.keys(requiredErrors).length > 0) {
-      setMessage({ type: 'error', text: 'Please fill in all required fields.' });
+      const message = requiredErrors.email === GMAIL_VALIDATION_ERROR
+        ? GMAIL_VALIDATION_ERROR
+        : 'Please fill in all required fields.';
+      setMessage({ type: 'error', text: message });
       return;
     }
 
@@ -2082,7 +2116,7 @@ console.log("AUTH USER:", authData);
     const submittedForm = {
       first_name: firstName,
       last_name: lastName,
-      email: formData.email,
+      email: trimmedEmail,
       role: formData.role,
       rank: finalRank,
       contact_number: contactNumber
@@ -2112,7 +2146,7 @@ console.log("AUTH USER:", authData);
 const permissions = getDefaultPermissions(formData.role);
 
     try {
-      const signupAttempt = invitePersonnel(formData.email, {
+      const signupAttempt = invitePersonnel(trimmedEmail, {
         first_name: firstName,
         last_name: lastName,
         role: formData.role,
@@ -2133,7 +2167,7 @@ const permissions = getDefaultPermissions(formData.role);
           includePersonnelWorkspaceProfiles: true
         });
         const accountExists = !fetchError && (latestAccounts || []).some((account) =>
-          String(account.email || '').toLowerCase() === String(formData.email || '').toLowerCase()
+          String(account.email || '').toLowerCase() === trimmedEmail.toLowerCase()
         );
 
         if (accountExists) {

@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { getUsersFromProfiles } from './usersService';
 import { getAccountStatus } from './progressService';
+import { dedupeRequest } from './requestDedupe';
 
 const ANALYTICS_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 const MAX_SESSION_DURATION_SECONDS = Number(import.meta.env.VITE_MAX_SESSION_DURATION_SECONDS || 7200);
@@ -403,7 +404,7 @@ const buildActivityTrends = (filteredAttempts, view = 'Month') => {
   return { labels, started, submitted };
 };
 
-const loadAnalyticsBaseData = async () => {
+const loadAnalyticsBaseData = async () => dedupeRequest('loadAnalyticsBaseData', async () => {
   const { data: profileUsers, error: profileUsersError } = await getUsersFromProfiles();
   if (profileUsersError) throw new Error(profileUsersError);
 
@@ -498,7 +499,7 @@ const loadAnalyticsBaseData = async () => {
     simulationSessions: eligibleSimulationSessions,
     appSessions: eligibleAppSessions,
   };
-};
+});
 
 const buildOverviewRows = ({ attempts, assessmentsById, modulesById, userById, filters, simulationSessions = [] }) => {
   const startDate = getTimeframeStartDate(filters?.timeframe);

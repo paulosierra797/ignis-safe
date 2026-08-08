@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { dedupeRequest } from './requestDedupe';
 
 const ADMIN_ACTIVITY_TABLE = 'admin_activity_logs';
 const SHIFT_SCHEDULE_TABLE = 'shift_schedule';
@@ -149,7 +150,7 @@ const callAdminApi = async (endpoint, payload = null) => {
   return responseBody;
 };
 
-export const getShiftScheduleConfig = async () => {
+export const getShiftScheduleConfig = async () => dedupeRequest('getShiftScheduleConfig', async () => {
   try {
     const { data, error } = await supabase
       .from(SHIFT_SCHEDULE_TABLE)
@@ -171,7 +172,7 @@ export const getShiftScheduleConfig = async () => {
     console.error('Error fetching shift schedule config:', error);
     return { data: null, updatedAt: null, error: error.message };
   }
-};
+});
 
 export const saveShiftScheduleConfig = async (
   { shift_a_dates = [], shift_b_dates = [] },
@@ -210,7 +211,7 @@ export const saveShiftScheduleConfig = async (
   }
 };
 
-export const getUsersFromProfiles = async () => {
+export const getUsersFromProfiles = async () => dedupeRequest('getUsersFromProfiles', async () => {
   try {
     const { data: profileRows, error: profileError } = await supabase
       .from('profiles')
@@ -262,37 +263,38 @@ export const getUsersFromProfiles = async () => {
     console.error('Error fetching users from profiles:', error);
     return { data: null, error: error.message };
   }
-};
+});
 
 // Get all admins
-export const getAllUsers = async ({ includePersonnelWorkspaceProfiles = false } = {}) => {
-  try {
-    const [accountsResult, profilesResult] = await Promise.all([
-      supabase.from('admin').select('*'),
-      includePersonnelWorkspaceProfiles
-        ? supabase.from(PERSONNEL_WORKSPACE_TABLE).select('*')
-        : Promise.resolve({ data: [], error: null })
-    ]);
-    
-    if (accountsResult.error) throw accountsResult.error;
-    if (profilesResult.error) throw profilesResult.error;
+export const getAllUsers = async ({ includePersonnelWorkspaceProfiles = false } = {}) =>
+  dedupeRequest(`getAllUsers:${includePersonnelWorkspaceProfiles}`, async () => {
+    try {
+      const [accountsResult, profilesResult] = await Promise.all([
+        supabase.from('admin').select('*'),
+        includePersonnelWorkspaceProfiles
+          ? supabase.from(PERSONNEL_WORKSPACE_TABLE).select('*')
+          : Promise.resolve({ data: [], error: null })
+      ]);
 
-    const accounts = accountsResult.data || [];
-    if (!includePersonnelWorkspaceProfiles) {
-      return { data: accounts, error: null };
+      if (accountsResult.error) throw accountsResult.error;
+      if (profilesResult.error) throw profilesResult.error;
+
+      const accounts = accountsResult.data || [];
+      if (!includePersonnelWorkspaceProfiles) {
+        return { data: accounts, error: null };
+      }
+
+      const accountsById = new Map(accounts.map((account) => [account.admin_id, account]));
+      const workspaceUsers = (profilesResult.data || [])
+        .map((profile) => toPersonnelWorkspaceUser(accountsById.get(profile.admin_id), profile))
+        .filter(Boolean);
+
+      return { data: [...accounts, ...workspaceUsers], error: null };
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+      return { data: null, error: error.message };
     }
-
-    const accountsById = new Map(accounts.map((account) => [account.admin_id, account]));
-    const workspaceUsers = (profilesResult.data || [])
-      .map((profile) => toPersonnelWorkspaceUser(accountsById.get(profile.admin_id), profile))
-      .filter(Boolean);
-
-    return { data: [...accounts, ...workspaceUsers], error: null };
-  } catch (error) {
-    console.error('Error fetching admins:', error);
-    return { data: null, error: error.message };
-  }
-};
+  });
 
 // Get admin by ID
 export const getUserById = async (adminId) => {
@@ -472,27 +474,29 @@ export const updateUserLastLogin = async (adminId) => {
 // Get personnel overview statistics for dashboard
 export const getPersonnelOverviewStats = async () => {
   try {
-    const { data: allUsers, error: personnelError } = await getAllUsers({
-      includePersonnelWorkspaceProfiles: true
-    });
-    
+    // Today's attendance doesn't depend on the personnel list, so fetch both
+    // independently instead of waiting on getAllUsers before starting it.
+    const today = new Date().toISOString().split('T')[0];
+
+    const [
+      { data: allUsers, error: personnelError },
+      { data: todayAttendance, error: attendanceError }
+    ] = await Promise.all([
+      getAllUsers({ includePersonnelWorkspaceProfiles: true }),
+      supabase
+        .from('attendance_records')
+        .select('personnel_id, time_in, time_out')
+        .eq('attendance_date', today)
+    ]);
+
     if (personnelError) throw personnelError;
+    if (attendanceError) throw attendanceError;
+
     const personnelData = (allUsers || [])
       .filter((user) => String(user.role || '').toLowerCase() === 'personnel');
-    
+
     const totalPersonnel = personnelData?.length || 0;
     const activePersonnel = personnelData?.filter(p => p.status === 'Active').length || 0;
-    
-    // Get today's date
-    const today = new Date().toISOString().split('T')[0];
-    
-    // Get today's attendance records
-    const { data: todayAttendance, error: attendanceError } = await supabase
-      .from('attendance_records')
-      .select('personnel_id, time_in, time_out')
-      .eq('attendance_date', today);
-    
-    if (attendanceError) throw attendanceError;
     
     // Calculate on-duty and off-duty counts
     const onDutySet = new Set();

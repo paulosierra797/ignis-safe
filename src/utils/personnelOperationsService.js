@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { getAllUsers, getShiftScheduleConfig } from './usersService';
 import { getManilaToday } from './dateUtils';
+import { dedupeRequest } from './requestDedupe';
 
 const ADMIN_TABLE = 'admin';
 const PERSONNEL_WORKSPACE_TABLE = 'personnel_workspace_profiles';
@@ -1160,29 +1161,30 @@ export const getPersonnelShiftAssignments = async (personnelId) => {
   }
 };
 
-export const getShiftAssignmentsForPeriod = async ({ startDate, endDate, shiftType }) => {
-  try {
-    let query = supabase
-      .from(PERSONNEL_SHIFT_ASSIGNMENTS_TABLE)
-      .select('assignment_id, personnel_id, shift_type, start_date, end_date, assigned_by, created_at');
+export const getShiftAssignmentsForPeriod = async ({ startDate, endDate, shiftType }) =>
+  dedupeRequest(`getShiftAssignmentsForPeriod:${startDate}:${endDate}:${shiftType || ''}`, async () => {
+    try {
+      let query = supabase
+        .from(PERSONNEL_SHIFT_ASSIGNMENTS_TABLE)
+        .select('assignment_id, personnel_id, shift_type, start_date, end_date, assigned_by, created_at');
 
-    if (shiftType) {
-      query = query.eq('shift_type', shiftType.toUpperCase());
+      if (shiftType) {
+        query = query.eq('shift_type', shiftType.toUpperCase());
+      }
+
+      const { data, error } = await query
+        .gte('end_date', startDate)
+        .lte('start_date', endDate)
+        .order('start_date', { ascending: true });
+
+      if (error) throw error;
+
+      return { data: data || [], error: null };
+    } catch (error) {
+      console.error('Error fetching shift assignments for period:', error);
+      return { data: [], error: error.message };
     }
-
-    const { data, error } = await query
-      .gte('end_date', startDate)
-      .lte('start_date', endDate)
-      .order('start_date', { ascending: true });
-
-    if (error) throw error;
-
-    return { data: data || [], error: null };
-  } catch (error) {
-    console.error('Error fetching shift assignments for period:', error);
-    return { data: [], error: error.message };
-  }
-};
+  });
 
 export const removeShiftAssignment = async (assignmentId) => {
   try {

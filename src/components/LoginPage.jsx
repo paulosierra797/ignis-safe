@@ -201,6 +201,18 @@ const handleLogin = async (e) => {
     const authenticatedRole = normalizeRole(loginProfile?.role);
     const authenticatedStatus = String(loginProfile?.status || '').trim().toLowerCase();
 
+    if (authenticatedRole === 'admin' && authenticatedStatus !== 'active') {
+      try {
+        await supabase.rpc('revoke_all_devices');
+      } catch (revokeError) {
+        console.warn('Could not revoke trusted devices for inactive admin account:', revokeError);
+      }
+      await supabase.auth.signOut({ scope: 'local' });
+      localStorage.removeItem('user');
+      setPendingRole('');
+      throw new Error('Access denied. This admin account is not active.');
+    }
+
     // Credentials alone are not authorization. A row must exist in `admin`
     // with a recognized role and a non-deactivated status, or this account
     // (e.g. a mobile-app-only user with no `admin` row) must never reach the
@@ -223,6 +235,21 @@ const handleLogin = async (e) => {
     }
 
     setPendingRole(authenticatedRole);
+
+    if (authenticatedRole === 'admin') {
+      const refreshedUser = await refreshCurrentUser();
+      setAuthFlowGated(false);
+
+      const refreshedStatus = String(refreshedUser?.status || '').trim().toLowerCase();
+      if (!refreshedUser || normalizeRole(refreshedUser.role) !== 'admin' || refreshedStatus !== 'active') {
+        await supabase.auth.signOut({ scope: 'local' });
+        localStorage.removeItem('user');
+        throw new Error('Failed to load admin profile.');
+      }
+
+      setAuthStep('authenticated');
+      return;
+    }
 
     // Password is correct. A stable device ID + secret checks whether this
     // browser previously completed OTP and is still inside its trust window.

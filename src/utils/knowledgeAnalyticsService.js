@@ -23,6 +23,19 @@ const DEFAULT_FILTER_OPTIONS = {
   topics: ['All'],
 };
 
+const ANALYTICS_CACHE_TTL_MS = 30 * 1000;
+let analyticsBaseDataCache = null;
+let analyticsBaseDataCacheExpiresAt = 0;
+
+const clearAnalyticsBaseDataCache = () => {
+  analyticsBaseDataCache = null;
+  analyticsBaseDataCacheExpiresAt = 0;
+};
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('ignis-safe:data-changed', clearAnalyticsBaseDataCache);
+}
+
 const DEFAULT_CHARTS_DATA = {
   userOverview: { labels: [], values: [] },
   activityTrends: { labels: [], started: [], submitted: [] },
@@ -404,7 +417,7 @@ const buildActivityTrends = (filteredAttempts, view = 'Month') => {
   return { labels, started, submitted };
 };
 
-const loadAnalyticsBaseData = async () => dedupeRequest('loadAnalyticsBaseData', async () => {
+const fetchAnalyticsBaseData = async () => dedupeRequest('loadAnalyticsBaseData', async () => {
   const { data: profileUsers, error: profileUsersError } = await getUsersFromProfiles();
   if (profileUsersError) throw new Error(profileUsersError);
 
@@ -500,6 +513,17 @@ const loadAnalyticsBaseData = async () => dedupeRequest('loadAnalyticsBaseData',
     appSessions: eligibleAppSessions,
   };
 });
+
+const loadAnalyticsBaseData = async () => {
+  if (analyticsBaseDataCache && Date.now() < analyticsBaseDataCacheExpiresAt) {
+    return analyticsBaseDataCache;
+  }
+
+  const data = await fetchAnalyticsBaseData();
+  analyticsBaseDataCache = data;
+  analyticsBaseDataCacheExpiresAt = Date.now() + ANALYTICS_CACHE_TTL_MS;
+  return data;
+};
 
 const buildOverviewRows = ({ attempts, assessmentsById, modulesById, userById, filters, simulationSessions = [] }) => {
   const startDate = getTimeframeStartDate(filters?.timeframe);
@@ -902,18 +926,13 @@ export const getAnalyticsFilterOptions = async () => {
   }
 
   try {
-    const { data, error } = await supabase
-      .from('modules')
-      .select('title')
-      .order('module_no', { ascending: true, nullsFirst: false });
-
-    if (error) throw error;
+    const { modules } = await loadAnalyticsBaseData();
 
     const topics = [
       'All',
       ...Array.from(
         new Set(
-          (data || [])
+          (modules || [])
             .map((row) => String(row.title || '').trim())
             .filter(Boolean),
         ),

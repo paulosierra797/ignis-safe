@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import './App.css'
 import Header from './components/Header'
 import HeroSection from './components/HeroSection'
@@ -10,35 +10,57 @@ import FAQSection from './components/FAQSection'
 import Footer from './components/Footer'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
-import Dashboard from './components/Dashboard';
-import Reports from './components/Reports';
-import AttendanceAdmin from './components/AttendanceAdmin';
-import AttendancePersonnel from './components/AttendancePersonnel';
-import AttendanceLogin from './components/AttendanceLogin';
-import AttendanceScan from './components/AttendanceScan';
-import AttendanceConfirm from './components/AttendanceConfirm';
-import Analytics from './components/Analytics';
-import AssessmentQuestions from './components/AssessmentQuestions';
-import LearningMaterials from './components/LearningMaterials';
-import Chart from './components/Chart';
-import Accounts from './components/Accounts';
-import Progress from './components/Progress';
-import AuditLogs from './components/AuditLogs';
-import Announcements from './components/Announcements';
-import PersonnelProfile from './components/PersonnelProfile';
-import AdminProfile from './components/AdminProfile';
-import History from './components/History';
-import PersonnelOperations from './components/PersonnelOperations';
-import AdminReports from './components/AdminReports';
-import OrganizationalChartView from './components/OrganizationalChartView';
-import TermsPage from './components/TermsPage';
-import PrivacyPage from './components/PrivacyPage';
-import ConfirmSignupPage from './components/ConfirmSignupPage';
 import { UserProvider, useUser } from './context/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { LandingContentProvider } from './context/LandingContentContext';
 import { LayoutProvider } from './context/LayoutContext';
 import AppSessionTracker from './components/AppSessionTracker';
+
+const loadDashboard = () => import('./components/Dashboard');
+const loadAnalytics = () => import('./components/Analytics');
+const loadPersonnelOperations = () => import('./components/PersonnelOperations');
+
+const Dashboard = lazy(loadDashboard);
+const Reports = lazy(() => import('./components/Reports'));
+const AttendanceAdmin = lazy(() => import('./components/AttendanceAdmin'));
+const AttendancePersonnel = lazy(() => import('./components/AttendancePersonnel'));
+const AttendanceLogin = lazy(() => import('./components/AttendanceLogin'));
+const AttendanceScan = lazy(() => import('./components/AttendanceScan'));
+const AttendanceConfirm = lazy(() => import('./components/AttendanceConfirm'));
+const Analytics = lazy(loadAnalytics);
+const AssessmentQuestions = lazy(() => import('./components/AssessmentQuestions'));
+const LearningMaterials = lazy(() => import('./components/LearningMaterials'));
+const Chart = lazy(() => import('./components/Chart'));
+const Accounts = lazy(() => import('./components/Accounts'));
+const Progress = lazy(() => import('./components/Progress'));
+const AuditLogs = lazy(() => import('./components/AuditLogs'));
+const Announcements = lazy(() => import('./components/Announcements'));
+const PersonnelProfile = lazy(() => import('./components/PersonnelProfile'));
+const AdminProfile = lazy(() => import('./components/AdminProfile'));
+const History = lazy(() => import('./components/History'));
+const PersonnelOperations = lazy(loadPersonnelOperations);
+const AdminReports = lazy(() => import('./components/AdminReports'));
+const OrganizationalChartView = lazy(() => import('./components/OrganizationalChartView'));
+const TermsPage = lazy(() => import('./components/TermsPage'));
+const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
+const ConfirmSignupPage = lazy(() => import('./components/ConfirmSignupPage'));
+
+const ROUTE_PRELOADERS = {
+  '/dashboard': loadDashboard,
+  '/dashboard/analytics': loadAnalytics,
+  '/personnel/operations': loadPersonnelOperations,
+};
+
+function RoutePreloader() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    const preload = ROUTE_PRELOADERS[pathname];
+    if (preload) void preload();
+  }, [pathname]);
+
+  return null;
+}
 
 function ScrollToTop() {
   const { pathname, hash } = useLocation();
@@ -147,12 +169,14 @@ function LandingPage() {
 function App() {
   return (
     <UserProvider>
+      <RoutePreloader />
       <AppSessionTracker />
       <LayoutProvider>
         <LandingContentProvider>
           <div className="app">
             <ScrollToTop />
-            <Routes>
+            <Suspense fallback={null}>
+              <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/confirm-signup" element={<ConfirmSignupPage />} />
@@ -183,7 +207,8 @@ function App() {
               <Route path="/organizational-chart" element={<OrganizationalChartView />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
-            </Routes>
+              </Routes>
+            </Suspense>
           </div>
         </LandingContentProvider>
       </LayoutProvider>

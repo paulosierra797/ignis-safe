@@ -83,9 +83,9 @@ export const UserProvider = ({ children }) => {
   };
 
   
-  const refreshCurrentUser = async () => {
+  const refreshCurrentUser = async (authUser = null, prefetchedProfile = null) => {
   try {
-    const { data } = await getCurrentUser();
+    const { data } = await getCurrentUser(authUser, prefetchedProfile);
 
     if (data) {
       return syncCurrentUser(data);
@@ -141,7 +141,7 @@ export const UserProvider = ({ children }) => {
 
         // ONLY react to real Supabase sessions
         if (session?.user) {
-          refreshCurrentUser();
+          refreshCurrentUser(session.user);
         }
 
         if (event === 'SIGNED_OUT') {

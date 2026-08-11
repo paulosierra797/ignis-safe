@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useUser } from './UserContext';
 import { getLandingContentFromDb, saveLandingContentToDb } from '../utils/landingContentService';
 
@@ -272,10 +273,16 @@ export const useLandingContent = () => {
 
 export const LandingContentProvider = ({ children }) => {
   const { currentUser } = useUser();
+  const location = useLocation();
+  const shouldSyncContent = location.pathname === '/'
+    || location.pathname === '/organizational-chart'
+    || location.pathname.endsWith('/announcements');
   const [content, setContentState] = useState(() => readStoredContent());
-  const [loadingContent, setLoadingContent] = useState(true);
+  const [loadingContent, setLoadingContent] = useState(shouldSyncContent);
 
   useEffect(() => {
+    if (!shouldSyncContent) return undefined;
+
     let isMounted = true;
 
     const syncFromDb = async () => {
@@ -308,7 +315,7 @@ export const LandingContentProvider = ({ children }) => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [shouldSyncContent]);
 
   const setContent = async (nextContent) => {
     const merged = mergeWithDefaults(nextContent);

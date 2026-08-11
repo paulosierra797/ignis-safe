@@ -118,21 +118,20 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
 
     const loadStats = async () => {
       setIsLoadingStats(true);
-      const { data: statsData } =
-  await getAnalyticsDashboardStats({
-    timeframe,
-    people,
-    topic,
-  });
-
-const { data: chartsData } =
-  await getAnalyticsChartsData({
-    timeframe,
-    people,
-    topic,
-    activityTrendsView,
-    userOverviewRange,
-  });
+      const [{ data: statsData }, { data: chartsData }] = await Promise.all([
+        getAnalyticsDashboardStats({
+          timeframe,
+          people,
+          topic,
+        }),
+        getAnalyticsChartsData({
+          timeframe,
+          people,
+          topic,
+          activityTrendsView,
+          userOverviewRange,
+        }),
+      ]);
 
       if (isMounted) {
         setStats(statsData || DEFAULT_STATS);

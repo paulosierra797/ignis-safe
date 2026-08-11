@@ -57,6 +57,12 @@ const TRUST_DURATION_MS = {
   admin: 12 * 60 * 60 * 1000
 };
 
+const preloadPortalWorkspace = (role) => {
+  if (role === 'admin') return import('./Dashboard');
+  if (role === 'personnel') return import('./PersonnelOperations');
+  return Promise.resolve();
+};
+
 const validateTrustedDeviceRecord = (record, { deviceId, userId }) => {
   const role = String(record?.role_at_trust || '').trim().toLowerCase();
   const expectedDuration = role === 'personnel'
@@ -189,7 +195,7 @@ const handleLogin = async (e) => {
 
     const { data: loginProfile, error: profileError } = await supabase
       .from('admin')
-      .select('role, status')
+      .select('*')
       .eq('admin_id', authData.user.id)
       .maybeSingle();
 
@@ -239,6 +245,7 @@ const handleLogin = async (e) => {
     }
 
     setPendingRole(authenticatedRole);
+    void preloadPortalWorkspace(authenticatedRole);
 
     // Password is correct. A stable device ID + secret checks whether this
     // browser previously completed OTP and is still inside its trust window.
@@ -253,7 +260,7 @@ const handleLogin = async (e) => {
     }
 
     if (!trustCheckError && isTrusted === true) {
-      const refreshedUser = await refreshCurrentUser();
+      const refreshedUser = await refreshCurrentUser(authData.user, loginProfile);
       setAuthFlowGated(false);
 
       if (!refreshedUser) {
@@ -452,7 +459,7 @@ const handleVerify = async (e) => {
     const verifiedUserId = data?.user?.id || data?.session?.user?.id;
     const { data: verifiedProfile, error: verifiedProfileError } = await supabase
       .from('admin')
-      .select('role, status')
+      .select('*')
       .eq('admin_id', verifiedUserId)
       .maybeSingle();
 
@@ -511,7 +518,9 @@ const handleVerify = async (e) => {
     // Load the full admin/personnel profile (name, rank, contact number,
     // avatar, permissions) instead of a bare {authUser, role} object, so
     // the profile card/header have real data immediately after login.
-    const refreshedUser = await refreshCurrentUser();
+    void preloadPortalWorkspace(verifiedRole);
+    const verifiedAuthUser = data?.user || data?.session?.user || null;
+    const refreshedUser = await refreshCurrentUser(verifiedAuthUser, verifiedProfile);
 
     if (!refreshedUser) {
       setError("Failed to load user profile.");

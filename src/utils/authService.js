@@ -396,39 +396,47 @@ export const touchBackofficeActivity = async () => {
 };
 
 // Get current user
-export const getCurrentUser = async () => {
+export const getCurrentUser = async (knownAuthUser = null, prefetchedProfile = null) => {
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    let user = knownAuthUser;
 
-if (authError) {
+    if (!user) {
+      const { data: { user: fetchedUser }, error: authError } = await supabase.auth.getUser();
 
-  if (authError.message === "Auth session missing!") {
-    return {
-      data:null,
-      error:null
-    };
-  }
+      if (authError) {
 
-  throw authError;
+        if (authError.message === "Auth session missing!") {
+          return {
+            data:null,
+            error:null
+          };
+        }
 
-}
+        throw authError;
+      }
+
+      user = fetchedUser;
+
+    }
 
     if (user) {
-      let adminData = null;
+      let adminData = prefetchedProfile;
 
       // Try to fetch admin record
-      try {
-        const { data, error } = await supabase
-          .from('admin')
-          .select('*')
-          .eq('admin_id', user.id)
-          .single();
+      if (!adminData) {
+        try {
+          const { data, error } = await supabase
+            .from('admin')
+            .select('*')
+            .eq('admin_id', user.id)
+            .single();
 
-        if (!error && data) {
-          adminData = data;
+          if (!error && data) {
+            adminData = data;
+          }
+        } catch (e) {
+          console.warn('Could not fetch admin record:', e);
         }
-      } catch (e) {
-        console.warn('Could not fetch admin record:', e);
       }
 
       // If admin record exists, return it

@@ -489,7 +489,7 @@ export default function Progress() {
 
                   <div className="progress-modal-section">
                     <h4><FiUser className="progress-modal-section-icon" aria-hidden="true" />Account and App Details</h4>
-                    <div className="progress-modal-info">
+                    <div className="progress-modal-info progress-modal-account-info">
                       <div className="progress-modal-info-item">
                         <span className="progress-modal-info-icon"><FiCheckCircle aria-hidden="true" /></span>
                         <div className="progress-modal-info-body">
@@ -517,13 +517,6 @@ export default function Progress() {
                               ? `Accepted${selectedUser.termsAcceptedAt ? ` on ${formatLongDate(selectedUser.termsAcceptedAt)}` : ''}`
                               : 'Not accepted'}
                           </span>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiPlayCircle aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">SIMULATIONS COMPLETED</span>
-                          <span className="progress-modal-value">{selectedUser.completedSimulations}</span>
                         </div>
                       </div>
                       <div className="progress-modal-info-item">

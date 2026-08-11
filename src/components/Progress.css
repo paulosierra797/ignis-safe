@@ -436,6 +436,10 @@
   gap: 1.2rem;
 }
 
+.progress-modal-account-info {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .progress-modal-info-item {
   display: flex;
   align-items: flex-start;

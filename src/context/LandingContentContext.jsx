@@ -40,7 +40,7 @@ export const DEFAULT_LANDING_CONTENT = {
         {
           title: 'ACCOUNT CREATION PROCESS',
           steps: [
-            { num: 1, text: 'Go to fsic.bfp.gov.ph or scan the QR code.' },
+            { num: 1, text: 'Go to fsis.e-bfp.com or scan the QR code below.' },
             { num: 2, text: 'Click "Register Now" and fill up the form needed then click "Create Account".' },
             { num: 3, text: 'Check your Email; Click "Verify Email" or the account validation link.' }
           ]
@@ -78,7 +78,7 @@ export const DEFAULT_LANDING_CONTENT = {
         {
           title: 'PROSESO NG PAGGAWA NG ACCOUNT',
           steps: [
-            { num: 1, text: 'Pumunta sa fsic.bfp.com o i-scan ang QR code.' },
+            { num: 1, text: 'Pumunta sa fsis.e-bfp.com o i-scan ang QR code sa ibaba.' },
             { num: 2, text: 'I-click ang "Register Now", punan ang kinakailangang impormasyon, at piliin ang "Create Account".' },
             { num: 3, text: 'I-check ang iyong email at i-click ang "Verify Email" o ang account validation link.' }
           ]

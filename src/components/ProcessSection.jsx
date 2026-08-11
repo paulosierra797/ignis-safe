@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import './ProcessSection.css'
 import { useLandingContent } from '../context/LandingContentContext';
+import fsisQrCode from '../assets/qrcode_fsis.e-bfp.com.png';
+
+const FSIS_APPLICATION_URL = 'https://fsis.e-bfp.com/';
 
 export default function ProcessSection() {
   const [isTagalog, setIsTagalog] = useState(false)
@@ -36,12 +39,44 @@ export default function ProcessSection() {
               <span className="process-column-number">{String(idx + 1).padStart(2, '0')}</span>
               <h3>{section.title}</h3>
               <ol className="steps-list">
-                {section.steps.map((step) => (
-                  <li key={step.num}>
+                {section.steps.map((step) => {
+                  const isFsisPortalStep = idx === 0 && step.num === 1;
+
+                  return (
+                  <li key={step.num} className={isFsisPortalStep ? 'fsis-portal-step' : undefined}>
                     <span className="step-number">{step.num}</span>
-                    <span className="step-text">{step.text}</span>
+                    <span className="step-text">
+                      {isFsisPortalStep ? (
+                        <>
+                          {isTagalog ? 'Pumunta sa ' : 'Go to '}
+                          <a
+                            className="fsis-portal-link"
+                            href={FSIS_APPLICATION_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            fsis.e-bfp.com
+                          </a>
+                          {isTagalog ? ' o i-scan ang QR code sa ibaba.' : ' or scan the QR code below.'}
+                          <a
+                            className="fsis-qr-link"
+                            href={FSIS_APPLICATION_URL}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label="Open the FSIS online application portal"
+                          >
+                            <img
+                              className="fsis-qr-image"
+                              src={fsisQrCode}
+                              alt="QR code for the FSIS online application portal"
+                            />
+                          </a>
+                        </>
+                      ) : step.text}
+                    </span>
                   </li>
-                ))}
+                  );
+                })}
               </ol>
             </article>
           ))}

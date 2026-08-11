@@ -175,6 +175,39 @@
   overflow-wrap: anywhere;
 }
 
+.fsis-portal-link {
+  color: #991b1b;
+  font-weight: 750;
+  text-underline-offset: 2px;
+}
+
+.fsis-portal-link:hover,
+.fsis-portal-link:focus-visible {
+  color: #b91c1c;
+}
+
+.fsis-qr-link {
+  width: min(150px, 100%);
+  display: block;
+  margin-top: 0.75rem;
+  border: 1px solid #e3e7ed;
+  border-radius: 6px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.fsis-qr-link:focus-visible {
+  outline: 3px solid rgba(185, 28, 28, 0.22);
+  outline-offset: 3px;
+}
+
+.fsis-qr-image {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+  object-fit: contain;
+}
+
 @media (max-width: 1180px) {
   .process-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

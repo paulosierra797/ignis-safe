@@ -33,7 +33,13 @@ export const getOrCreateDeviceCredentials = () => {
 
 export const getStoredDeviceId = () => localStorage.getItem(DEVICE_ID_KEY);
 
+export const getStoredDeviceSecret = () => localStorage.getItem(DEVICE_SECRET_KEY);
+
+export const clearDeviceSecret = () => {
+  localStorage.removeItem(DEVICE_SECRET_KEY);
+};
+
 export const clearDeviceCredentials = () => {
   localStorage.removeItem(DEVICE_ID_KEY);
-  localStorage.removeItem(DEVICE_SECRET_KEY);
+  clearDeviceSecret();
 };

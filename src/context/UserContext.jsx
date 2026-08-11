@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
+  checkCurrentDeviceTrust,
   forgetCurrentDevice,
   getCurrentUser,
   onAuthStateChange,
@@ -263,6 +264,7 @@ export const UserProvider = ({ children }) => {
     switchRole,
     hasPermission,
     logout,
+    checkCurrentDeviceTrust,
     forgetThisDevice,
     loading
   };

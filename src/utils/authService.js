@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { clearDeviceCredentials, getStoredDeviceId } from './deviceTrust';
+import { clearDeviceSecret, getStoredDeviceId, getStoredDeviceSecret } from './deviceTrust';
 
 const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 
@@ -290,14 +290,59 @@ export const signOut = async () => {
   }
 };
 
+export const ALREADY_FORGOTTEN_DEVICE_MESSAGE =
+  'This device is already forgotten. Email OTP will be required on your next login.';
+
+export const checkCurrentDeviceTrust = async () => {
+  try {
+    const deviceId = getStoredDeviceId();
+    const deviceSecret = getStoredDeviceSecret();
+    if (!deviceId) {
+      return { trusted: false, error: null };
+    }
+
+    const { data, error } = await supabase
+      .from('trusted_devices')
+      .select('device_id, trusted, expires_at, revoked_at')
+      .eq('device_id', deviceId)
+      .eq('trusted', true)
+      .is('revoked_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data || !deviceSecret) {
+      return { trusted: false, error: null };
+    }
+
+    const { data: isTrusted, error: validationError } = await supabase.rpc(
+      'check_trusted_device',
+      { p_device_id: deviceId, p_device_secret: deviceSecret }
+    );
+
+    if (validationError) throw validationError;
+
+    return { trusted: isTrusted === true, error: null };
+  } catch (error) {
+    console.error('Error checking trusted device:', error);
+    return { trusted: false, error: error?.message || 'Could not check this device.' };
+  }
+};
+
 // Explicitly forget the current browser. The current Supabase session remains
 // active, but the next login on this browser must complete email OTP again.
 export const forgetCurrentDevice = async () => {
   try {
     const deviceId = getStoredDeviceId();
-    if (!deviceId) {
-      clearDeviceCredentials();
-      return { error: null };
+    const trustStatus = await checkCurrentDeviceTrust();
+    if (trustStatus.error) {
+      throw new Error(trustStatus.error);
+    }
+
+    if (!trustStatus.trusted) {
+      clearDeviceSecret();
+      return { error: null, alreadyForgotten: true };
     }
 
     const { error } = await supabase.rpc('revoke_device', {
@@ -305,7 +350,7 @@ export const forgetCurrentDevice = async () => {
     });
 
     if (error) throw error;
-    clearDeviceCredentials();
+    clearDeviceSecret();
     return { error: null };
   } catch (error) {
     console.error('Error forgetting trusted device:', error);

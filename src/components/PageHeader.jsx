@@ -4,6 +4,7 @@ import { FaBars } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useLayout } from '../context/LayoutContext';
+import { ALREADY_FORGOTTEN_DEVICE_MESSAGE } from '../utils/authService';
 import './PageHeader.css';
 
 const formatRoleLabel = (role) => {
@@ -48,7 +49,13 @@ const PageHeader = ({
   });
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const { currentUser, accountUser, forgetThisDevice, logout } = useUser();
+  const {
+    currentUser,
+    accountUser,
+    checkCurrentDeviceTrust,
+    forgetThisDevice,
+    logout
+  } = useUser();
   const { isSidebarCollapsed, toggleMobileSidebar } = useLayout();
 
   const resolvedUserName = userName ?? getDisplayName(currentUser);
@@ -94,8 +101,25 @@ const PageHeader = ({
     });
   };
 
-  const handleForgetThisDevice = () => {
+  const handleForgetThisDevice = async () => {
     setIsDropdownOpen(false);
+    setForgetDialog({ isOpen: true, status: 'loading', message: 'Checking device status...' });
+
+    const { trusted, error } = await checkCurrentDeviceTrust();
+    if (error) {
+      setForgetDialog({ isOpen: true, status: 'error', message: error });
+      return;
+    }
+
+    if (!trusted) {
+      setForgetDialog({
+        isOpen: true,
+        status: 'already-forgotten',
+        message: ALREADY_FORGOTTEN_DEVICE_MESSAGE
+      });
+      return;
+    }
+
     setForgetDialog({ isOpen: true, status: 'confirm', message: '' });
   };
 
@@ -107,12 +131,21 @@ const PageHeader = ({
   const confirmForgetThisDevice = async () => {
     setForgetDialog({ isOpen: true, status: 'loading', message: '' });
 
-    const { error } = await forgetThisDevice();
+    const { error, alreadyForgotten } = await forgetThisDevice();
     if (error) {
       setForgetDialog({
         isOpen: true,
         status: 'error',
         message: error
+      });
+      return;
+    }
+
+    if (alreadyForgotten) {
+      setForgetDialog({
+        isOpen: true,
+        status: 'already-forgotten',
+        message: ALREADY_FORGOTTEN_DEVICE_MESSAGE
       });
       return;
     }
@@ -217,6 +250,8 @@ const PageHeader = ({
             <h2 id="device-dialog-title">
               {forgetDialog.status === 'success'
                 ? 'Device forgotten'
+                : forgetDialog.status === 'already-forgotten'
+                  ? 'Device already forgotten'
                 : forgetDialog.status === 'error'
                   ? 'Unable to forget device'
                   : 'Forget this device?'}
@@ -225,6 +260,8 @@ const PageHeader = ({
             <p>
               {forgetDialog.status === 'success'
                 ? 'You will need an email OTP the next time you log in on this browser. Your current session remains active.'
+                : forgetDialog.status === 'already-forgotten'
+                  ? forgetDialog.message
                 : forgetDialog.status === 'error'
                   ? forgetDialog.message || 'Please try again.'
                   : 'This browser will no longer skip email OTP on your next login.'}
@@ -233,7 +270,7 @@ const PageHeader = ({
             {forgetDialog.status === 'loading' ? (
               <div className="device-dialog-loading" role="status">
                 <span className="device-dialog-spinner" aria-hidden="true" />
-                Forgetting device...
+                {forgetDialog.message || 'Forgetting device...'}
               </div>
             ) : (
               <div className="device-dialog-actions">
@@ -252,7 +289,9 @@ const PageHeader = ({
                     Try Again
                   </button>
                 )}
-                {(forgetDialog.status === 'success' || forgetDialog.status === 'error') && (
+                {(forgetDialog.status === 'success'
+                  || forgetDialog.status === 'already-forgotten'
+                  || forgetDialog.status === 'error') && (
                   <button type="button" className="device-dialog-button device-dialog-button--secondary" onClick={closeForgetDialog}>
                     {forgetDialog.status === 'success' ? 'Done' : 'Close'}
                   </button>

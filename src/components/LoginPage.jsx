@@ -236,21 +236,6 @@ const handleLogin = async (e) => {
 
     setPendingRole(authenticatedRole);
 
-    if (authenticatedRole === 'admin') {
-      const refreshedUser = await refreshCurrentUser();
-      setAuthFlowGated(false);
-
-      const refreshedStatus = String(refreshedUser?.status || '').trim().toLowerCase();
-      if (!refreshedUser || normalizeRole(refreshedUser.role) !== 'admin' || refreshedStatus !== 'active') {
-        await supabase.auth.signOut({ scope: 'local' });
-        localStorage.removeItem('user');
-        throw new Error('Failed to load admin profile.');
-      }
-
-      setAuthStep('authenticated');
-      return;
-    }
-
     // Password is correct. A stable device ID + secret checks whether this
     // browser previously completed OTP and is still inside its trust window.
     const { deviceId, deviceSecret } = getOrCreateDeviceCredentials();
@@ -282,7 +267,9 @@ const handleLogin = async (e) => {
     if (localSignOutError) throw localSignOutError;
 
     const { error: otpError } = await sendLoginOtp(normalizedEmail);
-    if (otpError) throw otpError;
+    if (otpError) {
+      throw new Error('Could not send the login OTP. Please try again.');
+    }
 
     setResetEmail(normalizedEmail);
     setResetCode('');
@@ -467,7 +454,10 @@ const handleVerify = async (e) => {
     const verifiedStatus = String(verifiedProfile?.status || '').trim().toLowerCase();
     const isStillAuthorized = !verifiedProfileError
       && Boolean(verifiedProfile)
-      && (verifiedRole === 'admin' || verifiedRole === 'personnel')
+      && (
+        (verifiedRole === 'admin' && verifiedStatus === 'active')
+        || (verifiedRole === 'personnel' && verifiedStatus !== 'inactive' && verifiedStatus !== 'suspended')
+      )
       && verifiedStatus !== 'inactive'
       && verifiedStatus !== 'suspended';
 

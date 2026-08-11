@@ -195,6 +195,8 @@ const handleLogin = async (e) => {
 
     if (profileError) {
       await supabase.auth.signOut({ scope: 'local' });
+      localStorage.removeItem('user');
+      setCurrentUser(null);
       throw new Error('Could not verify the account type. Please try again.');
     }
 
@@ -209,6 +211,7 @@ const handleLogin = async (e) => {
       }
       await supabase.auth.signOut({ scope: 'local' });
       localStorage.removeItem('user');
+      setCurrentUser(null);
       setPendingRole('');
       throw new Error('Access denied. This admin account is not active.');
     }
@@ -230,6 +233,7 @@ const handleLogin = async (e) => {
       }
       await supabase.auth.signOut({ scope: 'local' });
       localStorage.removeItem('user');
+      setCurrentUser(null);
       setPendingRole('');
       throw new Error('Access denied. This account is not authorized to access this portal.');
     }
@@ -265,6 +269,8 @@ const handleLogin = async (e) => {
     // session. End only this session, then send the application email OTP.
     const { error: localSignOutError } = await supabase.auth.signOut({ scope: 'local' });
     if (localSignOutError) throw localSignOutError;
+    localStorage.removeItem('user');
+    setCurrentUser(null);
 
     const { error: otpError } = await sendLoginOtp(normalizedEmail);
     if (otpError) {

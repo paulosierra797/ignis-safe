@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { getStoredDeviceId } from './deviceTrust';
+import { clearDeviceCredentials, getStoredDeviceId } from './deviceTrust';
 
 const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 
@@ -290,13 +290,13 @@ export const signOut = async () => {
   }
 };
 
-// Explicitly forget the current browser without changing its stable local
-// identifier. The current Supabase session remains active, but the next login
-// on this browser must complete email OTP again.
+// Explicitly forget the current browser. The current Supabase session remains
+// active, but the next login on this browser must complete email OTP again.
 export const forgetCurrentDevice = async () => {
   try {
     const deviceId = getStoredDeviceId();
     if (!deviceId) {
+      clearDeviceCredentials();
       return { error: null };
     }
 
@@ -305,6 +305,7 @@ export const forgetCurrentDevice = async () => {
     });
 
     if (error) throw error;
+    clearDeviceCredentials();
     return { error: null };
   } catch (error) {
     console.error('Error forgetting trusted device:', error);

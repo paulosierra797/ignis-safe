@@ -241,8 +241,12 @@
 }
 
 .avatar-crop-btn:focus-visible {
-  outline: 3px solid #fcd34d;
+  outline: 3px solid #fdba74;
   outline-offset: 2px;
+}
+
+.avatar-crop-overlay:not(.avatar-crop-admin) .avatar-crop-btn:focus-visible {
+  outline-color: #fcd34d;
 }
 
 /* Admin theme: swap the orange accents for the admin dashboard's red palette */

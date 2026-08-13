@@ -4,6 +4,8 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import { uploadProfileImage } from '../utils/imageService';
 import { updateUser, logAdminActivity } from '../utils/usersService';
+import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_TYPES } from '../utils/avatarCrop';
+import AvatarCropModal from './AvatarCropModal';
 import UnsavedChangesPrompt from './UnsavedChangesPrompt';
 import './AdminProfile.css';
 
@@ -33,6 +35,7 @@ export default function AdminProfile() {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploading, setUploading] = useState(false);
   const [profileImage, setProfileImage] = useState('/user-avatar.svg');
+  const [cropFile, setCropFile] = useState(null);
 
   const [savingGeneral, setSavingGeneral] = useState(false);
   const [savingSecurity, setSavingSecurity] = useState(false);
@@ -68,13 +71,38 @@ export default function AdminProfile() {
     setProfileInitialized(true);
   }, [currentUser]);
 
-  const handleImageUpload = async (event) => {
+  const handleImageSelected = (event) => {
     const file = event.target.files[0];
+    event.target.value = '';
     if (!file) return;
 
+    if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
+      showModal('error', 'Invalid file type. Please upload an image (JPEG, PNG, GIF, or WebP).');
+      return;
+    }
+
+    if (file.size > AVATAR_MAX_SIZE) {
+      showModal('error', 'File size exceeds 5MB. Please upload a smaller image.');
+      return;
+    }
+
+    setCropFile(file);
+  };
+
+  const handleCropCancel = () => {
+    setCropFile(null);
+  };
+
+  const handleCropError = (message) => {
+    setCropFile(null);
+    showModal('error', message || 'The avatar could not be cropped.');
+  };
+
+  const handleCropApply = async (croppedFile) => {
+    setCropFile(null);
     setUploading(true);
     try {
-      const { data: imageUrl, error } = await uploadProfileImage(currentUser.admin_id, file);
+      const { data: imageUrl, error } = await uploadProfileImage(currentUser.admin_id, croppedFile);
 
       if (error) {
         showModal('error', 'Error uploading image: ' + error);
@@ -254,7 +282,7 @@ export default function AdminProfile() {
                   type="file"
                   accept="image/*"
                   style={{ display: 'none' }}
-                  onChange={handleImageUpload}
+                  onChange={handleImageSelected}
                 />
               </div>
 
@@ -429,6 +457,13 @@ export default function AdminProfile() {
             </div>
           </div>
         )}
+
+        <AvatarCropModal
+          file={cropFile}
+          onCancel={handleCropCancel}
+          onApply={handleCropApply}
+          onError={handleCropError}
+        />
 
         <UnsavedChangesPrompt
           when={hasUnsavedProfileChanges}

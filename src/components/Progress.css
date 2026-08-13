@@ -24,10 +24,6 @@
   .progress-table-card {
     overflow-x: auto;
   }
-
-  .progress-table {
-    min-width: 760px;
-  }
 }
 
 .progress-controls {
@@ -182,8 +178,13 @@
   overflow: hidden;
 }
 
+.progress-desktop-table {
+  overflow-x: auto;
+}
+
 .progress-table {
   width: 100%;
+  min-width: 980px;
   border-collapse: collapse;
 }
 
@@ -192,11 +193,12 @@
 }
 
 .progress-table thead tr th {
-  padding: 1rem;
+  padding: 1rem 0.85rem;
   text-align: left;
   color: white;
   font-weight: 600;
   font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .progress-table tbody tr {

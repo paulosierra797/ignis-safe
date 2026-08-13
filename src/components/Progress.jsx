@@ -81,6 +81,8 @@ const COMPLETION_RANGES = [
 
 const COMPLETION_OPTIONS = COMPLETION_RANGES.map((range) => range.label);
 
+const ACCOUNT_TYPE_OPTIONS = ['All', 'Admin', 'Personnel', 'Mobile User'];
+
 const matchesCompletionFilter = (overallPercent, filterValue) => {
   if (filterValue === 'All') return true;
 
@@ -97,6 +99,7 @@ export default function Progress() {
   const [errorMessage, setErrorMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [moduleFilter, setModuleFilter] = useState('All');
+  const [accountTypeFilter, setAccountTypeFilter] = useState('All');
   const [completionFilter, setCompletionFilter] = useState('All');
   const [completionSearchText, setCompletionSearchText] = useState('All');
   const [isCompletionDropdownOpen, setIsCompletionDropdownOpen] = useState(false);
@@ -140,6 +143,7 @@ export default function Progress() {
 
   const handleClearFilters = () => {
     setModuleFilter('All');
+    setAccountTypeFilter('All');
     setCompletionFilter('All');
     setCompletionSearchText('All');
     setSearchQuery('');
@@ -215,11 +219,14 @@ export default function Progress() {
         moduleFilter === 'All' ||
         item.modules.some((module) => module.name === moduleFilter && module.progress > 0);
 
+      const matchesAccountType =
+        accountTypeFilter === 'All' || item.accountType === accountTypeFilter;
+
       const matchesCompletion = matchesCompletionFilter(item.overallPercent, completionFilter);
 
-      return matchesSearch && matchesModule && matchesCompletion;
+      return matchesSearch && matchesModule && matchesAccountType && matchesCompletion;
     });
-  }, [completionFilter, moduleFilter, progressRows, searchQuery]);
+  }, [accountTypeFilter, completionFilter, moduleFilter, progressRows, searchQuery]);
 
   const totalUsers = progressRows.length;
 
@@ -252,6 +259,20 @@ export default function Progress() {
                 {moduleOptions.map((moduleOption) => (
                   <option key={moduleOption} value={moduleOption}>
                     {moduleOption}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="progress-filter">
+              <label>Filter by Account Type</label>
+              <select
+                value={accountTypeFilter}
+                onChange={(event) => setAccountTypeFilter(event.target.value)}
+              >
+                {ACCOUNT_TYPE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
                   </option>
                 ))}
               </select>

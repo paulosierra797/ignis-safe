@@ -4,6 +4,8 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import { uploadProfileImage } from '../utils/imageService';
+import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_TYPES } from '../utils/avatarCrop';
+import AvatarCropModal from './AvatarCropModal';
 import * as faceapi from '@vladmandic/face-api';
 import { loadFaceModels } from '../utils/loadFaceModels';
 import Webcam from 'react-webcam';
@@ -63,6 +65,7 @@ export default function PersonnelProfile() {
   const [searchQuery, setSearchQuery] = useState('');
   const [uploading, setUploading] = useState(false);
   const [profileImage, setProfileImage] = useState('/user-avatar.svg');
+  const [cropFile, setCropFile] = useState(null);
   const resolvedRank = rank === 'OTHER' ? rankCustom.trim() : rank;
   const displayName = `${resolvedRank || currentUser?.rank || ''} ${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'Personnel';
   const displayPhone = currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || currentUser?.mobile || 'Not available';
@@ -206,15 +209,40 @@ const [modal, setModal] = useState({
 
   setIsFaceModalOpen(true);
 };
-  const handleImageUpload = async (event) => {
+  const handleImageSelected = (event) => {
     const file = event.target.files[0];
+    event.target.value = '';
     if (!file) return;
 
+    if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
+      showModal({ type: 'error', message: 'Invalid file type. Please upload an image (JPEG, PNG, GIF, or WebP).' });
+      return;
+    }
+
+    if (file.size > AVATAR_MAX_SIZE) {
+      showModal({ type: 'error', message: 'File size exceeds 5MB. Please upload a smaller image.' });
+      return;
+    }
+
+    setCropFile(file);
+  };
+
+  const handleCropCancel = () => {
+    setCropFile(null);
+  };
+
+  const handleCropError = (message) => {
+    setCropFile(null);
+    showModal({ type: 'error', message: message || 'The avatar could not be cropped.' });
+  };
+
+  const handleCropApply = async (croppedFile) => {
+    setCropFile(null);
     setUploading(true);
     try {
       const { data: imageUrl, error } = await uploadProfileImage(
         currentUser.admin_id,
-        file,
+        croppedFile,
         { workspaceProfile: Boolean(currentUser.is_personnel_workspace_profile) }
       );
 
@@ -491,7 +519,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                   type="file"
                   accept="image/*"
                   style={{ display: 'none' }}
-                  onChange={handleImageUpload}
+                  onChange={handleImageSelected}
                 />
               </div>
 
@@ -676,6 +704,14 @@ const showModal = ({ type = "info", message, onConfirm }) => {
     </div>
   </div>
 )}
+
+        <AvatarCropModal
+          file={cropFile}
+          onCancel={handleCropCancel}
+          onApply={handleCropApply}
+          onError={handleCropError}
+        />
+
         {isRequestModalOpen && (
           <div className="request-modal-overlay" role="dialog" aria-modal="true">
             <div className="request-modal">

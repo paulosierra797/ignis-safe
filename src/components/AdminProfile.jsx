@@ -463,6 +463,7 @@ export default function AdminProfile() {
           onCancel={handleCropCancel}
           onApply={handleCropApply}
           onError={handleCropError}
+          theme="admin"
         />
 
         <UnsavedChangesPrompt

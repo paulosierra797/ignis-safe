@@ -6,7 +6,7 @@ import {
 } from '../utils/avatarCrop';
 import './AvatarCropModal.css';
 
-export default function AvatarCropModal({ file, onCancel, onApply, onError }) {
+export default function AvatarCropModal({ file, onCancel, onApply, onError, theme }) {
   const [crop, setCrop] = useState(null);
   const [isApplying, setIsApplying] = useState(false);
   const sourceUrlRef = useRef(null);
@@ -103,7 +103,7 @@ export default function AvatarCropModal({ file, onCancel, onApply, onError }) {
 
   return (
     <div
-      className="avatar-crop-overlay"
+      className={`avatar-crop-overlay${theme === 'admin' ? ' avatar-crop-admin' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="avatarCropTitle"

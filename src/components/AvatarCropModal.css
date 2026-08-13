@@ -41,7 +41,7 @@
 
 .avatar-crop-kicker {
   margin: 0 0 0.2rem;
-  color: #ea580c;
+  color: #92400e;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -59,10 +59,10 @@
 .avatar-crop-output {
   flex: 0 0 auto;
   padding: 0.38rem 0.65rem;
-  border: 1px solid #fed7aa;
+  border: 1px solid #fde68a;
   border-radius: 999px;
-  background: #fff7ed;
-  color: #9a3412;
+  background: #fef3c7;
+  color: #92400e;
   font-size: 0.7rem;
   font-weight: 800;
 }
@@ -149,7 +149,7 @@
 
 .avatar-crop-control output {
   min-width: 42px;
-  color: #9a3412;
+  color: #92400e;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   text-align: right;
@@ -157,12 +157,12 @@
 
 .avatar-crop-control input[type='range'] {
   width: 100%;
-  accent-color: #f97316;
+  accent-color: #FDB914;
   cursor: pointer;
 }
 
 .avatar-crop-control input[type='range']:focus-visible {
-  outline: 3px solid #fed7aa;
+  outline: 3px solid #fde68a;
   outline-offset: 3px;
   border-radius: 999px;
 }
@@ -181,12 +181,12 @@
 }
 
 .avatar-crop-reset:hover {
-  border-color: #fdba74;
-  color: #c2410c;
+  border-color: #fcd34d;
+  color: #92400e;
 }
 
 .avatar-crop-reset:focus-visible {
-  outline: 3px solid #fed7aa;
+  outline: 3px solid #fde68a;
   outline-offset: 2px;
 }
 
@@ -224,12 +224,13 @@
 }
 
 .avatar-crop-btn-save {
-  background: #f97316;
-  color: white;
-  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.35);
+  background: #FDB914;
+  color: #1f2937;
+  box-shadow: 0 2px 6px rgba(253, 185, 20, 0.35);
 }
 
 .avatar-crop-btn-save:hover {
+  background: #e5a512;
   transform: translateY(-1px);
 }
 
@@ -240,8 +241,53 @@
 }
 
 .avatar-crop-btn:focus-visible {
-  outline: 3px solid #fdba74;
+  outline: 3px solid #fcd34d;
   outline-offset: 2px;
+}
+
+/* Admin theme: swap the orange accents for the admin dashboard's red palette */
+.avatar-crop-admin .avatar-crop-kicker {
+  color: #b91c1c;
+}
+
+.avatar-crop-admin .avatar-crop-output {
+  border-color: #fecaca;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.avatar-crop-admin .avatar-crop-control output {
+  color: #b91c1c;
+}
+
+.avatar-crop-admin .avatar-crop-control input[type='range'] {
+  accent-color: #b91c1c;
+}
+
+.avatar-crop-admin .avatar-crop-control input[type='range']:focus-visible {
+  outline-color: #fecaca;
+}
+
+.avatar-crop-admin .avatar-crop-reset:hover {
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.avatar-crop-admin .avatar-crop-reset:focus-visible {
+  outline-color: #fecaca;
+}
+
+.avatar-crop-admin .avatar-crop-btn-save {
+  background: #b91c1c;
+  box-shadow: 0 2px 6px rgba(185, 28, 28, 0.35);
+}
+
+.avatar-crop-admin .avatar-crop-btn-save:hover {
+  background: #991b1b;
+}
+
+.avatar-crop-admin .avatar-crop-btn-save:focus-visible {
+  outline-color: #fca5a5;
 }
 
 @keyframes avatarCropModalIn {

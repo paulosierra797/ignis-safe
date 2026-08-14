@@ -30,11 +30,13 @@ const LoginBrandPanel = ({ portal }) => {
     </div>
 
     <div className="login-brand-content">
-      <img
-        src={bfpDasmaLogo}
-        alt="Bureau of Fire Protection Dasmariñas City Fire Station logo"
-        className="login-bfp-logo"
-      />
+      <span className="login-bfp-logo-frame">
+        <img
+          src={bfpDasmaLogo}
+          alt="Bureau of Fire Protection Dasmariñas City Fire Station logo"
+          className="login-bfp-logo"
+        />
+      </span>
       <div className="login-brand-rule" aria-hidden="true" />
       <h1>{isPersonnel ? 'Welcome, Personnel!' : 'Welcome, Admins!'}</h1>
       <p>

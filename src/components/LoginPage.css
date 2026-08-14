@@ -820,13 +820,30 @@
   margin: auto 0;
 }
 
-.login-bfp-logo {
-  width: clamp(136px, 14vw, 178px);
-  height: auto;
+/* The source PNG carries heavy transparent padding around the shield
+   (roughly 27% on the left, 19% on top), which made the logo look
+   oversized and pushed it visibly right of the yellow rule below it.
+   This frame crops that dead space via a scaled + translated image so
+   the shield's own edges - not the canvas edges - align with the rule. */
+.login-bfp-logo-frame {
+  position: relative;
+  width: clamp(84px, 8vw, 108px);
+  aspect-ratio: 234 / 298;
+  overflow: hidden;
   display: block;
   margin-bottom: 1.5rem;
-  object-fit: contain;
   filter: drop-shadow(0 12px 18px rgba(27, 5, 7, 0.24));
+}
+
+.login-bfp-logo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 233.33%;
+  max-width: none;
+  height: auto;
+  display: block;
+  transform: translate(-27.11%, -18.82%);
 }
 
 .login-brand-rule {
@@ -1002,9 +1019,9 @@
     gap: 0.3rem 1.35rem;
   }
 
-  .login-bfp-logo {
+  .login-bfp-logo-frame {
     grid-row: 1 / 4;
-    width: 112px;
+    width: 88px;
     margin: 0;
   }
 
@@ -1063,8 +1080,8 @@
     gap: 0.25rem 0.95rem;
   }
 
-  .login-bfp-logo {
-    width: 88px;
+  .login-bfp-logo-frame {
+    width: 70px;
   }
 
   .login-brand-rule {

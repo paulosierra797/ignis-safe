@@ -39,9 +39,11 @@ export const decomposeYawPitchRoll = (matrixData) => {
   };
 };
 
-// Empirically verify this against a real camera during manual testing - if
-// "turn left"/"turn right" feel swapped on a given setup, flip this constant
-// rather than re-deriving the matrix math.
+// The <video> preview is NOT CSS-mirrored (see AttendanceConfirm.jsx - the
+// getUserMedia stream is drawn raw), so MediaPipe's yaw is computed directly
+// against the unflipped camera frame. This constant is the single knob to
+// flip if "turn left"/"turn right" ever feel swapped on a real device -
+// re-derive the matrix math only as a last resort.
 const TURN_YAW_SIGN = 1;
 
 // --- Blink extraction ------------------------------------------------------
@@ -58,8 +60,15 @@ export const getBlinkScore = (blendshapeCategories = []) => {
 export const THRESHOLDS = {
   blinkClosed: 0.55,
   blinkOpen: 0.3,
-  turnYawDeg: 15,
-  lookPitchDeg: 12,
+  // A "strong" turn, not a slight glance - deliberately higher than a
+  // passive head wobble so a static photo tilted slightly can't pass.
+  turnYawDeg: 25,
+  // Turn must be held past the threshold for this long (not just a
+  // momentary spike) before the step is marked complete.
+  turnSustainMs: 350,
+  // Same idea for the "return to center" step between Turn Left and Turn
+  // Right - must genuinely settle back near baseline, not just pass through.
+  centerSustainMs: 300,
   neutralYawToleranceDeg: 8,
   neutralPitchToleranceDeg: 8,
   neutralBlinkMax: 0.35
@@ -77,6 +86,10 @@ export const isNeutralPose = (smoothed, baseline) => {
 };
 
 // --- Challenge actions -------------------------------------------------
+//
+// evaluate(state, smoothed, baseline, now) is called every tracked frame
+// while the step is active; `now` is a performance.now() timestamp used for
+// sustain windows (a threshold must be genuinely held, not just brushed).
 
 export const BLINK_ACTION = {
   id: 'blink_twice',
@@ -94,60 +107,60 @@ export const BLINK_ACTION = {
   }
 };
 
-const TURN_LOOK_ACTIONS = [
-  {
-    id: 'turn_left',
-    instruction: 'Turn your head left',
-    timeLimitMs: 6000,
-    createState: () => ({}),
-    evaluate: (_state, smoothed, baseline) =>
-      TURN_YAW_SIGN * (smoothed.yawDeg - baseline.yawDeg) < -THRESHOLDS.turnYawDeg
-  },
-  {
-    id: 'turn_right',
-    instruction: 'Turn your head right',
-    timeLimitMs: 6000,
-    createState: () => ({}),
-    evaluate: (_state, smoothed, baseline) =>
-      TURN_YAW_SIGN * (smoothed.yawDeg - baseline.yawDeg) > THRESHOLDS.turnYawDeg
-  },
-  {
-    id: 'look_up',
-    instruction: 'Look up',
-    timeLimitMs: 6000,
-    createState: () => ({}),
-    evaluate: (_state, smoothed, baseline) =>
-      smoothed.pitchDeg - baseline.pitchDeg > THRESHOLDS.lookPitchDeg
-  },
-  {
-    id: 'look_down',
-    instruction: 'Look down',
-    timeLimitMs: 6000,
-    createState: () => ({}),
-    evaluate: (_state, smoothed, baseline) =>
-      smoothed.pitchDeg - baseline.pitchDeg < -THRESHOLDS.lookPitchDeg
+const makeTurnAction = (id, instruction, isPastThreshold) => ({
+  id,
+  instruction,
+  timeLimitMs: 6000,
+  createState: () => ({ sustainSince: null }),
+  evaluate: (state, smoothed, baseline, now) => {
+    const relativeYaw = TURN_YAW_SIGN * (smoothed.yawDeg - baseline.yawDeg);
+    if (!isPastThreshold(relativeYaw)) {
+      state.sustainSince = null;
+      return false;
+    }
+    if (state.sustainSince == null) state.sustainSince = now;
+    return now - state.sustainSince >= THRESHOLDS.turnSustainMs;
   }
-];
+});
 
-export const ACTION_POOL = [BLINK_ACTION, ...TURN_LOOK_ACTIONS];
+export const TURN_LEFT_ACTION = makeTurnAction(
+  'turn_left',
+  'Turn head LEFT',
+  (relativeYaw) => relativeYaw < -THRESHOLDS.turnYawDeg
+);
 
-const shuffle = (array) => {
-  const copy = [...array];
-  for (let i = copy.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [copy[i], copy[j]] = [copy[j], copy[i]];
+export const TURN_RIGHT_ACTION = makeTurnAction(
+  'turn_right',
+  'Turn head RIGHT',
+  (relativeYaw) => relativeYaw > THRESHOLDS.turnYawDeg
+);
+
+// Sits between Turn Left and Turn Right so the right-turn step can never be
+// satisfied by a yaw reading left over from (or sweeping through on the way
+// back from) the left turn - the face must genuinely settle near baseline
+// first.
+export const RETURN_CENTER_ACTION = {
+  id: 'return_center',
+  instruction: 'Return to center',
+  timeLimitMs: 5000,
+  createState: () => ({ sustainSince: null }),
+  evaluate: (state, smoothed, baseline, now) => {
+    if (!isNeutralPose(smoothed, baseline)) {
+      state.sustainSince = null;
+      return false;
+    }
+    if (state.sustainSince == null) state.sustainSince = now;
+    return now - state.sustainSince >= THRESHOLDS.centerSustainMs;
   }
-  return copy;
 };
 
-// Always includes the mandatory blink, plus 1-2 randomly chosen turn/look
-// actions, in a randomized order (including where the blink falls). Called
-// fresh every attempt - never a fixed sequence.
-export const generateChallengeSequence = () => {
-  const extraCount = 1 + Math.round(Math.random()); // 1 or 2
-  const extras = shuffle(TURN_LOOK_ACTIONS).slice(0, extraCount);
-  return shuffle([BLINK_ACTION, ...extras]);
-};
+// Fixed order, every attempt: Blink -> Turn Left -> Center -> Turn Right.
+// Blink stays mandatory and first so a static photo can't just be tilted
+// left/right to pass. (The final return-to-center + capture, before face
+// matching, is handled separately by useLivenessCheck's 'lookStraight' phase.)
+export const CHALLENGE_SEQUENCE = [BLINK_ACTION, TURN_LEFT_ACTION, RETURN_CENTER_ACTION, TURN_RIGHT_ACTION];
+
+export const generateChallengeSequence = () => [...CHALLENGE_SEQUENCE];
 
 export const createChallengeSession = (qrSessionId) => ({
   challengeId: crypto.randomUUID(),

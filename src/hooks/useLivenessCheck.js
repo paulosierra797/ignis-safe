@@ -1,10 +1,10 @@
 // hooks/useLivenessCheck.js
 // Drives the MediaPipe Face Landmarker inference loop and the liveness phase
 // state machine: centering -> calibrating (neutral baseline) -> challenge
-// (mandatory blink + 1-2 random turn/look actions) -> lookStraight (neutral
-// recapture) -> passed/failed. Inference is throttled (~12fps) since
-// detectForVideo() is synchronous and blocks the UI thread if run every
-// requestAnimationFrame tick.
+// (blink -> turn left -> center -> turn right, fixed order) -> lookStraight
+// (final neutral recapture before face match) -> passed/failed. Inference is
+// throttled (~12fps) since detectForVideo() is synchronous and blocks the UI
+// thread if run every requestAnimationFrame tick.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadFaceLandmarker } from '../utils/faceLandmarker';
 import {
@@ -184,7 +184,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
   const advanceToLookStraight = (now) => {
     phaseRef.current = 'lookStraight';
     setPhase('lookStraight');
-    setInstruction('Look straight at the camera');
+    setInstruction('Return to center');
     setCountdownMs(null);
     lookStraightStartRef.current = now;
     lookStraightSustainStartRef.current = null;
@@ -243,7 +243,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     const action = sequenceRef.current[stepIndexRef.current];
     if (!action) return;
 
-    const done = action.evaluate(actionStateRef.current, smoothed, baselineRef.current);
+    const done = action.evaluate(actionStateRef.current, smoothed, baselineRef.current, now);
     const elapsed = now - stepStartTimeRef.current;
 
     if (done) {

@@ -6,7 +6,7 @@ const PHASE_LABELS = {
   loading: 'Preparing face check...',
   centering: 'Center your face in the frame',
   calibrating: 'Look straight, relax your face',
-  lookStraight: 'Look straight at the camera',
+  lookStraight: 'Return to center',
   passed: 'Liveness check passed ✓'
 };
 

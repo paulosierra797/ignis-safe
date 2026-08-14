@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FaArrowLeft, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { supabase } from '../utils/supabaseClient';
 import {
@@ -52,6 +52,23 @@ const LoginBrandPanel = ({ portal }) => {
 const REMEMBER_ME_KEY = 'remember_me';
 const REMEMBERED_EMAIL_KEY = 'remembered_email';
 const OTP_LENGTH = 6;
+
+// Only ever follow a post-login redirect back into the Attendance QR flow -
+// never an arbitrary/external URL - to keep this an internal return path
+// rather than an open redirect.
+const POST_LOGIN_REDIRECT_ALLOWLIST = ['/attendance-login', '/attendance-confirm'];
+
+const getSafeAttendanceRedirect = (rawRedirect) => {
+  if (!rawRedirect || !rawRedirect.startsWith('/') || rawRedirect.startsWith('//')) {
+    return null;
+  }
+
+  const isAllowed = POST_LOGIN_REDIRECT_ALLOWLIST.some(
+    (path) => rawRedirect === path || rawRedirect.startsWith(`${path}?`)
+  );
+
+  return isAllowed ? rawRedirect : null;
+};
 const TRUST_DURATION_MS = {
   personnel: 14 * 24 * 60 * 60 * 1000,
   admin: 12 * 60 * 60 * 1000
@@ -80,6 +97,8 @@ const validateTrustedDeviceRecord = (record, { deviceId, userId }) => {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const attendanceRedirect = getSafeAttendanceRedirect(searchParams.get('redirect'));
   const { currentUser, setCurrentUser, refreshCurrentUser } = useUser();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -552,11 +571,13 @@ useEffect(() => {
   console.log("ROLE:", role);
 
   if (routes[role]) {
-  navigate(routes[role], { replace: true });
+  // Came here from the Attendance QR flow (e.g. an unauthenticated scan) -
+  // return the user to it instead of the default portal landing page.
+  navigate(attendanceRedirect || routes[role], { replace: true });
 } else {
   console.error("Unknown role:", role);
 }
-}, [currentUser, authStep, navigate]);
+}, [currentUser, authStep, navigate, attendanceRedirect]);
 
   const displayPortal = pendingRole || 'admin';
 

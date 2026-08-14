@@ -1,217 +1,109 @@
-import React, { useCallback, useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaEye, FaEyeSlash } from 'react-icons/fa';
-import { authenticatePersonnel, getActivePersonnelSession, saveAuthToken } from '../utils/attendanceService';
-import { validateQRSession } from '../utils/attendanceService';
+import { validateQRSession, getActivePersonnelSession, saveAuthToken } from '../utils/attendanceService';
+import { supabase } from '../utils/supabaseClient';
 import ignisSafeLogo from '../assets/Logo1.png';
 
 import './AttendanceLogin.css';
 
-
+// Bounce-through controller for the Attendance QR flow: it never asks for
+// credentials itself. It resolves the visitor's existing session (personnel
+// login lives on the normal /login page) and either continues straight into
+// attendance validation or sends them to /login with a return URL back here.
 const AttendanceLogin = () => {
   const navigate = useNavigate();
-const [searchParams] = useSearchParams();
-const sessionId = searchParams.get("station");
-const buildConfirmUrl = useCallback((attendanceSessionId) =>
-  `/attendance-confirm?auth=${encodeURIComponent(attendanceSessionId)}&station=${encodeURIComponent(sessionId || '')}`,
-[sessionId]);
- 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get('station');
+
+  const buildConfirmUrl = useCallback((attendanceSessionId) =>
+    `/attendance-confirm?auth=${encodeURIComponent(attendanceSessionId)}&station=${encodeURIComponent(sessionId || '')}`,
+  [sessionId]);
+
+  const buildLoginBounceUrl = useCallback(() =>
+    `/attendance-login?station=${encodeURIComponent(sessionId || '')}`,
+  [sessionId]);
+
   const [isCheckingSession, setIsCheckingSession] = useState(true);
-  const [qrValid, setQrValid] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-     if (!qrValid) {
-    setError('Invalid or expired QR session');
-    return;
-  }
+  useEffect(() => {
+    let isCancelled = false;
 
-    setError('');
-
-    if (!email.trim()) {
-      setError('Please enter your account email');
-      return;
-    }
-
-    if (!password) {
-      setError('Please enter your account password');
-      return;
-    }
-
-    setIsLoading(true);
-
-    // Authenticate
-    const officer = await authenticatePersonnel(email, password);
-    if (officer) {
-      const token = saveAuthToken(officer);
-      setEmail('');
-      setPassword('');
-      navigate(buildConfirmUrl(token.sessionId), { replace: true });
-    } else {
-      setError('Invalid personnel account email or password. Please try again.');
-    }
-
-    setIsLoading(false);
-  };
- useEffect(() => {
-  let isCancelled = false;
-
-  const checkQRAndSession = async () => {
-    setIsCheckingSession(true);
-
-    try {
-      if (!sessionId) {
-        setError("Invalid QR session");
-        setQrValid(false);
-        setIsCheckingSession(false);
-        return;
-      }
-
-      const result = await validateQRSession(sessionId);
-
-      if (isCancelled) return;
-
-      if (!result.valid) {
-        setError(result.reason);
-        setQrValid(false);
-        setIsCheckingSession(false);
-        return;
-      }
-
-      setQrValid(true);
+    const checkQRAndSession = async () => {
+      setIsCheckingSession(true);
       setError('');
 
-      const officer = await getActivePersonnelSession();
-      if (isCancelled) return;
+      try {
+        if (!sessionId) {
+          if (!isCancelled) {
+            setError('Invalid QR session');
+            setIsCheckingSession(false);
+          }
+          return;
+        }
 
-      if (officer) {
-        const token = saveAuthToken(officer);
-        navigate(buildConfirmUrl(token.sessionId), { replace: true });
-        return;
-      }
+        const result = await validateQRSession(sessionId);
+        if (isCancelled) return;
 
-      setIsCheckingSession(false);
-    } catch {
-      if (!isCancelled) {
-        setError('Could not validate the QR session. Please try again.');
-        setQrValid(false);
+        if (!result.valid) {
+          setError(result.reason);
+          setIsCheckingSession(false);
+          return;
+        }
+
+        // Already authenticated as a valid personnel account - skip straight
+        // to attendance validation, no re-entry of credentials.
+        const officer = await getActivePersonnelSession();
+        if (isCancelled) return;
+
+        if (officer) {
+          const token = saveAuthToken(officer);
+          navigate(buildConfirmUrl(token.sessionId), { replace: true });
+          return;
+        }
+
+        // No usable personnel session. Distinguish "not logged in at all"
+        // (send to the normal login page and come straight back here) from
+        // "logged in but this account can't mark attendance" (surface an
+        // error instead of bouncing back to /login in a loop).
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (isCancelled) return;
+
+        if (!sessionData?.session) {
+          navigate(`/login?redirect=${encodeURIComponent(buildLoginBounceUrl())}`, { replace: true });
+          return;
+        }
+
+        setError('This account is not authorized to mark attendance. Please sign in with a valid personnel account.');
         setIsCheckingSession(false);
+      } catch {
+        if (!isCancelled) {
+          setError('Could not validate the QR session. Please try again.');
+          setIsCheckingSession(false);
+        }
       }
-    }
-  };
+    };
 
-  checkQRAndSession();
-  return () => {
-    isCancelled = true;
-  };
-}, [buildConfirmUrl, navigate, sessionId]);
-  
-
-  if (isCheckingSession) {
-    return (
-      <div className="attendance-login-page">
-        <div className="attendance-session-check" role="status" aria-live="polite">
-          <div className="attendance-session-check-spinner" aria-hidden="true" />
-          <p>Loading...</p>
-        </div>
-      </div>
-    );
-  }
+    checkQRAndSession();
+    return () => {
+      isCancelled = true;
+    };
+  }, [buildConfirmUrl, buildLoginBounceUrl, navigate, sessionId]);
 
   return (
     <div className="attendance-login-page">
-      <div className="attendance-login-shell">
-        <aside className="attendance-login-intro" aria-labelledby="attendance-login-title">
-          <div className="attendance-brand-surface">
+      <div className="attendance-session-check" role="status" aria-live="polite">
+        {isCheckingSession ? (
+          <>
+            <div className="attendance-session-check-spinner" aria-hidden="true" />
+            <p>Loading...</p>
+          </>
+        ) : (
+          <>
             <img src={ignisSafeLogo} alt="IGNIS SAFE" className="attendance-brand-logo" />
-          </div>
-
-          <div className="login-header">
-            <span className="login-badge">IGNIS SAFE</span>
-            <h1 id="attendance-login-title">Personnel Login</h1>
-            <p>Authenticate to mark attendance</p>
-          </div>
-
-          <div className="attendance-intro-accent" aria-hidden="true" />
-        </aside>
-
-        <section className="login-card" aria-label="Personnel attendance login form">
-
-          {!qrValid ? (
-            <div className="login-form">
-              {error && <div className="error-message">{error}</div>}
-            </div>
-          ) : (
-            <form className="login-form" onSubmit={handleLogin}>
-            <div className="form-group">
-              <label htmlFor="email-input" className="form-label">
-                Account Email
-              </label>
-              <input
-                id="email-input"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your account email"
-                autoComplete="username"
-                className="form-input"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="pin-input" className="form-label">
-                Account Password
-              </label>
-              <div className="attendance-password-wrapper">
-                <input
-                  id="pin-input"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your account password"
-                  autoComplete="current-password"
-                  className="form-input"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  className="attendance-password-toggle"
-                  onClick={() => setShowPassword((visible) => !visible)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  aria-pressed={showPassword}
-                  title={showPassword ? 'Hide password' : 'Show password'}
-                  disabled={isLoading}
-                >
-                  {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
-                </button>
-              </div>
-              <div className="pin-hint">Use the same password as your IGNIS SAFE account login.</div>
-            </div>
-
-            {error && <div className="error-message">{error}</div>}
-
-            <button
-              type="submit"
-              className="login-btn"
-              disabled={isLoading || !qrValid || !email.trim() || !password}
-            >
-              {isLoading ? 'Logging in...' : 'Login & Continue'}
-            </button>
-          </form>
-          )}
-
-          {qrValid && (
-            <div className="login-footer">
-              Only you can mark attendance with your credentials. Your account password is required for every session.
-            </div>
-          )}
-        </section>
+            <p>{error || 'Unable to continue.'}</p>
+          </>
+        )}
       </div>
     </div>
   );

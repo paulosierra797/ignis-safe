@@ -9,6 +9,7 @@ import ContactSection from './components/ContactSection'
 import SendMessageSection from './components/SendMessageSection'
 import FAQSection from './components/FAQSection'
 import Footer from './components/Footer'
+import FloatingContactButton from './components/FloatingContactButton'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LoginPage from './components/LoginPage';
 import { UserProvider, useUser } from './context/UserContext';
@@ -164,6 +165,7 @@ function LandingPage() {
       <SendMessageSection />
       <FAQSection />
       <Footer />
+      <FloatingContactButton />
     </>
   );
 }

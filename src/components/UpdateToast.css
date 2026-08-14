@@ -1,7 +1,10 @@
 .update-toast {
   position: fixed;
   right: clamp(1rem, 3vw, 2rem);
-  bottom: clamp(1rem, 3vw, 2rem);
+  /* Extra clearance above the base corner offset so this toast stacks above
+     other fixed bottom-right UI (FloatingContactButton on the landing page,
+     the personnel announcement nudge in Sidebar) instead of covering it. */
+  bottom: calc(clamp(1rem, 3vw, 2rem) + 4.75rem);
   z-index: 100000;
   display: flex;
   align-items: flex-start;
@@ -141,7 +144,7 @@
   .update-toast {
     left: 1rem;
     right: 1rem;
-    bottom: 1rem;
+    bottom: calc(1rem + 4rem);
     width: auto;
     max-width: none;
   }

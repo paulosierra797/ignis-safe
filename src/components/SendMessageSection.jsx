@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   FiUser,
   FiMail,
@@ -7,6 +7,7 @@ import {
   FiSend,
   FiCopy,
   FiCheck,
+  FiCheckCircle,
   FiHelpCircle,
   FiAlertCircle,
   FiFileText,
@@ -16,6 +17,7 @@ import './SendMessageSection.css'
 import { sendContactMessage } from '../utils/contactMessageService'
 
 const DIRECT_EMAIL = 'ignissafe.bfpdasmarinas@gmail.com'
+const MESSAGE_MAX_LENGTH = 1000
 
 const TOPIC_OPTIONS = [
   'General Inquiry',
@@ -44,7 +46,13 @@ export default function SendMessageSection() {
   const handleChange = (field) => (event) => {
     const { value } = event.target
     setForm((prev) => ({ ...prev, [field]: value }))
-    if (submitted) setSubmitted(false)
+    if (submitError) setSubmitError('')
+  }
+
+  const handleMessageChange = (event) => {
+    const { value } = event.target
+    if (value.length > MESSAGE_MAX_LENGTH) return
+    setForm((prev) => ({ ...prev, message: value }))
     if (submitError) setSubmitError('')
   }
 
@@ -102,6 +110,25 @@ export default function SendMessageSection() {
     }
   }
 
+  const closeSuccessModal = () => setSubmitted(false)
+
+  useEffect(() => {
+    if (!submitted) return undefined
+
+    const previousOverflow = document.body.style.overflow
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') closeSuccessModal()
+    }
+
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [submitted])
+
   return (
     <section className="send-message" id="send-message">
       <div className="send-message-container">
@@ -157,13 +184,19 @@ export default function SendMessageSection() {
             </div>
 
             <div className="send-message-field">
-              <label htmlFor="sm-message"><FiMessageSquare aria-hidden="true" /> Message</label>
+              <div className="send-message-field-label-row">
+                <label htmlFor="sm-message"><FiMessageSquare aria-hidden="true" /> Message</label>
+                <span className="send-message-char-counter">
+                  {form.message.length}/{MESSAGE_MAX_LENGTH}
+                </span>
+              </div>
               <textarea
                 id="sm-message"
                 rows={5}
                 placeholder="Tell us how we can help..."
                 value={form.message}
-                onChange={handleChange('message')}
+                onChange={handleMessageChange}
+                maxLength={MESSAGE_MAX_LENGTH}
                 required
               />
             </div>
@@ -172,12 +205,6 @@ export default function SendMessageSection() {
               <FiSend aria-hidden="true" />
               {submitting ? 'Sending...' : 'Send Message'}
             </button>
-
-            {submitted && (
-              <p className="send-message-success" role="status">
-                Thank you! Your message has been noted. We&apos;ll get back to you shortly.
-              </p>
-            )}
 
             {submitError && (
               <p className="send-message-error" role="alert">
@@ -228,6 +255,33 @@ export default function SendMessageSection() {
           </div>
         </div>
       </div>
+
+      {submitted && (
+        <div
+          className="send-message-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeSuccessModal()
+          }}
+        >
+          <div
+            className="send-message-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sendMessageSuccessTitle"
+          >
+            <span className="send-message-modal-icon" aria-hidden="true">
+              <FiCheckCircle />
+            </span>
+            <h3 id="sendMessageSuccessTitle">Message Sent Successfully!</h3>
+            <p>
+              Thank you for contacting BFP Dasmariñas. Please wait for our reply through the email address you provided.
+            </p>
+            <button type="button" className="send-message-modal-ok" onClick={closeSuccessModal}>
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

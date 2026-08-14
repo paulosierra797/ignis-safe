@@ -43,6 +43,7 @@ const AttendanceConfirm = () => {
   const [timeInSuccess, setTimeInSuccess] = useState(null);
   const [showLiveness, setShowLiveness] = useState(false);
   const [livenessAttemptKey, setLivenessAttemptKey] = useState(0);
+  const [livenessPhase, setLivenessPhase] = useState('idle');
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -272,6 +273,7 @@ const handleVerifyFace = async () => {
     // after LivenessCheck reports a pass (see handleLivenessPassed).
     setFaceStatus('Follow the on-screen instructions to verify you are live.');
     setLivenessAttemptKey((key) => key + 1);
+    setLivenessPhase('idle');
     setShowLiveness(true);
   } catch (err) {
     console.error(err);
@@ -284,6 +286,7 @@ const handleVerifyFace = async () => {
 
 const handleLivenessPassed = useCallback(async ({ canvas, challengeId, sequenceIds }) => {
   setShowLiveness(false);
+  setLivenessPhase('idle');
   setFaceStatus('Matching face...');
 
   try {
@@ -363,6 +366,7 @@ const handleLivenessPassed = useCallback(async ({ canvas, challengeId, sequenceI
 const handleLivenessFailed = useCallback((reason) => {
   appendFaceDebug(`liveness failed: ${reason}`);
   setShowLiveness(false);
+  setLivenessPhase('idle');
   setFaceError('Live face verification failed. Please look directly at the camera and follow the instructions.');
   setFaceStatus('Verification failed ✗');
   stopFaceCamera();
@@ -580,7 +584,10 @@ const handleLivenessFailed = useCallback((reason) => {
               <div className={`location-status ${faceError ? 'error' : authenticatedOfficer.faceVerified && !faceStatus.includes('✗') ? 'success' : ''}`}>
                 {faceError || faceStatus}
               </div>
-              <video ref={videoRef} className="confirm-camera-preview" autoPlay muted playsInline />
+              <div className={`confirm-camera-frame confirm-camera-frame--${showLiveness ? livenessPhase : 'idle'}`}>
+                <video ref={videoRef} className="confirm-camera-preview" autoPlay muted playsInline />
+                {showLiveness && <div className="confirm-camera-guide" aria-hidden="true" />}
+              </div>
               <canvas ref={canvasRef} className="confirm-camera-canvas" aria-hidden="true" />
               {showLiveness && (
                 <LivenessCheck
@@ -590,6 +597,7 @@ const handleLivenessFailed = useCallback((reason) => {
                   onPassed={handleLivenessPassed}
                   onFailed={handleLivenessFailed}
                   onDebug={appendFaceDebug}
+                  onPhaseChange={setLivenessPhase}
                 />
               )}
               {import.meta.env.DEV && (

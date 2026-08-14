@@ -291,13 +291,22 @@
   font-weight: 600;
 }
 
-.confirm-camera-preview {
+.confirm-camera-frame {
+  position: relative;
   width: 100%;
   min-height: 180px;
   border-radius: 14px;
+  overflow: hidden;
   background: #0f1418;
-  object-fit: cover;
   border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.confirm-camera-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  object-fit: cover;
   /* Mirror the on-screen preview only, like a normal front-camera app
      (Windows Camera, Zoom, FaceTime, etc.) - this is a display-only CSS
      transform on the <video> element and does NOT touch the underlying
@@ -307,6 +316,47 @@
      liveness head-pose math stay on the unmirrored source and remain
      unaffected by this. See livenessChallenge.js's TURN_YAW_SIGN comment. */
   transform: scaleX(-1);
+}
+
+/* Circular face guide: a transparent circle "cut out" of a dimmed overlay
+   via a huge box-shadow spread, so only the framed area is fully visible.
+   Purely a visual aid - detection/matching still runs on the full frame. */
+.confirm-camera-guide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.confirm-camera-guide::before {
+  content: '';
+  width: min(64%, 230px);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.55), 0 0 22px rgba(255, 255, 255, 0.12);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.confirm-camera-frame--centering .confirm-camera-guide::before {
+  border-color: rgba(245, 181, 68, 0.9);
+}
+
+.confirm-camera-frame--calibrating .confirm-camera-guide::before,
+.confirm-camera-frame--challenge .confirm-camera-guide::before {
+  border-color: var(--glow);
+  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.55), 0 0 22px var(--glow);
+}
+
+.confirm-camera-frame--passed .confirm-camera-guide::before {
+  border-color: var(--success);
+  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.55), 0 0 22px var(--success);
+}
+
+.confirm-camera-frame--failed .confirm-camera-guide::before {
+  border-color: var(--error);
 }
 
 .confirm-camera-canvas {

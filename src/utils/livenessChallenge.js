@@ -61,7 +61,7 @@ const TURN_YAW_SIGN = -1;
 
 // --- Blink extraction ------------------------------------------------------
 // No longer a challenge step on its own, but still feeds isNeutralPose below
-// so "Return to Center" can't be satisfied with eyes closed.
+// so a "settled, facing forward" reading can't be satisfied with eyes closed.
 
 export const getBlinkScore = (blendshapeCategories = []) => {
   const byName = new Map(blendshapeCategories.map((c) => [c.categoryName, c.score]));
@@ -108,6 +108,10 @@ const makeTurnAction = (id, instruction, isPastThreshold) => ({
   id,
   instruction,
   timeLimitMs: 6000,
+  // Exposed so the UI can render a smooth in-step progress fraction
+  // (elapsed sustain hold / sustainMs) - display only, doesn't affect
+  // evaluate()'s pass/fail decision below.
+  sustainMs: THRESHOLDS.turnSustainMs,
   createState: () => ({ sustainSince: null }),
   evaluate: (state, smoothed, baseline, now) => {
     const relativeYaw = TURN_YAW_SIGN * (smoothed.yawDeg - baseline.yawDeg);
@@ -132,14 +136,13 @@ export const TURN_RIGHT_ACTION = makeTurnAction(
   (relativeYaw) => relativeYaw > THRESHOLDS.turnYawDeg
 );
 
-// Sits between Turn Left and Turn Right so the right-turn step can never be
-// satisfied by a yaw reading left over from (or sweeping through on the way
-// back from) the left turn - the face must genuinely settle near baseline
-// first.
+// Kept for isNeutralPose/centering use elsewhere, but no longer inserted as
+// its own challenge step - see CHALLENGE_SEQUENCE below.
 export const RETURN_CENTER_ACTION = {
   id: 'return_center',
   instruction: 'Return to center',
   timeLimitMs: 5000,
+  sustainMs: THRESHOLDS.centerSustainMs,
   createState: () => ({ sustainSince: null }),
   evaluate: (state, smoothed, baseline, now) => {
     if (!isNeutralPose(smoothed, baseline)) {
@@ -151,11 +154,15 @@ export const RETURN_CENTER_ACTION = {
   }
 };
 
-// Fixed order, every attempt: Turn Left -> Center -> Turn Right -> Center.
-// The final Center step's own sustain hold is what gates completion - once
-// it's satisfied, useLivenessCheck captures the frame and moves straight to
-// face matching (no separate re-centering phase after this).
-export const CHALLENGE_SEQUENCE = [TURN_LEFT_ACTION, RETURN_CENTER_ACTION, TURN_RIGHT_ACTION, RETURN_CENTER_ACTION];
+// Fixed order, every attempt: Turn Left -> Turn Right. Each turn action
+// already requires a sustained hold past turnYawDeg (see makeTurnAction)
+// before it counts as done, so a quick pass-through on the way to the other
+// side can't satisfy either step - that sustain gate is what keeps this
+// spoof-resistant without an explicit "return to center" step in between.
+// The final Turn Right step's own sustain hold is what gates completion -
+// once it's satisfied, useLivenessCheck captures the frame and moves
+// straight to face matching.
+export const CHALLENGE_SEQUENCE = [TURN_LEFT_ACTION, TURN_RIGHT_ACTION];
 
 export const generateChallengeSequence = () => [...CHALLENGE_SEQUENCE];
 

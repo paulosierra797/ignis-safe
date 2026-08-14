@@ -1,12 +1,12 @@
 // hooks/useLivenessCheck.js
 // Drives the MediaPipe Face Landmarker inference loop and the liveness phase
 // state machine: centering -> calibrating (neutral baseline) -> challenge
-// (turn left -> center -> turn right -> center, fixed order) -> passed/failed.
-// The final "return to center" step's own sustain hold gates completion, so
-// the frame is captured and face matching starts immediately once it's held -
-// no separate re-centering phase after the challenge. Inference is throttled
-// (~12fps) since detectForVideo() is synchronous and blocks the UI thread if
-// run every requestAnimationFrame tick.
+// (turn left -> turn right, fixed order) -> passed/failed. The final Turn
+// Right step's own sustain hold gates completion, so the frame is captured
+// and face matching starts immediately once it's held - no separate
+// re-centering phase after the challenge. Inference is throttled (~12fps)
+// since detectForVideo() is synchronous and blocks the UI thread if run
+// every requestAnimationFrame tick.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadFaceLandmarker } from '../utils/faceLandmarker';
 import {
@@ -78,6 +78,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
   const [stepCount, setStepCount] = useState(0);
   const [countdownMs, setCountdownMs] = useState(null);
   const [failureReason, setFailureReason] = useState('');
+  const [progressPercent, setProgressPercent] = useState(0);
 
   const rafRef = useRef(null);
   const landmarkerRef = useRef(null);
@@ -164,6 +165,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     setInstruction(action.instruction);
     setStepIndex(stepIndexRef.current);
     setStepCount(sequenceRef.current.length);
+    setProgressPercent((stepIndexRef.current / sequenceRef.current.length) * 100);
     pushDebug(`challenge step ${stepIndexRef.current + 1}/${sequenceRef.current.length}: ${action.id}`);
   };
 
@@ -181,6 +183,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
       return;
     }
     setCountdownMs(null);
+    setProgressPercent(100);
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -207,7 +210,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
 
   const handleCentering = (bbox, now) => {
     if (centeringStartRef.current == null) centeringStartRef.current = now;
-    setInstruction('Center your face in the frame');
+    setInstruction('Center your face in the circle');
 
     if (!isBBoxCentered(bbox)) {
       centeringSustainStartRef.current = null;
@@ -264,6 +267,15 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
       return;
     }
     setCountdownMs(Math.max(0, action.timeLimitMs - elapsed));
+
+    // Display-only smooth fill: fraction of the way through this step's
+    // sustain hold (0 until the pose is actually past threshold and being
+    // held). Doesn't affect action.evaluate()'s pass/fail decision above.
+    const sustainSince = actionStateRef.current?.sustainSince;
+    const holdFraction = sustainSince == null
+      ? 0
+      : Math.min(1, (now - sustainSince) / (action.sustainMs || 1));
+    setProgressPercent(((stepIndexRef.current + holdFraction) / sequenceRef.current.length) * 100);
   };
 
   const processResult = (result, now, video) => {
@@ -336,6 +348,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     setPhase('loading');
     setInstruction('Preparing face check...');
     setFailureReason('');
+    setProgressPercent(0);
     centeringStartRef.current = null;
     centeringSustainStartRef.current = null;
     bufferRef.current = [];
@@ -369,6 +382,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     stepIndex,
     stepCount,
     countdownMs,
+    progressPercent,
     failureLabel: FAILURE_REASON_LABELS[failureReason] || '',
     thresholds: THRESHOLDS
   };

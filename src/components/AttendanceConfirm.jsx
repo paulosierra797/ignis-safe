@@ -39,6 +39,7 @@ const AttendanceConfirm = () => {
   const [verificationPhotoBlob, setVerificationPhotoBlob] = useState(null);
   const [verifiedStationId, setVerifiedStationId] = useState(null);
   const [showAttendanceConfirmation, setShowAttendanceConfirmation] = useState(false);
+  const [timeInSuccess, setTimeInSuccess] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -55,7 +56,7 @@ const AttendanceConfirm = () => {
     ? `${stationGeo.name} (${stationGeo.stationId})`
     : stationGeo.name;
   const hasPendingVerification = Boolean(mode || geoLocation || verificationPhotoBlob) &&
-    confirmStatus?.type !== 'success';
+    confirmStatus?.type !== 'success' && !timeInSuccess;
   const navigationBlocker = useBlocker(hasPendingVerification && !isProcessing);
   const timeInDisabled = isAttendanceStatusLoading || !attendanceStatus?.canTimeIn;
   const timeOutDisabled = isAttendanceStatusLoading || !attendanceStatus?.canTimeOut;
@@ -411,16 +412,22 @@ const handleVerifyFace = async () => {
   }
 });
       setShowAttendanceConfirmation(false);
-      setConfirmStatus({
-        type: 'success',
-        message: `✓ Attendance confirmed for ${authenticatedOfficer.name} (${authenticatedOfficer.rank}) at ${stationLabel}.`
-      });
 
-      setStatus(
-        action === 'updated'
-          ? `Time Out recorded at ${record.timeOut}.`
-          : `Confirmed ${mode === 'in' ? `Time In at ${record.timeIn}` : `Time Out at ${record.timeOut}`}.`
-      );
+      if (mode === 'in' && action !== 'updated') {
+        setTimeInSuccess({ time: record.timeIn });
+      } else {
+        setConfirmStatus({
+          type: 'success',
+          message: `✓ Attendance confirmed for ${authenticatedOfficer.name} (${authenticatedOfficer.rank}) at ${stationLabel}.`
+        });
+
+        setStatus(
+          action === 'updated'
+            ? `Time Out recorded at ${record.timeOut}.`
+            : `Confirmed Time Out at ${record.timeOut}.`
+        );
+      }
+
       await refreshAttendanceStatus();
 
       if (authenticatedOfficer.admin_id) {
@@ -650,6 +657,32 @@ const handleVerifyFace = async () => {
                       disabled={isProcessing}
                     >
                       {isProcessing ? 'Saving...' : `Yes, Record ${mode === 'in' ? 'Time In' : 'Time Out'}`}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {timeInSuccess && (
+              <div className="attendance-confirm-overlay" role="presentation">
+                <div
+                  className="attendance-confirm-dialog attendance-success-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="timeInSuccessTitle"
+                >
+                  <div className="attendance-confirm-dialog-icon success" aria-hidden="true">✓</div>
+                  <h2 id="timeInSuccessTitle">Time In Recorded Successfully!</h2>
+                  <p>
+                    Your Time In was recorded at <strong>{timeInSuccess.time}</strong>. You may record your Time Out after your shift.
+                  </p>
+                  <div className="attendance-confirm-dialog-actions">
+                    <button
+                      type="button"
+                      className="attendance-confirm-approve"
+                      onClick={() => navigate('/personnel/operations')}
+                    >
+                      Back to Personnel Account
                     </button>
                   </div>
                 </div>

@@ -433,6 +433,15 @@
   color: var(--error);
 }
 
+.attendance-confirm-dialog-icon.success {
+  background: rgba(16, 185, 129, 0.16);
+  color: var(--success);
+}
+
+.attendance-success-dialog {
+  border-color: rgba(245, 181, 68, 0.35);
+}
+
 .attendance-confirm-dialog h2 {
   margin: 0;
   font-family: 'Chakra Petch', 'Segoe UI', sans-serif;

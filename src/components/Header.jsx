@@ -443,10 +443,10 @@ export default function Header() {
     <header className="header">
       <div className="header-container">
         <a className="landing-brand" href={sectionHref('home')} onClick={(event) => handleSectionClick(event, 'home')}>
-          <img src={logo} alt="BFP Dasmarinas City Fire Station seal" className="landing-brand-logo" />
+          <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="landing-brand-logo" />
           <div className="landing-brand-text">
             <h4>BUREAU OF FIRE PROTECTION</h4>
-            <h4>DASMARINAS CITY FIRE STATION</h4>
+            <h4>DASMARIÑAS CITY FIRE STATION</h4>
           </div>
         </a>
 

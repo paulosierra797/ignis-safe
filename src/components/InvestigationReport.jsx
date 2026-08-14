@@ -38,7 +38,7 @@ export default function InvestigationReport({
     memorandumFor: '',
     memorandumDate: '',
     memorandumSubject: '',
-    fireStation: 'Dasmarinas City Fire Station, Dasmarinas City, Cavite, Region IV-A',
+    fireStation: 'Dasmariñas City Fire Station, Dasmariñas City, Cavite, Region IV-A',
     fireAlarmReceived: '',
     fireCaller: '',
     fireCallerOffice: '',

@@ -16,10 +16,10 @@ export default function Footer() {
       <div className="footer-container footer-main">
         <div className="footer-brand">
           <div className="footer-logo">
-            <img src={logo} alt="BFP Dasmarinas City Fire Station seal" className="footer-logo-image" />
+            <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="footer-logo-image" />
             <div>
               <span>Bureau of Fire Protection</span>
-              <h3>Dasmarinas City Fire Station</h3>
+              <h3>Dasmariñas City Fire Station</h3>
             </div>
           </div>
           <p>Serving the community through fire prevention, emergency response, and public safety education.</p>
@@ -56,7 +56,7 @@ export default function Footer() {
 
       <div className="footer-bottom">
         <div className="footer-container footer-bottom-inner">
-          <p>&copy; {currentYear} BFP Dasmarinas City Fire Station. All rights reserved.</p>
+          <p>&copy; {currentYear} BFP Dasmariñas City Fire Station. All rights reserved.</p>
           <div className="footer-links">
             <Link to="/terms">Terms</Link>
             <Link to="/privacy">Privacy</Link>

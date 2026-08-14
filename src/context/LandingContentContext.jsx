@@ -10,7 +10,7 @@ const STORAGE_KEY = 'ignis_landing_content_v1';
 export const DEFAULT_LANDING_CONTENT = {
   hero: {
     title: 'Protecting lives, property and community',
-    lead: 'Welcome to our Dasmarinas Fire Station portal.',
+    lead: 'Welcome to our Dasmariñas Fire Station portal.',
     description:
       'Learn about our services, contact details and FSIC & FSEC organization for safety, preparedness, and community support.',
     photos: []
@@ -18,7 +18,7 @@ export const DEFAULT_LANDING_CONTENT = {
   about: {
     title: 'About us',
     intro:
-      'The Dasmarinas Fire Station is committed to protecting lives, safety, and the environment through professional and expertise, emergency medical services, and disaster response. Our dedicated team of firefighters and first responders serve around the clock to ensure the safety of our community. We take pride in serving the public with a unwavering commitment towards emergency response and community service.',
+      'The Dasmariñas Fire Station is committed to protecting lives, safety, and the environment through professional and expertise, emergency medical services, and disaster response. Our dedicated team of firefighters and first responders serve around the clock to ensure the safety of our community. We take pride in serving the public with a unwavering commitment towards emergency response and community service.',
     missionTitle: 'Our Mission',
     missionText:
       'We commit to prevent and suppress destructive fires, investigate its causes; enforce Fire Code and other related laws; respond to man-made and natural disasters and other emergencies.',
@@ -32,7 +32,7 @@ export const DEFAULT_LANDING_CONTENT = {
     landlineSecondary: '416-0875',
     mobile: '0995 336 9534',
     email: 'dasmariasfire@gmail.com',
-    facebookLabel: 'BFP-Dasmarinas FS Cavite',
+    facebookLabel: 'BFP-Dasmariñas FS Cavite',
     facebookUrl: 'https://www.facebook.com/GOLF.E207/'
   },
   process: {

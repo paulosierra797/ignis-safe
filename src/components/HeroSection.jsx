@@ -20,7 +20,7 @@ export default function HeroSection() {
       }));
     }
 
-    return [{ id: 'default-banner-photo', url: bfppic, alt: 'BFP Dasmarinas fire station personnel' }];
+    return [{ id: 'default-banner-photo', url: bfppic, alt: 'BFP Dasmariñas fire station personnel' }];
   }, [content.hero.photos]);
 
   const hasMultiplePhotos = bannerPhotos.length > 1;

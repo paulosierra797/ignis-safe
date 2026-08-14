@@ -11,7 +11,7 @@ export default function TermsPage() {
         <section className="legal-section">
           <h2>1. Purpose of the Website</h2>
           <p>
-            This website is provided by the Bureau of Fire Protection Dasmarinas City Fire Station
+            This website is provided by the Bureau of Fire Protection Dasmariñas City Fire Station
             to share public information, fire safety resources, contact details, and related service
             updates.
           </p>

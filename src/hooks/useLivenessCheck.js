@@ -1,16 +1,17 @@
 // hooks/useLivenessCheck.js
 // Drives the MediaPipe Face Landmarker inference loop and the liveness phase
 // state machine: centering -> calibrating (neutral baseline) -> challenge
-// (blink -> turn left -> center -> turn right, fixed order) -> lookStraight
-// (final neutral recapture before face match) -> passed/failed. Inference is
-// throttled (~12fps) since detectForVideo() is synchronous and blocks the UI
-// thread if run every requestAnimationFrame tick.
+// (turn left -> center -> turn right -> center, fixed order) -> passed/failed.
+// The final "return to center" step's own sustain hold gates completion, so
+// the frame is captured and face matching starts immediately once it's held -
+// no separate re-centering phase after the challenge. Inference is throttled
+// (~12fps) since detectForVideo() is synchronous and blocks the UI thread if
+// run every requestAnimationFrame tick.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadFaceLandmarker } from '../utils/faceLandmarker';
 import {
   decomposeYawPitchRoll,
   getBlinkScore,
-  isNeutralPose,
   createChallengeSession,
   isChallengeValidForSession,
   THRESHOLDS
@@ -33,16 +34,12 @@ const CALIBRATION_SUSTAIN_MS = 600;
 const CALIBRATION_TIMEOUT_MS = 7000;
 const CALIBRATION_STABILITY_DEG = 5;
 
-const LOOK_STRAIGHT_SUSTAIN_MS = 400;
-const LOOK_STRAIGHT_TIMEOUT_MS = 6000;
-
 const FAILURE_REASON_LABELS = {
   tracking_lost: 'No face detected.',
   multiple_faces: 'More than one face was detected.',
   centering_timeout: 'Could not get a centered, single face in view.',
   calibration_timeout: 'Could not hold a steady neutral pose.',
   challenge_timeout: 'Challenge action was not completed in time.',
-  look_straight_timeout: 'Did not return to a neutral pose in time.',
   session_mismatch: 'Verification session changed mid-check.',
   landmarker_error: 'Face tracking failed to start.'
 };
@@ -105,9 +102,6 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
   const actionStateRef = useRef(null);
   const stepStartTimeRef = useRef(null);
   const challengeSessionRef = useRef(null);
-
-  const lookStraightStartRef = useRef(null);
-  const lookStraightSustainStartRef = useRef(null);
 
   const qrSessionIdRef = useRef(qrSessionId);
   const onCompleteRef = useRef(onComplete);
@@ -181,14 +175,23 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     startStep(now);
   };
 
-  const advanceToLookStraight = (now) => {
-    phaseRef.current = 'lookStraight';
-    setPhase('lookStraight');
-    setInstruction('Return to center');
+  const finishChallenge = (now, video) => {
+    if (!isChallengeValidForSession(challengeSessionRef.current, qrSessionIdRef.current)) {
+      fail('session_mismatch');
+      return;
+    }
     setCountdownMs(null);
-    lookStraightStartRef.current = now;
-    lookStraightSustainStartRef.current = null;
-    pushDebug('challenge complete, awaiting neutral recapture');
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    pushDebug('challenge complete, proceeding to face match');
+    complete({
+      passed: true,
+      canvas,
+      challengeId: challengeSessionRef.current.challengeId,
+      sequenceIds: sequenceRef.current.map((a) => a.id)
+    });
   };
 
   const advanceToCalibrating = (now) => {
@@ -239,7 +242,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     }
   };
 
-  const handleChallenge = (smoothed, now) => {
+  const handleChallenge = (smoothed, now, video) => {
     const action = sequenceRef.current[stepIndexRef.current];
     if (!action) return;
 
@@ -249,7 +252,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     if (done) {
       stepIndexRef.current += 1;
       if (stepIndexRef.current >= sequenceRef.current.length) {
-        advanceToLookStraight(now);
+        finishChallenge(now, video);
       } else {
         startStep(now);
       }
@@ -261,36 +264,6 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
       return;
     }
     setCountdownMs(Math.max(0, action.timeLimitMs - elapsed));
-  };
-
-  const handleLookStraight = (smoothed, now, video) => {
-    const neutral = isNeutralPose(smoothed, baselineRef.current);
-    if (!neutral) {
-      lookStraightSustainStartRef.current = null;
-    } else {
-      if (lookStraightSustainStartRef.current == null) lookStraightSustainStartRef.current = now;
-      if (now - lookStraightSustainStartRef.current >= LOOK_STRAIGHT_SUSTAIN_MS) {
-        if (!isChallengeValidForSession(challengeSessionRef.current, qrSessionIdRef.current)) {
-          fail('session_mismatch');
-          return;
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        complete({
-          passed: true,
-          canvas,
-          challengeId: challengeSessionRef.current.challengeId,
-          sequenceIds: sequenceRef.current.map((a) => a.id)
-        });
-        return;
-      }
-    }
-
-    if (now - lookStraightStartRef.current > LOOK_STRAIGHT_TIMEOUT_MS) {
-      fail('look_straight_timeout');
-    }
   };
 
   const processResult = (result, now, video) => {
@@ -328,8 +301,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     if (!smoothed) return;
 
     if (phaseRef.current === 'calibrating') handleCalibrating(smoothed, now);
-    else if (phaseRef.current === 'challenge') handleChallenge(smoothed, now);
-    else if (phaseRef.current === 'lookStraight') handleLookStraight(smoothed, now, video);
+    else if (phaseRef.current === 'challenge') handleChallenge(smoothed, now, video);
   };
 
   const tick = useCallback(() => {

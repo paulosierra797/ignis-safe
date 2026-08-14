@@ -41,12 +41,21 @@ export const decomposeYawPitchRoll = (matrixData) => {
 
 // The <video> preview is NOT CSS-mirrored (see AttendanceConfirm.jsx - the
 // getUserMedia stream is drawn raw), so MediaPipe's yaw is computed directly
-// against the unflipped camera frame. This constant is the single knob to
-// flip if "turn left"/"turn right" ever feel swapped on a real device -
-// re-derive the matrix math only as a last resort.
-const TURN_YAW_SIGN = 1;
+// against the unflipped camera frame. decomposeYawPitchRoll's atan2(m13, m33)
+// is +θ when the canonical face's forward (+Z, facing the camera) axis
+// rotates toward image +X (screen right). Since the preview is unmirrored,
+// image-right is the subject's OWN LEFT (as in a normal photo of someone
+// facing the camera, not a mirror) - so raw yawDeg is positive when the
+// person turns their own left, negative when they turn their own right.
+// TURN_LEFT/TURN_RIGHT below are written expecting the opposite sign
+// (negative = left, positive = right), so this must be -1 to match on a real
+// device. This is the single knob to flip if "turn left"/"turn right" ever
+// feel swapped - re-derive the matrix math only as a last resort.
+const TURN_YAW_SIGN = -1;
 
 // --- Blink extraction ------------------------------------------------------
+// No longer a challenge step on its own, but still feeds isNeutralPose below
+// so "Return to Center" can't be satisfied with eyes closed.
 
 export const getBlinkScore = (blendshapeCategories = []) => {
   const byName = new Map(blendshapeCategories.map((c) => [c.categoryName, c.score]));
@@ -58,8 +67,6 @@ export const getBlinkScore = (blendshapeCategories = []) => {
 // --- Thresholds --------------------------------------------------------
 
 export const THRESHOLDS = {
-  blinkClosed: 0.55,
-  blinkOpen: 0.3,
   // A "strong" turn, not a slight glance - deliberately higher than a
   // passive head wobble so a static photo tilted slightly can't pass.
   turnYawDeg: 25,
@@ -90,22 +97,6 @@ export const isNeutralPose = (smoothed, baseline) => {
 // evaluate(state, smoothed, baseline, now) is called every tracked frame
 // while the step is active; `now` is a performance.now() timestamp used for
 // sustain windows (a threshold must be genuinely held, not just brushed).
-
-export const BLINK_ACTION = {
-  id: 'blink_twice',
-  instruction: 'Blink twice',
-  timeLimitMs: 7000,
-  createState: () => ({ phase: 'open', blinkCount: 0 }),
-  evaluate: (state, smoothed) => {
-    if (state.phase === 'open' && smoothed.blinkScore > THRESHOLDS.blinkClosed) {
-      state.phase = 'closed';
-    } else if (state.phase === 'closed' && smoothed.blinkScore < THRESHOLDS.blinkOpen) {
-      state.phase = 'open';
-      state.blinkCount += 1;
-    }
-    return state.blinkCount >= 2;
-  }
-};
 
 const makeTurnAction = (id, instruction, isPastThreshold) => ({
   id,
@@ -154,11 +145,11 @@ export const RETURN_CENTER_ACTION = {
   }
 };
 
-// Fixed order, every attempt: Blink -> Turn Left -> Center -> Turn Right.
-// Blink stays mandatory and first so a static photo can't just be tilted
-// left/right to pass. (The final return-to-center + capture, before face
-// matching, is handled separately by useLivenessCheck's 'lookStraight' phase.)
-export const CHALLENGE_SEQUENCE = [BLINK_ACTION, TURN_LEFT_ACTION, RETURN_CENTER_ACTION, TURN_RIGHT_ACTION];
+// Fixed order, every attempt: Turn Left -> Center -> Turn Right -> Center.
+// The final Center step's own sustain hold is what gates completion - once
+// it's satisfied, useLivenessCheck captures the frame and moves straight to
+// face matching (no separate re-centering phase after this).
+export const CHALLENGE_SEQUENCE = [TURN_LEFT_ACTION, RETURN_CENTER_ACTION, TURN_RIGHT_ACTION, RETURN_CENTER_ACTION];
 
 export const generateChallengeSequence = () => [...CHALLENGE_SEQUENCE];
 

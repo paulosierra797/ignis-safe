@@ -20,11 +20,6 @@ const formatDistance = (distanceMeters) => {
   return `${Math.round(distance)} m`;
 };
 
-const formatFaceMatch = (percentage) => {
-  const value = Number(percentage);
-  return Number.isFinite(value) ? `${value.toFixed(1)}%` : 'Not recorded';
-};
-
 const getVerificationLabel = (status) => {
   if (status === 'passed') return 'Passed';
   if (status === 'failed') return 'Failed';
@@ -414,10 +409,6 @@ const AttendancePersonnel = () => {
                 <article className="attendance-detail-card">
                   <h3>Face ID Verification</h3>
                   <dl>
-                    <div>
-                      <dt>Face match</dt>
-                      <dd>{formatFaceMatch(selectedRecord.faceMatchPercentage)}</dd>
-                    </div>
                     <div>
                       <dt>Face check</dt>
                       <dd className={selectedRecord.faceVerificationPassed === true ? 'verification-pass' : selectedRecord.faceVerificationPassed === false ? 'verification-fail' : ''}>

@@ -4,6 +4,7 @@ import { loadFaceModels } from '../utils/loadFaceModels';
 import { getFaceByAdminId } from '../utils/attendanceService';
 import * as faceapi from '@vladmandic/face-api';
 import { validateQRSession } from '../utils/attendanceService';
+import LivenessCheck from './LivenessCheck';
 import './AttendanceConfirm.css';
 import {
   requestGeoLocation,
@@ -35,14 +36,17 @@ const AttendanceConfirm = () => {
   const [attendanceStatus, setAttendanceStatus] = useState(null);
   const [attendanceStatusError, setAttendanceStatusError] = useState('');
   const [isAttendanceStatusLoading, setIsAttendanceStatusLoading] = useState(false);
-  const faceDebug = [];
+  const [faceDebug, setFaceDebug] = useState([]);
   const [verificationPhotoBlob, setVerificationPhotoBlob] = useState(null);
   const [verifiedStationId, setVerifiedStationId] = useState(null);
   const [showAttendanceConfirmation, setShowAttendanceConfirmation] = useState(false);
   const [timeInSuccess, setTimeInSuccess] = useState(null);
+  const [showLiveness, setShowLiveness] = useState(false);
+  const [livenessAttemptKey, setLivenessAttemptKey] = useState(0);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+  const storedDescriptorRef = useRef(null);
  
   const authSessionId = searchParams.get('auth');
   const qrSessionId = searchParams.get('station');
@@ -207,6 +211,10 @@ useEffect(() => {
   }
 };
 
+const appendFaceDebug = useCallback((message) => {
+  setFaceDebug((prev) => [...prev.slice(-19), `${new Date().toISOString().slice(11, 19)} ${message}`]);
+}, []);
+
 const handleVerifyFace = async () => {
   if (!authenticatedOfficer) {
     setFaceError('Authentication error. Please login again.');
@@ -223,6 +231,7 @@ const handleVerifyFace = async () => {
   setVerificationPhotoBlob(null);
   setIsVerifyingFace(true);
   setFaceStatus('Loading face data...');
+  setFaceDebug([]);
 
   try {
     // 1. Get stored face from Supabase
@@ -234,11 +243,11 @@ const handleVerifyFace = async () => {
       return;
     }
 
-    const storedDescriptor = new Float32Array(
-  typeof data.face_descriptor === 'string'
-    ? JSON.parse(data.face_descriptor)
-    : data.face_descriptor
-);
+    storedDescriptorRef.current = new Float32Array(
+      typeof data.face_descriptor === 'string'
+        ? JSON.parse(data.face_descriptor)
+        : data.face_descriptor
+    );
 
     // 2. Open camera
     setFaceStatus('Requesting camera...');
@@ -259,29 +268,35 @@ const handleVerifyFace = async () => {
       await videoRef.current.play();
     }
 
-    setFaceStatus('Look at the camera... detecting face');
+    // 3. Hand off to the liveness challenge. Identity matching only runs
+    // after LivenessCheck reports a pass (see handleLivenessPassed).
+    setFaceStatus('Follow the on-screen instructions to verify you are live.');
+    setLivenessAttemptKey((key) => key + 1);
+    setShowLiveness(true);
+  } catch (err) {
+    console.error(err);
+    setFaceError('Face verification failed.');
+    setFaceStatus('Error occurred during verification.');
+    stopFaceCamera();
+    setIsVerifyingFace(false);
+  }
+};
 
-    // 3. Wait a bit for stable frame
-    await new Promise(r => setTimeout(r, 800));
+const handleLivenessPassed = useCallback(async ({ canvas, challengeId, sequenceIds }) => {
+  setShowLiveness(false);
+  setFaceStatus('Matching face...');
 
-    const canvas = document.createElement('canvas');
-    canvas.width = videoRef.current.videoWidth;
-    canvas.height = videoRef.current.videoHeight;
-
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(videoRef.current, 0, 0);
-
-    // 4. Detect face
-   const detection = await faceapi
-  .detectSingleFace(
-    canvas,
-    new faceapi.TinyFaceDetectorOptions()
-  )
-  .withFaceLandmarks()
-  .withFaceDescriptor();
+  try {
+    // 4. Detect face on the exact live frame captured the instant the
+    // liveness challenge's final "look straight" step succeeded.
+    const detection = await faceapi
+      .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
+      .withFaceLandmarks()
+      .withFaceDescriptor();
 
     if (!detection) {
       setFaceError('No face detected.');
+      setFaceStatus('Verification failed ✗');
       stopFaceCamera();
       setIsVerifyingFace(false);
       return;
@@ -298,16 +313,18 @@ const handleVerifyFace = async () => {
       return;
     }
 
-    // 5. Compare faces
+    // 5. Compare faces - identical threshold/logic to before, only the
+    // source frame changed.
     const distance = faceapi.euclideanDistance(
       detection.descriptor,
-      storedDescriptor
+      storedDescriptorRef.current
     );
 
     const threshold = 0.5;
     const isMatch = distance < threshold;
 
     setFaceScore(1 - distance);
+    appendFaceDebug(`match distance=${distance.toFixed(3)} threshold=${threshold} sequence=${sequenceIds.join(',')}`);
 
     if (isMatch) {
       setVerificationPhotoBlob(capturedPhoto);
@@ -317,7 +334,11 @@ const handleVerifyFace = async () => {
         ...authenticatedOfficer,
         faceVerified: true,
         faceMatchScore: 1 - distance,
-        faceVerifiedAt: new Date().toISOString()
+        faceVerifiedAt: new Date().toISOString(),
+        livenessPassed: true,
+        livenessChallengeId: challengeId,
+        livenessVerifiedAt: new Date().toISOString(),
+        livenessChallengeSequence: sequenceIds
       };
 
       saveAuthToken(updated);
@@ -330,7 +351,6 @@ const handleVerifyFace = async () => {
 
     stopFaceCamera();
     setIsVerifyingFace(false);
-
   } catch (err) {
     console.error(err);
     setFaceError('Face verification failed.');
@@ -338,7 +358,16 @@ const handleVerifyFace = async () => {
     stopFaceCamera();
     setIsVerifyingFace(false);
   }
-};
+}, [authenticatedOfficer, appendFaceDebug]);
+
+const handleLivenessFailed = useCallback((reason) => {
+  appendFaceDebug(`liveness failed: ${reason}`);
+  setShowLiveness(false);
+  setFaceError('Live face verification failed. Please look directly at the camera and follow the instructions.');
+  setFaceStatus('Verification failed ✗');
+  stopFaceCamera();
+  setIsVerifyingFace(false);
+}, [appendFaceDebug]);
 
   const handleConfirm = () => {
     if (!mode) {
@@ -403,6 +432,10 @@ const handleVerifyFace = async () => {
     faceMatchScore: faceScore ?? authenticatedOfficer.faceMatchScore,
     facePassed: authenticatedOfficer.faceVerified,
     faceVerifiedAt: authenticatedOfficer.faceVerifiedAt,
+    livenessPassed: authenticatedOfficer.livenessPassed,
+    livenessChallengeId: authenticatedOfficer.livenessChallengeId,
+    livenessVerifiedAt: authenticatedOfficer.livenessVerifiedAt,
+    livenessChallengeSequence: authenticatedOfficer.livenessChallengeSequence,
     locationPassed: proximity.isValid,
     distanceMeters: proximity.distance,
     stationRadiusMeters: proximity.radius,
@@ -549,16 +582,28 @@ const handleVerifyFace = async () => {
               </div>
               <video ref={videoRef} className="confirm-camera-preview" autoPlay muted playsInline />
               <canvas ref={canvasRef} className="confirm-camera-canvas" aria-hidden="true" />
-              <div className="face-debug-panel">
-                <div className="face-debug-title">Face Debug</div>
-                {faceDebug.length > 0 ? (
-                  faceDebug.map((line) => (
-                    <div key={line} className="face-debug-line">{line}</div>
-                  ))
-                ) : (
-                  <div className="face-debug-empty">No face debug events yet.</div>
-                )}
-              </div>
+              {showLiveness && (
+                <LivenessCheck
+                  key={livenessAttemptKey}
+                  videoRef={videoRef}
+                  qrSessionId={qrSessionId}
+                  onPassed={handleLivenessPassed}
+                  onFailed={handleLivenessFailed}
+                  onDebug={appendFaceDebug}
+                />
+              )}
+              {import.meta.env.DEV && (
+                <div className="face-debug-panel">
+                  <div className="face-debug-title">Face Debug</div>
+                  {faceDebug.length > 0 ? (
+                    faceDebug.map((line, index) => (
+                      <div key={`${index}-${line}`} className="face-debug-line">{line}</div>
+                    ))
+                  ) : (
+                    <div className="face-debug-empty">No face debug events yet.</div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* GPS Validation */}

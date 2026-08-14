@@ -1,0 +1,59 @@
+.liveness-check {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #0f1418;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.liveness-instruction {
+  color: #eef1f4;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.liveness-check--failed .liveness-instruction {
+  color: var(--error);
+}
+
+.liveness-check--passed .liveness-instruction {
+  color: var(--success);
+}
+
+.liveness-progress {
+  display: flex;
+  gap: 8px;
+}
+
+.liveness-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: background 0.2s ease;
+}
+
+.liveness-dot.active {
+  background: var(--glow);
+}
+
+.liveness-dot.done {
+  background: var(--success);
+}
+
+.liveness-countdown {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--glow);
+}
+
+.liveness-fail-detail {
+  font-size: 11px;
+  color: rgba(239, 68, 68, 0.85);
+}

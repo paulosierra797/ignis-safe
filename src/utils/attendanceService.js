@@ -358,7 +358,13 @@ const buildVerificationFields = ({ officer, mode, location, verification, photoP
     verification_recorded_at: new Date().toISOString(),
     verification_metadata: {
       station_radius_m: toFiniteNumber(verification?.stationRadiusMeters),
-      face_verified_at: verification?.faceVerifiedAt || null
+      face_verified_at: verification?.faceVerifiedAt || null,
+      liveness_passed: Boolean(verification?.livenessPassed),
+      liveness_challenge_id: verification?.livenessChallengeId || null,
+      liveness_completed_at: verification?.livenessVerifiedAt || null,
+      liveness_challenge_sequence: Array.isArray(verification?.livenessChallengeSequence)
+        ? verification.livenessChallengeSequence
+        : null
     }
   };
 };

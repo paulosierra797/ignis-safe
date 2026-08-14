@@ -13,6 +13,7 @@
     "local-api:dev": "npm run dev --prefix local-api"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.0.1",
     "@supabase/supabase-js": "^2.39.8",
     "@techstark/opencv-js": "^4.12.0-release.1",
     "@vladmandic/face-api": "^1.7.15",

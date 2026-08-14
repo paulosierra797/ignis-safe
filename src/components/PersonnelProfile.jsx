@@ -90,7 +90,6 @@ const [faceLoading, setFaceLoading] = useState(false);
 const webcamRef = React.useRef(null);
 const [faceBox, setFaceBox] = useState(null);
 const [faceRecord, setFaceRecord] = useState(null);
-const faceCooldownUntil = getFaceCooldownUntil(faceRecord);
 const [modal, setModal] = useState({
   open: false,
   type: "info", // "success" | "error" | "confirm"
@@ -229,7 +228,7 @@ const [modal, setModal] = useState({
   if (cooldownUntil) {
     showModal({
       type: "info",
-      message: `You can update your Face ID again on ${formatFaceCooldownDate(cooldownUntil)}.`
+      message: `Face ID is already registered. You can update your Face ID again on ${formatFaceCooldownDate(cooldownUntil)}.`
     });
     return;
   }
@@ -480,7 +479,7 @@ const captureFace = async () => {
       const cooldownUntil = getFaceIdCooldownUntil(error);
       showModal(
         cooldownUntil
-          ? { type: 'info', message: `You can update your Face ID again on ${formatFaceCooldownDate(cooldownUntil)}.` }
+          ? { type: 'info', message: `Face ID is already registered. You can update your Face ID again on ${formatFaceCooldownDate(cooldownUntil)}.` }
           : { type: 'error', message: 'Failed to save face data.' }
       );
       return;
@@ -642,15 +641,9 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                     type="button"
                     className="change-password-btn register-face-btn"
                     onClick={handleFaceRegisterClick}
-                    disabled={!!faceCooldownUntil}
                   >
                     {faceRecord ? 'Update Face ID' : 'Register Face ID'}
                   </button>
-                  {faceCooldownUntil && (
-                    <p className="face-cooldown-note">
-                      You can update your Face ID again on {formatFaceCooldownDate(faceCooldownUntil)}.
-                    </p>
-                  )}
                 </div>
 
                 <div className="my-requests-section">

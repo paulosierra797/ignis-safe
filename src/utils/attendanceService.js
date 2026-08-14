@@ -75,7 +75,16 @@ const buildOfficerFromAuthUser = async (authUser) => {
   const accountEmail = authUser.email.toLowerCase();
   const fallbackOfficer = personnelDatabase.find((p) => p.email.toLowerCase() === accountEmail);
 
-  const [adminResult, workspaceResult] = await Promise.all([
+  // is_active_personnel_account() is the single source of truth for "is this
+  // an active Personnel account" - the same RPC the record_attendance_action()
+  // submission enforces server-side. It checks the real public.admin record's
+  // status plus role, accepting both role = 'personnel' and role = 'admin'
+  // accounts that also own a personnel_workspace_profiles row (an admin who
+  // is also registered as active Personnel). Keeping eligibility on this one
+  // DB-backed check - instead of re-deriving it from admin/workspace rows in
+  // JS - prevents the login gate and the submission RPC from drifting apart.
+  const [eligibilityResult, adminResult, workspaceResult] = await Promise.all([
+    supabase.rpc('is_active_personnel_account'),
     supabase
       .from('admin')
       .select('*')
@@ -88,37 +97,16 @@ const buildOfficerFromAuthUser = async (authUser) => {
       .maybeSingle()
   ]);
 
-  if (adminResult.error || workspaceResult.error) {
+  if (eligibilityResult.error || adminResult.error || workspaceResult.error) {
+    return null;
+  }
+
+  if (!eligibilityResult.data) {
     return null;
   }
 
   const adminProfile = adminResult.data || null;
   const workspaceProfile = workspaceResult.data || null;
-  const accountRole = String(adminProfile?.role || '').trim().toLowerCase();
-  const accountStatus = String(adminProfile?.status || '').trim().toLowerCase();
-
-  // Admin accounts can also carry a personnel_workspace_profiles row so they
-  // can mark their own attendance (see getPersonnelWorkspaceProfile in
-  // usersService.js) - accept that combination the same way the rest of the
-  // app does, instead of only ever accepting accountRole === 'personnel'.
-  const isPersonnelAccount = accountRole === 'personnel';
-  const isAdminActingAsPersonnel = accountRole === 'admin' && Boolean(workspaceProfile);
-
-  if (!isPersonnelAccount && !isAdminActingAsPersonnel) {
-    return null;
-  }
-
-  // Account validity always comes from the admin table's own status column
-  // (Active / Inactive / Suspended / Pending Activation - the same field
-  // ProtectedRoute uses to decide whether the login itself is disabled).
-  // personnel_workspace_profiles.status is an on-duty/on-leave/off-duty
-  // indicator, not an account-authorization flag, so it must never gate
-  // whether this account is allowed to reach attendance - only whether a
-  // shift is currently scheduled, which is validated separately downstream.
-  if (accountStatus && accountStatus !== 'active') {
-    return null;
-  }
-
   const personnelProfile = workspaceProfile || adminProfile;
   const personnelName = `${personnelProfile?.first_name || ''} ${personnelProfile?.last_name || ''}`.trim();
 

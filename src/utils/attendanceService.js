@@ -580,21 +580,58 @@ export const recordAttendance = async ({ officer, mode, location, qrSessionId, v
 };
 
 // GPS Validation
+
+// Loose bounding box covering all Philippine territory. Used to catch
+// obviously wrong GPS fixes (e.g. a browser/OS falling back to an
+// IP-based or cached location in another country) before they are ever
+// accepted as a valid attendance location.
+const PHILIPPINES_BOUNDS = {
+  minLat: 4.5,
+  maxLat: 21.5,
+  minLng: 116.0,
+  maxLng: 127.0
+};
+
+export const isWithinPhilippines = (latitude, longitude) => (
+  Number.isFinite(latitude) &&
+  Number.isFinite(longitude) &&
+  latitude >= PHILIPPINES_BOUNDS.minLat &&
+  latitude <= PHILIPPINES_BOUNDS.maxLat &&
+  longitude >= PHILIPPINES_BOUNDS.minLng &&
+  longitude <= PHILIPPINES_BOUNDS.maxLng
+);
+
 export const requestGeoLocation = () => {
   return new Promise((resolve, reject) => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          const { latitude, longitude, accuracy } = position.coords;
+
+          if (!isWithinPhilippines(latitude, longitude)) {
+            console.error(
+              `[Attendance GPS] Rejected out-of-country fix — lat=${latitude}, lng=${longitude}, accuracy=${accuracy}m. ` +
+              'Expected a location within the Philippines.'
+            );
+            reject(new Error('Detected location is outside the Philippines. Please enable GPS and try again.'));
+            return;
+          }
+
+          console.log(
+            `[Attendance GPS] Detected fix — lat=${latitude}, lng=${longitude}, accuracy=${accuracy}m, timestamp=${new Date().toISOString()}`
+          );
+
           resolve({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy,
+            latitude,
+            longitude,
+            accuracy,
             timestamp: new Date().getTime()
           });
         },
         (error) => {
           reject(error);
-        }
+        },
+        { enableHighAccuracy: true }
       );
     } else {
       reject(new Error('Geolocation not supported'));
@@ -648,13 +685,17 @@ const DEFAULT_RADIUS_METERS = 100;
 //   radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS)
 // };
 
-// TEST LOCATION ONLY — SIERRA HOUSE
-// https://maps.apple/p/3my8VxZd9v2yWb
+// TEST LOCATION ONLY – SIERRA HOUSE
+// Block 2 Lot 74 Tennyson St., Brighton 2, Lancaster New City,
+// Brgy. Pasong Camachile I, General Trias, Cavite, Philippines
+// Coordinates confirmed from an on-site GPS fix (Apple Maps pin drop,
+// not address geocoding) — https://maps.apple/p/3my8VxZd9v2yWb
 const defaultStation = {
   latitude: 14.364420,
   longitude: 120.882661,
   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
-  address: import.meta.env.VITE_STATION_ADDRESS || '',
+  address: import.meta.env.VITE_STATION_ADDRESS ||
+    'Block 2 Lot 74 Tennyson St., Brighton 2, Lancaster New City, Brgy. Pasong Camachile I, General Trias, Cavite, Philippines',
   stationId: 'DEFAULT',
   radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS)
 };
@@ -672,8 +713,11 @@ export const STATION_GEO_MAP = {
   //   stationId: 'ZINI-M3',
   //   radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius)
   // },
-  // TEST LOCATION ONLY — SIERRA HOUSE
-  // https://maps.apple/p/3my8VxZd9v2yWb
+  // TEST LOCATION ONLY – SIERRA HOUSE
+  // Block 2 Lot 74 Tennyson St., Brighton 2, Lancaster New City,
+  // Brgy. Pasong Camachile I, General Trias, Cavite, Philippines
+  // Coordinates confirmed from an on-site GPS fix (Apple Maps pin drop,
+  // not address geocoding) — https://maps.apple/p/3my8VxZd9v2yWb
   'ZINI-M3': {
     latitude: 14.364420,
     longitude: 120.882661,

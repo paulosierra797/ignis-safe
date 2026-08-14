@@ -167,8 +167,12 @@ useEffect(() => {
     try {
       const geo = await requestGeoLocation();
       setGeoLocation(geo);
-      
+
       const proximity = validateProximity(geo, stationGeo, stationGeo.radius || 100);
+      console.log(
+        `[Attendance GPS] lat=${geo.latitude}, lng=${geo.longitude}, accuracy=${geo.accuracy}m, ` +
+        `distanceFrom="${stationGeo.name}"=${proximity.distance.toFixed(2)}m, radius=${proximity.radius}m, withinRadius=${proximity.isValid}`
+      );
       if (proximity.isValid) {
         setGeoStatus(`✓ On-site verified (${proximity.distance.toFixed(0)}m away)`);
       } else {

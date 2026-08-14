@@ -4,6 +4,16 @@ const QUESTIONS_TABLE = 'assessment_questions';
 const OPTIONS_TABLE = 'assessment_options';
 const DEFAULT_OPTION_KEYS = ['A', 'B', 'C', 'D'];
 
+const normalizeAssessmentTypeLabel = (rawType) => {
+  const value = String(rawType || '').trim().toLowerCase();
+  if (value === 'pre_test' || value === 'pre-test' || value === 'pretest') {
+    return 'Pre-test';
+  }
+  if (value === 'post_test' || value === 'post-test' || value === 'posttest') {
+    return 'Post-test';
+  }
+  return '';
+};
 
 const parseRetryAfterSeconds = (obj) => {
   if (!obj) return null;
@@ -137,17 +147,6 @@ export const getAssessmentOptions = async () => {
       return accumulator;
     }, {});
 
-    const normalizeTypeLabel = (rawType) => {
-      const value = String(rawType || '').trim().toLowerCase();
-      if (value === 'pre_test' || value === 'pre-test' || value === 'pretest') {
-        return 'Pre-test';
-      }
-      if (value === 'post_test' || value === 'post-test' || value === 'posttest') {
-        return 'Post-test';
-      }
-      return '';
-    };
-
     const normalizeTypeOrder = (typeLabel) => {
       if (typeLabel === 'Pre-test') return 1;
       if (typeLabel === 'Post-test') return 2;
@@ -159,8 +158,8 @@ export const getAssessmentOptions = async () => {
       const moduleNoB = moduleNumberById[b.module_id] ?? Number.MAX_SAFE_INTEGER;
       if (moduleNoA !== moduleNoB) return moduleNoA - moduleNoB;
 
-      const typeOrderA = normalizeTypeOrder(normalizeTypeLabel(a.type));
-      const typeOrderB = normalizeTypeOrder(normalizeTypeLabel(b.type));
+      const typeOrderA = normalizeTypeOrder(normalizeAssessmentTypeLabel(a.type));
+      const typeOrderB = normalizeTypeOrder(normalizeAssessmentTypeLabel(b.type));
       if (typeOrderA !== typeOrderB) return typeOrderA - typeOrderB;
 
       return String(a.title || '').localeCompare(String(b.title || ''));
@@ -173,7 +172,7 @@ export const getAssessmentOptions = async () => {
         type: row.type || '',
         module_id: row.module_id || null,
         module_no: moduleNumberById[row.module_id] ?? null,
-        type_label: normalizeTypeLabel(row.type)
+        type_label: normalizeAssessmentTypeLabel(row.type)
       })),
       error: null
     };
@@ -201,6 +200,61 @@ export const getQuestionsByAssessment = async (assessmentId) => {
     return { data: (data || []).map(mapQuestion), error: null };
   } catch (error) {
     console.error('Error loading assessment questions:', error);
+    return { data: [], error: error.message };
+  }
+};
+
+export const getQuestionsByModule = async (moduleId) => {
+  try {
+    if (!moduleId) {
+      return { data: [], error: null };
+    }
+
+    const { data: assessmentRows, error: assessmentsError } = await supabase
+      .from('assessments')
+      .select('id, title, type, module_id')
+      .eq('module_id', moduleId);
+
+    if (assessmentsError) throw assessmentsError;
+
+    const assessments = assessmentRows || [];
+    const assessmentIds = assessments.map((assessment) => assessment.id).filter(Boolean);
+
+    if (assessmentIds.length === 0) {
+      return { data: [], error: null };
+    }
+
+    const assessmentById = assessments.reduce((accumulator, assessment) => {
+      accumulator[assessment.id] = assessment;
+      return accumulator;
+    }, {});
+
+    const { data, error } = await supabase
+      .from(QUESTIONS_TABLE)
+      .select('id, assessment_id, question_no, prompt, explanation, is_active, created_at, question_type, prompt_tl, explanation_tl')
+      .in('assessment_id', assessmentIds)
+      .eq('is_active', true)
+      .order('assessment_id', { ascending: true })
+      .order('question_no', { ascending: true });
+
+    if (error) throw error;
+
+    return {
+      data: (data || []).map((row) => {
+        const assessment = assessmentById[row.assessment_id] || {};
+
+        return {
+          ...mapQuestion(row),
+          assessment_title: assessment.title || '',
+          assessment_type: assessment.type || '',
+          assessment_type_label: normalizeAssessmentTypeLabel(assessment.type),
+          module_id: assessment.module_id || moduleId,
+        };
+      }),
+      error: null
+    };
+  } catch (error) {
+    console.error('Error loading module assessment questions:', error);
     return { data: [], error: error.message };
   }
 };

@@ -9,6 +9,7 @@ import { logAdminActivity } from '../utils/usersService';
 import {
   getAssessmentOptions,
   getQuestionsByAssessment,
+  getQuestionsByModule,
   createAssessmentQuestion,
   updateAssessmentQuestion,
   getAssessmentOptionsByQuestionIds,
@@ -26,6 +27,177 @@ const MODULE_TITLE_FALLBACKS = {
   3: 'Electrical Fire: Causes, Safe Actions, and Prevention',
   4: 'Kitchen Fire: What It Is, Common Types, and What To Do',
   5: 'Tenement Fire: What It Is, Common Causes, and What To Do'
+};
+
+const QUESTION_STOP_WORDS = new Set([
+  'about', 'after', 'also', 'ang', 'ano', 'are', 'atas', 'bakit', 'before', 'best',
+  'both', 'can', 'choose', 'correct', 'dapat', 'does', 'during', 'each', 'from',
+  'give', 'habang', 'how', 'into', 'is', 'ito', 'iyon', 'kapag', 'kung', 'may',
+  'mga', 'module', 'most', 'ng', 'nito', 'one', 'pag', 'para', 'question', 'sa',
+  'should', 'that', 'the', 'their', 'this', 'to', 'tungkol', 'what', 'when',
+  'where', 'which', 'why', 'with', 'you', 'your'
+]);
+
+const normalizeQuestionText = (value = '') => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9\s]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const stemQuestionToken = (token = '') => token
+  .replace(/(ing|ed|es|s)$/i, '')
+  .replace(/(han|hin|in|an)$/i, '');
+
+const tokenizeQuestionText = (value = '') => normalizeQuestionText(value)
+  .split(' ')
+  .map(stemQuestionToken)
+  .filter((token) => token.length > 2 && !QUESTION_STOP_WORDS.has(token));
+
+const buildBigrams = (tokens = []) => {
+  const bigrams = [];
+  for (let index = 0; index < tokens.length - 1; index += 1) {
+    bigrams.push(`${tokens[index]} ${tokens[index + 1]}`);
+  }
+  return bigrams;
+};
+
+const getSetOverlapScore = (leftItems = [], rightItems = []) => {
+  const leftSet = new Set(leftItems);
+  const rightSet = new Set(rightItems);
+  if (leftSet.size === 0 || rightSet.size === 0) return 0;
+
+  let intersection = 0;
+  leftSet.forEach((item) => {
+    if (rightSet.has(item)) intersection += 1;
+  });
+
+  return intersection / Math.min(leftSet.size, rightSet.size);
+};
+
+const getDiceScore = (leftItems = [], rightItems = []) => {
+  const leftSet = new Set(leftItems);
+  const rightSet = new Set(rightItems);
+  if (leftSet.size === 0 || rightSet.size === 0) return 0;
+
+  let intersection = 0;
+  leftSet.forEach((item) => {
+    if (rightSet.has(item)) intersection += 1;
+  });
+
+  return (2 * intersection) / (leftSet.size + rightSet.size);
+};
+
+const levenshteinDistance = (left = '', right = '') => {
+  const leftLength = left.length;
+  const rightLength = right.length;
+
+  if (leftLength === 0) return rightLength;
+  if (rightLength === 0) return leftLength;
+
+  const previous = Array.from({ length: rightLength + 1 }, (_, index) => index);
+  const current = Array(rightLength + 1).fill(0);
+
+  for (let leftIndex = 1; leftIndex <= leftLength; leftIndex += 1) {
+    current[0] = leftIndex;
+
+    for (let rightIndex = 1; rightIndex <= rightLength; rightIndex += 1) {
+      const cost = left[leftIndex - 1] === right[rightIndex - 1] ? 0 : 1;
+      current[rightIndex] = Math.min(
+        current[rightIndex - 1] + 1,
+        previous[rightIndex] + 1,
+        previous[rightIndex - 1] + cost
+      );
+    }
+
+    for (let index = 0; index <= rightLength; index += 1) {
+      previous[index] = current[index];
+    }
+  }
+
+  return previous[rightLength];
+};
+
+const getQuestionComparableText = (question = {}) => [
+  question.prompt,
+  question.prompt_tl,
+].filter(Boolean).join(' ');
+
+const getQuestionSimilarityScore = (leftQuestion = {}, rightQuestion = {}) => {
+  const leftText = normalizeQuestionText(getQuestionComparableText(leftQuestion));
+  const rightText = normalizeQuestionText(getQuestionComparableText(rightQuestion));
+
+  if (!leftText || !rightText) return 0;
+  if (leftText === rightText) return 1;
+
+  const shorter = leftText.length <= rightText.length ? leftText : rightText;
+  const longer = leftText.length > rightText.length ? leftText : rightText;
+  if (shorter.length >= 24 && longer.includes(shorter)) return 0.94;
+
+  const leftTokens = tokenizeQuestionText(leftText);
+  const rightTokens = tokenizeQuestionText(rightText);
+  const tokenOverlap = getSetOverlapScore(leftTokens, rightTokens);
+  const tokenDice = getDiceScore(leftTokens, rightTokens);
+  const phraseOverlap = getSetOverlapScore(buildBigrams(leftTokens), buildBigrams(rightTokens));
+  const editSimilarity = 1 - (levenshteinDistance(leftText, rightText) / Math.max(leftText.length, rightText.length));
+
+  return Math.max(tokenOverlap, tokenDice, phraseOverlap, editSimilarity);
+};
+
+const findSimilarQuestion = (candidate = {}, existingQuestions = [], excludeQuestionId = null) => {
+  const candidateText = normalizeQuestionText(getQuestionComparableText(candidate));
+  if (!candidateText) return null;
+
+  return (existingQuestions || []).find((existingQuestion) => {
+    if (!existingQuestion) return false;
+    if (excludeQuestionId && existingQuestion.id === excludeQuestionId) return false;
+
+    const score = getQuestionSimilarityScore(candidate, existingQuestion);
+    const candidateTokens = tokenizeQuestionText(candidateText);
+    const existingTokens = tokenizeQuestionText(getQuestionComparableText(existingQuestion));
+    const enoughSharedTerms = Math.min(candidateTokens.length, existingTokens.length) >= 4;
+
+    return score >= 0.82 || (enoughSharedTerms && score >= 0.72);
+  }) || null;
+};
+
+const buildExistingQuestionReferences = (questions = []) => (questions || [])
+  .map((question) => ({
+    question_no: question.question_no || null,
+    assessmentType: question.assessment_type_label || question.assessmentType || '',
+    prompt: String(question.prompt || '').trim(),
+    prompt_tl: String(question.prompt_tl || '').trim(),
+  }))
+  .filter((question) => question.prompt || question.prompt_tl)
+  .slice(0, 40);
+
+const getAssessmentDifficultyGuidance = (assessment = {}) => {
+  const label = getAssessmentTypeLabel(assessment).toLowerCase();
+
+  if (label.includes('pre')) {
+    return [
+      'Pre-Assessment difficulty: easier, foundational, and direct.',
+      'Ask recognition or basic knowledge questions that check understanding of key terms, actions, and facts from the module.',
+      'Avoid long scenarios and avoid application-heavy analysis for Pre-Assessment questions.',
+    ].join(' ');
+  }
+
+  if (label.includes('post')) {
+    return [
+      'Post-Assessment difficulty: clearly harder than Pre-Assessment.',
+      'Ask application-based, situational, analytical, or scenario-based questions that test deeper understanding.',
+      'Do not rephrase Pre-Assessment questions; use new situations, examples, and decision-making contexts.',
+    ].join(' ');
+  }
+
+  return 'Use practical questions that are distinct from all existing questions in this module.';
+};
+
+const formatQuestionConflict = (question = {}, similarQuestion = {}) => {
+  const typeLabel = similarQuestion.assessment_type_label || similarQuestion.assessmentType || 'another assessment';
+  const questionNo = similarQuestion.question_no ? ` question ${similarQuestion.question_no}` : '';
+  return `Question ${question.question_no}: too similar to ${typeLabel}${questionNo}. Please revise or generate a different question.`;
 };
 
 const getAssessmentTypeLabel = (assessment = {}) => {
@@ -495,6 +667,145 @@ export default function AssessmentQuestions() {
       .slice(0, 12000);
   };
 
+  const buildCurrentAssessmentQuestionPool = (assessment = selectedAssessment, sourceQuestions = questions) => (
+    (sourceQuestions || []).map((question) => ({
+      ...question,
+      assessment_id: question.assessment_id || assessment?.id || selectedAssessmentId,
+      assessment_title: assessment?.title || selectedAssessmentLabel || '',
+      assessment_type: assessment?.type || '',
+      assessment_type_label: getAssessmentTypeLabel(assessment || {}),
+      module_id: assessment?.module_id || null,
+    }))
+  );
+
+  const loadModuleQuestionPool = async (assessment = selectedAssessment, sourceQuestions = questions) => {
+    if (!assessment?.module_id) {
+      return { data: buildCurrentAssessmentQuestionPool(assessment, sourceQuestions), error: null };
+    }
+
+    const { data, error } = await getQuestionsByModule(assessment.module_id);
+
+    if (error) {
+      return { data: [], error };
+    }
+
+    const currentQuestions = buildCurrentAssessmentQuestionPool(assessment, sourceQuestions);
+    const questionById = new Map();
+
+    (data || []).forEach((question) => {
+      questionById.set(question.id, question);
+    });
+
+    currentQuestions.forEach((question) => {
+      questionById.set(question.id, question);
+    });
+
+    return { data: Array.from(questionById.values()), error: null };
+  };
+
+  const generateUniqueQuestionDrafts = async ({
+    assessment,
+    moduleNo,
+    learningContext,
+    count,
+    existingQuestionsByNumber,
+    targetQuestion = null,
+  }) => {
+    const { data: moduleQuestionPool, error: moduleQuestionError } = await loadModuleQuestionPool(assessment);
+
+    if (moduleQuestionError) {
+      return { drafts: [], error: `Unable to check existing module questions: ${moduleQuestionError}` };
+    }
+
+    const acceptedQuestions = [];
+    let lastGenerateError = null;
+    const oldPrompt = String(targetQuestion?.prompt || '').trim();
+    const maxAttempts = 4;
+
+    for (let attempt = 1; attempt <= maxAttempts && acceptedQuestions.length < count; attempt += 1) {
+      const acceptedPool = acceptedQuestions.map((question, index) => ({
+        ...question,
+        question_no: targetQuestion?.question_no || index + 1,
+        assessment_type_label: getAssessmentTypeLabel(assessment),
+      }));
+      const avoidancePool = [...moduleQuestionPool, ...acceptedPool];
+      const remainingCount = count - acceptedQuestions.length;
+      const requestedCount = Math.min(10, Math.max(remainingCount, remainingCount * 2));
+      const { data: generatedPayload, error: generateError } = await generateAssessmentQuestions({
+        assessmentId: selectedAssessmentId,
+        assessmentTitle: assessment?.title || selectedAssessmentLabel || `Module ${moduleNo}`,
+        assessmentType: assessment?.type_label || assessment?.type || '',
+        moduleNo,
+        questionCount: requestedCount,
+        targetQuestionNo: targetQuestion ? Number(targetQuestion.question_no) : undefined,
+        existingPrompt: oldPrompt,
+        difficultyGuidance: getAssessmentDifficultyGuidance(assessment),
+        existingQuestions: buildExistingQuestionReferences(avoidancePool),
+        context: learningContext,
+      });
+
+      if (generateError) {
+        lastGenerateError = generateError;
+        break;
+      }
+
+      const generatedQuestions = generatedPayload?.questions || [];
+      generatedQuestions.forEach((generatedQuestion) => {
+        if (acceptedQuestions.length >= count) return;
+
+        const candidate = {
+          ...generatedQuestion,
+          assessment_type_label: getAssessmentTypeLabel(assessment),
+        };
+        const similarQuestion = findSimilarQuestion(candidate, avoidancePool);
+
+        if (!similarQuestion) {
+          acceptedQuestions.push(candidate);
+        }
+      });
+    }
+
+    if (acceptedQuestions.length < count) {
+      return {
+        drafts: [],
+        error: lastGenerateError
+          ? formatGenerateQuestionsError(lastGenerateError)
+          : `The AI could not produce ${count} unique question${count === 1 ? '' : 's'} that were different enough from the existing module questions. Please try Generate again.`,
+      };
+    }
+
+    const drafts = acceptedQuestions.slice(0, count).map((generatedQuestion, index) => {
+      const questionNo = targetQuestion ? Number(targetQuestion.question_no) : index + 1;
+      return buildGeneratedQuestionDraft({
+        generatedQuestion,
+        questionNo,
+        assessmentId: selectedAssessmentId,
+        existingQuestion: targetQuestion || existingQuestionsByNumber?.get(questionNo) || null,
+      });
+    });
+
+    return { drafts, error: null };
+  };
+
+  const validateQuestionUniquenessBeforeSave = async (question) => {
+    const { data: moduleQuestionPool, error } = await loadModuleQuestionPool(selectedAssessment);
+
+    if (error) {
+      return { isValid: false, message: `Unable to check existing module questions: ${error}` };
+    }
+
+    const similarQuestion = findSimilarQuestion(question, moduleQuestionPool, question.id);
+
+    if (similarQuestion) {
+      return {
+        isValid: false,
+        message: formatQuestionConflict(question, similarQuestion),
+      };
+    }
+
+    return { isValid: true, message: '' };
+  };
+
   const handleGenerateQuestions = async () => {
     if (isGenerating) return;
     if (!selectedAssessmentId) return;
@@ -534,38 +845,22 @@ export default function AssessmentQuestions() {
         return;
       }
 
-      const { data: generatedPayload, error: generateError } = await generateAssessmentQuestions({
-        assessmentId: selectedAssessmentId,
-        assessmentTitle: selectedAssessment?.title || selectedAssessmentLabel || `Module ${moduleNo}`,
-        assessmentType: selectedAssessment?.type_label || selectedAssessment?.type || '',
-        moduleNo,
-        questionCount: safeCount,
-        context: learningContext,
-      });
-
-      if (generateError || !generatedPayload?.questions?.length) {
-        setMessage({
-          type: 'error',
-          text: formatGenerateQuestionsError(generateError),
-        });
-        return;
-      }
-
       const existingQuestionsByNumber = new Map(
         questions.map((question) => [Number(question.question_no), question])
       );
-      const generatedDrafts = generatedPayload.questions.map((generatedQuestion, index) => {
-        const questionNo = index + 1;
-        return buildGeneratedQuestionDraft({
-          generatedQuestion,
-          questionNo,
-          assessmentId: selectedAssessmentId,
-          existingQuestion: existingQuestionsByNumber.get(questionNo) || null,
-        });
+      const { drafts: generatedDrafts, error: generateError } = await generateUniqueQuestionDrafts({
+        assessment: selectedAssessment,
+        moduleNo,
+        learningContext,
+        count: safeCount,
+        existingQuestionsByNumber,
       });
 
-      if (generatedDrafts.length === 0) {
-        setMessage({ type: 'error', text: 'The AI did not return any usable questions.' });
+      if (generateError || generatedDrafts.length === 0) {
+        setMessage({
+          type: 'error',
+          text: generateError || 'The AI did not return any usable questions.',
+        });
         return;
       }
 
@@ -634,29 +929,19 @@ export default function AssessmentQuestions() {
         return;
       }
 
-      const { data: generatedPayload, error: generateError } = await generateAssessmentQuestions({
-        assessmentId: selectedAssessmentId,
-        assessmentTitle: selectedAssessment?.title || selectedAssessmentLabel || `Module ${moduleNo}`,
-        assessmentType: selectedAssessment?.type_label || selectedAssessment?.type || '',
+      const { drafts: generatedDrafts, error: generateError } = await generateUniqueQuestionDrafts({
+        assessment: selectedAssessment,
         moduleNo,
-        questionCount: 1,
-        targetQuestionNo: Number(question.question_no),
-        existingPrompt: String(question.prompt || '').trim(),
-        context: learningContext,
+        learningContext,
+        count: 1,
+        targetQuestion: question,
       });
 
-      const generatedQuestion = generatedPayload?.questions?.[0];
-      if (generateError || !generatedQuestion) {
-        setMessage({ type: 'error', text: formatGenerateQuestionsError(generateError) });
+      const generatedDraft = generatedDrafts[0];
+      if (generateError || !generatedDraft) {
+        setMessage({ type: 'error', text: generateError || 'The AI did not return a usable replacement question.' });
         return;
       }
-
-      const generatedDraft = buildGeneratedQuestionDraft({
-        generatedQuestion,
-        questionNo: Number(question.question_no),
-        assessmentId: selectedAssessmentId,
-        existingQuestion: question,
-      });
 
       setQuestions((current) => current.map((item) => (
         item.id === question.id ? generatedDraft : item
@@ -682,6 +967,11 @@ export default function AssessmentQuestions() {
       return false;
     }
 
+    if (!String(question.prompt_tl || '').trim()) {
+      setMessage({ type: 'error', text: `Question ${question.question_no}: Tagalog prompt is required.` });
+      return false;
+    }
+
     const normalizedOptions = (question.options || [])
       .map((option, index) => ({
         ...option,
@@ -700,8 +990,19 @@ export default function AssessmentQuestions() {
       return false;
     }
 
+    if (filledOptions.some((option) => !String(option.option_text_tl || '').trim())) {
+      setMessage({ type: 'error', text: `Question ${question.question_no}: add Tagalog text for every filled choice.` });
+      return false;
+    }
+
     if (correctOptions.length !== 1) {
       setMessage({ type: 'error', text: `Question ${question.question_no}: select exactly one correct answer.` });
+      return false;
+    }
+
+    const uniquenessCheck = await validateQuestionUniquenessBeforeSave(question);
+    if (!uniquenessCheck.isValid) {
+      setMessage({ type: 'error', text: uniquenessCheck.message });
       return false;
     }
 

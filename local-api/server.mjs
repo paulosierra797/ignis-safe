@@ -12,6 +12,116 @@ const API_KEY = process.env.GEMINI_API_KEY ||
 
 const MODEL_NAME = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
+const normalizeText = (value = '') => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9\s]/g, ' ')
+  .replace(/\s+/g, ' ')
+  .trim();
+
+const stopWords = new Set([
+  'about', 'after', 'also', 'ang', 'ano', 'are', 'bakit', 'before', 'best',
+  'can', 'choose', 'correct', 'dapat', 'does', 'during', 'each', 'from',
+  'habang', 'how', 'into', 'is', 'ito', 'iyon', 'kapag', 'kung', 'may',
+  'mga', 'module', 'most', 'ng', 'nito', 'one', 'pag', 'para', 'question',
+  'sa', 'should', 'that', 'the', 'their', 'this', 'to', 'what', 'when',
+  'where', 'which', 'why', 'with', 'you', 'your',
+]);
+
+const tokenizeText = (value = '') => normalizeText(value)
+  .split(' ')
+  .map((token) => token.replace(/(ing|ed|es|s)$/i, '').replace(/(han|hin|in|an)$/i, ''))
+  .filter((token) => token.length > 2 && !stopWords.has(token));
+
+const buildBigrams = (tokens = []) => {
+  const bigrams = [];
+  for (let index = 0; index < tokens.length - 1; index += 1) {
+    bigrams.push(`${tokens[index]} ${tokens[index + 1]}`);
+  }
+  return bigrams;
+};
+
+const getSetOverlapScore = (leftItems = [], rightItems = []) => {
+  const leftSet = new Set(leftItems);
+  const rightSet = new Set(rightItems);
+  if (leftSet.size === 0 || rightSet.size === 0) return 0;
+
+  let intersection = 0;
+  leftSet.forEach((item) => {
+    if (rightSet.has(item)) intersection += 1;
+  });
+
+  return intersection / Math.min(leftSet.size, rightSet.size);
+};
+
+const getComparableQuestionText = (question = {}) => [
+  question.prompt,
+  question.prompt_tl,
+].filter(Boolean).join(' ');
+
+const getSimilarityScore = (leftQuestion = {}, rightQuestion = {}) => {
+  const leftText = normalizeText(getComparableQuestionText(leftQuestion));
+  const rightText = normalizeText(getComparableQuestionText(rightQuestion));
+
+  if (!leftText || !rightText) return 0;
+  if (leftText === rightText) return 1;
+
+  const shorter = leftText.length <= rightText.length ? leftText : rightText;
+  const longer = leftText.length > rightText.length ? leftText : rightText;
+  if (shorter.length >= 24 && longer.includes(shorter)) return 0.94;
+
+  const leftTokens = tokenizeText(leftText);
+  const rightTokens = tokenizeText(rightText);
+  return Math.max(
+    getSetOverlapScore(leftTokens, rightTokens),
+    getSetOverlapScore(buildBigrams(leftTokens), buildBigrams(rightTokens))
+  );
+};
+
+const isTooSimilar = (candidate = {}, existingQuestions = []) => existingQuestions.some((existingQuestion) => {
+  const score = getSimilarityScore(candidate, existingQuestion);
+  const candidateTokens = tokenizeText(getComparableQuestionText(candidate));
+  const existingTokens = tokenizeText(getComparableQuestionText(existingQuestion));
+  const enoughSharedTerms = Math.min(candidateTokens.length, existingTokens.length) >= 4;
+
+  return score >= 0.82 || (enoughSharedTerms && score >= 0.72);
+});
+
+const normalizeExistingQuestions = (value = []) => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (typeof item === 'string') {
+        return { prompt: item };
+      }
+
+      return {
+        question_no: Number.isFinite(Number(item?.question_no)) ? Number(item.question_no) : null,
+        assessmentType: String(item?.assessmentType || '').trim(),
+        prompt: String(item?.prompt || '').trim(),
+        prompt_tl: String(item?.prompt_tl || '').trim(),
+      };
+    })
+    .filter((item) => item.prompt || item.prompt_tl)
+    .slice(0, 40);
+};
+
+const filterUniqueQuestions = (questions = [], existingQuestions = [], questionCount = 1) => {
+  const accepted = [];
+
+  questions.forEach((question) => {
+    if (accepted.length >= questionCount) return;
+
+    if (!isTooSimilar(question, [...existingQuestions, ...accepted])) {
+      accepted.push(question);
+    }
+  });
+
+  return accepted;
+};
+
 const extractRetryDelaySecondsFromError = (err) => {
   try {
     if (!err) return null;
@@ -66,7 +176,16 @@ app.post('/api/generate-assessment-questions', async (req, res) => {
   }
 
   try {
-    const { moduleNo, questionCount, context, assessmentTitle, assessmentType } = req.body;
+    const {
+      moduleNo,
+      questionCount,
+      context,
+      assessmentTitle,
+      assessmentType,
+      targetQuestionNo,
+      existingPrompt,
+      difficultyGuidance,
+    } = req.body;
 
     if (!moduleNo) {
       return res.status(400).json({ error: 'moduleNo is required.', data: null });
@@ -77,20 +196,37 @@ app.post('/api/generate-assessment-questions', async (req, res) => {
     }
 
     const safeCount = Math.min(Math.max(Number(questionCount) || 5, 1), 10);
+    const existingQuestions = normalizeExistingQuestions(req.body?.existingQuestions);
+    const existingQuestionText = existingQuestions
+      .map((question, index) => {
+        const label = [
+          question.assessmentType || 'Assessment',
+          question.question_no ? `Q${question.question_no}` : `Item ${index + 1}`,
+        ].filter(Boolean).join(' ');
+        return `${label}: ${question.prompt}${question.prompt_tl ? ` / ${question.prompt_tl}` : ''}`;
+      })
+      .join('\n');
 
     const prompt = [
       `You are generating assessment questions for Module ${moduleNo}.`,
       assessmentTitle ? `Assessment title: ${assessmentTitle}.` : '',
       assessmentType ? `Assessment type: ${assessmentType}.` : '',
+      Number(targetQuestionNo || 0) ? `Generate a replacement draft specifically for question ${Number(targetQuestionNo)}.` : '',
+      existingPrompt ? `Use a different angle and wording from this existing question: ${existingPrompt}` : '',
+      difficultyGuidance ? String(difficultyGuidance).trim() : '',
       `Create exactly ${safeCount} multiple-choice questions grounded only in the source material below.`,
+      'Do not generate any question that is identical, lightly reworded, or semantically near-duplicate to any existing module question or to another question in this response.',
+      'Use different wording, examples, answer choices, scenarios, and question structures across the entire response.',
+      'Keep the correct answer unambiguous and vary the correct option position instead of using a predictable pattern.',
       'Every question must include both English and Tagalog (Filipino) content.',
-      'The prompt_tl, explanation_tl, and option_text_tl fields are required and must be natural Tagalog translations.',
+      'The prompt_tl, explanation_tl, and option_text_tl fields are required and must be natural Tagalog translations of the same English question, choices, answer, and explanation.',
+      'Do not create a separate Tagalog question with different meaning, different choices, or a different correct answer.',
       'Do not leave any *_tl field blank, and do not copy the English text into the Tagalog fields.',
       'Return JSON only, with this exact shape: {"questions":[{"question_type":"multiple_choice","prompt":"...","prompt_tl":"...","explanation":"...","explanation_tl":"...","options":[{"option_key":"A","option_text":"...","option_text_tl":"...","is_correct":true,"display_order":1},{"option_key":"B",...},{"option_key":"C",...},{"option_key":"D",...}]}]}',
       'Each question must have exactly 4 answer choices, with exactly 1 correct answer.',
-      'Make the questions clear, practical, and different in style.',
       'Keep options plausible and avoid duplicate wording.',
       'Do not use markdown, code fences, or explanations outside the JSON.',
+      existingQuestionText ? `Existing module questions to avoid:\n${existingQuestionText}` : '',
       'Source material:',
       context,
     ].filter(Boolean).join('\n\n');
@@ -106,7 +242,7 @@ app.post('/api/generate-assessment-questions', async (req, res) => {
         },
       ],
       generationConfig: {
-        temperature: 0.6,
+        temperature: 0.72,
         maxOutputTokens: 4096,
       },
     });
@@ -143,7 +279,7 @@ app.post('/api/generate-assessment-questions', async (req, res) => {
         ? parsed.questions
         : [];
 
-    const normalizedQuestions = questions
+    const normalizedQuestions = filterUniqueQuestions(questions
       .map((item) => ({
         question_type: 'multiple_choice',
         prompt: String(item.prompt || '').trim(),
@@ -162,8 +298,7 @@ app.post('/api/generate-assessment-questions', async (req, res) => {
             .filter((option) => option.option_key && option.option_text)
           : [],
       }))
-      .filter((item) => item.prompt.length > 0)
-      .slice(0, safeCount);
+      .filter((item) => item.prompt.length > 0), existingQuestions, safeCount);
 
     if (normalizedQuestions.length === 0) {
       return res.status(500).json({ 

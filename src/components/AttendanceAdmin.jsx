@@ -18,11 +18,6 @@ const formatDistance = (distanceMeters) => {
   return `${Math.round(distance)} m`;
 };
 
-const formatFaceMatch = (percentage) => {
-  const value = Number(percentage);
-  return Number.isFinite(value) ? `${value.toFixed(1)}%` : 'Not recorded';
-};
-
 const getVerificationLabel = (status) => {
   if (status === 'passed') return 'Passed';
   if (status === 'failed') return 'Failed';
@@ -33,6 +28,12 @@ const getVerificationLabel = (status) => {
 const getCheckLabel = (value) => {
   if (value === true) return 'Passed';
   if (value === false) return 'Failed';
+  return 'Not recorded';
+};
+
+const getAttendanceStatusLabel = (record) => {
+  if (record.timeIn && record.timeOut) return 'Completed';
+  if (record.timeIn) return 'Time In recorded';
   return 'Not recorded';
 };
 
@@ -393,7 +394,7 @@ const AttendanceAdmin = () => {
                 <div>
                   <span className="attendance-details-eyebrow">Attendance verification</span>
                   <h2 id="attendanceDetailsTitle">{selectedRecord.name}</h2>
-                  <p>{selectedRecord.rank} · {selectedRecord.date}</p>
+                  <p>{selectedRecord.rank} · {selectedRecord.date} · Shift {selectedRecord.shiftId}</p>
                 </div>
                 <CloseButton
                   className="attendance-details-close"
@@ -406,14 +407,34 @@ const AttendanceAdmin = () => {
                 <span className={`attendance-verification-badge large ${selectedRecord.verificationStatus}`}>
                   Overall: {getVerificationLabel(selectedRecord.verificationStatus)}
                 </span>
-                {selectedRecord.verificationType && (
-                  <span className="attendance-verification-event">
-                    {selectedRecord.verificationType === 'in' ? 'Time In' : 'Time Out'} verification
-                  </span>
-                )}
+                <span className="attendance-verification-event">
+                  {getAttendanceStatusLabel(selectedRecord)}
+                </span>
               </div>
 
               <div className="attendance-details-grid">
+                <article className="attendance-detail-card">
+                  <h3>Attendance</h3>
+                  <dl>
+                    <div>
+                      <dt>Date</dt>
+                      <dd>{selectedRecord.date}</dd>
+                    </div>
+                    <div>
+                      <dt>Assigned shift</dt>
+                      <dd>{selectedRecord.shiftId}</dd>
+                    </div>
+                    <div>
+                      <dt>Time In</dt>
+                      <dd>{selectedRecord.timeIn || 'Not recorded'}</dd>
+                    </div>
+                    <div>
+                      <dt>Time Out</dt>
+                      <dd>{selectedRecord.timeOut || 'Not recorded'}</dd>
+                    </div>
+                  </dl>
+                </article>
+
                 <article className="attendance-detail-card">
                   <h3>Verified Location</h3>
                   <dl>
@@ -449,10 +470,6 @@ const AttendanceAdmin = () => {
                 <article className="attendance-detail-card">
                   <h3>Face ID Verification</h3>
                   <dl>
-                    <div>
-                      <dt>Face match</dt>
-                      <dd>{formatFaceMatch(selectedRecord.faceMatchPercentage)}</dd>
-                    </div>
                     <div>
                       <dt>Face check</dt>
                       <dd className={selectedRecord.faceVerificationPassed === true ? 'verification-pass' : selectedRecord.faceVerificationPassed === false ? 'verification-fail' : ''}>

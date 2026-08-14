@@ -514,15 +514,14 @@ const handleVerifyFace = async () => {
 
             {attendanceCompleted ? (
               <div className="attendance-completed-card">
-                <h2>Attendance completed for today.</h2>
                 <div className="attendance-completed-times">
-                  <div>
-                    <span>Recorded Time In</span>
-                    <strong>{attendanceStatus.record?.timeIn || '--'}</strong>
+                  <div className="attendance-completed-time-block">
+                    <span className="attendance-completed-label">Time In</span>
+                    <strong className="attendance-completed-value">{attendanceStatus.record?.timeIn || '--'}</strong>
                   </div>
-                  <div>
-                    <span>Recorded Time Out</span>
-                    <strong>{attendanceStatus.record?.timeOut || '--'}</strong>
+                  <div className="attendance-completed-time-block">
+                    <span className="attendance-completed-label">Time Out</span>
+                    <strong className="attendance-completed-value">{attendanceStatus.record?.timeOut || '--'}</strong>
                   </div>
                 </div>
                 <button

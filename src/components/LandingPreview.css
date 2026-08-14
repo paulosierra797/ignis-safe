@@ -5,6 +5,7 @@
   max-width: 100%;
   overflow: hidden;
   box-sizing: border-box;
+  margin-bottom: 1.75rem;
 }
 
 .landing-preview-toolbar {

@@ -795,17 +795,17 @@
   position: relative;
   z-index: 2;
   width: fit-content;
-  padding: 0.65rem 0.8rem;
+  padding: 0.85rem 1.05rem;
   border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 13px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow:
-    0 12px 32px rgba(20, 3, 5, 0.26),
+    0 14px 36px rgba(20, 3, 5, 0.28),
     0 0 0 1px rgba(255, 255, 255, 0.34);
 }
 
 .login-logo {
-  width: clamp(135px, 13vw, 170px);
+  width: clamp(170px, 16vw, 220px);
   display: block;
 }
 
@@ -817,10 +817,10 @@
 }
 
 .login-bfp-logo {
-  width: clamp(108px, 12vw, 140px);
+  width: clamp(136px, 14vw, 178px);
   height: auto;
   display: block;
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.5rem;
   object-fit: contain;
   filter: drop-shadow(0 12px 18px rgba(27, 5, 7, 0.24));
 }
@@ -989,14 +989,14 @@
     max-width: none;
     margin: 0.75rem 0 0;
     display: grid;
-    grid-template-columns: 90px minmax(0, 1fr);
+    grid-template-columns: 112px minmax(0, 1fr);
     align-items: center;
-    gap: 0.25rem 1.25rem;
+    gap: 0.3rem 1.35rem;
   }
 
   .login-bfp-logo {
     grid-row: 1 / 4;
-    width: 90px;
+    width: 112px;
     margin: 0;
   }
 
@@ -1041,21 +1041,21 @@
   }
 
   .logo-section {
-    padding: 0.5rem 0.6rem;
+    padding: 0.65rem 0.8rem;
   }
 
   .login-logo {
-    width: 124px;
+    width: 150px;
   }
 
   .login-brand-content {
     margin-top: 0.9rem;
-    grid-template-columns: 70px minmax(0, 1fr);
-    gap: 0.2rem 0.85rem;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 0.25rem 0.95rem;
   }
 
   .login-bfp-logo {
-    width: 70px;
+    width: 88px;
   }
 
   .login-brand-rule {

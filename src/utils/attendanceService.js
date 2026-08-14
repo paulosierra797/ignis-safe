@@ -108,11 +108,14 @@ const buildOfficerFromAuthUser = async (authUser) => {
     return null;
   }
 
-  const activeStatus = isAdminActingAsPersonnel
-    ? String(workspaceProfile?.status || '').trim().toLowerCase()
-    : accountStatus;
-
-  if (activeStatus && activeStatus !== 'active') {
+  // Account validity always comes from the admin table's own status column
+  // (Active / Inactive / Suspended / Pending Activation - the same field
+  // ProtectedRoute uses to decide whether the login itself is disabled).
+  // personnel_workspace_profiles.status is an on-duty/on-leave/off-duty
+  // indicator, not an account-authorization flag, so it must never gate
+  // whether this account is allowed to reach attendance - only whether a
+  // shift is currently scheduled, which is validated separately downstream.
+  if (accountStatus && accountStatus !== 'active') {
     return null;
   }
 

@@ -544,6 +544,23 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
   background: #d97706;
 }
 
+.change-password-btn:disabled {
+  background: #d1d5db;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.register-face-btn:disabled:hover {
+  background: #d1d5db;
+}
+
+.face-cooldown-note {
+  flex-basis: 100%;
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
 .my-requests-section {
   margin-top: 1.5rem;
   padding-top: 1.25rem;

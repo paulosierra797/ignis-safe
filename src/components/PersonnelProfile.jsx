@@ -10,7 +10,7 @@ import * as faceapi from '@vladmandic/face-api';
 import { loadFaceModels } from '../utils/loadFaceModels';
 import Webcam from 'react-webcam';
 import './PersonnelProfile.css';
-import { getFaceByAdminId, registerFace } from '../utils/faceApiService';
+import { getFaceByAdminId, registerFace, getFaceIdCooldownUntil } from '../utils/faceApiService';
 import {
   PROFILE_FIELD_OPTIONS,
   getProfileFieldLabel,
@@ -54,6 +54,19 @@ const RANK_LABELS = {
   FO1: 'FO1 - Fire Officer I'
 };
 const PHONE_NUMBER_ERROR = 'Phone number must contain exactly 11 digits.';
+const FACE_ID_COOLDOWN_DAYS = 7;
+
+// Mirrors the 7-day cooldown enforced server-side in register_face() —
+// used here only to drive the button/label state; the DB is the source of truth.
+const getFaceCooldownUntil = (record) => {
+  if (!record?.updated_at) return null;
+  const eligibleAt = new Date(record.updated_at);
+  eligibleAt.setDate(eligibleAt.getDate() + FACE_ID_COOLDOWN_DAYS);
+  return eligibleAt > new Date() ? eligibleAt : null;
+};
+
+const formatFaceCooldownDate = (value) =>
+  new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 const EMPTY_REQUEST_VALUES = Object.fromEntries(
   PROFILE_FIELD_OPTIONS.map((option) => [option.value, ''])
 );
@@ -76,6 +89,8 @@ export default function PersonnelProfile() {
 const [faceLoading, setFaceLoading] = useState(false);
 const webcamRef = React.useRef(null);
 const [faceBox, setFaceBox] = useState(null);
+const [faceRecord, setFaceRecord] = useState(null);
+const faceCooldownUntil = getFaceCooldownUntil(faceRecord);
 const [modal, setModal] = useState({
   open: false,
   type: "info", // "success" | "error" | "confirm"
@@ -125,6 +140,15 @@ const [modal, setModal] = useState({
 
   initModels();
 }, []);
+
+  useEffect(() => {
+    const loadFaceRecord = async () => {
+      if (!currentUser?.admin_id) return;
+      const { data } = await getFaceByAdminId(currentUser.admin_id);
+      setFaceRecord(data || null);
+    };
+    loadFaceRecord();
+  }, [currentUser?.admin_id]);
 
   const loadMyRequests = useCallback(async () => {
     if (!currentUser?.admin_id) return;
@@ -199,10 +223,13 @@ const [modal, setModal] = useState({
     return;
   }
 
-  if (data) {
+  setFaceRecord(data || null);
+
+  const cooldownUntil = getFaceCooldownUntil(data);
+  if (cooldownUntil) {
     showModal({
       type: "info",
-      message: "Face ID is already registered. You cannot register another one."
+      message: `You can update your Face ID again on ${formatFaceCooldownDate(cooldownUntil)}.`
     });
     return;
   }
@@ -450,12 +477,18 @@ const captureFace = async () => {
 
     if (error) {
       console.error("Supabase error:", error);
-      showModal({ type: 'error', message: 'Failed to save face data.' });
+      const cooldownUntil = getFaceIdCooldownUntil(error);
+      showModal(
+        cooldownUntil
+          ? { type: 'info', message: `You can update your Face ID again on ${formatFaceCooldownDate(cooldownUntil)}.` }
+          : { type: 'error', message: 'Failed to save face data.' }
+      );
       return;
     }
 
     showModal({ type: 'success', message: 'Face registered successfully!' });
     setIsFaceModalOpen(false);
+    setFaceRecord({ updated_at: new Date().toISOString() });
 
     void logPersonnelActivity({
       personnelId: currentUser.admin_id,
@@ -609,9 +642,15 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                     type="button"
                     className="change-password-btn register-face-btn"
                     onClick={handleFaceRegisterClick}
+                    disabled={!!faceCooldownUntil}
                   >
-                    Register Face ID
+                    {faceRecord ? 'Update Face ID' : 'Register Face ID'}
                   </button>
+                  {faceCooldownUntil && (
+                    <p className="face-cooldown-note">
+                      You can update your Face ID again on {formatFaceCooldownDate(faceCooldownUntil)}.
+                    </p>
+                  )}
                 </div>
 
                 <div className="my-requests-section">

@@ -29,7 +29,10 @@ const AttendanceConfirm = () => {
   const [faceStatus, setFaceStatus] = useState('Face verification has not started yet.');
   const [faceScore, setFaceScore] = useState(null);
   const [faceError, setFaceError] = useState('');
-  const [isVerifyingFace, setIsVerifyingFace] = useState(false);
+  // Single source of truth for the face verification UI: idle | liveness | matching | success | failed.
+  // Replaces the old isVerifyingFace/faceVerified-on-token combo that could go out of sync
+  // (e.g. a stale "verified" flag surviving into a failed retry).
+  const [verificationState, setVerificationState] = useState('idle');
   const [isProcessing, setIsProcessing] = useState(false);
   const [confirmStatus, setConfirmStatus] = useState(null);
   const [authError, setAuthError] = useState('');
@@ -48,6 +51,11 @@ const AttendanceConfirm = () => {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const storedDescriptorRef = useRef(null);
+  // Monotonic token for the in-flight verification attempt. Async callbacks
+  // (camera acquisition, liveness completion, face matching) compare against
+  // this before applying results, so a stale attempt can never overwrite the
+  // current one.
+  const attemptIdRef = useRef(0);
  
   const authSessionId = searchParams.get('auth');
   const qrSessionId = searchParams.get('station');
@@ -216,6 +224,13 @@ const appendFaceDebug = useCallback((message) => {
   setFaceDebug((prev) => [...prev.slice(-19), `${new Date().toISOString().slice(11, 19)} ${message}`]);
 }, []);
 
+// The camera is otherwise only stopped on final success (see handleLivenessPassed)
+// so it stays live across failed retries; unmounting the page is the "explicit
+// cancellation" that must still turn it off.
+useEffect(() => {
+  return () => stopFaceCamera();
+}, []);
+
 const handleVerifyFace = async () => {
   if (!authenticatedOfficer) {
     setFaceError('Authentication error. Please login again.');
@@ -227,20 +242,44 @@ const handleVerifyFace = async () => {
     return;
   }
 
+  const attemptId = attemptIdRef.current + 1;
+  attemptIdRef.current = attemptId;
+
+  // Reset every stale flag from a previous attempt before starting this one,
+  // so a leftover "verified"/error/liveness state can never bleed into the retry.
   setFaceError('');
   setFaceScore(null);
   setVerificationPhotoBlob(null);
-  setIsVerifyingFace(true);
-  setFaceStatus('Loading face data...');
   setFaceDebug([]);
+  setShowLiveness(false);
+  setLivenessPhase('idle');
+  setVerificationState('liveness');
+  setFaceStatus('Loading face data...');
+
+  if (authenticatedOfficer.faceVerified) {
+    const resetOfficer = {
+      ...authenticatedOfficer,
+      faceVerified: false,
+      faceMatchScore: null,
+      faceVerifiedAt: null,
+      livenessPassed: false,
+      livenessChallengeId: null,
+      livenessVerifiedAt: null,
+      livenessChallengeSequence: null
+    };
+    saveAuthToken(resetOfficer);
+    setAuthenticatedOfficer(resetOfficer);
+  }
 
   try {
     // 1. Get stored face from Supabase
     const { data, error } = await getFaceByAdminId(authenticatedOfficer.admin_id);
+    if (attemptIdRef.current !== attemptId) return;
 
     if (error || !data) {
       setFaceError('No registered face found.');
-      setIsVerifyingFace(false);
+      setFaceStatus('Verification failed ✗');
+      setVerificationState('failed');
       return;
     }
 
@@ -250,43 +289,62 @@ const handleVerifyFace = async () => {
         : data.face_descriptor
     );
 
-    // 2. Open camera
+    // 2. Open the camera, reusing an already-active stream from a prior
+    // attempt on this session instead of re-prompting/flickering. The stream
+    // is only ever torn down on final success or explicit cancellation
+    // (see stopFaceCamera call sites), so a retry after a failure has a live
+    // preview already - never a black box.
     setFaceStatus('Requesting camera...');
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'user',
-        width: { ideal: 640 },
-        height: { ideal: 480 }
-      },
-      audio: false
-    });
+    let stream = streamRef.current;
+    const streamIsLive = stream?.getTracks().some((track) => track.readyState === 'live');
 
-    streamRef.current = stream;
+    if (!streamIsLive) {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'user',
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        },
+        audio: false
+      });
+
+      if (attemptIdRef.current !== attemptId) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      streamRef.current = stream;
+    }
 
     if (videoRef.current) {
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
     }
 
+    if (attemptIdRef.current !== attemptId) return;
+
     // 3. Hand off to the liveness challenge. Identity matching only runs
     // after LivenessCheck reports a pass (see handleLivenessPassed).
     setFaceStatus('Follow the on-screen instructions to verify you are live.');
-    setLivenessAttemptKey((key) => key + 1);
+    setLivenessAttemptKey(attemptId);
     setLivenessPhase('idle');
     setShowLiveness(true);
   } catch (err) {
+    if (attemptIdRef.current !== attemptId) return;
     console.error(err);
     setFaceError('Face verification failed.');
     setFaceStatus('Error occurred during verification.');
-    stopFaceCamera();
-    setIsVerifyingFace(false);
+    setVerificationState('failed');
   }
 };
 
-const handleLivenessPassed = useCallback(async ({ canvas, challengeId, sequenceIds }) => {
+const handleLivenessPassed = useCallback(async ({ canvas, challengeId, sequenceIds }, attemptId) => {
+  if (attemptIdRef.current !== attemptId) return; // stale attempt, ignore
+
   setShowLiveness(false);
   setLivenessPhase('idle');
+  setVerificationState('matching');
   setFaceStatus('Matching face...');
 
   try {
@@ -297,11 +355,12 @@ const handleLivenessPassed = useCallback(async ({ canvas, challengeId, sequenceI
       .withFaceLandmarks()
       .withFaceDescriptor();
 
+    if (attemptIdRef.current !== attemptId) return;
+
     if (!detection) {
       setFaceError('No face detected.');
       setFaceStatus('Verification failed ✗');
-      stopFaceCamera();
-      setIsVerifyingFace(false);
+      setVerificationState('failed');
       return;
     }
 
@@ -309,10 +368,12 @@ const handleLivenessPassed = useCallback(async ({ canvas, challengeId, sequenceI
       canvas.toBlob(resolve, 'image/jpeg', 0.88);
     });
 
+    if (attemptIdRef.current !== attemptId) return;
+
     if (!capturedPhoto) {
       setFaceError('Unable to capture the verification photo. Please try again.');
-      stopFaceCamera();
-      setIsVerifyingFace(false);
+      setFaceStatus('Verification failed ✗');
+      setVerificationState('failed');
       return;
     }
 
@@ -332,6 +393,7 @@ const handleLivenessPassed = useCallback(async ({ canvas, challengeId, sequenceI
     if (isMatch) {
       setVerificationPhotoBlob(capturedPhoto);
       setFaceStatus('Face verified ✓');
+      setVerificationState('success');
 
       const updated = {
         ...authenticatedOfficer,
@@ -346,31 +408,34 @@ const handleLivenessPassed = useCallback(async ({ canvas, challengeId, sequenceI
 
       saveAuthToken(updated);
       setAuthenticatedOfficer(updated);
+      // Identity matching is fully finished and it's a final success - now it's safe to stop the camera.
+      stopFaceCamera();
     } else {
       setVerificationPhotoBlob(null);
       setFaceError('Face does not match.');
       setFaceStatus('Verification failed ✗');
+      setVerificationState('failed');
     }
-
-    stopFaceCamera();
-    setIsVerifyingFace(false);
   } catch (err) {
+    if (attemptIdRef.current !== attemptId) return;
     console.error(err);
     setFaceError('Face verification failed.');
     setFaceStatus('Error occurred during verification.');
-    stopFaceCamera();
-    setIsVerifyingFace(false);
+    setVerificationState('failed');
   }
 }, [authenticatedOfficer, appendFaceDebug]);
 
-const handleLivenessFailed = useCallback((reason) => {
+const handleLivenessFailed = useCallback((reason, attemptId) => {
+  if (attemptIdRef.current !== attemptId) return; // stale attempt, ignore
+
   appendFaceDebug(`liveness failed: ${reason}`);
   setShowLiveness(false);
   setLivenessPhase('idle');
   setFaceError('Live face verification failed. Please look directly at the camera and follow the instructions.');
   setFaceStatus('Verification failed ✗');
-  stopFaceCamera();
-  setIsVerifyingFace(false);
+  setVerificationState('failed');
+  // Liveness failed before identity matching ever ran - camera stays live so
+  // "Try Again" can restart the challenge instantly, no black preview.
 }, [appendFaceDebug]);
 
   const handleConfirm = () => {
@@ -575,13 +640,19 @@ const handleLivenessFailed = useCallback((reason) => {
               <label className="section-label">Face Verification</label>
               <button
                 type="button"
-                className={`location-btn ${authenticatedOfficer.faceVerified ? 'verified' : ''}`}
+                className={`location-btn ${verificationState === 'success' ? 'verified' : ''}`}
                 onClick={handleVerifyFace}
-                disabled={isVerifyingFace}
+                disabled={verificationState === 'liveness' || verificationState === 'matching'}
               >
-                {isVerifyingFace ? 'Checking...' : authenticatedOfficer.faceVerified ? '✓ Face Verified' : 'Verify Face'}
+                {verificationState === 'liveness' || verificationState === 'matching'
+                  ? 'Checking...'
+                  : verificationState === 'success'
+                    ? '✓ Face Verified'
+                    : verificationState === 'failed'
+                      ? 'Try Again'
+                      : 'Verify Face'}
               </button>
-              <div className={`location-status ${faceError ? 'error' : authenticatedOfficer.faceVerified && !faceStatus.includes('✗') ? 'success' : ''}`}>
+              <div className={`location-status ${faceError ? 'error' : verificationState === 'success' ? 'success' : ''}`}>
                 {faceError || faceStatus}
               </div>
               <div className={`confirm-camera-frame confirm-camera-frame--${showLiveness ? livenessPhase : 'idle'}`}>
@@ -594,8 +665,8 @@ const handleLivenessFailed = useCallback((reason) => {
                   key={livenessAttemptKey}
                   videoRef={videoRef}
                   qrSessionId={qrSessionId}
-                  onPassed={handleLivenessPassed}
-                  onFailed={handleLivenessFailed}
+                  onPassed={(result) => handleLivenessPassed(result, livenessAttemptKey)}
+                  onFailed={(reason) => handleLivenessFailed(reason, livenessAttemptKey)}
                   onDebug={appendFaceDebug}
                   onPhaseChange={setLivenessPhase}
                 />

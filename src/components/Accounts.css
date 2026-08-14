@@ -2791,6 +2791,193 @@
   line-height: 1.5;
 }
 
+/* Edit Personnel Modal (redesigned) */
+.accounts-edit-personnel-overlay {
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.accounts-edit-personnel-modal {
+  width: min(700px, 100%);
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+  padding: 1.5rem 1.75rem 1.75rem;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+}
+
+.accounts-edit-personnel-header {
+  align-items: flex-start;
+  gap: 1rem;
+  padding-bottom: 1.1rem;
+  border-bottom: 2px solid #fee2e2;
+}
+
+.accounts-edit-personnel-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.accounts-edit-personnel-icon {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 1.2rem;
+}
+
+.accounts-edit-personnel-heading-text {
+  min-width: 0;
+}
+
+.accounts-edit-personnel-header h3 {
+  font-size: 1.15rem;
+}
+
+.accounts-edit-personnel-subtitle {
+  margin: 0.25rem 0 0;
+  color: #6b7280;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.accounts-edit-personnel-body {
+  padding-top: 0.35rem;
+}
+
+.accounts-edit-personnel-body .accounts-modal-grid {
+  align-items: start;
+}
+
+.accounts-edit-personnel-body .accounts-modal-field input,
+.accounts-edit-personnel-body .accounts-modal-field select {
+  width: 100%;
+  min-height: 44px;
+  box-sizing: border-box;
+  border-color: #e2e8f0;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.accounts-edit-personnel-body .accounts-modal-field input:focus,
+.accounts-edit-personnel-body .accounts-modal-field select:focus {
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+
+.accounts-edit-personnel-body .accounts-modal-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2.25rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23B91C1C' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.85rem center;
+  background-size: 12px 8px;
+}
+
+.accounts-edit-personnel-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.accounts-edit-personnel-hint svg {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  width: 13px;
+  height: 13px;
+  color: #b91c1c;
+}
+
+.accounts-edit-personnel-divider {
+  height: 1px;
+  margin: 0.25rem 0 0;
+  background: #e5e7eb;
+}
+
+.accounts-edit-cancel-btn {
+  min-height: 44px;
+  padding: 0.6rem 1.5rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #344054;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.accounts-edit-cancel-btn:hover {
+  border-color: #b91c1c;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.accounts-edit-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.6rem 1.6rem;
+  border: none;
+  border-radius: 10px;
+  background: #b91c1c;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(185, 28, 28, 0.3);
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.accounts-edit-save-btn:hover {
+  background: #991b1b;
+}
+
+.accounts-edit-save-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+@media (max-width: 640px) {
+  .accounts-edit-personnel-modal {
+    width: 100%;
+    padding: 1.25rem 1.1rem 1.5rem;
+  }
+
+  .accounts-edit-personnel-body .accounts-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .accounts-edit-personnel-header {
+    gap: 0.75rem;
+  }
+
+  .accounts-edit-personnel-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1.05rem;
+  }
+
+  .accounts-modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .accounts-edit-cancel-btn,
+  .accounts-edit-save-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* Personnel Shift Assignment Styles */
 .accounts-personnel-shift-modal {
   width: min(1120px, calc(100vw - 3rem));

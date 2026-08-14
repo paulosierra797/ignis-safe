@@ -7,8 +7,10 @@ import {
   FiCalendar,
   FiClock,
   FiEdit3,
+  FiInfo,
   FiMail,
   FiPhone,
+  FiSave,
   FiShield,
   FiUser,
 } from 'react-icons/fi';
@@ -4390,17 +4392,27 @@ const permissions = getDefaultPermissions(formData.role);
         )}
 
         {isEditModalOpen && (
-  <div className="accounts-modal-overlay" role="dialog">
-    <div className="accounts-modal">
-      <div className="accounts-modal-header">
-        <h3>Edit Personnel</h3>
+  <div className="accounts-modal-overlay accounts-edit-personnel-overlay" role="dialog">
+    <div className="accounts-modal accounts-edit-personnel-modal">
+      <div className="accounts-modal-header accounts-edit-personnel-header">
+        <div className="accounts-edit-personnel-heading">
+          <span className="accounts-edit-personnel-icon" aria-hidden="true">
+            <FiUser />
+          </span>
+          <div className="accounts-edit-personnel-heading-text">
+            <h3>Edit Personnel</h3>
+            <p className="accounts-edit-personnel-subtitle">
+              Update personnel information and account details.
+            </p>
+          </div>
+        </div>
         <CloseButton
           onClick={() => setIsEditModalOpen(false)}
           label="Close edit personnel modal"
         />
       </div>
 
-     <div className="accounts-modal-body">
+     <div className="accounts-modal-body accounts-edit-personnel-body">
   <div className="accounts-modal-grid">
 
     <div className="accounts-modal-field">
@@ -4536,8 +4548,11 @@ const permissions = getDefaultPermissions(formData.role);
             <option key={option} value={option}>{option}</option>
           ))}
         </select>
-        <small className="accounts-modal-field-hint">
-          Tracks whether this personnel is still in service. On Leave is managed separately and does not affect Service Status.
+        <small className="accounts-modal-field-hint accounts-edit-personnel-hint">
+          <FiInfo aria-hidden="true" />
+          <span>
+            Tracks whether this personnel is still in service. On Leave is managed separately and does not affect Service Status.
+          </span>
         </small>
       </div>
     )}
@@ -4550,11 +4565,14 @@ const permissions = getDefaultPermissions(formData.role);
   )}
 </div>
 
+      <div className="accounts-edit-personnel-divider" />
+
       <div className="accounts-modal-footer">
-        <button className ="cancel-btn"onClick={() => setIsEditModalOpen(false)}>
+        <button className="accounts-edit-cancel-btn" onClick={() => setIsEditModalOpen(false)}>
           Cancel
         </button>
-        <button className="save-btn" onClick={handleUpdatePersonnel}>
+        <button className="accounts-edit-save-btn" onClick={handleUpdatePersonnel}>
+          <FiSave aria-hidden="true" />
           Save Changes
         </button>
       </div>

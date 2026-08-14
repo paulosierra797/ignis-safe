@@ -2,14 +2,20 @@ import { supabase } from './supabaseClient';
 
 const normalizeText = (value) => String(value || '').trim().toLowerCase();
 
-export const getLearningMaterialsAdminView = async () => {
+export const getLearningMaterialsAdminView = async (moduleNo = null) => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('learning_material_admin_view')
       .select('*')
       .order('module_no', { ascending: true })
       .order('page_no', { ascending: true })
       .order('block_no', { ascending: true });
+
+    if (moduleNo) {
+      query = query.eq('module_no', moduleNo);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
     return { data: data || [], error: null };

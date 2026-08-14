@@ -368,6 +368,9 @@ export default function AssessmentQuestions() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const bypassNavigationRef = useRef(false);
   const questionHighlightTimeoutRef = useRef(null);
+  const moduleContextCacheRef = useRef(new Map());
+  const [generationProgress, setGenerationProgress] = useState(null);
+  const [generatingRowProgress, setGeneratingRowProgress] = useState({});
 
   const isDirty = dirtyQuestionIds.size > 0;
   const shouldBlockNavigation = useCallback(({ currentLocation, nextLocation }) => {
@@ -405,7 +408,8 @@ export default function AssessmentQuestions() {
       const { data, error } = assessmentResult;
 
       if (!learningMaterialsResult.error) {
-        const loadedTitles = (learningMaterialsResult.data || []).reduce((titles, row) => {
+        const materialRows = learningMaterialsResult.data || [];
+        const loadedTitles = materialRows.reduce((titles, row) => {
           const moduleNo = Number(row.module_no || 0);
           const moduleTitle = String(row.module_title_en || '').trim();
           if (moduleNo > 0 && moduleTitle && !titles[moduleNo]) {
@@ -414,6 +418,18 @@ export default function AssessmentQuestions() {
           return titles;
         }, {});
         setModuleTitles({ ...MODULE_TITLE_FALLBACKS, ...loadedTitles });
+
+        // Prime the per-module learning-context cache from this one full fetch so
+        // "Generate Questions" never has to re-fetch materials during this session.
+        const moduleNumbers = new Set(
+          materialRows.map((row) => Number(row.module_no || 0)).filter(Boolean)
+        );
+        moduleNumbers.forEach((moduleNo) => {
+          const context = buildModuleContext(materialRows, moduleNo);
+          if (context) {
+            moduleContextCacheRef.current.set(moduleNo, context);
+          }
+        });
       }
 
       if (error) {
@@ -667,6 +683,25 @@ export default function AssessmentQuestions() {
       .slice(0, 12000);
   };
 
+  const getModuleLearningContext = async (moduleNo) => {
+    if (moduleContextCacheRef.current.has(moduleNo)) {
+      return { context: moduleContextCacheRef.current.get(moduleNo), error: null };
+    }
+
+    const { data: materialRows, error: materialError } = await getLearningMaterialsAdminView(moduleNo);
+
+    if (materialError) {
+      return { context: '', error: materialError };
+    }
+
+    const context = buildModuleContext(materialRows || [], moduleNo);
+    if (context) {
+      moduleContextCacheRef.current.set(moduleNo, context);
+    }
+
+    return { context, error: null };
+  };
+
   const buildCurrentAssessmentQuestionPool = (assessment = selectedAssessment, sourceQuestions = questions) => (
     (sourceQuestions || []).map((question) => ({
       ...question,
@@ -707,22 +742,32 @@ export default function AssessmentQuestions() {
     assessment,
     moduleNo,
     learningContext,
+    moduleQuestionPool = [],
     count,
     existingQuestionsByNumber,
     targetQuestion = null,
+    onProgress,
   }) => {
-    const { data: moduleQuestionPool, error: moduleQuestionError } = await loadModuleQuestionPool(assessment);
-
-    if (moduleQuestionError) {
-      return { drafts: [], error: `Unable to check existing module questions: ${moduleQuestionError}` };
-    }
-
     const acceptedQuestions = [];
     let lastGenerateError = null;
     const oldPrompt = String(targetQuestion?.prompt || '').trim();
-    const maxAttempts = 4;
+    // Requesting a duplicate-absorbing buffer in one call (instead of looping more
+    // requests whenever the AI returns a near-duplicate) is what keeps this to a
+    // single AI round trip in the common case. maxAttempts is now only a true
+    // fallback for the rare case the buffer wasn't enough.
+    const maxAttempts = 2;
+    const requestBuffer = 4;
+    const maxRequestCount = 14;
 
     for (let attempt = 1; attempt <= maxAttempts && acceptedQuestions.length < count; attempt += 1) {
+      onProgress?.({
+        attempt,
+        maxAttempts,
+        label: attempt === 1
+          ? 'Generating questions with AI (English + Tagalog)...'
+          : `Requesting additional unique questions (attempt ${attempt} of ${maxAttempts})...`,
+      });
+
       const acceptedPool = acceptedQuestions.map((question, index) => ({
         ...question,
         question_no: targetQuestion?.question_no || index + 1,
@@ -730,7 +775,7 @@ export default function AssessmentQuestions() {
       }));
       const avoidancePool = [...moduleQuestionPool, ...acceptedPool];
       const remainingCount = count - acceptedQuestions.length;
-      const requestedCount = Math.min(10, Math.max(remainingCount, remainingCount * 2));
+      const requestedCount = Math.min(maxRequestCount, remainingCount + requestBuffer);
       const { data: generatedPayload, error: generateError } = await generateAssessmentQuestions({
         assessmentId: selectedAssessmentId,
         assessmentTitle: assessment?.title || selectedAssessmentLabel || `Module ${moduleNo}`,
@@ -764,6 +809,8 @@ export default function AssessmentQuestions() {
         }
       });
     }
+
+    onProgress?.({ label: 'Finalizing question drafts...' });
 
     if (acceptedQuestions.length < count) {
       return {
@@ -831,17 +878,28 @@ export default function AssessmentQuestions() {
 
       const safeCount = 10;
 
-      const { data: materialRows, error: materialError } = await getLearningMaterialsAdminView();
+      setGenerationProgress({ label: 'Preparing module materials...' });
+
+      const [
+        { context: learningContext, error: materialError },
+        { data: moduleQuestionPool, error: moduleQuestionError },
+      ] = await Promise.all([
+        getModuleLearningContext(moduleNo),
+        loadModuleQuestionPool(selectedAssessment),
+      ]);
 
       if (materialError) {
         setMessage({ type: 'error', text: `Unable to load learning materials: ${materialError}` });
         return;
       }
 
-      const learningContext = buildModuleContext(materialRows || [], moduleNo);
-
       if (!learningContext) {
         setMessage({ type: 'error', text: `No active learning material content found for Module ${moduleNo}.` });
+        return;
+      }
+
+      if (moduleQuestionError) {
+        setMessage({ type: 'error', text: `Unable to check existing module questions: ${moduleQuestionError}` });
         return;
       }
 
@@ -852,8 +910,10 @@ export default function AssessmentQuestions() {
         assessment: selectedAssessment,
         moduleNo,
         learningContext,
+        moduleQuestionPool,
         count: safeCount,
         existingQuestionsByNumber,
+        onProgress: setGenerationProgress,
       });
 
       if (generateError || generatedDrafts.length === 0) {
@@ -894,6 +954,7 @@ export default function AssessmentQuestions() {
       });
     } finally {
       setIsGenerating(false);
+      setGenerationProgress(null);
     }
   };
 
@@ -917,15 +978,33 @@ export default function AssessmentQuestions() {
         return;
       }
 
-      const { data: materialRows, error: materialError } = await getLearningMaterialsAdminView();
+      const setRowProgress = (progress) => setGeneratingRowProgress((current) => ({
+        ...current,
+        [question.id]: progress,
+      }));
+
+      setRowProgress({ label: 'Preparing module materials...' });
+
+      const [
+        { context: learningContext, error: materialError },
+        { data: moduleQuestionPool, error: moduleQuestionError },
+      ] = await Promise.all([
+        getModuleLearningContext(moduleNo),
+        loadModuleQuestionPool(selectedAssessment),
+      ]);
+
       if (materialError) {
         setMessage({ type: 'error', text: `Unable to load learning materials: ${materialError}` });
         return;
       }
 
-      const learningContext = buildModuleContext(materialRows || [], moduleNo);
       if (!learningContext) {
         setMessage({ type: 'error', text: `No active learning material content found for Module ${moduleNo}.` });
+        return;
+      }
+
+      if (moduleQuestionError) {
+        setMessage({ type: 'error', text: `Unable to check existing module questions: ${moduleQuestionError}` });
         return;
       }
 
@@ -933,8 +1012,10 @@ export default function AssessmentQuestions() {
         assessment: selectedAssessment,
         moduleNo,
         learningContext,
+        moduleQuestionPool,
         count: 1,
         targetQuestion: question,
+        onProgress: setRowProgress,
       });
 
       const generatedDraft = generatedDrafts[0];
@@ -953,6 +1034,11 @@ export default function AssessmentQuestions() {
       });
     } finally {
       setGeneratingRowIds((current) => {
+        const next = { ...current };
+        delete next[question.id];
+        return next;
+      });
+      setGeneratingRowProgress((current) => {
         const next = { ...current };
         delete next[question.id];
         return next;
@@ -1307,9 +1393,15 @@ export default function AssessmentQuestions() {
                 onClick={handleGenerateQuestions}
                 disabled={!selectedAssessmentId || isLoadingQuestions || isGenerating}
               >
+                {isGenerating && <span className="assessment-generate-spinner" aria-hidden="true" />}
                 {isGenerating ? 'Generating...' : 'Generate Questions'}
               </button>
             </div>
+            {isGenerating && (
+              <div className="assessment-generate-progress" role="status" aria-live="polite">
+                {generationProgress?.label || 'Generating questions with AI...'}
+              </div>
+            )}
             <p className="assessment-generator-hint">
               Uses the selected module’s learning materials to create unsaved drafts for review. Nothing is stored until you save.
             </p>
@@ -1375,6 +1467,11 @@ export default function AssessmentQuestions() {
                     <span className="assessment-question-type-label">Multiple Choice</span>
                     {isQuestionDirty && <span className="assessment-dirty-badge">Unsaved changes</span>}
                     {question._isAiGenerated && <span className="assessment-ai-draft-badge">AI draft</span>}
+                    {isGeneratingRow && (
+                      <span className="assessment-generate-progress assessment-generate-progress-inline" role="status" aria-live="polite">
+                        {generatingRowProgress[question.id]?.label || 'Generating...'}
+                      </span>
+                    )}
                   </div>
 
                   <div className="assessment-actions">
@@ -1384,6 +1481,7 @@ export default function AssessmentQuestions() {
                       onClick={() => handleGenerateSingleQuestion(question)}
                       disabled={isSaving || isGenerating || isGeneratingRow}
                     >
+                      {isGeneratingRow && <span className="assessment-generate-spinner" aria-hidden="true" />}
                       {isGeneratingRow
                         ? 'Generating...'
                         : question._isAiGenerated

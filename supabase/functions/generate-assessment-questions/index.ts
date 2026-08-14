@@ -244,7 +244,9 @@ Deno.serve(async (request) => {
     const body = await request.json();
     console.log('Request body received:', { moduleNo: body?.moduleNo, questionCount: body?.questionCount });
     const moduleNo = Number(body?.moduleNo || 0);
-    const questionCount = Math.min(Math.max(Number(body?.questionCount || 5), 1), 10);
+    // Cap raised from 10 to 14 so the client can request a small duplicate-absorbing
+    // buffer in a single call instead of looping additional sequential requests.
+    const questionCount = Math.min(Math.max(Number(body?.questionCount || 5), 1), 14);
     const context = String(body?.context || '').trim();
     const assessmentTitle = String(body?.assessmentTitle || '').trim();
     const assessmentType = String(body?.assessmentType || '').trim();
@@ -309,7 +311,9 @@ Deno.serve(async (request) => {
         ],
         generationConfig: {
           temperature: 0.72,
-          maxOutputTokens: 8192,
+          // Raised alongside the questionCount cap (10 -> 14) so a bilingual batch
+          // with explanations and 4 options per question doesn't get truncated.
+          maxOutputTokens: 16384,
           responseMimeType: 'application/json',
         },
       }),

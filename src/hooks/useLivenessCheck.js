@@ -1,12 +1,15 @@
 // hooks/useLivenessCheck.js
 // Drives the MediaPipe Face Landmarker inference loop and the liveness phase
 // state machine: centering -> calibrating (neutral baseline) -> challenge
-// (turn left -> turn right, fixed order) -> passed/failed. The final Turn
-// Right step's own sustain hold gates completion, so the frame is captured
-// and face matching starts immediately once it's held - no separate
-// re-centering phase after the challenge. Inference is throttled (~12fps)
-// since detectForVideo() is synchronous and blocks the UI thread if run
-// every requestAnimationFrame tick.
+// (turn left -> turn right, fixed order) -> passed. The final Turn Right
+// step's own sustain hold gates the visible 100%/"passed" state, but the
+// match frame isn't captured yet at that point - the exposed `phase` flips to
+// 'passed' immediately (no new instruction/step shown) while internally the
+// loop keeps running and waits for the face to settle back to center
+// (RETURN_CENTER_ACTION) before grabbing the frame used for identity
+// matching, so a side-angle turn frame is never sent to face match. Inference
+// is throttled (~12fps) since detectForVideo() is synchronous and blocks the
+// UI thread if run every requestAnimationFrame tick.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadFaceLandmarker } from '../utils/faceLandmarker';
 import {
@@ -14,6 +17,7 @@ import {
   getBlinkScore,
   createChallengeSession,
   isChallengeValidForSession,
+  RETURN_CENTER_ACTION,
   THRESHOLDS
 } from '../utils/livenessChallenge';
 
@@ -39,6 +43,7 @@ const FAILURE_REASON_LABELS = {
   multiple_faces: 'More than one face was detected.',
   centering_timeout: 'Could not get a centered, single face in view.',
   calibration_timeout: 'Could not hold a steady neutral pose.',
+  recenter_timeout: 'Could not settle back to a centered face for verification.',
   session_mismatch: 'Verification session changed mid-check.',
   landmarker_error: 'Face tracking failed to start.'
 };
@@ -101,6 +106,10 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
   const actionStateRef = useRef(null);
   const stepStartTimeRef = useRef(null);
   const challengeSessionRef = useRef(null);
+
+  const awaitingCenterRef = useRef(false);
+  const centerActionStateRef = useRef(null);
+  const awaitingCenterStartRef = useRef(null);
 
   const qrSessionIdRef = useRef(qrSessionId);
   const onCompleteRef = useRef(onComplete);
@@ -175,23 +184,50 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     startStep(now);
   };
 
-  const finishChallenge = (now, video) => {
+  // Turn Right's sustain hold just completed: snap the visible UI straight to
+  // 100%/"passed" (no new instruction or step is ever shown), but don't
+  // capture the match frame yet - keep the inference loop running and wait
+  // for the face to settle back to center first, so identity matching never
+  // runs on the side-angle turn frame.
+  const enterAwaitingCenter = (now) => {
     if (!isChallengeValidForSession(challengeSessionRef.current, qrSessionIdRef.current)) {
       fail('session_mismatch');
       return;
     }
     setProgressPercent(100);
+    phaseRef.current = 'passed';
+    setPhase('passed');
+    setInstruction('');
+    awaitingCenterRef.current = true;
+    centerActionStateRef.current = RETURN_CENTER_ACTION.createState();
+    awaitingCenterStartRef.current = now;
+    pushDebug('challenge complete (100%), waiting for face to re-center before capture');
+  };
+
+  const captureAndFinish = (now, video) => {
+    awaitingCenterRef.current = false;
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
-    pushDebug('challenge complete, proceeding to face match');
+    pushDebug('face re-centered, frame captured, proceeding to face match');
     complete({
       passed: true,
       canvas,
       challengeId: challengeSessionRef.current.challengeId,
       sequenceIds: sequenceRef.current.map((a) => a.id)
     });
+  };
+
+  const handleAwaitingCenter = (smoothed, now, video) => {
+    const done = RETURN_CENTER_ACTION.evaluate(centerActionStateRef.current, smoothed, baselineRef.current, now);
+    if (done) {
+      captureAndFinish(now, video);
+      return;
+    }
+    if (now - awaitingCenterStartRef.current > RETURN_CENTER_ACTION.timeLimitMs) {
+      fail('recenter_timeout');
+    }
   };
 
   const advanceToCalibrating = (now) => {
@@ -242,7 +278,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     }
   };
 
-  const handleChallenge = (smoothed, now, video) => {
+  const handleChallenge = (smoothed, now) => {
     const action = sequenceRef.current[stepIndexRef.current];
     if (!action) return;
 
@@ -251,7 +287,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     if (done) {
       stepIndexRef.current += 1;
       if (stepIndexRef.current >= sequenceRef.current.length) {
-        finishChallenge(now, video);
+        enterAwaitingCenter(now);
       } else {
         startStep(now);
       }
@@ -303,7 +339,8 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     if (!smoothed) return;
 
     if (phaseRef.current === 'calibrating') handleCalibrating(smoothed, now);
-    else if (phaseRef.current === 'challenge') handleChallenge(smoothed, now, video);
+    else if (phaseRef.current === 'challenge') handleChallenge(smoothed, now);
+    else if (phaseRef.current === 'passed' && awaitingCenterRef.current) handleAwaitingCenter(smoothed, now, video);
   };
 
   const tick = useCallback(() => {
@@ -342,6 +379,9 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     centeringStartRef.current = null;
     centeringSustainStartRef.current = null;
     bufferRef.current = [];
+    awaitingCenterRef.current = false;
+    centerActionStateRef.current = null;
+    awaitingCenterStartRef.current = null;
 
     let cancelled = false;
 

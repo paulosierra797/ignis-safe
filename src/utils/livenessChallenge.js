@@ -135,8 +135,10 @@ export const TURN_RIGHT_ACTION = makeTurnAction(
   (relativeYaw) => relativeYaw > THRESHOLDS.turnYawDeg
 );
 
-// Kept for isNeutralPose/centering use elsewhere, but no longer inserted as
-// its own challenge step - see CHALLENGE_SEQUENCE below.
+// Not inserted into CHALLENGE_SEQUENCE as a visible step (see below) - instead
+// useLivenessCheck reuses this directly, invisibly, after Turn Right hits
+// 100% to wait for the face to settle back to center before the match frame
+// is captured, so identity matching never runs on the side-angle turn frame.
 export const RETURN_CENTER_ACTION = {
   id: 'return_center',
   instruction: 'Return to center',
@@ -158,9 +160,9 @@ export const RETURN_CENTER_ACTION = {
 // before it counts as done, so a quick pass-through on the way to the other
 // side can't satisfy either step - that sustain gate is what keeps this
 // spoof-resistant without an explicit "return to center" step in between.
-// The final Turn Right step's own sustain hold is what gates completion -
-// once it's satisfied, useLivenessCheck captures the frame and moves
-// straight to face matching.
+// The final Turn Right step's own sustain hold is what gates the visible
+// 100% completion; useLivenessCheck then waits (invisibly, no extra step
+// shown) for RETURN_CENTER_ACTION to settle before capturing the match frame.
 export const CHALLENGE_SEQUENCE = [TURN_LEFT_ACTION, TURN_RIGHT_ACTION];
 
 export const generateChallengeSequence = () => [...CHALLENGE_SEQUENCE];

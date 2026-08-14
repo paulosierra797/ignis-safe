@@ -385,6 +385,243 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+.banner-photo-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.banner-photo-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.banner-photo-manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.banner-photo-manager-header .editor-field-helper {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+.banner-photo-add-btn,
+.banner-photo-empty-add,
+.banner-photo-icon-btn {
+  border: 0;
+  font-family: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
+}
+
+.banner-photo-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0.58rem 0.85rem;
+  border-radius: 8px;
+  background: #b91c1c;
+  color: #ffffff;
+  font-size: 0.84rem;
+}
+
+.banner-photo-add-btn:hover:not(:disabled) {
+  background: #991b1b;
+}
+
+.banner-photo-slots {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.banner-photo-slot {
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+  padding: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.banner-photo-slot.has-photo {
+  background: #ffffff;
+  border-color: #f0d4d4;
+}
+
+.banner-photo-thumb-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.banner-photo-number {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.45rem;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(127, 29, 29, 0.9);
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.banner-photo-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.banner-photo-empty {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  gap: 0.3rem;
+  color: #9ca3af;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.banner-photo-empty svg {
+  width: 24px;
+  height: 24px;
+}
+
+.banner-photo-alt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.banner-photo-alt-field span {
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.banner-photo-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem;
+}
+
+.banner-photo-icon-btn {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  height: 32px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.banner-photo-icon-btn:hover:not(:disabled),
+.banner-photo-icon-btn:focus-visible {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.banner-photo-icon-btn--danger {
+  color: #b91c1c;
+}
+
+.banner-photo-icon-btn--danger:hover:not(:disabled),
+.banner-photo-icon-btn--danger:focus-visible {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.banner-photo-icon-btn:focus-visible,
+.banner-photo-add-btn:focus-visible,
+.banner-photo-empty-add:focus-visible {
+  outline: 3px solid rgba(185, 28, 28, 0.18);
+  outline-offset: 2px;
+}
+
+.banner-photo-add-btn:active:not(:disabled),
+.banner-photo-empty-add:active:not(:disabled),
+.banner-photo-icon-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.banner-photo-add-btn:disabled,
+.banner-photo-empty-add:disabled,
+.banner-photo-icon-btn:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.banner-photo-empty-add {
+  min-height: 32px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 0.78rem;
+}
+
+.banner-photo-empty-add:hover:not(:disabled) {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.banner-photo-uploading {
+  min-height: 1rem;
+  color: #991b1b;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+@media (max-width: 1200px) {
+  .banner-photo-slots {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .banner-photo-manager-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .banner-photo-add-btn {
+    width: 100%;
+  }
+
+  .banner-photo-slots {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .banner-photo-slots {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 1024px) {
   .landing-editor-page {
     flex-direction: column;

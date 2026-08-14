@@ -3,6 +3,9 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingPreview from './LandingPreview';
 import { useLandingContent } from '../context/LandingContentContext';
+import { useUser } from '../context/UserContext';
+import { FiArrowDown, FiArrowUp, FiImage, FiPlus, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
+import { deleteBannerPhotoPaths, MAX_BANNER_PHOTOS, uploadBannerPhoto } from '../utils/bannerPhotoService';
 import './LandingContentEditor.css';
 import './AppDialog.css';
 
@@ -52,11 +55,17 @@ const displayValue = (value) => {
 };
 
 const stepsText = (steps) => (steps || []).map((step) => step.text).join(' | ');
+const summarizeHeroPhotos = (photos) => {
+  const validPhotos = Array.isArray(photos) ? photos.filter((photo) => photo?.url) : [];
+  if (validPhotos.length === 0) return 'No uploaded banner photos';
+  return validPhotos.map((photo, index) => `${index + 1}. ${photo.alt || photo.fileName || 'Banner photo'}`).join(' | ');
+};
 
 const LANDING_FIELD_MAP = [
   { label: 'Main Page Title', get: (c) => c.hero.title },
   { label: 'Welcome Message', get: (c) => c.hero.lead },
   { label: 'Supporting Description', get: (c) => c.hero.description },
+  { label: 'Main Banner Photos', get: (c) => summarizeHeroPhotos(c.hero.photos) },
   { label: 'About Us Section Heading', get: (c) => c.about.title },
   { label: 'About Us Description', get: (c) => c.about.intro },
   { label: 'Mission Title', get: (c) => c.about.missionTitle },
@@ -210,6 +219,7 @@ const GroupCard = ({ number, title, description, children }) => (
 
 const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded = false, onDirtyChange }, ref) {
   const [searchQuery, setSearchQuery] = useState('');
+  const { currentUser } = useUser();
   const { content, setContent, resetContent, defaults, loadingContent } = useLandingContent();
   const [draft, setDraft] = useState(() => {
     const storedDraft = readLandingDraft();
@@ -220,6 +230,10 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   const [confirmModal, setConfirmModal] = useState({ open: false, changes: [], onConfirm: null });
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [discardModalOpen, setDiscardModalOpen] = useState(false);
+  const [uploadingBannerPhoto, setUploadingBannerPhoto] = useState(null);
+  const [replacingBannerPhotoIndex, setReplacingBannerPhotoIndex] = useState(null);
+  const [pendingRemovedBannerPaths, setPendingRemovedBannerPaths] = useState([]);
+  const bannerPhotoInputRef = useRef(null);
   const isFirstContentSync = useRef(true);
 
   React.useEffect(() => {
@@ -244,25 +258,39 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
     onDirtyChange?.(hasChanges);
   }, [hasChanges, onDirtyChange]);
 
+  const heroPhotos = Array.isArray(draft.hero.photos) ? draft.hero.photos : [];
+
+  const showTemporaryMessage = useCallback((message) => {
+    setSaveMessage(message);
+    window.setTimeout(() => setSaveMessage(''), 3000);
+  }, []);
+
   const performSave = useCallback(async (nextDraft) => {
     setSaving(true);
     try {
+      const removedPaths = pendingRemovedBannerPaths;
       const { error } = await setContent(nextDraft);
       if (error) {
         setSaveMessage(`Saved locally, but failed to sync to database: ${error}`);
       } else {
-        setSaveMessage('Landing page content saved.');
+        const { error: deleteError } = await deleteBannerPhotoPaths(removedPaths);
+        setPendingRemovedBannerPaths([]);
+        setSaveMessage(deleteError
+          ? `Landing page content saved, but old photo cleanup failed: ${deleteError}`
+          : 'Landing page content saved.'
+        );
       }
       window.setTimeout(() => setSaveMessage(''), 3000);
     } finally {
       setSaving(false);
     }
-  }, [setContent]);
+  }, [pendingRemovedBannerPaths, setContent]);
 
   useImperativeHandle(ref, () => ({
     discardUnsavedChanges: () => {
       clearLandingDraft();
       setDraft(deepClone(content));
+      setPendingRemovedBannerPaths([]);
     },
     hasUnsavedChanges: () => JSON.stringify(draft) !== JSON.stringify(content),
     saveChanges: async () => {
@@ -295,6 +323,103 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         [field]: value,
       },
     }));
+  };
+
+  const updateHeroPhotos = (updater) => {
+    setDraft((prev) => {
+      const currentPhotos = Array.isArray(prev.hero.photos) ? prev.hero.photos : [];
+      const nextPhotos = typeof updater === 'function' ? updater(currentPhotos) : updater;
+
+      return {
+        ...prev,
+        hero: {
+          ...prev.hero,
+          photos: nextPhotos.slice(0, MAX_BANNER_PHOTOS),
+        },
+      };
+    });
+  };
+
+  const queueBannerPathRemoval = (path) => {
+    if (!path) return;
+    setPendingRemovedBannerPaths((prev) => (prev.includes(path) ? prev : [...prev, path]));
+  };
+
+  const openBannerPhotoPicker = (index = null) => {
+    setReplacingBannerPhotoIndex(index);
+    bannerPhotoInputRef.current?.click();
+  };
+
+  const handleBannerPhotoChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    const targetIndex = replacingBannerPhotoIndex;
+    const isReplacing = Number.isInteger(targetIndex);
+
+    if (!isReplacing && heroPhotos.length >= MAX_BANNER_PHOTOS) {
+      showTemporaryMessage(`Only ${MAX_BANNER_PHOTOS} banner photos are allowed.`);
+      return;
+    }
+
+    setUploadingBannerPhoto(isReplacing ? targetIndex : 'new');
+    setReplacingBannerPhotoIndex(null);
+
+    const { data, error } = await uploadBannerPhoto({
+      adminId: currentUser?.admin_id,
+      file,
+      position: isReplacing ? targetIndex : heroPhotos.length,
+    });
+
+    setUploadingBannerPhoto(null);
+
+    if (error) {
+      showTemporaryMessage(`Failed to upload banner photo: ${error}`);
+      return;
+    }
+
+    if (isReplacing) {
+      queueBannerPathRemoval(heroPhotos[targetIndex]?.path);
+    }
+
+    updateHeroPhotos((photos) => {
+      if (!isReplacing) {
+        return [...photos, data];
+      }
+
+      return photos.map((photo, index) => (
+        index === targetIndex
+          ? { ...data, alt: photo.alt || data.alt }
+          : photo
+      ));
+    });
+
+    showTemporaryMessage(isReplacing ? 'Banner photo replaced. Save changes to publish.' : 'Banner photo added. Save changes to publish.');
+  };
+
+  const updateBannerPhotoAlt = (photoIndex, value) => {
+    updateHeroPhotos((photos) => photos.map((photo, index) => (
+      index === photoIndex ? { ...photo, alt: value } : photo
+    )));
+  };
+
+  const moveBannerPhoto = (photoIndex, direction) => {
+    updateHeroPhotos((photos) => {
+      const nextIndex = photoIndex + direction;
+      if (nextIndex < 0 || nextIndex >= photos.length) return photos;
+
+      const nextPhotos = [...photos];
+      const [movedPhoto] = nextPhotos.splice(photoIndex, 1);
+      nextPhotos.splice(nextIndex, 0, movedPhoto);
+      return nextPhotos;
+    });
+  };
+
+  const deleteBannerPhoto = (photoIndex) => {
+    queueBannerPathRemoval(heroPhotos[photoIndex]?.path);
+    updateHeroPhotos((photos) => photos.filter((_, index) => index !== photoIndex));
+    showTemporaryMessage('Banner photo removed. Save changes to publish.');
   };
 
   const updateNested = (section, locale, key, value) => {
@@ -418,6 +543,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
 
   const confirmDiscard = () => {
     setDraft(deepClone(content));
+    setPendingRemovedBannerPaths([]);
     setDiscardModalOpen(false);
   };
 
@@ -435,11 +561,16 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
 
     setSaving(true);
     try {
+      const resetPhotoPaths = (Array.isArray(draft.hero.photos) ? draft.hero.photos : [])
+        .map((photo) => photo.path)
+        .filter(Boolean);
       const { error } = await resetContent();
       setDraft(deepClone(defaults));
       if (error) {
         setSaveMessage(`Defaults reset locally, but failed to sync to database: ${error}`);
       } else {
+        await deleteBannerPhotoPaths(resetPhotoPaths);
+        setPendingRemovedBannerPaths([]);
         setSaveMessage('Landing page content reset to defaults.');
       }
       window.setTimeout(() => setSaveMessage(''), 3000);
@@ -530,6 +661,123 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           >
             <AutoResizeTextarea minHeight={110} maxHeight={300} value={draft.hero.description} onChange={(e) => updateField('hero', 'description', e.target.value)} />
           </Field>
+
+          <div className="banner-photo-manager">
+            <input
+              ref={bannerPhotoInputRef}
+              type="file"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              className="banner-photo-file-input"
+              onChange={handleBannerPhotoChange}
+            />
+            <div className="banner-photo-manager-header">
+              <div>
+                <span className="editor-field-label">Main Banner Photos</span>
+                <p className="editor-field-helper">
+                  Upload up to {MAX_BANNER_PHOTOS} optimized photos. The order below is the public carousel order.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="banner-photo-add-btn"
+                onClick={() => openBannerPhotoPicker()}
+                disabled={heroPhotos.length >= MAX_BANNER_PHOTOS || uploadingBannerPhoto !== null}
+              >
+                <FiPlus aria-hidden="true" />
+                {uploadingBannerPhoto === 'new' ? 'Uploading...' : 'Add photo'}
+              </button>
+            </div>
+
+            <div className="banner-photo-slots" aria-label="Main banner photo order">
+              {Array.from({ length: MAX_BANNER_PHOTOS }).map((_, index) => {
+                const photo = heroPhotos[index];
+                const isUploadingThisPhoto = uploadingBannerPhoto === index;
+
+                return (
+                  <div key={photo?.id || `banner-slot-${index}`} className={`banner-photo-slot${photo ? ' has-photo' : ''}`}>
+                    <div className="banner-photo-thumb-wrap">
+                      <span className="banner-photo-number">{index + 1}</span>
+                      {photo ? (
+                        <img src={photo.url} alt={photo.alt || `Main banner photo ${index + 1}`} className="banner-photo-thumb" loading="lazy" />
+                      ) : (
+                        <div className="banner-photo-empty">
+                          <FiImage aria-hidden="true" />
+                          <span>Empty</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {photo ? (
+                      <>
+                        <label className="banner-photo-alt-field">
+                          <span>Alt text</span>
+                          <input
+                            type="text"
+                            value={photo.alt || ''}
+                            onChange={(event) => updateBannerPhotoAlt(index, event.target.value)}
+                            placeholder={`Main banner photo ${index + 1}`}
+                            maxLength={140}
+                          />
+                        </label>
+                        <div className="banner-photo-actions">
+                          <button
+                            type="button"
+                            className="banner-photo-icon-btn"
+                            onClick={() => moveBannerPhoto(index, -1)}
+                            disabled={index === 0 || uploadingBannerPhoto !== null}
+                            aria-label={`Move banner photo ${index + 1} earlier`}
+                            title="Move earlier"
+                          >
+                            <FiArrowUp aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="banner-photo-icon-btn"
+                            onClick={() => moveBannerPhoto(index, 1)}
+                            disabled={index === heroPhotos.length - 1 || uploadingBannerPhoto !== null}
+                            aria-label={`Move banner photo ${index + 1} later`}
+                            title="Move later"
+                          >
+                            <FiArrowDown aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="banner-photo-icon-btn"
+                            onClick={() => openBannerPhotoPicker(index)}
+                            disabled={uploadingBannerPhoto !== null}
+                            aria-label={`Replace banner photo ${index + 1}`}
+                            title="Replace"
+                          >
+                            <FiRefreshCw aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            className="banner-photo-icon-btn banner-photo-icon-btn--danger"
+                            onClick={() => deleteBannerPhoto(index)}
+                            disabled={uploadingBannerPhoto !== null}
+                            aria-label={`Delete banner photo ${index + 1}`}
+                            title="Delete"
+                          >
+                            <FiTrash2 aria-hidden="true" />
+                          </button>
+                        </div>
+                        {isUploadingThisPhoto && <span className="banner-photo-uploading">Uploading replacement...</span>}
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        className="banner-photo-empty-add"
+                        onClick={() => openBannerPhotoPicker()}
+                        disabled={index !== heroPhotos.length || uploadingBannerPhoto !== null}
+                      >
+                        {uploadingBannerPhoto === 'new' && index === heroPhotos.length ? 'Uploading...' : 'Use this slot'}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </GroupCard>
 
         <GroupCard

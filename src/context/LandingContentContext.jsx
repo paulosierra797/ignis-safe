@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { useLocation } from 'react-router-dom';
 import { useUser } from './UserContext';
 import { getLandingContentFromDb, saveLandingContentToDb } from '../utils/landingContentService';
+import { MAX_BANNER_PHOTOS } from '../utils/bannerPhotoService';
 
 const STORAGE_KEY = 'ignis_landing_content_v1';
 
@@ -11,7 +12,8 @@ export const DEFAULT_LANDING_CONTENT = {
     title: 'Protecting lives, property and community',
     lead: 'Welcome to our Dasmarinas Fire Station portal.',
     description:
-      'Learn about our services, contact details and FSIC & FSEC organization for safety, preparedness, and community support.'
+      'Learn about our services, contact details and FSIC & FSEC organization for safety, preparedness, and community support.',
+    photos: []
   },
   about: {
     title: 'About us',
@@ -217,8 +219,29 @@ export const DEFAULT_LANDING_CONTENT = {
 
 const LandingContentContext = createContext();
 
+const normalizeHeroPhotos = (photos) => (
+  Array.isArray(photos)
+    ? photos
+        .filter((photo) => photo && typeof photo === 'object' && photo.url)
+        .slice(0, MAX_BANNER_PHOTOS)
+        .map((photo, index) => ({
+          id: photo.id || `banner-photo-${index + 1}`,
+          url: photo.url,
+          path: photo.path || '',
+          alt: photo.alt || `Main banner photo ${index + 1}`,
+          fileName: photo.fileName || '',
+          size: Number(photo.size || 0),
+          uploadedAt: photo.uploadedAt || '',
+        }))
+    : []
+);
+
 const mergeWithDefaults = (candidate = {}) => ({
-  hero: { ...DEFAULT_LANDING_CONTENT.hero, ...(candidate.hero || {}) },
+  hero: {
+    ...DEFAULT_LANDING_CONTENT.hero,
+    ...(candidate.hero || {}),
+    photos: normalizeHeroPhotos(candidate.hero?.photos)
+  },
   about: { ...DEFAULT_LANDING_CONTENT.about, ...(candidate.about || {}) },
   contact: { ...DEFAULT_LANDING_CONTENT.contact, ...(candidate.contact || {}) },
   process: {

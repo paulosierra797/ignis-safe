@@ -28,15 +28,9 @@ export const LEAVE_DOCUMENT_MAX_FILES = 5;
 const LEAVE_DOCUMENT_ALLOWED_EXTENSIONS = new Set(['pdf', 'jpg', 'jpeg', 'png']);
 const LEAVE_DOCUMENT_ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']);
 
-const CONTACT_NUMBER_REGEX = /^[0-9+\-\s()]{7,20}$/;
+const CONTACT_NUMBER_REGEX = /^[0-9]{11}$/;
 
-export const isValidLeaveContactNumber = (value) => {
-  const trimmed = String(value || '').trim();
-  if (!trimmed) return true;
-  if (!CONTACT_NUMBER_REGEX.test(trimmed)) return false;
-  const digitCount = trimmed.replace(/[^0-9]/g, '').length;
-  return digitCount >= 7 && digitCount <= 13;
-};
+export const isValidLeaveContactNumber = (value) => CONTACT_NUMBER_REGEX.test(String(value || '').trim());
 
 // Inclusive day count (a same-day leave request counts as 1 day), derived
 // from the stored dates rather than persisted so it can never go stale.
@@ -367,7 +361,7 @@ export const submitPersonnelLeaveRequest = async (adminId, formValues = {}) => {
     }
 
     if (!isValidLeaveContactNumber(contactNumber)) {
-      return { data: null, error: 'Please enter a valid contact number.' };
+      return { data: null, error: 'Contact number must contain exactly 11 digits.' };
     }
 
     if (files.length > LEAVE_DOCUMENT_MAX_FILES) {

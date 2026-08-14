@@ -126,8 +126,8 @@ const computeLeaveFormErrors = (form, todayIso) => {
     errors.reason = 'Please provide a reason for leave.';
   }
 
-  if (form.contactNumber && !isValidLeaveContactNumber(form.contactNumber)) {
-    errors.contactNumber = 'Please enter a valid contact number.';
+  if (!isValidLeaveContactNumber(form.contactNumber)) {
+    errors.contactNumber = 'Contact number must contain exactly 11 digits.';
   }
 
   return errors;
@@ -372,15 +372,6 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
     loadPageData();
   }, [loadPageData]);
 
-  // Prefill the optional contact number from the personnel's own profile the
-  // first time it becomes available, without overwriting anything the user
-  // has already typed into the form.
-  useEffect(() => {
-    if (currentUser?.contact_number) {
-      setLeaveForm((prev) => (prev.contactNumber ? prev : { ...prev, contactNumber: currentUser.contact_number }));
-    }
-  }, [currentUser?.contact_number]);
-
   useEffect(() => {
     const handleFocusOrVisible = () => {
       if (document.visibilityState === 'visible') {
@@ -512,8 +503,9 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
 
   const handleLeaveInput = (event) => {
     const { name, value } = event.target;
+    const sanitizedValue = name === 'contactNumber' ? value.replace(/[^0-9]/g, '').slice(0, 11) : value;
     setLeaveForm((prev) => {
-      const next = { ...prev, [name]: value };
+      const next = { ...prev, [name]: sanitizedValue };
       // Start Date moving past the current End Date makes it invalid, so
       // clear it rather than silently submitting an out-of-range value.
       if (name === 'startDate' && next.endDate && next.endDate < value) {
@@ -922,6 +914,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                         onChange={handleLeaveInput}
                         onBlur={handleLeaveBlur}
                         maxLength={100}
+                        autoComplete="off"
                       />
                       {visibleLeaveFieldErrors.otherLeaveType && (
                         <span className="leave-field-error">{visibleLeaveFieldErrors.otherLeaveType}</span>
@@ -980,13 +973,17 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                     <input
                       id="leave-contact-number"
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       name="contactNumber"
                       className="leave-text-input"
-                      placeholder="Optional"
+                      placeholder="11-digit contact number"
                       value={leaveForm.contactNumber}
                       onChange={handleLeaveInput}
                       onBlur={handleLeaveBlur}
-                      maxLength={20}
+                      maxLength={11}
+                      autoComplete="off"
+                      required
                     />
                     {visibleLeaveFieldErrors.contactNumber && (
                       <span className="leave-field-error">{visibleLeaveFieldErrors.contactNumber}</span>

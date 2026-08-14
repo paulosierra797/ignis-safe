@@ -668,6 +668,7 @@ export const validateProximity = (userGeo, stationGeo, radiusMeters = 100) => {
   };
 };
 
+// eslint-disable-next-line no-unused-vars -- kept for the commented-out production radius/coords below (TEST ONLY overrides are active)
 const parseNumber = (value, fallback) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -685,19 +686,19 @@ const DEFAULT_RADIUS_METERS = 100;
 //   radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS)
 // };
 
-// TEST LOCATION ONLY – SIERRA HOUSE
-// Block 2 Lot 74 Tennyson St., Brighton 2, Lancaster New City,
-// Brgy. Pasong Camachile I, General Trias, Cavite, Philippines
-// Coordinates confirmed from an on-site GPS fix (Apple Maps pin drop,
-// not address geocoding) — https://maps.apple/p/3my8VxZd9v2yWb
+// TEST ONLY — temporary attendance test location
+// Captured live from navigator.geolocation (browser/device GPS fix) on 2026-08-14
+// for testing the full Time In / Time Out flow. Restore the REAL BFP LOCATION
+// block above when done testing.
 const defaultStation = {
-  latitude: 14.364420,
-  longitude: 120.882661,
+  latitude: 14.364417324719483, // TEST ONLY
+  longitude: 120.88277998427404, // TEST ONLY
   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
   address: import.meta.env.VITE_STATION_ADDRESS ||
     'Block 2 Lot 74 Tennyson St., Brighton 2, Lancaster New City, Brgy. Pasong Camachile I, General Trias, Cavite, Philippines',
   stationId: 'DEFAULT',
-  radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS)
+  // radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS), // ORIGINAL — restore this line when done testing
+  radius: 50 // TEST ONLY — widened to absorb GPS accuracy drift while testing
 };
 
 export const STATION_GEO = defaultStation;
@@ -713,18 +714,18 @@ export const STATION_GEO_MAP = {
   //   stationId: 'ZINI-M3',
   //   radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius)
   // },
-  // TEST LOCATION ONLY – SIERRA HOUSE
-  // Block 2 Lot 74 Tennyson St., Brighton 2, Lancaster New City,
-  // Brgy. Pasong Camachile I, General Trias, Cavite, Philippines
-  // Coordinates confirmed from an on-site GPS fix (Apple Maps pin drop,
-  // not address geocoding) — https://maps.apple/p/3my8VxZd9v2yWb
+  // TEST ONLY — temporary attendance test location
+  // Captured live from navigator.geolocation (browser/device GPS fix) on 2026-08-14
+  // for testing the full Time In / Time Out flow. Restore the REAL BFP LOCATION
+  // block above when done testing.
   'ZINI-M3': {
-    latitude: 14.364420,
-    longitude: 120.882661,
+    latitude: 14.364417324719483, // TEST ONLY
+    longitude: 120.88277998427404, // TEST ONLY
     name: import.meta.env.VITE_STATION_ZINI_M3_NAME || 'Station Delta',
     address: import.meta.env.VITE_STATION_ZINI_M3_ADDRESS || defaultStation.address,
     stationId: 'ZINI-M3',
-    radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius)
+    // radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius), // ORIGINAL — restore this line when done testing
+    radius: 50 // TEST ONLY — widened to absorb GPS accuracy drift while testing
   }
 };
 

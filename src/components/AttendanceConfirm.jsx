@@ -46,6 +46,11 @@ const AttendanceConfirm = () => {
   const authSessionId = searchParams.get('auth');
   const qrSessionId = searchParams.get('station');
   const stationGeo = useMemo(() => getStationGeo(verifiedStationId), [verifiedStationId]);
+  const geoProximity = useMemo(
+    () => (geoLocation ? validateProximity(geoLocation, stationGeo, stationGeo.radius || 100) : null),
+    [geoLocation, stationGeo]
+  );
+  const isLocationVerified = Boolean(geoProximity?.isValid);
   const stationLabel = stationGeo.stationId && stationGeo.stationId !== 'DEFAULT'
     ? `${stationGeo.name} (${stationGeo.stationId})`
     : stationGeo.name;
@@ -169,10 +174,15 @@ useEffect(() => {
       setGeoLocation(geo);
 
       const proximity = validateProximity(geo, stationGeo, stationGeo.radius || 100);
-      console.log(
-        `[Attendance GPS] lat=${geo.latitude}, lng=${geo.longitude}, accuracy=${geo.accuracy}m, ` +
-        `distanceFrom="${stationGeo.name}"=${proximity.distance.toFixed(2)}m, radius=${proximity.radius}m, withinRadius=${proximity.isValid}`
-      );
+      // TEST ONLY — debug readout for temporary location testing, safe to leave enabled
+      console.log('[Attendance GPS TEST]', {
+        detectedLatitude: geo.latitude,
+        detectedLongitude: geo.longitude,
+        gpsAccuracyMeters: geo.accuracy,
+        distanceFromTestLocationMeters: Number(proximity.distance.toFixed(2)),
+        allowedRadiusMeters: proximity.radius,
+        withinRadius: proximity.isValid
+      });
       if (proximity.isValid) {
         setGeoStatus(`✓ On-site verified (${proximity.distance.toFixed(0)}m away)`);
       } else {
@@ -550,13 +560,19 @@ const handleVerifyFace = async () => {
               <label className="section-label">Location Verification</label>
               <button
                 type="button"
-                className={`location-btn ${geoLocation ? 'verified' : ''}`}
+                className={`location-btn ${isLocationVerified ? 'verified' : ''}`}
                 onClick={handleRequestLocation}
                 disabled={isProcessing}
               >
-                {isProcessing ? 'Checking...' : geoLocation ? '✓ Location Verified' : 'Request Location'}
+                {isProcessing
+                  ? 'Checking...'
+                  : isLocationVerified
+                    ? '✓ Location Verified'
+                    : geoLocation
+                      ? 'Not On-Site'
+                      : 'Request Location'}
               </button>
-              <div className={`location-status ${geoLocation && !geoStatus.includes('✗') ? 'success' : geoStatus.includes('✗') ? 'error' : ''}`}>
+              <div className={`location-status ${isLocationVerified ? 'success' : geoStatus.includes('✗') || (geoLocation && !isLocationVerified) ? 'error' : ''}`}>
                 {geoStatus}
               </div>
             </div>

@@ -13,6 +13,7 @@ import {
   FiUsers,
 } from 'react-icons/fi'
 import './SendMessageSection.css'
+import { sendContactMessage } from '../utils/contactMessageService'
 
 const DIRECT_EMAIL = 'ignissafe.bfpdasmarinas@gmail.com'
 
@@ -36,18 +37,35 @@ const INITIAL_FORM = { name: '', email: '', topic: '', message: '' }
 export default function SendMessageSection() {
   const [form, setForm] = useState(INITIAL_FORM)
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [copied, setCopied] = useState(false)
 
   const handleChange = (field) => (event) => {
     const { value } = event.target
     setForm((prev) => ({ ...prev, [field]: value }))
     if (submitted) setSubmitted(false)
+    if (submitError) setSubmitError('')
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    setSubmitted(true)
-    setForm(INITIAL_FORM)
+    if (submitting) return
+
+    setSubmitting(true)
+    setSubmitError('')
+
+    const { success, error } = await sendContactMessage(form)
+
+    setSubmitting(false)
+
+    if (success) {
+      setSubmitted(true)
+      setForm(INITIAL_FORM)
+    } else {
+      setSubmitted(false)
+      setSubmitError(error || 'Something went wrong while sending your message. Please try again.')
+    }
   }
 
   const handleCopyEmail = async () => {
@@ -150,14 +168,20 @@ export default function SendMessageSection() {
               />
             </div>
 
-            <button type="submit" className="send-message-submit">
+            <button type="submit" className="send-message-submit" disabled={submitting}>
               <FiSend aria-hidden="true" />
-              Send Message
+              {submitting ? 'Sending...' : 'Send Message'}
             </button>
 
             {submitted && (
               <p className="send-message-success" role="status">
                 Thank you! Your message has been noted. We&apos;ll get back to you shortly.
+              </p>
+            )}
+
+            {submitError && (
+              <p className="send-message-error" role="alert">
+                {submitError}
               </p>
             )}
           </form>

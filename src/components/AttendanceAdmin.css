@@ -88,6 +88,8 @@
 }
 
 .attendance-filters-box {
+  --attendance-filter-control-height: 46px;
+  --attendance-filter-label-gap: 8px;
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -105,19 +107,23 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--attendance-filter-label-gap);
+  min-width: 0;
 }
 
 .filter-item label {
   font-size: 13px;
   font-weight: 500;
   color: #666;
-  margin-bottom: 4px;
+  line-height: 1.2;
+  margin: 0;
 }
 
 .search-input-wrapper {
   position: relative;
   width: 100%;
+  height: var(--attendance-filter-control-height);
+  box-sizing: border-box;
 }
 
 .search-icon {
@@ -130,10 +136,14 @@
 
 .search-input-wrapper input {
   width: 100%;
-  padding: 12px 15px 12px 45px;
+  height: 100%;
+  min-height: var(--attendance-filter-control-height);
+  padding: 0 15px 0 45px;
   border: 1px solid #e0e0e0;
   border-radius: 6px;
+  box-sizing: border-box;
   font-size: 14px;
+  line-height: 1.2;
   background-color: #fafafa;
   transition: border-color 0.3s;
 }
@@ -148,13 +158,24 @@
 
 .date-picker-input {
   width: 100%;
-  padding: 12px 15px;
+  height: var(--attendance-filter-control-height);
+  min-height: var(--attendance-filter-control-height);
+  padding: 0 15px;
   border: 1px solid #e0e0e0;
   border-radius: 6px;
+  box-sizing: border-box;
   font-size: 14px;
+  line-height: 1.2;
   background-color: white;
   cursor: pointer;
   transition: border-color 0.3s;
+}
+
+.filter-item .react-datepicker-wrapper,
+.filter-item .react-datepicker__input-container {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .filter-actions {
@@ -163,12 +184,16 @@
 }
 
 .clear-filters-btn {
-  padding: 12px 25px;
+  height: var(--attendance-filter-control-height);
+  min-height: var(--attendance-filter-control-height);
+  padding: 0 25px;
   background-color: #6c757d;
   color: white;
   border: none;
   border-radius: 6px;
+  box-sizing: border-box;
   font-size: 13px;
+  line-height: 1.2;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.3s;

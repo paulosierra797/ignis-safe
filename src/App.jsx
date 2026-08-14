@@ -6,6 +6,7 @@ import LandingAnnouncements from './components/LandingAnnouncements'
 import AboutSection from './components/AboutSection'
 import ProcessSection from './components/ProcessSection'
 import ContactSection from './components/ContactSection'
+import SendMessageSection from './components/SendMessageSection'
 import FAQSection from './components/FAQSection'
 import Footer from './components/Footer'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
@@ -160,6 +161,7 @@ function LandingPage() {
       <AboutSection />
       <ProcessSection />
       <ContactSection />
+      <SendMessageSection />
       <FAQSection />
       <Footer />
     </>

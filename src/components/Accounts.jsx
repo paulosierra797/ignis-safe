@@ -74,6 +74,7 @@ const ACCOUNTS_TABS = [
 ];
 const ACCOUNTS_TAB_KEYS = ACCOUNTS_TABS.map((tab) => tab.key);
 const ACCOUNT_PAGE_SIZE = 10;
+const SERVICE_STATUS_OPTIONS = ['Active', 'Retired', 'Resigned', 'Separated', 'Dismissed', 'Deceased'];
 const EMPTY_PERSONNEL_FORM = {
   first_name: '',
   last_name: '',
@@ -150,6 +151,7 @@ function PersonnelProfileModal({
     || account.email
     || 'Personnel';
   const normalizedStatus = String(account.status || 'Inactive').toLowerCase().replace(/\s+/g, '-');
+  const normalizedServiceStatus = String(account.service_status || 'Active').toLowerCase().replace(/\s+/g, '-');
   const leaveActive = isOnLeave(account);
   const lastActivity = account.last_login || account.updated_at || account.created_at;
 
@@ -192,9 +194,16 @@ function PersonnelProfileModal({
               <h4>{accountName}</h4>
               <p><FiMail aria-hidden="true" />{account.email || 'No email recorded'}</p>
             </div>
-            <span className={`status-pill ${normalizedStatus}`}>
-              {formatStatusLabel(account.status, 'Inactive')}
-            </span>
+            <div className="personnel-profile-status-group">
+              <span className={`status-pill ${normalizedStatus}`}>
+                {formatStatusLabel(account.status, 'Inactive')}
+              </span>
+              {isPersonnelAccount(account) && (
+                <span className={`status-pill service-status-pill ${normalizedServiceStatus}`}>
+                  {formatStatusLabel(account.service_status, 'Active')}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="personnel-profile-section">
@@ -761,6 +770,7 @@ function AccountDirectoryGroup({
             const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim()
               || (variant === 'admin' ? 'Admin' : 'Personnel');
             const normalizedStatus = String(account.status || 'inactive').toLowerCase().replace(/\s+/g, '-');
+            const normalizedServiceStatus = String(account.service_status || 'Active').toLowerCase().replace(/\s+/g, '-');
 
             return (
               <article className="account-directory-entry" key={account.admin_id || account.id}>
@@ -771,9 +781,16 @@ function AccountDirectoryGroup({
                       <strong title={accountName}>{accountName}</strong>
                       <span title={account.email || ''}>{account.email || '—'}</span>
                     </div>
-                    <span className={`status-pill ${normalizedStatus}`}>
-                      {formatStatusLabel(account.status, 'Inactive')}
-                    </span>
+                    <div className="account-directory-status-group">
+                      <span className={`status-pill ${normalizedStatus}`}>
+                        {formatStatusLabel(account.status, 'Inactive')}
+                      </span>
+                      {variant === 'personnel' && (
+                        <span className={`status-pill service-status-pill ${normalizedServiceStatus}`}>
+                          {formatStatusLabel(account.service_status, 'Active')}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="account-directory-entry-meta">
@@ -1979,7 +1996,8 @@ const [editFormData, setEditFormData] = useState({
   email: '',
   role: '',
   rank: '',
-  contact_number: ''
+  contact_number: '',
+  service_status: 'Active'
 });
 const openProfileModal = (account) => {
   setSelectedProfileAccount(account);
@@ -1999,7 +2017,8 @@ const openEditModal = (account) => {
     email: account.email || '',
     role: account.role || '',
     rank: account.rank || '',
-    contact_number: account.contact_number || ''
+    contact_number: account.contact_number || '',
+    service_status: account.service_status || 'Active'
   });
   setIsEditModalOpen(true);
 };
@@ -2013,7 +2032,8 @@ const handleUpdatePersonnel = async () => {
     email: editFormData.email.trim(),
     role: editFormData.role,
     rank: editFormData.rank,
-    contact_number: editFormData.contact_number
+    contact_number: editFormData.contact_number,
+    service_status: editFormData.service_status
   };
   const { data: authData } = await supabase.auth.getUser();
 console.log("AUTH USER:", authData);
@@ -3227,7 +3247,9 @@ const permissions = getDefaultPermissions(formData.role);
     const fullName = `${account.first_name || ''} ${account.last_name || ''}`.toLowerCase().trim();
     const matchSearch = fullName.includes(personnelSearch.toLowerCase());
     const matchRank = rankFilter === 'All Ranks' || account.rank === rankFilter;
-    const matchStatus = statusFilter === 'All Status' || account.status === statusFilter;
+    const matchStatus = statusFilter === 'All Status'
+      || account.status === statusFilter
+      || account.service_status === statusFilter;
     return matchSearch && matchRank && matchStatus;
   });
   const filteredPersonnelAccounts = filteredAccounts.filter(isPersonnelAccount);
@@ -4183,10 +4205,16 @@ const permissions = getDefaultPermissions(formData.role);
               <option>Active</option>
               <option>Inactive</option>
                <option>On Leave</option>
-             
+
               <option>Pending Activation</option>
-      
+
               <option>Expired</option>
+              <option disabled>──────────</option>
+              <option>Retired</option>
+              <option>Resigned</option>
+              <option>Separated</option>
+              <option>Dismissed</option>
+              <option>Deceased</option>
             </select>
           </div>
 
@@ -4491,6 +4519,28 @@ const permissions = getDefaultPermissions(formData.role);
         <option value="FO1">FO1 - Fire Officer I</option>
       </select>
     </div>
+
+    {String(editFormData.role).toLowerCase() === 'personnel' && (
+      <div className="accounts-modal-field">
+        <label>Service Status</label>
+        <select
+          value={editFormData.service_status}
+          onChange={(e) =>
+            setEditFormData({
+              ...editFormData,
+              service_status: e.target.value
+            })
+          }
+        >
+          {SERVICE_STATUS_OPTIONS.map((option) => (
+            <option key={option} value={option}>{option}</option>
+          ))}
+        </select>
+        <small className="accounts-modal-field-hint">
+          Tracks whether this personnel is still in service. On Leave is managed separately and does not affect Service Status.
+        </small>
+      </div>
+    )}
 
   </div>
     {message.text && (

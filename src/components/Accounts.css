@@ -2055,6 +2055,47 @@
   color: #5b21b6;
 }
 
+.status-pill.retired {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-pill.resigned {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.status-pill.separated {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.status-pill.dismissed {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-pill.deceased {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.account-directory-status-group,
+.personnel-profile-status-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+.accounts-modal-field-hint {
+  display: block;
+  margin-top: 0.3rem;
+  color: #6b7280;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .leave-date-meta {
   margin: 0.35rem 0 0;
   font-size: 0.72rem;
@@ -4129,8 +4170,14 @@
     gap: 0.45rem;
   }
 
-  .account-directory-entry-heading .status-pill {
+  .account-directory-entry-heading .status-pill,
+  .account-directory-entry-heading .account-directory-status-group {
     align-self: flex-start;
+  }
+
+  .account-directory-status-group {
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
   .accounts-directory-page-controls {
@@ -4387,9 +4434,11 @@
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .personnel-profile-identity > .status-pill {
+  .personnel-profile-identity > .personnel-profile-status-group {
     grid-column: 1 / -1;
     justify-self: start;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
   .personnel-profile-detail-grid {

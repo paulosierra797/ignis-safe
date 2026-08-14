@@ -92,6 +92,7 @@ export const updatePersonnelWorkspaceProfile = async (adminId, updates) => {
       'contact_number',
       'avatar_url',
       'status',
+      'service_status',
       'leave_start_date',
       'leave_end_date'
     ];

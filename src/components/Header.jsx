@@ -7,7 +7,7 @@ import { FiChevronDown, FiLogIn, FiMenu, FiX } from 'react-icons/fi';
 // Order matches the actual DOM order of sections on the landing page — the
 // scroll-spy loop below relies on this order, which is independent of the
 // order these ids are presented in the nav.
-const SCROLL_SECTION_IDS = ['home', 'announcements', 'about', 'process', 'contact', 'faq'];
+const SCROLL_SECTION_IDS = ['home', 'announcements', 'about', 'process', 'contact', 'send-message', 'faq'];
 
 const PRIMARY_NAV_ITEMS = [
   { id: 'home', label: 'Home' },
@@ -15,17 +15,139 @@ const PRIMARY_NAV_ITEMS = [
   { id: 'process', label: 'Online Application' }
 ];
 
-const CONTACT_NAV_ITEM = { id: 'contact', label: 'Contact Us' };
-
 const ABOUT_MENU_ITEMS = [
   { id: 'about', label: 'About', type: 'section' },
   { id: 'faq', label: 'FAQ', type: 'section' },
   { id: 'organizational-chart', label: 'Organizational Chart', type: 'route', to: '/organizational-chart' }
 ];
 
+const CONTACT_MENU_ITEMS = [
+  { id: 'contact', label: 'Contact Us', type: 'section' },
+  { id: 'send-message', label: 'Send Us a Message', type: 'section' }
+];
+
+// Sets up the shared outside-click / Escape-to-close behavior for a hover-or-click
+// nav dropdown. Takes refs rather than returning them, since a custom hook handing
+// back an object containing a ref is ambiguous for the React Compiler's ref-safety
+// analysis (it can't tell which returned fields are refs vs plain values).
+function useDropdownAutoClose(open, setOpen, containerRef, toggleRef) {
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handlePointerDown = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [open, setOpen, containerRef]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+        toggleRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [open, setOpen, toggleRef]);
+}
+
+function NavDropdown({
+  menuId,
+  ariaLabel,
+  toggleLabel,
+  toggleActive,
+  items,
+  open,
+  containerRef,
+  toggleRef,
+  itemRefs,
+  onToggleClick,
+  onToggleKeyDown,
+  onMouseEnter,
+  onMouseLeave,
+  onBlur,
+  onItemKeyDown,
+  isLandingPage,
+  activeSection,
+  location,
+  sectionHref,
+  onItemSectionClick,
+  onItemRouteClick
+}) {
+  return (
+    <div
+      className="nav-dropdown"
+      ref={containerRef}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onBlur={onBlur}
+    >
+      <button
+        type="button"
+        ref={toggleRef}
+        className={`nav-link nav-dropdown-toggle ${toggleActive ? 'is-active' : ''}`}
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={onToggleClick}
+        onKeyDown={onToggleKeyDown}
+      >
+        {toggleLabel}
+        <FiChevronDown aria-hidden="true" className={`nav-dropdown-arrow ${open ? 'open' : ''}`} />
+      </button>
+
+      <ul id={menuId} role="menu" aria-label={ariaLabel} className={`nav-dropdown-menu ${open ? 'open' : ''}`}>
+        {items.map((item, index) => (
+          <li key={item.id} role="none">
+            {item.type === 'route' ? (
+              <Link
+                role="menuitem"
+                ref={(el) => { itemRefs.current[index] = el; }}
+                to={item.to}
+                className={location.pathname === item.to ? 'is-active' : ''}
+                aria-current={location.pathname === item.to ? 'page' : undefined}
+                onClick={onItemRouteClick}
+                onKeyDown={(event) => onItemKeyDown(event, index)}
+              >
+                {item.label}
+              </Link>
+            ) : (
+              <a
+                role="menuitem"
+                ref={(el) => { itemRefs.current[index] = el; }}
+                href={sectionHref(item.id)}
+                className={isLandingPage && activeSection === item.id ? 'is-active' : ''}
+                aria-current={isLandingPage && activeSection === item.id ? 'location' : undefined}
+                onClick={(event) => onItemSectionClick(event, item.id)}
+                onKeyDown={(event) => onItemKeyDown(event, index)}
+              >
+                {item.label}
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const location = useLocation();
   const [activeSection, setActiveSection] = useState(() => {
     // Seed the indicator from the URL hash on first render so a cross-page
@@ -41,6 +163,8 @@ export default function Header() {
   const isAboutActive =
     (isLandingPage && (activeSection === 'about' || activeSection === 'faq')) ||
     location.pathname === '/organizational-chart';
+  const isContactActive =
+    isLandingPage && (activeSection === 'contact' || activeSection === 'send-message');
   const suppressTrackingRef = useRef(false);
   const suppressTimeoutRef = useRef(null);
   // Hash present the moment this Header instance mounts — set when a
@@ -50,6 +174,10 @@ export default function Header() {
   const aboutToggleRef = useRef(null);
   const aboutItemRefs = useRef([]);
   const aboutHoverTimeoutRef = useRef(null);
+  const contactRef = useRef(null);
+  const contactToggleRef = useRef(null);
+  const contactItemRefs = useRef([]);
+  const contactHoverTimeoutRef = useRef(null);
   const supportsHoverRef = useRef(
     typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches
   );
@@ -125,6 +253,7 @@ export default function Header() {
       if (event.key === 'Escape') {
         setMenuOpen(false);
         setAboutOpen(false);
+        setContactOpen(false);
       }
     };
 
@@ -139,41 +268,14 @@ export default function Header() {
 
   useEffect(() => () => clearTimeout(suppressTimeoutRef.current), []);
 
-  // Close the dropdown on outside click/tap.
-  useEffect(() => {
-    if (!aboutOpen) return undefined;
+  // Close each dropdown on outside click/tap and on Escape.
+  useDropdownAutoClose(aboutOpen, setAboutOpen, aboutRef, aboutToggleRef);
+  useDropdownAutoClose(contactOpen, setContactOpen, contactRef, contactToggleRef);
 
-    const handlePointerDown = (event) => {
-      if (aboutRef.current && !aboutRef.current.contains(event.target)) {
-        setAboutOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('touchstart', handlePointerDown);
-
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('touchstart', handlePointerDown);
-    };
-  }, [aboutOpen]);
-
-  // Close the dropdown on Escape and return focus to its toggle.
-  useEffect(() => {
-    if (!aboutOpen) return undefined;
-
-    const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setAboutOpen(false);
-        aboutToggleRef.current?.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [aboutOpen]);
-
-  useEffect(() => () => clearTimeout(aboutHoverTimeoutRef.current), []);
+  useEffect(() => () => {
+    clearTimeout(aboutHoverTimeoutRef.current);
+    clearTimeout(contactHoverTimeoutRef.current);
+  }, []);
 
   const handleSectionClick = (event, sectionId) => {
     setMenuOpen(false);
@@ -259,6 +361,61 @@ export default function Header() {
     }
   };
 
+  const handleContactSectionSelect = (event, sectionId) => {
+    handleSectionClick(event, sectionId);
+    setContactOpen(false);
+  };
+
+  const handleContactToggleClick = () => {
+    if (supportsHoverRef.current) {
+      setContactOpen(true);
+    } else {
+      setContactOpen((open) => !open);
+    }
+  };
+
+  const handleContactMouseEnter = () => {
+    if (!supportsHoverRef.current) return;
+    clearTimeout(contactHoverTimeoutRef.current);
+    setContactOpen(true);
+  };
+
+  const handleContactMouseLeave = () => {
+    if (!supportsHoverRef.current) return;
+    contactHoverTimeoutRef.current = setTimeout(() => setContactOpen(false), 150);
+  };
+
+  const handleContactBlur = (event) => {
+    if (contactRef.current && !contactRef.current.contains(event.relatedTarget)) {
+      setContactOpen(false);
+    }
+  };
+
+  const handleContactToggleKeyDown = (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setContactOpen(true);
+      requestAnimationFrame(() => contactItemRefs.current[0]?.focus());
+    }
+  };
+
+  const handleContactItemKeyDown = (event, index) => {
+    const items = contactItemRefs.current;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      items[(index + 1) % items.length]?.focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[(index - 1 + items.length) % items.length]?.focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      items[0]?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      items[items.length - 1]?.focus();
+    }
+  };
+
   return (
     <header className="header">
       <div className="header-container">
@@ -275,6 +432,7 @@ export default function Header() {
           onClick={() => {
             setMenuOpen((open) => !open);
             setAboutOpen(false);
+            setContactOpen(false);
           }}
           type="button"
           aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
@@ -292,6 +450,7 @@ export default function Header() {
             onClick={() => {
               setMenuOpen(false);
               setAboutOpen(false);
+              setContactOpen(false);
             }}
           />
         )}
@@ -309,68 +468,52 @@ export default function Header() {
             </a>
           ))}
 
-          <div
-            className="nav-dropdown"
-            ref={aboutRef}
+          <NavDropdown
+            menuId="about-us-menu"
+            ariaLabel="About Us"
+            toggleLabel="About Us"
+            toggleActive={isAboutActive}
+            items={ABOUT_MENU_ITEMS}
+            open={aboutOpen}
+            containerRef={aboutRef}
+            toggleRef={aboutToggleRef}
+            itemRefs={aboutItemRefs}
+            onToggleClick={handleAboutToggleClick}
+            onToggleKeyDown={handleAboutToggleKeyDown}
             onMouseEnter={handleAboutMouseEnter}
             onMouseLeave={handleAboutMouseLeave}
             onBlur={handleAboutBlur}
-          >
-            <button
-              type="button"
-              ref={aboutToggleRef}
-              className={`nav-link nav-dropdown-toggle ${isAboutActive ? 'is-active' : ''}`}
-              aria-haspopup="true"
-              aria-expanded={aboutOpen}
-              aria-controls="about-us-menu"
-              onClick={handleAboutToggleClick}
-              onKeyDown={handleAboutToggleKeyDown}
-            >
-              About Us
-              <FiChevronDown aria-hidden="true" className={`nav-dropdown-arrow ${aboutOpen ? 'open' : ''}`} />
-            </button>
+            onItemKeyDown={handleAboutItemKeyDown}
+            isLandingPage={isLandingPage}
+            activeSection={activeSection}
+            location={location}
+            sectionHref={sectionHref}
+            onItemSectionClick={handleAboutSectionSelect}
+            onItemRouteClick={handleAboutRouteSelect}
+          />
 
-            <ul id="about-us-menu" role="menu" aria-label="About Us" className={`nav-dropdown-menu ${aboutOpen ? 'open' : ''}`}>
-              {ABOUT_MENU_ITEMS.map((item, index) => (
-                <li key={item.id} role="none">
-                  {item.type === 'route' ? (
-                    <Link
-                      role="menuitem"
-                      ref={(el) => { aboutItemRefs.current[index] = el; }}
-                      to={item.to}
-                      className={location.pathname === item.to ? 'is-active' : ''}
-                      aria-current={location.pathname === item.to ? 'page' : undefined}
-                      onClick={handleAboutRouteSelect}
-                      onKeyDown={(event) => handleAboutItemKeyDown(event, index)}
-                    >
-                      {item.label}
-                    </Link>
-                  ) : (
-                    <a
-                      role="menuitem"
-                      ref={(el) => { aboutItemRefs.current[index] = el; }}
-                      href={sectionHref(item.id)}
-                      className={isLandingPage && activeSection === item.id ? 'is-active' : ''}
-                      aria-current={isLandingPage && activeSection === item.id ? 'location' : undefined}
-                      onClick={(event) => handleAboutSectionSelect(event, item.id)}
-                      onKeyDown={(event) => handleAboutItemKeyDown(event, index)}
-                    >
-                      {item.label}
-                    </a>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <a
-            className={`nav-link ${isLandingPage && activeSection === CONTACT_NAV_ITEM.id ? 'is-active' : ''}`}
-            href={sectionHref(CONTACT_NAV_ITEM.id)}
-            aria-current={isLandingPage && activeSection === CONTACT_NAV_ITEM.id ? 'location' : undefined}
-            onClick={(event) => handleSectionClick(event, CONTACT_NAV_ITEM.id)}
-          >
-            {CONTACT_NAV_ITEM.label}
-          </a>
+          <NavDropdown
+            menuId="contact-us-menu"
+            ariaLabel="Contact Us"
+            toggleLabel="Contact Us"
+            toggleActive={isContactActive}
+            items={CONTACT_MENU_ITEMS}
+            open={contactOpen}
+            containerRef={contactRef}
+            toggleRef={contactToggleRef}
+            itemRefs={contactItemRefs}
+            onToggleClick={handleContactToggleClick}
+            onToggleKeyDown={handleContactToggleKeyDown}
+            onMouseEnter={handleContactMouseEnter}
+            onMouseLeave={handleContactMouseLeave}
+            onBlur={handleContactBlur}
+            onItemKeyDown={handleContactItemKeyDown}
+            isLandingPage={isLandingPage}
+            activeSection={activeSection}
+            location={location}
+            sectionHref={sectionHref}
+            onItemSectionClick={handleContactSectionSelect}
+          />
 
           <Link className="landing-login-link login-btn" to="/login" onClick={() => setMenuOpen(false)}>
             <FiLogIn aria-hidden="true" />

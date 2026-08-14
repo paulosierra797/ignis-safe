@@ -30,13 +30,13 @@ const CONTACT_MENU_ITEMS = [
 // nav dropdown. Takes refs rather than returning them, since a custom hook handing
 // back an object containing a ref is ambiguous for the React Compiler's ref-safety
 // analysis (it can't tell which returned fields are refs vs plain values).
-function useDropdownAutoClose(open, setOpen, containerRef, toggleRef) {
+function useDropdownAutoClose(open, onClose, containerRef, toggleRef) {
   useEffect(() => {
     if (!open) return undefined;
 
     const handlePointerDown = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setOpen(false);
+        onClose();
       }
     };
 
@@ -47,21 +47,21 @@ function useDropdownAutoClose(open, setOpen, containerRef, toggleRef) {
       document.removeEventListener('mousedown', handlePointerDown);
       document.removeEventListener('touchstart', handlePointerDown);
     };
-  }, [open, setOpen, containerRef]);
+  }, [open, onClose, containerRef]);
 
   useEffect(() => {
     if (!open) return undefined;
 
     const handleEscape = (event) => {
       if (event.key === 'Escape') {
-        setOpen(false);
+        onClose();
         toggleRef.current?.focus();
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [open, setOpen, toggleRef]);
+  }, [open, onClose, toggleRef]);
 }
 
 function NavDropdown({
@@ -146,8 +146,12 @@ function NavDropdown({
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
-  const [contactOpen, setContactOpen] = useState(false);
+  // Single source of truth for which nav dropdown is open — only one of
+  // 'about' | 'contact' | null at a time, so opening one always closes the
+  // other instead of letting them overlap via independent hover states.
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const aboutOpen = openDropdown === 'about';
+  const contactOpen = openDropdown === 'contact';
   const location = useLocation();
   const [activeSection, setActiveSection] = useState(() => {
     // Seed the indicator from the URL hash on first render so a cross-page
@@ -252,8 +256,7 @@ export default function Header() {
     const handleEscape = (event) => {
       if (event.key === 'Escape') {
         setMenuOpen(false);
-        setAboutOpen(false);
-        setContactOpen(false);
+        setOpenDropdown(null);
       }
     };
 
@@ -268,9 +271,29 @@ export default function Header() {
 
   useEffect(() => () => clearTimeout(suppressTimeoutRef.current), []);
 
+  const openAbout = useCallback(() => setOpenDropdown('about'), []);
+  const closeAbout = useCallback(
+    () => setOpenDropdown((current) => (current === 'about' ? null : current)),
+    []
+  );
+  const toggleAbout = useCallback(
+    () => setOpenDropdown((current) => (current === 'about' ? null : 'about')),
+    []
+  );
+
+  const openContact = useCallback(() => setOpenDropdown('contact'), []);
+  const closeContact = useCallback(
+    () => setOpenDropdown((current) => (current === 'contact' ? null : current)),
+    []
+  );
+  const toggleContact = useCallback(
+    () => setOpenDropdown((current) => (current === 'contact' ? null : 'contact')),
+    []
+  );
+
   // Close each dropdown on outside click/tap and on Escape.
-  useDropdownAutoClose(aboutOpen, setAboutOpen, aboutRef, aboutToggleRef);
-  useDropdownAutoClose(contactOpen, setContactOpen, contactRef, contactToggleRef);
+  useDropdownAutoClose(aboutOpen, closeAbout, aboutRef, aboutToggleRef);
+  useDropdownAutoClose(contactOpen, closeContact, contactRef, contactToggleRef);
 
   useEffect(() => () => {
     clearTimeout(aboutHoverTimeoutRef.current);
@@ -298,11 +321,11 @@ export default function Header() {
 
   const handleAboutSectionSelect = (event, sectionId) => {
     handleSectionClick(event, sectionId);
-    setAboutOpen(false);
+    closeAbout();
   };
 
   const handleAboutRouteSelect = () => {
-    setAboutOpen(false);
+    closeAbout();
     setMenuOpen(false);
   };
 
@@ -313,33 +336,33 @@ export default function Header() {
     // Escape/item-select handle closing. Touch/no-hover devices get a
     // normal open/close toggle since there's no hover to open it for them.
     if (supportsHoverRef.current) {
-      setAboutOpen(true);
+      openAbout();
     } else {
-      setAboutOpen((open) => !open);
+      toggleAbout();
     }
   };
 
   const handleAboutMouseEnter = () => {
     if (!supportsHoverRef.current) return;
     clearTimeout(aboutHoverTimeoutRef.current);
-    setAboutOpen(true);
+    openAbout();
   };
 
   const handleAboutMouseLeave = () => {
     if (!supportsHoverRef.current) return;
-    aboutHoverTimeoutRef.current = setTimeout(() => setAboutOpen(false), 150);
+    aboutHoverTimeoutRef.current = setTimeout(closeAbout, 150);
   };
 
   const handleAboutBlur = (event) => {
     if (aboutRef.current && !aboutRef.current.contains(event.relatedTarget)) {
-      setAboutOpen(false);
+      closeAbout();
     }
   };
 
   const handleAboutToggleKeyDown = (event) => {
     if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      setAboutOpen(true);
+      openAbout();
       requestAnimationFrame(() => aboutItemRefs.current[0]?.focus());
     }
   };
@@ -363,38 +386,38 @@ export default function Header() {
 
   const handleContactSectionSelect = (event, sectionId) => {
     handleSectionClick(event, sectionId);
-    setContactOpen(false);
+    closeContact();
   };
 
   const handleContactToggleClick = () => {
     if (supportsHoverRef.current) {
-      setContactOpen(true);
+      openContact();
     } else {
-      setContactOpen((open) => !open);
+      toggleContact();
     }
   };
 
   const handleContactMouseEnter = () => {
     if (!supportsHoverRef.current) return;
     clearTimeout(contactHoverTimeoutRef.current);
-    setContactOpen(true);
+    openContact();
   };
 
   const handleContactMouseLeave = () => {
     if (!supportsHoverRef.current) return;
-    contactHoverTimeoutRef.current = setTimeout(() => setContactOpen(false), 150);
+    contactHoverTimeoutRef.current = setTimeout(closeContact, 150);
   };
 
   const handleContactBlur = (event) => {
     if (contactRef.current && !contactRef.current.contains(event.relatedTarget)) {
-      setContactOpen(false);
+      closeContact();
     }
   };
 
   const handleContactToggleKeyDown = (event) => {
     if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      setContactOpen(true);
+      openContact();
       requestAnimationFrame(() => contactItemRefs.current[0]?.focus());
     }
   };
@@ -431,8 +454,7 @@ export default function Header() {
           className="menu-btn"
           onClick={() => {
             setMenuOpen((open) => !open);
-            setAboutOpen(false);
-            setContactOpen(false);
+            setOpenDropdown(null);
           }}
           type="button"
           aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
@@ -449,8 +471,7 @@ export default function Header() {
             aria-label="Close navigation menu"
             onClick={() => {
               setMenuOpen(false);
-              setAboutOpen(false);
-              setContactOpen(false);
+              setOpenDropdown(null);
             }}
           />
         )}

@@ -304,6 +304,22 @@ export const isAuthValid = () => {
 const ATTENDANCE_VERIFICATION_BUCKET = 'attendance_verifications';
 const SIGNED_PHOTO_URL_TTL_SECONDS = 10 * 60;
 const DUPLICATE_ATTENDANCE_MESSAGE = 'Your attendance for this action has already been recorded.';
+const GENERIC_ATTENDANCE_FAILURE_MESSAGE = 'Failed to save attendance. Please try again.';
+
+// Messages record_attendance_action() raises intentionally via `raise exception` -
+// safe to surface to the user as-is. Anything else (e.g. a raw Postgres error like
+// "column account.name does not exist") is an internal failure and must not leak
+// to the UI - see recordAttendance() below.
+const KNOWN_ATTENDANCE_RPC_MESSAGES = [
+  DUPLICATE_ATTENDANCE_MESSAGE,
+  'Authentication is required.',
+  'Only active personnel accounts may record attendance.',
+  'Invalid attendance action.',
+  'Invalid QR session',
+  'QR already used',
+  'QR expired',
+  'Time Out cannot be recorded without an existing Time In.'
+];
 
 const toFiniteNumber = (value) => {
   const number = Number(value);
@@ -554,10 +570,11 @@ export const recordAttendance = async ({ officer, mode, location, qrSessionId, v
 
   if (error) {
     await removeAttendanceVerificationPhoto(uploadedPhotoPath);
-    const message = error.message?.includes(DUPLICATE_ATTENDANCE_MESSAGE)
-      ? DUPLICATE_ATTENDANCE_MESSAGE
-      : error.message || 'Failed to save attendance.';
-    throw new Error(message);
+    const knownMessage = KNOWN_ATTENDANCE_RPC_MESSAGES.find((known) => error.message?.includes(known));
+    if (!knownMessage) {
+      console.error('record_attendance_action RPC failed:', error);
+    }
+    throw new Error(knownMessage || GENERIC_ATTENDANCE_FAILURE_MESSAGE);
   }
 
   return {

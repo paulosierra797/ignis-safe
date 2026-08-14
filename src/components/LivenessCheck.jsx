@@ -29,7 +29,7 @@ const LivenessCheck = ({ videoRef, qrSessionId, onPassed, onFailed, onDebug, onP
     }
   };
 
-  const { phase, instruction, countdownMs, progressPercent, failureLabel } = useLivenessCheck({
+  const { phase, instruction, progressPercent, failureLabel } = useLivenessCheck({
     videoRef,
     active: true,
     qrSessionId,
@@ -46,7 +46,6 @@ const LivenessCheck = ({ videoRef, qrSessionId, onPassed, onFailed, onDebug, onP
 
   const showProgress = phase === 'centering' || phase === 'calibrating' || phase === 'challenge' || phase === 'passed';
   const displayPercent = Math.round(phase === 'passed' ? 100 : progressPercent);
-  const countdownSeconds = countdownMs != null ? Math.ceil(countdownMs / 1000) : null;
 
   return (
     <div className={`liveness-check liveness-check--${phase}`}>
@@ -67,10 +66,6 @@ const LivenessCheck = ({ videoRef, qrSessionId, onPassed, onFailed, onDebug, onP
           </div>
           <span className="liveness-progress-label">{displayPercent}%</span>
         </div>
-      )}
-
-      {phase === 'challenge' && countdownSeconds != null && (
-        <div className="liveness-countdown">{countdownSeconds}s</div>
       )}
 
       {import.meta.env.DEV && phase === 'failed' && failureLabel && (

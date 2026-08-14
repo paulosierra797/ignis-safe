@@ -39,7 +39,6 @@ const FAILURE_REASON_LABELS = {
   multiple_faces: 'More than one face was detected.',
   centering_timeout: 'Could not get a centered, single face in view.',
   calibration_timeout: 'Could not hold a steady neutral pose.',
-  challenge_timeout: 'Challenge action was not completed in time.',
   session_mismatch: 'Verification session changed mid-check.',
   landmarker_error: 'Face tracking failed to start.'
 };
@@ -76,7 +75,6 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
   const [instruction, setInstruction] = useState('');
   const [stepIndex, setStepIndex] = useState(0);
   const [stepCount, setStepCount] = useState(0);
-  const [countdownMs, setCountdownMs] = useState(null);
   const [failureReason, setFailureReason] = useState('');
   const [progressPercent, setProgressPercent] = useState(0);
 
@@ -182,7 +180,6 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
       fail('session_mismatch');
       return;
     }
-    setCountdownMs(null);
     setProgressPercent(100);
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
@@ -250,7 +247,6 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     if (!action) return;
 
     const done = action.evaluate(actionStateRef.current, smoothed, baselineRef.current, now);
-    const elapsed = now - stepStartTimeRef.current;
 
     if (done) {
       stepIndexRef.current += 1;
@@ -261,12 +257,6 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
       }
       return;
     }
-
-    if (elapsed > action.timeLimitMs) {
-      fail('challenge_timeout');
-      return;
-    }
-    setCountdownMs(Math.max(0, action.timeLimitMs - elapsed));
 
     // Display-only smooth fill: fraction of the way through this step's
     // sustain hold (0 until the pose is actually past threshold and being
@@ -381,7 +371,6 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     instruction,
     stepIndex,
     stepCount,
-    countdownMs,
     progressPercent,
     failureLabel: FAILURE_REASON_LABELS[failureReason] || '',
     thresholds: THRESHOLDS

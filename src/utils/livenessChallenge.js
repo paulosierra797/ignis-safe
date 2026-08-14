@@ -107,7 +107,6 @@ export const isNeutralPose = (smoothed, baseline) => {
 const makeTurnAction = (id, instruction, isPastThreshold) => ({
   id,
   instruction,
-  timeLimitMs: 6000,
   // Exposed so the UI can render a smooth in-step progress fraction
   // (elapsed sustain hold / sustainMs) - display only, doesn't affect
   // evaluate()'s pass/fail decision below.

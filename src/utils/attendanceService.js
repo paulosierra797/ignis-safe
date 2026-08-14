@@ -635,9 +635,21 @@ const parseNumber = (value, fallback) => {
 
 const DEFAULT_RADIUS_METERS = 100;
 
+// --- REAL BFP LOCATION (production) ---
+// const defaultStation = {
+//   latitude: parseNumber(import.meta.env.VITE_STATION_LATITUDE, 14.5994),
+//   longitude: parseNumber(import.meta.env.VITE_STATION_LONGITUDE, 120.9842),
+//   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
+//   address: import.meta.env.VITE_STATION_ADDRESS || '',
+//   stationId: 'DEFAULT',
+//   radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS)
+// };
+
+// TEST LOCATION ONLY — SIERRA HOUSE
+// https://maps.apple/p/3my8VxZd9v2yWb
 const defaultStation = {
-  latitude: parseNumber(import.meta.env.VITE_STATION_LATITUDE, 14.5994),
-  longitude: parseNumber(import.meta.env.VITE_STATION_LONGITUDE, 120.9842),
+  latitude: 14.364420,
+  longitude: 120.882661,
   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
   address: import.meta.env.VITE_STATION_ADDRESS || '',
   stationId: 'DEFAULT',
@@ -648,9 +660,20 @@ export const STATION_GEO = defaultStation;
 
 export const STATION_GEO_MAP = {
   DEFAULT: defaultStation,
+  // --- REAL BFP LOCATION (production) ---
+  // 'ZINI-M3': {
+  //   latitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LATITUDE, defaultStation.latitude),
+  //   longitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LONGITUDE, defaultStation.longitude),
+  //   name: import.meta.env.VITE_STATION_ZINI_M3_NAME || 'Station Delta',
+  //   address: import.meta.env.VITE_STATION_ZINI_M3_ADDRESS || defaultStation.address,
+  //   stationId: 'ZINI-M3',
+  //   radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius)
+  // },
+  // TEST LOCATION ONLY — SIERRA HOUSE
+  // https://maps.apple/p/3my8VxZd9v2yWb
   'ZINI-M3': {
-    latitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LATITUDE, defaultStation.latitude),
-    longitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LONGITUDE, defaultStation.longitude),
+    latitude: 14.364420,
+    longitude: 120.882661,
     name: import.meta.env.VITE_STATION_ZINI_M3_NAME || 'Station Delta',
     address: import.meta.env.VITE_STATION_ZINI_M3_ADDRESS || defaultStation.address,
     stationId: 'ZINI-M3',

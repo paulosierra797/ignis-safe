@@ -298,6 +298,15 @@
   background: #0f1418;
   object-fit: cover;
   border: 1px solid rgba(0, 0, 0, 0.08);
+  /* Mirror the on-screen preview only, like a normal front-camera app
+     (Windows Camera, Zoom, FaceTime, etc.) - this is a display-only CSS
+     transform on the <video> element and does NOT touch the underlying
+     video frame data. Canvas capture (drawImage) and MediaPipe's
+     detectForVideo both read straight from the raw <video> element, not
+     from rendered/CSS-transformed pixels, so the captured frame and
+     liveness head-pose math stay on the unmirrored source and remain
+     unaffected by this. See livenessChallenge.js's TURN_YAW_SIGN comment. */
+  transform: scaleX(-1);
 }
 
 .confirm-camera-canvas {

@@ -39,18 +39,24 @@ export const decomposeYawPitchRoll = (matrixData) => {
   };
 };
 
-// The <video> preview is NOT CSS-mirrored (see AttendanceConfirm.jsx - the
-// getUserMedia stream is drawn raw), so MediaPipe's yaw is computed directly
-// against the unflipped camera frame. decomposeYawPitchRoll's atan2(m13, m33)
-// is +θ when the canonical face's forward (+Z, facing the camera) axis
-// rotates toward image +X (screen right). Since the preview is unmirrored,
-// image-right is the subject's OWN LEFT (as in a normal photo of someone
-// facing the camera, not a mirror) - so raw yawDeg is positive when the
-// person turns their own left, negative when they turn their own right.
-// TURN_LEFT/TURN_RIGHT below are written expecting the opposite sign
-// (negative = left, positive = right), so this must be -1 to match on a real
-// device. This is the single knob to flip if "turn left"/"turn right" ever
-// feel swapped - re-derive the matrix math only as a last resort.
+// The <video> element itself is drawn raw - see AttendanceConfirm.jsx/
+// useLivenessCheck.js, where MediaPipe's detectForVideo(video, ...) and the
+// capture canvas's drawImage(video, 0, 0) both read the decoded video frame
+// directly. CSS applied to the <video> element (AttendanceConfirm.css mirrors
+// it for on-screen display, matching a normal front-camera app) is a
+// rendering-only transform and does not affect that underlying frame data, so
+// MediaPipe's yaw is still computed against the unflipped camera frame.
+// decomposeYawPitchRoll's atan2(m13, m33) is +θ when the canonical face's
+// forward (+Z, facing the camera) axis rotates toward image +X (screen
+// right). Since the raw frame is unmirrored, image-right is the subject's OWN
+// LEFT (as in a normal photo of someone facing the camera, not a mirror) - so
+// raw yawDeg is positive when the person turns their own left, negative when
+// they turn their own right. TURN_LEFT/TURN_RIGHT below are written expecting
+// the opposite sign (negative = left, positive = right), so this must be -1
+// to match on a real device. This is the single knob to flip if "turn
+// left"/"turn right" ever feel swapped - re-derive the matrix math only as a
+// last resort, and don't "fix" it by touching the CSS mirror instead (that
+// only changes what the preview looks like, not the frame math).
 const TURN_YAW_SIGN = -1;
 
 // --- Blink extraction ------------------------------------------------------

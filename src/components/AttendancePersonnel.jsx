@@ -195,11 +195,25 @@ const AttendancePersonnel = () => {
               <div className="qr-instructions">
                 <h3 className="qr-instructions-title">How it works:</h3>
                 <ol className="qr-instructions-list">
-                  <li>Register your face first through Profile &gt; Register Face ID.</li>
-                  <li>Scan the QR code and log in using your personnel account credentials.</li>
-                  <li>Allow camera and location access when prompted.</li>
-                  <li>Complete the facial and location verification.</li>
-                  <li>Select Time In or Time Out, then confirm your attendance.</li>
+                  <li>
+                    <strong>Register your Face ID</strong> through <strong>Profile &gt; Register Face ID</strong>.
+                    For security purposes, Face ID may only be updated once every <strong>7 days</strong>.
+                  </li>
+                  <li>
+                    <strong>Scan the Station QR Code or use the Copy Link</strong> to access the secure
+                    attendance page.
+                  </li>
+                  <li>
+                    Grant <strong>camera and location permissions</strong> when requested by the system.
+                  </li>
+                  <li>
+                    Complete the required <strong>facial and location verification</strong> before recording
+                    attendance.
+                  </li>
+                  <li>
+                    <strong>Time In</strong> must be completed first. <strong>Time Out</strong> will only
+                    become available after a valid Time In has been successfully recorded.
+                  </li>
                 </ol>
               </div>
 

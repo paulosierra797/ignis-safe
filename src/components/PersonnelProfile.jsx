@@ -903,21 +903,36 @@ const showModal = ({ type = "info", message, onConfirm }) => {
   <div className="face-modal-overlay">
     <div className="face-modal">
 
-      <h2>Face Registration</h2>
-      <p>
-        {faceLoading
-          ? 'Registering your Face ID...'
-          : showLiveness
-            ? 'Follow the on-screen instructions to verify you are live.'
-            : 'Center your face, then follow the on-screen instructions to verify you are live.'}
-      </p>
+      <div className="face-modal-header">
+        <span className="face-modal-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 9V6.5A2.5 2.5 0 0 1 6.5 4H9" />
+            <path d="M15 4h2.5A2.5 2.5 0 0 1 20 6.5V9" />
+            <path d="M20 15v2.5a2.5 2.5 0 0 1-2.5 2.5H15" />
+            <path d="M9 20H6.5A2.5 2.5 0 0 1 4 17.5V15" />
+            <circle cx="9" cy="10.5" r="0.75" fill="currentColor" stroke="none" />
+            <circle cx="15" cy="10.5" r="0.75" fill="currentColor" stroke="none" />
+            <path d="M9 14c1 1 5 1 6 0" />
+          </svg>
+        </span>
+        <h2>Face ID Registration</h2>
+        <p className="face-modal-subtitle">
+          {faceLoading
+            ? 'Registering your Face ID...'
+            : showLiveness
+              ? 'Follow the on-screen instructions to verify you are live.'
+              : 'Center your face in the frame, then follow the on-screen instructions.'}
+        </p>
+      </div>
 
-      <div className={`face-camera-box face-camera-box--${showLiveness ? livenessPhase : 'idle'}`}>
-        {/* Raw, non-inverted <video> - the mirror below is a CSS-only
-            display transform (matches a normal front-camera app); the
-            underlying frame MediaPipe/face-api read is never flipped. */}
-        <video ref={videoRef} className="face-video" autoPlay muted playsInline />
-        {showLiveness && <div className="face-camera-guide" aria-hidden="true" />}
+      <div className="face-camera-frame">
+        <div className={`face-camera-box face-camera-box--${showLiveness ? livenessPhase : 'idle'}`}>
+          {/* Raw, non-inverted <video> - the mirror below is a CSS-only
+              display transform (matches a normal front-camera app); the
+              underlying frame MediaPipe/face-api read is never flipped. */}
+          <video ref={videoRef} className="face-video" autoPlay muted playsInline />
+          {showLiveness && <div className="face-camera-guide" aria-hidden="true" />}
+        </div>
       </div>
 
       {showLiveness && (
@@ -931,7 +946,12 @@ const showModal = ({ type = "info", message, onConfirm }) => {
         />
       )}
 
-      {faceRegError && <div className="face-reg-error">{faceRegError}</div>}
+      {faceRegError && (
+        <div className="face-reg-error">
+          <span className="face-reg-error-icon" aria-hidden="true">!</span>
+          <span>{faceRegError}</span>
+        </div>
+      )}
 
       <div className="face-modal-actions">
         {faceRegError && !showLiveness && !faceLoading && (

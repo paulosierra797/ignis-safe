@@ -10,11 +10,14 @@
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(231, 230, 230, 0.6);
+  background: rgba(17, 24, 39, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 
   display: flex;
   justify-content: center;
   align-items: center;
+  padding: 1rem;
 
   z-index: 99999; /* VERY IMPORTANT */
 }
@@ -100,18 +103,18 @@
   flex: 1 1 0;
 }
 .face-modal {
-  width: min(420px, 100%);
-  max-height: calc(100vh - 80px);
+  width: min(408px, 100%);
+  max-height: calc(100vh - 64px);
   overflow-y: auto;
   background: white;
-  border-radius: 18px;
-  padding: 1.75rem 1.5rem;
+  border-radius: 24px;
+  padding: 2rem 1.75rem 1.75rem;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
+  gap: 1.25rem;
+  box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.35), 0 4px 16px rgba(15, 23, 42, 0.08);
   animation: fadeIn 0.3s ease-in-out, slideUp 0.3s ease-in-out;
   /* Feeds LivenessCheck.css (rendered inside this modal), which reads these
      as custom properties rather than defining its own. */
@@ -120,26 +123,59 @@
   --error: #ef4444;
 }
 
+.face-modal-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.face-modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(253, 185, 20, 0.18), rgba(253, 185, 20, 0.08));
+  border: 1px solid rgba(253, 185, 20, 0.35);
+  color: #b8860b;
+}
+
 .face-modal h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: #111827;
 }
 
-.face-modal p {
+.face-modal-subtitle {
   margin: 0;
   color: #6b7280;
   font-size: 0.9rem;
+  line-height: 1.5;
+  max-width: 30ch;
+}
+
+.face-camera-frame {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+  border-radius: 22px;
+  padding: 6px;
+  background: linear-gradient(160deg, #1f2937, #0b0f14);
+  box-shadow: 0 14px 30px -12px rgba(15, 23, 42, 0.4);
 }
 
 .face-camera-box {
   position: relative;
   width: 100%;
-  max-width: 340px;
-  aspect-ratio: 4 / 3;
-  border-radius: 12px;
+  aspect-ratio: 1 / 1;
+  border-radius: 17px;
   overflow: hidden;
   background: #111827;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 .face-modal-actions {
@@ -147,18 +183,56 @@
   justify-content: center;
   gap: 0.75rem;
   width: 100%;
+  margin-top: 0.15rem;
 }
 
 .face-modal-actions .save-btn,
 .face-modal-actions .cancel-btn {
   flex: 1 1 0;
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.face-modal-actions .save-btn {
+  background: linear-gradient(135deg, #fdb914, #f5a623);
+  color: #1f2937;
+  border: none;
+  box-shadow: 0 10px 22px -8px rgba(253, 185, 20, 0.55);
+}
+
+.face-modal-actions .save-btn:hover {
+  background: linear-gradient(135deg, #f5a623, #e5960f);
+  transform: translateY(-1px);
+}
+
+.face-modal-actions .cancel-btn {
+  background: #f9fafb;
+  color: #374151;
+  border: 1.5px solid #e5e7eb;
+}
+
+.face-modal-actions .cancel-btn:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.face-modal-actions .cancel-btn:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  border-color: #e5e7eb;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .face-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 12px;
+  border-radius: 17px;
   /* Display-only mirror to match a normal front-camera app (Windows Camera,
      Zoom, etc). The underlying <video> frame that MediaPipe/face-api read
      (detectForVideo, canvas drawImage) is never flipped - see the
@@ -181,42 +255,124 @@
 
 .face-camera-guide::before {
   content: '';
-  width: min(64%, 230px);
+  width: min(70%, 220px);
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   border: 3px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.55), 0 0 22px rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.58), 0 0 24px rgba(255, 255, 255, 0.15);
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .face-camera-box--centering .face-camera-guide::before {
   border-color: rgba(245, 181, 68, 0.9);
+  animation: face-guide-pulse 1.6s ease-in-out infinite;
 }
 
 .face-camera-box--calibrating .face-camera-guide::before,
 .face-camera-box--challenge .face-camera-guide::before {
   border-color: var(--glow);
-  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.55), 0 0 22px var(--glow);
+  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.58), 0 0 24px var(--glow);
 }
 
 .face-camera-box--passed .face-camera-guide::before {
   border-color: var(--success);
-  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.55), 0 0 22px var(--success);
+  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.58), 0 0 24px var(--success);
 }
 
 .face-camera-box--failed .face-camera-guide::before {
   border-color: var(--error);
 }
 
+@keyframes face-guide-pulse {
+  0%, 100% { box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.58), 0 0 24px rgba(245, 181, 68, 0.25); }
+  50% { box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.58), 0 0 34px rgba(245, 181, 68, 0.55); }
+}
+
 .face-reg-error {
   width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(239, 68, 68, 0.1);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.18);
   color: var(--error);
   font-size: 12.5px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.face-reg-error-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--error);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Scoped overrides for the shared LivenessCheck instruction/progress card so
+   it reads as a premium, cohesive part of this modal. LivenessCheck.css
+   itself is untouched - Attendance's inline (non-modal) usage is unaffected. */
+.face-modal .liveness-check {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #131a20, #0d1216);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 24px -14px rgba(15, 23, 42, 0.5);
+  gap: 12px;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+
+.face-modal .liveness-instruction {
+  font-size: 1rem;
+}
+
+.face-modal .liveness-check--passed {
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.16), #0d1216);
+  border-color: rgba(16, 185, 129, 0.32);
+}
+
+.face-modal .liveness-check--failed {
+  background: linear-gradient(180deg, rgba(239, 68, 68, 0.14), #0d1216);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.face-modal .liveness-progress-track {
+  height: 10px;
+}
+
+.face-modal .liveness-progress-fill {
+  box-shadow: 0 0 10px rgba(245, 181, 68, 0.5);
+}
+
+.face-modal .liveness-check--passed .liveness-progress-fill {
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+}
+
+.face-modal .liveness-progress-label {
+  font-size: 12.5px;
+}
+
+@media (max-width: 420px) {
+  .face-modal {
+    padding: 1.6rem 1.25rem 1.25rem;
+    border-radius: 20px;
+    gap: 1rem;
+  }
+
+  .face-camera-frame {
+    max-width: 240px;
+  }
 }
 
 .personnel-profile-content {

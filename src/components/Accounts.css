@@ -1222,6 +1222,14 @@
   box-shadow: none;
 }
 
+.personnel-history-section {
+  margin-top: 1.5rem;
+}
+
+.personnel-history-body {
+  padding-top: 0.25rem;
+}
+
 .leave-requests-groups {
   display: flex;
   flex-direction: column;

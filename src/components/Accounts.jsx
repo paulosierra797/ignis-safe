@@ -4134,6 +4134,7 @@ const permissions = getDefaultPermissions(formData.role);
         )}
 
         {activeAccountsTab === 'personnel' && (
+        <>
         <section
           className="accounts-directory-section"
           aria-labelledby="personnel-directory-title"
@@ -4261,21 +4262,23 @@ const permissions = getDefaultPermissions(formData.role);
             />
           </div>
         )}
+        </section>
 
-        <div className="leave-requests-groups">
-          <div className="account-directory-group leave-request-group leave-request-group-history leave-history-card personnel-history-card">
-            <div className="account-directory-group-header">
-              <div>
-                <h4>Personnel List History</h4>
-              </div>
-              <div className="request-history-heading-actions">
-                <span>
-                  {visiblePersonnelAccountHistory.length} of {filteredPersonnelAccountHistory.length} shown
-                </span>
-              </div>
+        <section
+          className="accounts-directory-section personnel-history-section"
+          aria-labelledby="personnel-history-title"
+        >
+          <div className="accounts-directory-header">
+            <div>
+              <p className="accounts-directory-eyebrow">Personnel directory</p>
+              <h3 id="personnel-history-title">Personnel List History</h3>
             </div>
+            <span className="accounts-directory-count">
+              {visiblePersonnelAccountHistory.length} of {filteredPersonnelAccountHistory.length} shown
+            </span>
+          </div>
 
-            <div className="account-directory-group-body">
+          <div className="personnel-history-body">
 
               <div className="request-history-toolbar">
                 <select
@@ -4340,10 +4343,9 @@ const permissions = getDefaultPermissions(formData.role);
                 label="history entries"
                 onToggle={() => toggleRequestSection('personnelHistory')}
               />
-            </div>
           </div>
-        </div>
         </section>
+        </>
         )}
 
         {isProfileModalOpen && selectedProfileAccount && (

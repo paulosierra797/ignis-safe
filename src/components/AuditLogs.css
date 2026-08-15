@@ -48,10 +48,10 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 1rem;
+  gap: 0.7rem;
   background: white;
   border-radius: 12px;
-  padding: 1.25rem 1.5rem;
+  padding: 1.1rem 1.25rem;
   border: 1px solid #e2e8f0;
 }
 
@@ -59,17 +59,18 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  flex: 1 1 200px;
+  flex: 1 1 130px;
   min-width: 0;
 }
 
 .audit-logs-filter-search {
-  flex: 2 1 280px;
+  flex: 2 1 190px;
 }
 
 .audit-logs-filter-clear-group,
 .audit-logs-filter-actions {
   flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .audit-logs-filter-actions-label {
@@ -78,7 +79,7 @@
 
 .audit-logs-filter-actions-buttons {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .audit-logs-filter-label {
@@ -87,6 +88,7 @@
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .audit-logs-search-wrapper {
@@ -187,7 +189,7 @@
   color: #475569;
   font-weight: 700;
   border-radius: 8px;
-  padding: 0 1.5rem;
+  padding: 0 1.2rem;
   font-size: 0.8rem;
   letter-spacing: 0.3px;
   cursor: pointer;
@@ -209,7 +211,7 @@
   color: white;
   font-weight: 700;
   border-radius: 8px;
-  padding: 0 1.5rem;
+  padding: 0 1.2rem;
   font-size: 0.8rem;
   letter-spacing: 0.3px;
   cursor: pointer;
@@ -493,6 +495,14 @@
 
   .audit-logs-filter-clear-group {
     flex-basis: calc(50% - 0.5rem);
+  }
+
+  .audit-logs-filter-actions {
+    flex-basis: 100%;
+  }
+
+  .audit-logs-filter-actions-buttons {
+    justify-content: flex-end;
   }
 
   .audit-logs-clear {

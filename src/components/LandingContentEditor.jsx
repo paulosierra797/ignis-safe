@@ -239,6 +239,9 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   const bannerPhotoAddInputRef = useRef(null);
   const isFirstContentSync = useRef(true);
   const syncedContentRef = useRef(content);
+  const previewSectionRef = useRef(null);
+  const contentSectionRef = useRef(null);
+  const [activeNavSection, setActiveNavSection] = useState('preview');
 
   React.useEffect(() => {
     if (isFirstContentSync.current) {
@@ -272,6 +275,35 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   React.useEffect(() => {
     onDirtyChange?.(hasChanges);
   }, [hasChanges, onDirtyChange]);
+
+  React.useEffect(() => {
+    if (!embedded) return undefined;
+
+    const previewEl = previewSectionRef.current;
+    const contentEl = contentSectionRef.current;
+    if (!previewEl || !contentEl || typeof IntersectionObserver === 'undefined') return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const mostVisible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (mostVisible) {
+          setActiveNavSection(mostVisible.target === previewEl ? 'preview' : 'content');
+        }
+      },
+      { rootMargin: '-140px 0px -55% 0px', threshold: [0, 0.1, 0.25, 0.5, 0.75, 1] }
+    );
+
+    observer.observe(previewEl);
+    observer.observe(contentEl);
+    return () => observer.disconnect();
+  }, [embedded]);
+
+  const scrollToNavSection = useCallback((sectionRef, sectionKey) => {
+    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveNavSection(sectionKey);
+  }, []);
 
   const heroPhotos = Array.isArray(draft.hero.photos) ? draft.hero.photos : [];
 
@@ -679,8 +711,30 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         <div className="landing-editor-alert">Loading latest landing content...</div>
       )}
 
-      <LandingPreview content={draft} />
+      {embedded && (
+        <nav className="landing-side-nav" aria-label="Landing page section navigation">
+          <button
+            type="button"
+            className={`landing-side-nav-btn${activeNavSection === 'preview' ? ' is-active' : ''}`}
+            onClick={() => scrollToNavSection(previewSectionRef, 'preview')}
+          >
+            Quick Preview
+          </button>
+          <button
+            type="button"
+            className={`landing-side-nav-btn${activeNavSection === 'content' ? ' is-active' : ''}`}
+            onClick={() => scrollToNavSection(contentSectionRef, 'content')}
+          >
+            Landing Page Content
+          </button>
+        </nav>
+      )}
 
+      <div id="landing-section-preview" ref={previewSectionRef} className="landing-section-anchor">
+        <LandingPreview content={draft} />
+      </div>
+
+      <div id="landing-section-content" ref={contentSectionRef} className="landing-section-anchor">
       {!embedded && (
         <div className="landing-editor-toolbar">
           <div className="landing-editor-toolbar-info">
@@ -1092,6 +1146,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             </div>
           ))}
         </SectionBlock>
+      </div>
       </div>
 
       {confirmModal.open && (

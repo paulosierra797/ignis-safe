@@ -8,7 +8,7 @@ import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_TYPES } from '../utils/avatarCrop';
 import AvatarCropModal from './AvatarCropModal';
 import * as faceapi from '@vladmandic/face-api';
 import { loadFaceModels } from '../utils/loadFaceModels';
-import Webcam from 'react-webcam';
+import LivenessCheck from './LivenessCheck';
 import './PersonnelProfile.css';
 import { getFaceByAdminId, registerFace, getFaceIdCooldownUntil } from '../utils/faceApiService';
 import {
@@ -87,9 +87,21 @@ export default function PersonnelProfile() {
     : 'Personnel';
   const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
 const [faceLoading, setFaceLoading] = useState(false);
-const webcamRef = React.useRef(null);
-const [faceBox, setFaceBox] = useState(null);
 const [faceRecord, setFaceRecord] = useState(null);
+// Liveness verification state - mirrors the Attendance Face ID flow
+// (see AttendanceConfirm.jsx/useLivenessCheck) so a photo held up to the
+// camera (e.g. on another phone) can't be registered as a live face.
+const [showLiveness, setShowLiveness] = useState(false);
+const [livenessAttemptKey, setLivenessAttemptKey] = useState(0);
+const [livenessPhase, setLivenessPhase] = useState('idle');
+const [livenessSessionId, setLivenessSessionId] = useState(null);
+const [faceRegError, setFaceRegError] = useState('');
+const videoRef = useRef(null);
+const streamRef = useRef(null);
+// Monotonic token for the in-flight registration attempt, so async camera/
+// liveness/capture callbacks from a stale attempt can never apply their
+// result after the modal has moved on (closed, retried, etc.).
+const attemptIdRef = useRef(0);
 const [modal, setModal] = useState({
   open: false,
   type: "info", // "success" | "error" | "confirm"
@@ -161,37 +173,66 @@ const [modal, setModal] = useState({
     loadMyRequests();
   }, [loadMyRequests]);
 
-  useEffect(() => {
-  if (!isFaceModalOpen) return;
-
-  let interval;
-
-  const startDetection = async () => {
-    interval = setInterval(async () => {
-      if (!webcamRef.current) return;
-
-      const screenshot = webcamRef.current.getScreenshot();
-      if (!screenshot) return;
-
-      const img = await faceapi.fetchImage(screenshot);
-
-      const detection = await faceapi
-        .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks();
-
-      if (detection) {
-        setFaceBox(detection.detection.box);
-      } else {
-        setFaceBox(null);
-      }
-    }, 200); // adjust speed (200ms = smooth)
-
+  const stopFaceCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
   };
 
-  startDetection();
+  const startFaceCamera = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: 'user',
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      },
+      audio: false
+    });
+    streamRef.current = stream;
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+    }
+  };
 
-  return () => clearInterval(interval);
-}, [isFaceModalOpen]);
+  // Opening the modal immediately starts the camera and the same left/right
+  // liveness challenge used in Attendance - there is no manual capture path,
+  // so registration can't proceed until liveness passes. Closing the modal
+  // tears the camera back down.
+  useEffect(() => {
+    if (!isFaceModalOpen) return undefined;
+
+    let cancelled = false;
+    const attemptId = attemptIdRef.current + 1;
+    attemptIdRef.current = attemptId;
+
+    setFaceRegError('');
+    setShowLiveness(false);
+    setLivenessPhase('idle');
+
+    (async () => {
+      try {
+        await startFaceCamera();
+        if (cancelled || attemptIdRef.current !== attemptId) return;
+        setLivenessSessionId(crypto.randomUUID());
+        setLivenessAttemptKey(attemptId);
+        setShowLiveness(true);
+      } catch (err) {
+        if (cancelled) return;
+        console.error('Failed to start camera for Face ID registration:', err);
+        setFaceRegError('Unable to access the camera. Please allow camera permissions and try again.');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      stopFaceCamera();
+    };
+  }, [isFaceModalOpen]);
 
   useEffect(() => {
     if (currentUser) {
@@ -444,39 +485,46 @@ const [modal, setModal] = useState({
       details: `Requested changes to ${Object.keys(changes).map(getProfileFieldLabel).join(', ')}.`
     });
   };
-const captureFace = async () => {
-  if (!webcamRef.current) return;
+const FACE_LIVENESS_FAILURE_MESSAGE =
+  'Live face verification failed. Please use your actual face and follow the on-screen instructions.';
 
+// Runs only after LivenessCheck reports a pass, on the exact live frame
+// captured the instant the left/right challenge and re-center settled - a
+// static photo (printed, on-screen, or on another phone) can't reach this
+// point. Mirrors handleLivenessPassed in AttendanceConfirm.jsx.
+const handleFaceLivenessPassed = async ({ canvas }, attemptId) => {
+  if (attemptIdRef.current !== attemptId) return; // stale attempt, ignore
+
+  setShowLiveness(false);
+  setLivenessPhase('idle');
+  setFaceRegError('');
   setFaceLoading(true);
 
   try {
-    const screenshot = webcamRef.current.getScreenshot();
-
-    const img = await faceapi.fetchImage(screenshot);
-
     const detection = await faceapi
-      .detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
+      .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions())
       .withFaceLandmarks()
       .withFaceDescriptor();
 
-    if (!detection) {
-      showModal({ type: 'error', message: 'No face detected. Please try again.' });
-      setFaceLoading(false);
+    if (attemptIdRef.current !== attemptId) return;
 
+    if (!detection) {
+      setFaceRegError('No face detected. Please try again.');
+      setFaceLoading(false);
       return;
     }
 
     const descriptor = Array.from(detection.descriptor);
 
-    // ✅ SAVE USING SERVICE
-    const { error } = await registerFace(
-      currentUser.admin_id,
-      descriptor
-    );
+    const { error } = await registerFace(currentUser.admin_id, descriptor);
+
+    if (attemptIdRef.current !== attemptId) return;
 
     if (error) {
       console.error("Supabase error:", error);
       const cooldownUntil = getFaceIdCooldownUntil(error);
+      setFaceLoading(false);
+      setIsFaceModalOpen(false);
       showModal(
         cooldownUntil
           ? { type: 'info', message: `Face ID is already registered. You can update your Face ID again on ${formatFaceCooldownDate(cooldownUntil)}.` }
@@ -485,9 +533,10 @@ const captureFace = async () => {
       return;
     }
 
-    showModal({ type: 'success', message: 'Face registered successfully!' });
+    setFaceLoading(false);
     setIsFaceModalOpen(false);
     setFaceRecord({ updated_at: new Date().toISOString() });
+    showModal({ type: 'success', message: 'Face registered successfully!' });
 
     void logPersonnelActivity({
       personnelId: currentUser.admin_id,
@@ -495,14 +544,32 @@ const captureFace = async () => {
       action: 'Face ID Registered',
       details: 'Registered Face ID for attendance verification.'
     });
-
   } catch (err) {
+    if (attemptIdRef.current !== attemptId) return;
     console.error("Face registration error:", err);
-    showModal({ type: 'error', message: 'Face registration failed.' });
-
-  } finally {
+    setFaceRegError('Face registration failed. Please try again.');
     setFaceLoading(false);
   }
+};
+
+const handleFaceLivenessFailed = (reason, attemptId) => {
+  if (attemptIdRef.current !== attemptId) return; // stale attempt, ignore
+
+  setShowLiveness(false);
+  setLivenessPhase('idle');
+  setFaceRegError(FACE_LIVENESS_FAILURE_MESSAGE);
+  // Liveness failed before any capture/registration ever ran - the camera
+  // stays live so "Try Again" can restart the challenge instantly.
+};
+
+const retryFaceLiveness = () => {
+  const attemptId = attemptIdRef.current + 1;
+  attemptIdRef.current = attemptId;
+  setFaceRegError('');
+  setLivenessPhase('idle');
+  setLivenessSessionId(crypto.randomUUID());
+  setLivenessAttemptKey(attemptId);
+  setShowLiveness(true);
 };
 const showModal = ({ type = "info", message, onConfirm }) => {
   setModal({
@@ -837,53 +904,49 @@ const showModal = ({ type = "info", message, onConfirm }) => {
     <div className="face-modal">
 
       <h2>Face Registration</h2>
-      <p>Align your face inside the camera frame</p>
+      <p>
+        {faceLoading
+          ? 'Registering your Face ID...'
+          : showLiveness
+            ? 'Follow the on-screen instructions to verify you are live.'
+            : 'Center your face, then follow the on-screen instructions to verify you are live.'}
+      </p>
 
-     <div className="face-camera-box">
-  <div className="face-wrapper">
+      <div className={`face-camera-box face-camera-box--${showLiveness ? livenessPhase : 'idle'}`}>
+        {/* Raw, non-inverted <video> - the mirror below is a CSS-only
+            display transform (matches a normal front-camera app); the
+            underlying frame MediaPipe/face-api read is never flipped. */}
+        <video ref={videoRef} className="face-video" autoPlay muted playsInline />
+        {showLiveness && <div className="face-camera-guide" aria-hidden="true" />}
+      </div>
 
-    <Webcam
-      ref={webcamRef}
-      screenshotFormat="image/jpeg"
-      videoConstraints={{ facingMode: "user" }}
-      // Keep react-webcam's own mirroring off (mirrored=true would also
-      // flip the getScreenshot() canvas, not just the on-screen video).
-      // The visual mirror that matches the Windows Camera app is applied
-      // as a CSS transform on .face-wrapper instead (see PersonnelProfile.css),
-      // which flips the video and the face-box overlay together without
-      // touching the raw frame getScreenshot() reads for detection/Face ID.
-      mirrored={false}
-      className="face-webcam"
-    />
+      {showLiveness && (
+        <LivenessCheck
+          key={livenessAttemptKey}
+          videoRef={videoRef}
+          qrSessionId={livenessSessionId}
+          onPassed={(result) => handleFaceLivenessPassed(result, livenessAttemptKey)}
+          onFailed={(reason) => handleFaceLivenessFailed(reason, livenessAttemptKey)}
+          onPhaseChange={setLivenessPhase}
+        />
+      )}
 
-    {/* GREEN FACE BOX OVERLAY */}
-    {faceBox && (
-      <div
-        className="face-box"
-        style={{
-          top: faceBox.y,
-          left: faceBox.x,
-          width: faceBox.width,
-          height: faceBox.height,
-        }}
-      />
-    )}
-
-  </div>
-</div>
+      {faceRegError && <div className="face-reg-error">{faceRegError}</div>}
 
       <div className="face-modal-actions">
-        <button
-          className="save-btn"
-          onClick={captureFace}
-          disabled={faceLoading}
-        >
-          {faceLoading ? "Processing..." : "Capture Face"}
-        </button>
+        {faceRegError && !showLiveness && !faceLoading && (
+          <button
+            className="save-btn"
+            onClick={retryFaceLiveness}
+          >
+            Try Again
+          </button>
+        )}
 
         <button
           className="cancel-btn"
           onClick={() => setIsFaceModalOpen(false)}
+          disabled={faceLoading}
         >
           Cancel
         </button>

@@ -113,6 +113,11 @@
   gap: 0.85rem;
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
   animation: fadeIn 0.3s ease-in-out, slideUp 0.3s ease-in-out;
+  /* Feeds LivenessCheck.css (rendered inside this modal), which reads these
+     as custom properties rather than defining its own. */
+  --glow: #f5b544;
+  --success: #10b981;
+  --error: #ef4444;
 }
 
 .face-modal h2 {
@@ -128,6 +133,7 @@
 }
 
 .face-camera-box {
+  position: relative;
   width: 100%;
   max-width: 340px;
   aspect-ratio: 4 / 3;
@@ -148,46 +154,69 @@
   flex: 1 1 0;
 }
 
-.face-wrapper {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  /* Mirror the whole preview (video + face-box together) so it matches
-     the Windows Camera app's left/right orientation, like a normal
-     front-camera app. Flipping the wrapper - not just the video - keeps
-     the face-box overlay aligned with the face, since both are flipped
-     as one unit. This is purely a display transform: getScreenshot()
-     still reads the underlying <video> element's raw, unmirrored pixels,
-     so Face ID capture and detection are unaffected. */
-  transform: scaleX(-1);
-}
-
-.face-webcam {
+.face-video {
   width: 100%;
   height: 100%;
   object-fit: cover;
   border-radius: 12px;
+  /* Display-only mirror to match a normal front-camera app (Windows Camera,
+     Zoom, etc). The underlying <video> frame that MediaPipe/face-api read
+     (detectForVideo, canvas drawImage) is never flipped - see the
+     TURN_YAW_SIGN comment in utils/livenessChallenge.js. */
+  transform: scaleX(-1);
 }
 
-.face-box {
+/* Circular face guide, phase-tinted exactly like Attendance's
+   .confirm-camera-guide (AttendanceConfirm.css) - a transparent circle cut
+   out of a dimmed overlay via box-shadow spread. Visual aid only; detection
+   and liveness evaluation run on the full, unmirrored frame. */
+.face-camera-guide {
   position: absolute;
-  border: 3px solid #00ff6a;
-  border-radius: 10px;
-  box-shadow: 0 0 10px #00ff6a;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
-  animation: pulse 1.2s infinite;
 }
 
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 5px #00ff6a;
-  }
-  50% {
-    box-shadow: 0 0 15px #00ff6a;
-  }
-  100% {
-    box-shadow: 0 0 5px #00ff6a;
-  }
+.face-camera-guide::before {
+  content: '';
+  width: min(64%, 230px);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.55), 0 0 22px rgba(255, 255, 255, 0.12);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.face-camera-box--centering .face-camera-guide::before {
+  border-color: rgba(245, 181, 68, 0.9);
+}
+
+.face-camera-box--calibrating .face-camera-guide::before,
+.face-camera-box--challenge .face-camera-guide::before {
+  border-color: var(--glow);
+  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.55), 0 0 22px var(--glow);
+}
+
+.face-camera-box--passed .face-camera-guide::before {
+  border-color: var(--success);
+  box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.55), 0 0 22px var(--success);
+}
+
+.face-camera-box--failed .face-camera-guide::before {
+  border-color: var(--error);
+}
+
+.face-reg-error {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
 .personnel-profile-content {

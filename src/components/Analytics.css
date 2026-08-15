@@ -1006,6 +1006,50 @@
   }
 }
 
+/* Skeleton loaders (replace "..." placeholders while a section's data loads) */
+.analytics-skeleton {
+  display: inline-block;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #eef0f3 25%, #f7f8fa 37%, #eef0f3 63%);
+  background-size: 400% 100%;
+  animation: analytics-skeleton-shimmer 1.4s ease infinite;
+}
+
+.analytics-skeleton-text {
+  height: 0.95em;
+  vertical-align: middle;
+}
+
+.analytics-skeleton-text.analytics-skeleton-sm {
+  height: 0.8em;
+}
+
+.analytics-skeleton-text.analytics-skeleton-lg {
+  height: 1.3em;
+}
+
+.analytics-skeleton-block {
+  width: 100%;
+  min-height: 60px;
+  border-radius: 8px;
+}
+
+@keyframes analytics-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .analytics-skeleton {
+    animation: none;
+    background: #eef0f3;
+  }
+}
+
 /* Analytics visual refresh */
 .analytics-container {
   background: #f6f7f9;

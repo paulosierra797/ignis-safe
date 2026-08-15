@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FaArrowDown, FaArrowUp, FaMinus } from 'react-icons/fa';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -50,6 +50,23 @@ function AnalyticsCardHeader({ title, description, children }) {
   );
 }
 
+// Shimmering placeholders shown instead of "..." while a section's own data is
+// still loading - sized to match the value they stand in for, so nothing
+// jumps once the real value arrives.
+function SkeletonText({ width = '3.5rem', size = 'md' }) {
+  return (
+    <span
+      className={`analytics-skeleton analytics-skeleton-text analytics-skeleton-${size}`}
+      style={{ width }}
+      aria-hidden="true"
+    />
+  );
+}
+
+function SkeletonBlock({ height = '100%' }) {
+  return <div className="analytics-skeleton analytics-skeleton-block" style={{ height }} aria-hidden="true" />;
+}
+
 export default function Analytics() {
   const [searchQuery, setSearchQuery] = useState('');
   const [timeframe, setTimeframe] = useState('All-time');
@@ -60,7 +77,22 @@ export default function Analytics() {
   const [topics, setTopics] = useState(['All']);
   const [stats, setStats] = useState(DEFAULT_STATS);
   const [charts, setCharts] = useState(DEFAULT_CHARTS);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  // The summary cards (Total Learners, Questions Answered, Knowledge...) and the
+  // charts below them depend on different, independently-cached fetches, so each
+  // section gets its own loading flag instead of one shared flag gating every
+  // card on the slowest request - the lighter summary numbers can render as soon
+  // as they resolve instead of waiting on the heavier chart aggregation.
+  const [isLoadingSummary, setIsLoadingSummary] = useState(true);
+  const [isLoadingCharts, setIsLoadingCharts] = useState(true);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  // Reuses already-fetched results per filter combination within this session so
+  // switching back to a previously selected Timeframe/Users/Topic renders
+  // instantly instead of showing a loading state again. Entries are refreshed in
+  // the background on every fetch (including cache hits) so the reused data
+  // never goes stale for long.
+  const summaryCacheRef = useRef(new Map());
+  const chartsCacheRef = useRef(new Map());
 // Starting Knowledge
 let startingColor = "#22c55e";
 if (stats.startingKnowledge < 40) {
@@ -113,39 +145,92 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
     };
   }, []);
 
+  // Refetches on every underlying data change (mirrors the analytics base-data
+  // cache's own invalidation in knowledgeAnalyticsService.js, which clears on
+  // this same event with no scope filtering) so Analytics stays in sync with
+  // edits made elsewhere in the admin panel without a manual page reload.
+  useEffect(() => {
+    const handleDataChanged = () => setRefreshTick((tick) => tick + 1);
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('ignis-safe:data-changed', handleDataChanged);
+      return () => window.removeEventListener('ignis-safe:data-changed', handleDataChanged);
+    }
+
+    return undefined;
+  }, []);
+
+  // Summary cards (Total Learners, Questions Answered, Average Session,
+  // Knowledge Progress, Knowledge Gain) only depend on Timeframe/Users/Topic -
+  // the chart-local Activity/Overview range selectors below don't affect them,
+  // so they don't belong in this effect's dependencies.
   useEffect(() => {
     let isMounted = true;
+    const cacheKey = `${timeframe}|${people}|${topic}`;
+    const cached = summaryCacheRef.current.get(cacheKey);
 
-    const loadStats = async () => {
-      setIsLoadingStats(true);
-      const [{ data: statsData }, { data: chartsData }] = await Promise.all([
-        getAnalyticsDashboardStats({
-          timeframe,
-          people,
-          topic,
-        }),
-        getAnalyticsChartsData({
-          timeframe,
-          people,
-          topic,
-          activityTrendsView,
-          userOverviewRange,
-        }),
-      ]);
+    if (cached) {
+      setStats(cached);
+      setIsLoadingSummary(false);
+    } else {
+      setIsLoadingSummary(true);
+    }
 
-      if (isMounted) {
-        setStats(statsData || DEFAULT_STATS);
-        setCharts(chartsData || DEFAULT_CHARTS);
-        setIsLoadingStats(false);
-      }
+    const loadSummary = async () => {
+      const { data } = await getAnalyticsDashboardStats({ timeframe, people, topic });
+      if (!isMounted) return;
+
+      const nextStats = data || DEFAULT_STATS;
+      summaryCacheRef.current.set(cacheKey, nextStats);
+      setStats(nextStats);
+      setIsLoadingSummary(false);
     };
 
-    loadStats();
+    loadSummary();
 
     return () => {
       isMounted = false;
     };
-  }, [timeframe, people, topic, activityTrendsView, userOverviewRange]);
+  }, [timeframe, people, topic, refreshTick]);
+
+  // Charts additionally depend on the Activity Trends and Active Learner Trend
+  // range selectors, so this stays a separate effect/fetch from the summary
+  // cards above - changing either selector no longer re-triggers the summary
+  // stats fetch.
+  useEffect(() => {
+    let isMounted = true;
+    const cacheKey = `${timeframe}|${people}|${topic}|${activityTrendsView}|${userOverviewRange}`;
+    const cached = chartsCacheRef.current.get(cacheKey);
+
+    if (cached) {
+      setCharts(cached);
+      setIsLoadingCharts(false);
+    } else {
+      setIsLoadingCharts(true);
+    }
+
+    const loadCharts = async () => {
+      const { data } = await getAnalyticsChartsData({
+        timeframe,
+        people,
+        topic,
+        activityTrendsView,
+        userOverviewRange,
+      });
+      if (!isMounted) return;
+
+      const nextCharts = data || DEFAULT_CHARTS;
+      chartsCacheRef.current.set(cacheKey, nextCharts);
+      setCharts(nextCharts);
+      setIsLoadingCharts(false);
+    };
+
+    loadCharts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [timeframe, people, topic, activityTrendsView, userOverviewRange, refreshTick]);
 
   return (
     <div className="analytics-container">
@@ -210,7 +295,9 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
               <h3>Total Learners</h3>
             </div>
             <div className="stat-value">
-              <span className="main-value">{isLoadingStats ? '...' : stats.totalUsers}</span>
+              <span className="main-value">
+                {isLoadingSummary ? <SkeletonText width="4rem" size="lg" /> : stats.totalUsers}
+              </span>
             </div>
             <p>Total registered mobile app learners included in the selected filters.</p>
           </div>
@@ -221,7 +308,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
             </div>
             <div className="stat-value">
               <span className="main-value">
-                {isLoadingStats ? '...' : stats.questionsAnswered.toLocaleString()}
+                {isLoadingSummary ? <SkeletonText width="5rem" size="lg" /> : stats.questionsAnswered.toLocaleString()}
               </span>
             </div>
             <p>Total assessment questions submitted by the learners included in the filters.</p>
@@ -233,7 +320,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
             </div>
             <div className="stat-value">
               <span className="main-value main-value-time">
-                {isLoadingStats ? '...' : stats.avgSessionLength}
+                {isLoadingSummary ? <SkeletonText width="4.5rem" size="lg" /> : stats.avgSessionLength}
               </span>
             </div>
             <p>Typical time a learner spends in one application session.</p>
@@ -255,14 +342,14 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
                 <span className="knowledge-bar-dot" style={{ background: startingColor }}></span>
                 <span>Starting Knowledge</span>
                 <span className="knowledge-bar-value" style={{ color: startingColor }}>
-                  {isLoadingStats ? '...' : `${stats.startingKnowledge}%`}
+                  {isLoadingSummary ? <SkeletonText width="2.5rem" /> : `${stats.startingKnowledge}%`}
                 </span>
               </div>
               <div className="knowledge-bar-track">
                 <div
                   className="knowledge-bar-fill"
                   style={{
-                    width: `${isLoadingStats ? 0 : Math.min(Math.max(stats.startingKnowledge, 0), 100)}%`,
+                    width: `${isLoadingSummary ? 0 : Math.min(Math.max(stats.startingKnowledge, 0), 100)}%`,
                     background: startingColor,
                   }}
                 ></div>
@@ -275,14 +362,14 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
                 <span className="knowledge-bar-dot" style={{ background: currentColor }}></span>
                 <span>Current Knowledge</span>
                 <span className="knowledge-bar-value" style={{ color: currentColor }}>
-                  {isLoadingStats ? '...' : `${stats.currentKnowledge}%`}
+                  {isLoadingSummary ? <SkeletonText width="2.5rem" /> : `${stats.currentKnowledge}%`}
                 </span>
               </div>
               <div className="knowledge-bar-track">
                 <div
                   className="knowledge-bar-fill"
                   style={{
-                    width: `${isLoadingStats ? 0 : Math.min(Math.max(stats.currentKnowledge, 0), 100)}%`,
+                    width: `${isLoadingSummary ? 0 : Math.min(Math.max(stats.currentKnowledge, 0), 100)}%`,
                     background: currentColor,
                   }}
                 ></div>
@@ -299,8 +386,8 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
                 <GainArrowIcon aria-hidden="true" />
               </span>
               <span className="gain-value" style={{ color: gainColor }}>
-                {isLoadingStats
-                  ? '...'
+                {isLoadingSummary
+                  ? <SkeletonText width="3.5rem" size="lg" />
                   : `${stats.knowledgeGainPercent > 0 ? '+' : ''}${stats.knowledgeGainPercent}%`}
               </span>
             </div>
@@ -308,12 +395,12 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
               className="gain-status-pill"
               style={{ background: `${gainColor}1a`, color: gainColor }}
             >
-              {isLoadingStats ? 'Loading...' : gainStatusLabel}
+              {isLoadingSummary ? <SkeletonText width="3.5rem" size="sm" /> : gainStatusLabel}
             </div>
             <div className="gain-meter">
               <div className="gain-meter-track">
                 <div className="gain-meter-zero-line"></div>
-                {!isLoadingStats && gainMagnitude > 0 && (
+                {!isLoadingSummary && gainMagnitude > 0 && (
                   <div
                     className="gain-meter-fill"
                     style={{
@@ -351,7 +438,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
           </AnalyticsCardHeader>
           <div className="overview-chart">
             <div className="analytics-chart-canvas analytics-chart-canvas-wide">
-              <UserOverviewChart chartData={charts.userOverview} isLoading={isLoadingStats} />
+              {isLoadingCharts ? <SkeletonBlock /> : <UserOverviewChart chartData={charts.userOverview} />}
             </div>
           </div>
         </div>
@@ -380,7 +467,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
               </select>
             </AnalyticsCardHeader>
             <div className="analytics-chart-canvas">
-              <ActivityTrendsChart chartData={charts.activityTrends} />
+              {isLoadingCharts ? <SkeletonBlock /> : <ActivityTrendsChart chartData={charts.activityTrends} />}
             </div>
           </div>
 
@@ -391,7 +478,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
               description="Pre-test and post-test scores show where learning improved after training."
             />
             <div className="analytics-chart-canvas analytics-chart-canvas-tall">
-              <TrainingProgressChart chartData={charts.learningByModule} />
+              {isLoadingCharts ? <SkeletonBlock /> : <TrainingProgressChart chartData={charts.learningByModule} />}
             </div>
             <div className="training-legend">
               <div className="legend-item">
@@ -412,7 +499,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
               description="Compares lesson completion with completion of the related practical simulation."
             />
             <div className="analytics-chart-canvas analytics-chart-canvas-tall">
-              <CompletionSimulationChart chartData={charts.completionByModule} />
+              {isLoadingCharts ? <SkeletonBlock /> : <CompletionSimulationChart chartData={charts.completionByModule} />}
             </div>
             <div className="training-legend">
               <div className="legend-item">
@@ -433,7 +520,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
               description="Tracks how the measured improvement in learner scores changes over time."
             />
             <div className="analytics-chart-canvas">
-              <KnowledgeGainTrendChart chartData={charts.knowledgeGainTrend} />
+              {isLoadingCharts ? <SkeletonBlock /> : <KnowledgeGainTrendChart chartData={charts.knowledgeGainTrend} />}
             </div>
           </div>
 
@@ -444,7 +531,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
               description="Groups learners by how urgently their recent results may need attention."
             />
             <div className="analytics-chart-canvas analytics-chart-canvas-donut">
-              <RiskDistributionChart chartData={charts.riskDistribution} />
+              {isLoadingCharts ? <SkeletonBlock /> : <RiskDistributionChart chartData={charts.riskDistribution} />}
             </div>
           </div>
         </div>
@@ -456,7 +543,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
             description="Shows where learners are most active and where repeated attempts may indicate difficulty."
           />
           <div className="analytics-chart-canvas analytics-chart-canvas-wide">
-            <PerformanceChart chartData={charts.attemptsByModule} />
+            {isLoadingCharts ? <SkeletonBlock /> : <PerformanceChart chartData={charts.attemptsByModule} />}
           </div>
           <div className="performance-legend">
             <div className="legend-item">

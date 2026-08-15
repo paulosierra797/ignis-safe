@@ -254,7 +254,9 @@ const fetchSimulationSessions = async () => {
 };
 
 const fetchAppSessions = async () => {
-  const { data, error } = await supabase.from('app_sessions').select('*');
+  const { data, error } = await supabase
+    .from('app_sessions')
+    .select('admin_id, started_at, ended_at, duration_seconds, updated_at');
 
   if (!error) {
     return (data || []).map(normalizeAppSessionRow);

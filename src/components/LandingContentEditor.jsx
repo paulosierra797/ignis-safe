@@ -217,7 +217,7 @@ const GroupCard = ({ number, title, description, children }) => (
   </section>
 );
 
-const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded = false, onDirtyChange }, ref) {
+const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded = false, onDirtyChange, onActiveSectionChange }, ref) {
   const [searchQuery, setSearchQuery] = useState('');
   const { currentUser } = useUser();
   const { content, setContent, resetContent, defaults, loadingContent } = useLandingContent();
@@ -275,6 +275,10 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   React.useEffect(() => {
     onDirtyChange?.(hasChanges);
   }, [hasChanges, onDirtyChange]);
+
+  React.useEffect(() => {
+    onActiveSectionChange?.(activeNavSection);
+  }, [activeNavSection, onActiveSectionChange]);
 
   React.useEffect(() => {
     if (!embedded) return undefined;
@@ -351,6 +355,12 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   }, [content, pendingRemovedBannerPaths, setContent]);
 
   useImperativeHandle(ref, () => ({
+    scrollToSection: (sectionKey) => {
+      scrollToNavSection(
+        sectionKey === 'content' ? contentSectionRef : previewSectionRef,
+        sectionKey === 'content' ? 'content' : 'preview'
+      );
+    },
     discardUnsavedChanges: () => {
       clearLandingDraft();
       syncedContentRef.current = content;
@@ -378,7 +388,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       await performSave(nextDraft);
       return true;
     }
-  }), [content, draft, performSave]);
+  }), [content, draft, performSave, scrollToNavSection]);
 
   const updateField = (section, field, value) => {
     setDraft((prev) => ({
@@ -709,25 +719,6 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
     <>
       {loadingContent && (
         <div className="landing-editor-alert">Loading latest landing content...</div>
-      )}
-
-      {embedded && (
-        <nav className="landing-side-nav" aria-label="Landing page section navigation">
-          <button
-            type="button"
-            className={`landing-side-nav-btn${activeNavSection === 'preview' ? ' is-active' : ''}`}
-            onClick={() => scrollToNavSection(previewSectionRef, 'preview')}
-          >
-            Quick Preview
-          </button>
-          <button
-            type="button"
-            className={`landing-side-nav-btn${activeNavSection === 'content' ? ' is-active' : ''}`}
-            onClick={() => scrollToNavSection(contentSectionRef, 'content')}
-          >
-            Landing Page Content
-          </button>
-        </nav>
       )}
 
       <div id="landing-section-preview" ref={previewSectionRef} className="landing-section-anchor">

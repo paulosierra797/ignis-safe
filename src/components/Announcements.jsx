@@ -157,6 +157,7 @@ export default function Announcements() {
   });
   const [exitModalContext, setExitModalContext] = useState(null); // 'announcement' | 'landing' | null
   const [isLandingDirty, setIsLandingDirty] = useState(false);
+  const [landingActiveSection, setLandingActiveSection] = useState('preview');
   const landingEditorRef = useRef(null);
   const pendingNavigationRef = useRef(null);
   const bypassNavigationRef = useRef(false);
@@ -828,7 +829,7 @@ export default function Announcements() {
               </button>
             </div>
 
-            {isAnnouncementTab && (
+            {isAnnouncementTab ? (
               <button
                 type="button"
                 className={`archive-list-button${archivedOpen ? ' is-open' : ''}`}
@@ -842,6 +843,23 @@ export default function Announcements() {
                   <span className="archive-list-count">{archivedAnnouncements.length}</span>
                 )}
               </button>
+            ) : (
+              <div className="landing-nav-toolbar" aria-label="Landing page section navigation">
+                <button
+                  type="button"
+                  className={`landing-nav-toolbar-btn${landingActiveSection === 'preview' ? ' is-active' : ''}`}
+                  onClick={() => landingEditorRef.current?.scrollToSection('preview')}
+                >
+                  Quick Preview
+                </button>
+                <button
+                  type="button"
+                  className={`landing-nav-toolbar-btn${landingActiveSection === 'content' ? ' is-active' : ''}`}
+                  onClick={() => landingEditorRef.current?.scrollToSection('content')}
+                >
+                  Landing Page Content
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -1018,7 +1036,12 @@ export default function Announcements() {
 
         {isAdmin && activeTab === 'landing' ? (
           <div className="announcement-card landing-editor-card">
-            <LandingContentEditor embedded ref={landingEditorRef} onDirtyChange={setIsLandingDirty} />
+            <LandingContentEditor
+              embedded
+              ref={landingEditorRef}
+              onDirtyChange={setIsLandingDirty}
+              onActiveSectionChange={setLandingActiveSection}
+            />
           </div>
         ) : (
           <div className="announcement-card list-card">

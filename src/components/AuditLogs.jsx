@@ -8,11 +8,33 @@ import './AuditLogs.css';
 import { getAdminAuditLogs } from '../utils/usersService';
 import { formatStatusLabel } from '../utils/statusUtils';
 
+const PAGE_SIZE = 10;
+const DETAILS_TRUNCATE_LENGTH = 70;
+
+const getStatusClass = (status) => {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (normalized.includes('fail')) return 'failed';
+  if (normalized.includes('pending')) return 'pending';
+  return 'success';
+};
+
+const escapeCsvValue = (value) => {
+  const str = String(value ?? '');
+  if (/[",\n]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+};
+
 export default function AuditLogs() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSearch, setFilterSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('All Actions');
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('All Statuses');
+  const [dateRange, setDateRange] = useState([null, null]);
+  const [rangeStart, rangeEnd] = dateRange;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedLog, setSelectedLog] = useState(null);
   const [auditLogs, setAuditLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [tableMessage, setTableMessage] = useState('');
@@ -45,27 +67,90 @@ export default function AuditLogs() {
   const filteredLogs = useMemo(() => {
     const normalizedSearch = filterSearch.trim().toLowerCase();
 
-    return auditLogs.filter((log) => {
+    const filtered = auditLogs.filter((log) => {
       const matchesSearch =
         !normalizedSearch ||
         String(log.user || '').toLowerCase().includes(normalizedSearch) ||
-        String(log.action || '').toLowerCase().includes(normalizedSearch) ||
         String(log.details || '').toLowerCase().includes(normalizedSearch);
 
       const matchesAction = actionFilter === 'All Actions' || log.action === actionFilter;
 
-      const matchesDate =
-        !selectedDate ||
-        new Date(log.timestamp).toDateString() === selectedDate.toDateString();
+      const matchesStatus =
+        statusFilter === 'All Statuses' || getStatusClass(log.status) === statusFilter.toLowerCase();
 
-      return matchesSearch && matchesAction && matchesDate;
+      let matchesDate = true;
+      if (rangeStart) {
+        const logDate = new Date(log.timestamp);
+        const start = new Date(rangeStart);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(rangeEnd || rangeStart);
+        end.setHours(23, 59, 59, 999);
+        matchesDate = logDate >= start && logDate <= end;
+      }
+
+      return matchesSearch && matchesAction && matchesStatus && matchesDate;
     });
-  }, [auditLogs, filterSearch, actionFilter, selectedDate]);
+
+    return filtered.sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+  }, [auditLogs, filterSearch, actionFilter, statusFilter, rangeStart, rangeEnd]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedLogs = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredLogs.slice(start, start + PAGE_SIZE);
+  }, [filteredLogs, safePage]);
+
+  const handleSearchChange = (value) => {
+    setFilterSearch(value);
+    setCurrentPage(1);
+  };
+
+  const handleActionFilterChange = (value) => {
+    setActionFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleDateRangeChange = (update) => {
+    setDateRange(update);
+    setCurrentPage(1);
+  };
 
   const handleClearFilters = () => {
     setFilterSearch('');
     setActionFilter('All Actions');
-    setSelectedDate(null);
+    setStatusFilter('All Statuses');
+    setDateRange([null, null]);
+    setCurrentPage(1);
+  };
+
+  const handleExportCsv = () => {
+    const headers = ['No.', 'Timestamp', 'User', 'Action', 'Details', 'Status'];
+    const rows = filteredLogs.map((log, index) => [
+      index + 1,
+      new Date(log.timestamp).toLocaleString('en-US'),
+      log.user,
+      log.action,
+      log.details,
+      formatStatusLabel(log.status)
+    ]);
+
+    const csvContent = [headers, ...rows].map((row) => row.map(escapeCsvValue).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -100,26 +185,26 @@ export default function AuditLogs() {
         <div className="audit-logs-filters">
           <div className="audit-logs-filter-row">
             <div className="audit-logs-filter-group audit-logs-filter-search">
-              <label className="audit-logs-filter-label" htmlFor="audit-logs-search-input">Search Activity</label>
+              <label className="audit-logs-filter-label" htmlFor="audit-logs-search-input">Search User / Details</label>
               <div className="audit-logs-search-wrapper">
                 <FaSearch className="audit-logs-search-icon" />
                 <input
                   id="audit-logs-search-input"
                   type="text"
-                  placeholder="Search by user or action"
+                  placeholder="Search by user or details"
                   value={filterSearch}
-                  onChange={(e) => setFilterSearch(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="audit-logs-search-input"
                 />
               </div>
             </div>
 
             <div className="audit-logs-filter-group">
-              <label className="audit-logs-filter-label" htmlFor="audit-logs-action-select">Filter by Action</label>
+              <label className="audit-logs-filter-label" htmlFor="audit-logs-action-select">Action Type</label>
               <select
                 id="audit-logs-action-select"
                 value={actionFilter}
-                onChange={(e) => setActionFilter(e.target.value)}
+                onChange={(e) => handleActionFilterChange(e.target.value)}
                 className="audit-logs-select"
               >
                 <option>All Actions</option>
@@ -134,23 +219,47 @@ export default function AuditLogs() {
             </div>
 
             <div className="audit-logs-filter-group">
-              <label className="audit-logs-filter-label" htmlFor="audit-logs-date-input">Filter by Date</label>
+              <label className="audit-logs-filter-label" htmlFor="audit-logs-status-select">Status</label>
+              <select
+                id="audit-logs-status-select"
+                value={statusFilter}
+                onChange={(e) => handleStatusFilterChange(e.target.value)}
+                className="audit-logs-select"
+              >
+                <option>All Statuses</option>
+                <option>Success</option>
+                <option>Failed</option>
+                <option>Pending</option>
+              </select>
+            </div>
+
+            <div className="audit-logs-filter-group">
+              <label className="audit-logs-filter-label" htmlFor="audit-logs-date-input">Date Range</label>
               <div className="audit-logs-datepicker-wrapper">
                 <DatePicker
                   id="audit-logs-date-input"
-                  selected={selectedDate}
-                  onChange={(date) => setSelectedDate(date)}
+                  selectsRange
+                  startDate={rangeStart}
+                  endDate={rangeEnd}
+                  onChange={handleDateRangeChange}
+                  isClearable
                   dateFormat="dd/MM/yyyy"
-                  placeholderText="dd/mm/yyyy"
+                  placeholderText="dd/mm/yyyy - dd/mm/yyyy"
                   className="audit-logs-datepicker"
                 />
               </div>
             </div>
 
-            <div className="audit-logs-filter-group audit-logs-filter-clear-group">
-              <button type="button" className="audit-logs-clear" onClick={handleClearFilters}>
-                Clear Filters
-              </button>
+            <div className="audit-logs-filter-group audit-logs-filter-actions">
+              <span className="audit-logs-filter-label audit-logs-filter-actions-label">&nbsp;</span>
+              <div className="audit-logs-filter-actions-buttons">
+                <button type="button" className="audit-logs-clear" onClick={handleClearFilters}>
+                  Clear Filters
+                </button>
+                <button type="button" className="audit-logs-export" onClick={handleExportCsv} disabled={filteredLogs.length === 0}>
+                  Export CSV
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -181,9 +290,9 @@ export default function AuditLogs() {
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log, index) => (
+                paginatedLogs.map((log, index) => (
                   <tr key={log.id}>
-                    <td className="audit-logs-no-column">{index + 1}</td>
+                    <td className="audit-logs-no-column">{(safePage - 1) * PAGE_SIZE + index + 1}</td>
                     <td>{new Date(log.timestamp).toLocaleString('en-US')}</td>
                     <td>{log.user}</td>
                     <td>
@@ -191,9 +300,20 @@ export default function AuditLogs() {
                         {log.action}
                       </span>
                     </td>
-                    <td>{log.details}</td>
                     <td>
-                      <span className="audit-logs-status-badge success">
+                      <div className="audit-logs-details-text">{log.details}</div>
+                      {String(log.details || '').length > DETAILS_TRUNCATE_LENGTH && (
+                        <button
+                          type="button"
+                          className="audit-logs-view-details-btn"
+                          onClick={() => setSelectedLog(log)}
+                        >
+                          View Details
+                        </button>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`audit-logs-status-badge ${getStatusClass(log.status)}`}>
                         {formatStatusLabel(log.status)}
                       </span>
                     </td>
@@ -202,8 +322,76 @@ export default function AuditLogs() {
               )}
             </tbody>
           </table>
+
+          {!loadingLogs && filteredLogs.length > 0 && (
+            <div className="audit-logs-pagination">
+              <button
+                type="button"
+                className="audit-logs-page-btn"
+                onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+                disabled={safePage === 1}
+              >
+                Previous
+              </button>
+              <span className="audit-logs-page-info">
+                Page {safePage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                className="audit-logs-page-btn"
+                onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+                disabled={safePage === totalPages}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </div>
+
+      {selectedLog && (
+        <div className="audit-logs-modal-overlay" onClick={() => setSelectedLog(null)}>
+          <div className="audit-logs-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="audit-logs-modal-header">
+              <h3>Activity Details</h3>
+              <button
+                type="button"
+                className="audit-logs-modal-close"
+                onClick={() => setSelectedLog(null)}
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="audit-logs-modal-body">
+              <div className="audit-logs-modal-row">
+                <span className="audit-logs-modal-row-label">Timestamp</span>
+                <span>{new Date(selectedLog.timestamp).toLocaleString('en-US')}</span>
+              </div>
+              <div className="audit-logs-modal-row">
+                <span className="audit-logs-modal-row-label">User</span>
+                <span>{selectedLog.user}</span>
+              </div>
+              <div className="audit-logs-modal-row">
+                <span className="audit-logs-modal-row-label">Action</span>
+                <span className={`audit-logs-action-badge ${selectedLog.actionType}`}>
+                  {selectedLog.action}
+                </span>
+              </div>
+              <div className="audit-logs-modal-row">
+                <span className="audit-logs-modal-row-label">Status</span>
+                <span className={`audit-logs-status-badge ${getStatusClass(selectedLog.status)}`}>
+                  {formatStatusLabel(selectedLog.status)}
+                </span>
+              </div>
+              <div className="audit-logs-modal-details">
+                <span className="audit-logs-modal-row-label">Details</span>
+                <p>{selectedLog.details}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

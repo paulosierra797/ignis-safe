@@ -242,13 +242,25 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   const bannerPhotoMultiInputRef = useRef(null);
   const bannerDropzoneDragCounter = useRef(0);
   const isFirstContentSync = useRef(true);
+  const syncedContentRef = useRef(content);
 
   React.useEffect(() => {
     if (isFirstContentSync.current) {
       isFirstContentSync.current = false;
+      syncedContentRef.current = content;
       return;
     }
-    setDraft(deepClone(content));
+
+    // Only auto-sync the draft to freshly loaded content (e.g. the initial
+    // DB fetch resolving after mount) when the admin has no unsaved edits
+    // pending. Otherwise this would silently discard in-progress work, such
+    // as banner photos just added but not yet saved.
+    setDraft((prevDraft) => {
+      const draftMatchesLastSyncedContent =
+        JSON.stringify(prevDraft) === JSON.stringify(syncedContentRef.current);
+      return draftMatchesLastSyncedContent ? deepClone(content) : prevDraft;
+    });
+    syncedContentRef.current = content;
   }, [content]);
 
   const hasChanges = useMemo(() => JSON.stringify(draft) !== JSON.stringify(content), [draft, content]);
@@ -273,6 +285,19 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   }, []);
 
   const performSave = useCallback(async (nextDraft) => {
+    // Safety net: if the draft would save with zero banner photos while the
+    // last-known saved content had some, and not all of them were explicitly
+    // removed by the admin (tracked via pendingRemovedBannerPaths), refuse to
+    // save. This guards against ever persisting an accidentally-cleared
+    // photo array, whatever the cause.
+    const nextPhotos = Array.isArray(nextDraft?.hero?.photos) ? nextDraft.hero.photos : [];
+    const previousPhotos = Array.isArray(content?.hero?.photos) ? content.hero.photos : [];
+    if (nextPhotos.length === 0 && previousPhotos.length > 0 && pendingRemovedBannerPaths.length < previousPhotos.length) {
+      setSaveMessage('Save blocked: banner photos appear to have been cleared unexpectedly. Please reload the page and try again.');
+      window.setTimeout(() => setSaveMessage(''), 4000);
+      return;
+    }
+
     setSaving(true);
     try {
       const removedPaths = pendingRemovedBannerPaths;
@@ -286,16 +311,21 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           ? `Landing page content saved, but old photo cleanup failed: ${deleteError}`
           : 'Landing page content saved.'
         );
+        // Mark the just-saved draft as the source of truth so the content-sync
+        // effect doesn't treat it as stale once the context's `content` catches up.
+        syncedContentRef.current = nextDraft;
+        setDraft(deepClone(nextDraft));
       }
       window.setTimeout(() => setSaveMessage(''), 3000);
     } finally {
       setSaving(false);
     }
-  }, [pendingRemovedBannerPaths, setContent]);
+  }, [content, pendingRemovedBannerPaths, setContent]);
 
   useImperativeHandle(ref, () => ({
     discardUnsavedChanges: () => {
       clearLandingDraft();
+      syncedContentRef.current = content;
       setDraft(deepClone(content));
       setPendingRemovedBannerPaths([]);
     },
@@ -662,6 +692,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   };
 
   const confirmDiscard = () => {
+    syncedContentRef.current = content;
     setDraft(deepClone(content));
     setPendingRemovedBannerPaths([]);
     setDiscardModalOpen(false);
@@ -685,6 +716,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         .map((photo) => photo.path)
         .filter(Boolean);
       const { error } = await resetContent();
+      syncedContentRef.current = defaults;
       setDraft(deepClone(defaults));
       if (error) {
         setSaveMessage(`Defaults reset locally, but failed to sync to database: ${error}`);

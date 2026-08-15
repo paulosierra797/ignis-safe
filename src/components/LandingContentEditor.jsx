@@ -4,7 +4,7 @@ import PageHeader from './PageHeader';
 import LandingPreview from './LandingPreview';
 import { useLandingContent } from '../context/LandingContentContext';
 import { useUser } from '../context/UserContext';
-import { FiArrowDown, FiArrowUp, FiImage, FiMove, FiPlus, FiRefreshCw, FiTrash2, FiUploadCloud, FiX } from 'react-icons/fi';
+import { FiArrowDown, FiArrowUp, FiMove, FiPlus, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
 import { deleteBannerPhotoPaths, MAX_BANNER_PHOTOS, uploadBannerPhoto } from '../utils/bannerPhotoService';
 import './LandingContentEditor.css';
 import './AppDialog.css';
@@ -231,16 +231,12 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [discardModalOpen, setDiscardModalOpen] = useState(false);
   const [uploadingBannerPhoto, setUploadingBannerPhoto] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [replacingBannerPhotoIndex, setReplacingBannerPhotoIndex] = useState(null);
   const [pendingRemovedBannerPaths, setPendingRemovedBannerPaths] = useState([]);
-  const [bannerUploadPanelOpen, setBannerUploadPanelOpen] = useState(false);
-  const [isDraggingFileOverPanel, setIsDraggingFileOverPanel] = useState(false);
   const [draggedPhotoIndex, setDraggedPhotoIndex] = useState(null);
   const [dragOverPhotoIndex, setDragOverPhotoIndex] = useState(null);
   const bannerPhotoInputRef = useRef(null);
-  const bannerPhotoMultiInputRef = useRef(null);
-  const bannerDropzoneDragCounter = useRef(0);
+  const bannerPhotoAddInputRef = useRef(null);
   const isFirstContentSync = useRef(true);
   const syncedContentRef = useRef(content);
 
@@ -422,93 +418,38 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
     showTemporaryMessage('Banner photo replaced. Save changes to publish.');
   };
 
-  const handleAddPhotoFiles = async (fileList) => {
-    const files = Array.from(fileList || []).filter(Boolean);
-    if (files.length === 0) return;
+  const openAddPhotoPicker = () => {
+    bannerPhotoAddInputRef.current?.click();
+  };
 
-    const availableSlots = MAX_BANNER_PHOTOS - heroPhotos.length;
-    if (availableSlots <= 0) {
+  const handleAddPhotoChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+
+    if (heroPhotos.length >= MAX_BANNER_PHOTOS) {
       showTemporaryMessage(`Only ${MAX_BANNER_PHOTOS} banner photos are allowed.`);
       return;
     }
 
-    const filesToUpload = files.slice(0, availableSlots);
-    const skippedCount = files.length - filesToUpload.length;
-
+    const position = heroPhotos.length;
     setUploadingBannerPhoto('new');
-    setUploadProgress({ current: 0, total: filesToUpload.length });
 
-    const uploaded = [];
-    const failures = [];
-    let position = heroPhotos.length;
-
-    for (let i = 0; i < filesToUpload.length; i += 1) {
-      const { data, error } = await uploadBannerPhoto({
-        adminId: currentUser?.admin_id,
-        file: filesToUpload[i],
-        position,
-      });
-
-      if (error) {
-        failures.push(error);
-      } else {
-        uploaded.push(data);
-        position += 1;
-      }
-
-      setUploadProgress({ current: i + 1, total: filesToUpload.length });
-    }
+    const { data, error } = await uploadBannerPhoto({
+      adminId: currentUser?.admin_id,
+      file,
+      position,
+    });
 
     setUploadingBannerPhoto(null);
 
-    if (uploaded.length > 0) {
-      updateHeroPhotos((photos) => [...photos, ...uploaded]);
-      setBannerUploadPanelOpen(false);
+    if (error) {
+      showTemporaryMessage(`Failed to upload banner photo: ${error}`);
+      return;
     }
 
-    const parts = [];
-    if (uploaded.length > 0) {
-      parts.push(`${uploaded.length} photo${uploaded.length === 1 ? '' : 's'} added`);
-    }
-    if (skippedCount > 0) {
-      parts.push(`${skippedCount} skipped (limit of ${MAX_BANNER_PHOTOS} reached)`);
-    }
-    if (failures.length > 0) {
-      parts.push(`${failures.length} failed to upload`);
-    }
-
-    showTemporaryMessage(parts.length > 0 ? `${parts.join(', ')}. Save changes to publish.` : 'No photos were added.');
-  };
-
-  const handleAddPhotoInputChange = (event) => {
-    const files = event.target.files;
-    event.target.value = '';
-    handleAddPhotoFiles(files);
-  };
-
-  const handleBannerDropzoneDragEnter = (event) => {
-    event.preventDefault();
-    bannerDropzoneDragCounter.current += 1;
-    setIsDraggingFileOverPanel(true);
-  };
-
-  const handleBannerDropzoneDragOver = (event) => {
-    event.preventDefault();
-  };
-
-  const handleBannerDropzoneDragLeave = (event) => {
-    event.preventDefault();
-    bannerDropzoneDragCounter.current = Math.max(0, bannerDropzoneDragCounter.current - 1);
-    if (bannerDropzoneDragCounter.current === 0) {
-      setIsDraggingFileOverPanel(false);
-    }
-  };
-
-  const handleBannerDropzoneDrop = (event) => {
-    event.preventDefault();
-    bannerDropzoneDragCounter.current = 0;
-    setIsDraggingFileOverPanel(false);
-    handleAddPhotoFiles(event.dataTransfer.files);
+    updateHeroPhotos((photos) => [...photos, data]);
+    showTemporaryMessage('Banner photo added. Save changes to publish.');
   };
 
   const updateBannerPhotoAlt = (photoIndex, value) => {
@@ -823,167 +764,134 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
               onChange={handleReplacePhotoChange}
             />
             <input
-              ref={bannerPhotoMultiInputRef}
+              ref={bannerPhotoAddInputRef}
               type="file"
               accept="image/jpeg,image/jpg,image/png,image/webp"
-              multiple
               className="banner-photo-file-input"
-              onChange={handleAddPhotoInputChange}
+              onChange={handleAddPhotoChange}
             />
 
             <div className="banner-photo-manager-header">
               <div>
                 <span className="editor-field-label">Main Banner Photos</span>
                 <p className="editor-field-helper">
-                  Upload up to {MAX_BANNER_PHOTOS} optimized photos. Drag a card to reorder it — the order below is the public carousel order.
+                  {MAX_BANNER_PHOTOS} photo slots. Drag a card to reorder it — the order below is the public carousel order.
                 </p>
               </div>
-              <button
-                type="button"
-                className="banner-photo-add-btn"
-                onClick={() => setBannerUploadPanelOpen((open) => !open)}
-                disabled={heroPhotos.length >= MAX_BANNER_PHOTOS || uploadingBannerPhoto !== null}
-              >
-                <FiPlus aria-hidden="true" />
-                Add Photos
-              </button>
             </div>
 
-            {bannerUploadPanelOpen && heroPhotos.length < MAX_BANNER_PHOTOS && (
-              <div
-                className={`banner-photo-dropzone${isDraggingFileOverPanel ? ' is-dragging' : ''}${uploadingBannerPhoto === 'new' ? ' is-uploading' : ''}`}
-                onDragEnter={handleBannerDropzoneDragEnter}
-                onDragOver={handleBannerDropzoneDragOver}
-                onDragLeave={handleBannerDropzoneDragLeave}
-                onDrop={handleBannerDropzoneDrop}
-              >
-                <button
-                  type="button"
-                  className="banner-photo-dropzone-close"
-                  onClick={() => setBannerUploadPanelOpen(false)}
-                  aria-label="Close upload area"
-                  title="Close"
-                >
-                  <FiX aria-hidden="true" />
-                </button>
-                <FiUploadCloud className="banner-photo-dropzone-icon" aria-hidden="true" />
-                {uploadingBannerPhoto === 'new' ? (
-                  <p className="banner-photo-dropzone-title">Uploading {uploadProgress.current} of {uploadProgress.total}...</p>
-                ) : (
-                  <>
-                    <p className="banner-photo-dropzone-title">Drag &amp; drop photos here</p>
-                    <p className="banner-photo-dropzone-or">or</p>
-                    <button
-                      type="button"
-                      className="banner-photo-browse-btn"
-                      onClick={() => bannerPhotoMultiInputRef.current?.click()}
-                    >
-                      Browse Files
-                    </button>
-                    <p className="banner-photo-dropzone-hint">
-                      JPG, PNG, or WebP, up to 12MB each. {MAX_BANNER_PHOTOS - heroPhotos.length} slot{MAX_BANNER_PHOTOS - heroPhotos.length === 1 ? '' : 's'} remaining.
-                    </p>
-                  </>
-                )}
-              </div>
-            )}
+            <div className="banner-photo-grid" aria-label="Main banner photo order">
+              {Array.from({ length: MAX_BANNER_PHOTOS }).map((_, index) => {
+                const photo = heroPhotos[index];
 
-            {heroPhotos.length === 0 && !bannerUploadPanelOpen && (
-              <div className="banner-photo-empty-state">
-                <FiImage aria-hidden="true" />
-                <p>No banner photos yet. Click “Add Photos” to get started.</p>
-              </div>
-            )}
-
-            {heroPhotos.length > 0 && (
-              <div className="banner-photo-grid" aria-label="Main banner photo order">
-                {heroPhotos.map((photo, index) => {
-                  const isUploadingThisPhoto = uploadingBannerPhoto === index;
-
+                if (!photo) {
                   return (
-                    <div
-                      key={photo.id}
-                      className={`banner-photo-card${draggedPhotoIndex === index ? ' is-dragging' : ''}${dragOverPhotoIndex === index ? ' is-drag-over' : ''}`}
-                      onDragOver={handlePhotoCardDragOver(index)}
-                      onDragLeave={handlePhotoCardDragLeave(index)}
-                      onDrop={handlePhotoCardDrop(index)}
-                    >
-                      <div className="banner-photo-thumb-wrap">
-                        <span
-                          className="banner-photo-drag-handle"
-                          draggable
-                          onDragStart={handlePhotoCardDragStart(index)}
-                          onDragEnd={handlePhotoCardDragEnd}
-                          aria-label={`Drag to reorder banner photo ${index + 1}`}
-                          title="Drag to reorder"
-                        >
-                          <FiMove aria-hidden="true" />
-                        </span>
-                        <span className="banner-photo-number">{index + 1}</span>
-                        <img src={photo.url} alt={photo.alt || `Main banner photo ${index + 1}`} className="banner-photo-thumb" loading="lazy" />
-                        {isUploadingThisPhoto && (
-                          <div className="banner-photo-uploading-overlay">Uploading replacement...</div>
+                    <div key={`empty-slot-${index}`} className="banner-photo-card banner-photo-card--empty">
+                      <button
+                        type="button"
+                        className="banner-photo-add-slot-btn"
+                        onClick={openAddPhotoPicker}
+                        disabled={uploadingBannerPhoto !== null}
+                      >
+                        {uploadingBannerPhoto === 'new' && index === heroPhotos.length ? (
+                          <span className="banner-photo-add-slot-label">Uploading...</span>
+                        ) : (
+                          <>
+                            <FiPlus aria-hidden="true" className="banner-photo-add-slot-icon" />
+                            <span className="banner-photo-add-slot-label">Add Photo</span>
+                          </>
                         )}
-                      </div>
-
-                      <label className="banner-photo-alt-field">
-                        <span>Alt text</span>
-                        <input
-                          type="text"
-                          value={photo.alt || ''}
-                          onChange={(event) => updateBannerPhotoAlt(index, event.target.value)}
-                          placeholder={`Main banner photo ${index + 1}`}
-                          maxLength={140}
-                        />
-                      </label>
-
-                      <div className="banner-photo-actions">
-                        <button
-                          type="button"
-                          className="banner-photo-icon-btn"
-                          onClick={() => moveBannerPhoto(index, -1)}
-                          disabled={index === 0 || uploadingBannerPhoto !== null}
-                          aria-label={`Move banner photo ${index + 1} earlier`}
-                          title="Move earlier"
-                        >
-                          <FiArrowUp aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className="banner-photo-icon-btn"
-                          onClick={() => moveBannerPhoto(index, 1)}
-                          disabled={index === heroPhotos.length - 1 || uploadingBannerPhoto !== null}
-                          aria-label={`Move banner photo ${index + 1} later`}
-                          title="Move later"
-                        >
-                          <FiArrowDown aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className="banner-photo-icon-btn"
-                          onClick={() => openReplacePhotoPicker(index)}
-                          disabled={uploadingBannerPhoto !== null}
-                          aria-label={`Replace banner photo ${index + 1}`}
-                          title="Replace"
-                        >
-                          <FiRefreshCw aria-hidden="true" />
-                        </button>
-                        <button
-                          type="button"
-                          className="banner-photo-icon-btn banner-photo-icon-btn--danger"
-                          onClick={() => deleteBannerPhoto(index)}
-                          disabled={uploadingBannerPhoto !== null}
-                          aria-label={`Delete banner photo ${index + 1}`}
-                          title="Delete"
-                        >
-                          <FiTrash2 aria-hidden="true" />
-                        </button>
-                      </div>
+                      </button>
+                      <span className="banner-photo-number banner-photo-number--empty">{index + 1}</span>
                     </div>
                   );
-                })}
-              </div>
-            )}
+                }
+
+                const isUploadingThisPhoto = uploadingBannerPhoto === index;
+
+                return (
+                  <div
+                    key={photo.id}
+                    className={`banner-photo-card${draggedPhotoIndex === index ? ' is-dragging' : ''}${dragOverPhotoIndex === index ? ' is-drag-over' : ''}`}
+                    onDragOver={handlePhotoCardDragOver(index)}
+                    onDragLeave={handlePhotoCardDragLeave(index)}
+                    onDrop={handlePhotoCardDrop(index)}
+                  >
+                    <div className="banner-photo-thumb-wrap">
+                      <span
+                        className="banner-photo-drag-handle"
+                        draggable
+                        onDragStart={handlePhotoCardDragStart(index)}
+                        onDragEnd={handlePhotoCardDragEnd}
+                        aria-label={`Drag to reorder banner photo ${index + 1}`}
+                        title="Drag to reorder"
+                      >
+                        <FiMove aria-hidden="true" />
+                      </span>
+                      <span className="banner-photo-number">{index + 1}</span>
+                      <img src={photo.url} alt={photo.alt || `Main banner photo ${index + 1}`} className="banner-photo-thumb" loading="lazy" />
+                      {isUploadingThisPhoto && (
+                        <div className="banner-photo-uploading-overlay">Uploading replacement...</div>
+                      )}
+                    </div>
+
+                    <label className="banner-photo-alt-field">
+                      <span>Alt text</span>
+                      <input
+                        type="text"
+                        value={photo.alt || ''}
+                        onChange={(event) => updateBannerPhotoAlt(index, event.target.value)}
+                        placeholder={`Main banner photo ${index + 1}`}
+                        maxLength={140}
+                      />
+                    </label>
+
+                    <div className="banner-photo-actions">
+                      <button
+                        type="button"
+                        className="banner-photo-icon-btn"
+                        onClick={() => moveBannerPhoto(index, -1)}
+                        disabled={index === 0 || uploadingBannerPhoto !== null}
+                        aria-label={`Move banner photo ${index + 1} earlier`}
+                        title="Move earlier"
+                      >
+                        <FiArrowUp aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        className="banner-photo-icon-btn"
+                        onClick={() => moveBannerPhoto(index, 1)}
+                        disabled={index === heroPhotos.length - 1 || uploadingBannerPhoto !== null}
+                        aria-label={`Move banner photo ${index + 1} later`}
+                        title="Move later"
+                      >
+                        <FiArrowDown aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        className="banner-photo-icon-btn"
+                        onClick={() => openReplacePhotoPicker(index)}
+                        disabled={uploadingBannerPhoto !== null}
+                        aria-label={`Replace banner photo ${index + 1}`}
+                        title="Replace"
+                      >
+                        <FiRefreshCw aria-hidden="true" />
+                      </button>
+                      <button
+                        type="button"
+                        className="banner-photo-icon-btn banner-photo-icon-btn--danger"
+                        onClick={() => deleteBannerPhoto(index)}
+                        disabled={uploadingBannerPhoto !== null}
+                        aria-label={`Delete banner photo ${index + 1}`}
+                        title="Delete"
+                      >
+                        <FiTrash2 aria-hidden="true" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </GroupCard>
 

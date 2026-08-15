@@ -412,7 +412,7 @@ const handleLivenessPassed = useCallback(async ({ canvas, challengeId, sequenceI
       stopFaceCamera();
     } else {
       setVerificationPhotoBlob(null);
-      setFaceError('Face does not match.');
+      setFaceError('Face does not match the registered Face ID. Please try again using the registered personnel’s face.');
       setFaceStatus('Verification failed ✗');
       setVerificationState('failed');
     }
@@ -640,7 +640,7 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
               <label className="section-label">Face Verification</label>
               <button
                 type="button"
-                className={`location-btn ${verificationState === 'success' ? 'verified' : ''}`}
+                className={`location-btn ${verificationState === 'success' ? 'verified' : ''} ${verificationState === 'failed' ? 'error' : ''}`}
                 onClick={handleVerifyFace}
                 disabled={verificationState === 'liveness' || verificationState === 'matching'}
               >
@@ -692,7 +692,7 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
                 type="button"
                 className={`location-btn ${isLocationVerified ? 'verified' : ''}`}
                 onClick={handleRequestLocation}
-                disabled={isProcessing}
+                disabled={isProcessing || verificationState !== 'success'}
               >
                 {isProcessing
                   ? 'Checking...'
@@ -703,7 +703,7 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
                       : 'Request Location'}
               </button>
               <div className={`location-status ${isLocationVerified ? 'success' : geoStatus.includes('✗') || (geoLocation && !isLocationVerified) ? 'error' : ''}`}>
-                {geoStatus}
+                {verificationState !== 'success' ? 'Complete Face Verification first.' : geoStatus}
               </div>
             </div>
 

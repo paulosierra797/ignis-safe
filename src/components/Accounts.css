@@ -1324,8 +1324,8 @@
 
 .accounts-directory-groups {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.85fr);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
   align-items: start;
 }
 
@@ -1508,12 +1508,6 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #fff;
-}
-
-@media (max-width: 1280px) {
-  .accounts-directory-groups {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .accounts-directory-pagination {

@@ -4230,21 +4230,6 @@ const permissions = getDefaultPermissions(formData.role);
         ) : (
           <div className="accounts-directory-groups">
             <AccountDirectoryGroup
-              title="Personnel Accounts"
-              description="Operational personnel and their account status"
-              accounts={paginatedPersonnelAccounts}
-              totalCount={filteredPersonnelAccounts.length}
-              startIndex={personnelRangeStart}
-              emptyMessage="No personnel accounts match the selected filters."
-              getAccountActions={getAccountActions}
-              isOnLeave={isOnLeave}
-              formatLeaveDate={formatLeaveDate}
-              variant="personnel"
-              page={safePersonnelPage}
-              totalPages={personnelTotalPages}
-              onPageChange={setPersonnelPage}
-            />
-            <AccountDirectoryGroup
               title="Admin Accounts"
               description="Administrative and management accounts"
               accounts={paginatedAdminAccounts}
@@ -4258,6 +4243,21 @@ const permissions = getDefaultPermissions(formData.role);
               page={safeAdminPage}
               totalPages={adminTotalPages}
               onPageChange={setAdminPage}
+            />
+            <AccountDirectoryGroup
+              title="Personnel Accounts"
+              description="Operational personnel and their account status"
+              accounts={paginatedPersonnelAccounts}
+              totalCount={filteredPersonnelAccounts.length}
+              startIndex={personnelRangeStart}
+              emptyMessage="No personnel accounts match the selected filters."
+              getAccountActions={getAccountActions}
+              isOnLeave={isOnLeave}
+              formatLeaveDate={formatLeaveDate}
+              variant="personnel"
+              page={safePersonnelPage}
+              totalPages={personnelTotalPages}
+              onPageChange={setPersonnelPage}
             />
           </div>
         )}

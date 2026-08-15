@@ -74,13 +74,15 @@ export default function HeroSection() {
             onTouchStart={handleTouchStart}
             onTouchEnd={handleTouchEnd}
           >
-            <img
-              key={activePhoto.id || activePhoto.url}
-              src={activePhoto.url}
-              alt={activePhoto.alt}
-              className={`hero-image-img hero-carousel-photo is-${slideDirection}`}
-              loading={safeActivePhotoIndex === 0 ? 'eager' : 'lazy'}
-            />
+            <div className="hero-image-frame">
+              <img
+                key={activePhoto.id || activePhoto.url}
+                src={activePhoto.url}
+                alt={activePhoto.alt}
+                className={`hero-image-img hero-carousel-photo is-${slideDirection}`}
+                loading={safeActivePhotoIndex === 0 ? 'eager' : 'lazy'}
+              />
+            </div>
 
             {hasMultiplePhotos && (
               <>

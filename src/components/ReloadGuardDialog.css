@@ -1,0 +1,83 @@
+.reload-guard-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(12, 15, 18, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.reload-guard-dialog {
+  width: min(420px, 100%);
+  padding: 24px;
+  border: 1px solid rgba(245, 181, 68, 0.35);
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 24px 55px rgba(12, 15, 18, 0.28);
+  text-align: center;
+}
+
+.reload-guard-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  border-radius: 50%;
+  background: rgba(245, 181, 68, 0.2);
+  color: #9a5f00;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.reload-guard-dialog h2 {
+  margin: 0;
+  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-size: 22px;
+  color: #1f2933;
+}
+
+.reload-guard-dialog p {
+  margin: 10px 0 0;
+  color: #626871;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.reload-guard-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.reload-guard-btn {
+  flex: 1;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reload-guard-btn--stay {
+  border: 1px solid #d7dce2;
+  background: #ffffff;
+  color: #4b5563;
+}
+
+.reload-guard-btn--continue {
+  border: 1px solid #f5b544;
+  background: #f5b544;
+  color: #2f2411;
+}
+
+@media (max-width: 480px) {
+  .reload-guard-actions {
+    flex-direction: column-reverse;
+  }
+}

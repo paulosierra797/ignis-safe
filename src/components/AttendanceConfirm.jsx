@@ -5,6 +5,8 @@ import { getFaceByAdminId } from '../utils/attendanceService';
 import * as faceapi from '@vladmandic/face-api';
 import { validateQRSession } from '../utils/attendanceService';
 import LivenessCheck from './LivenessCheck';
+import ReloadGuardDialog from './ReloadGuardDialog';
+import { setReloadGuardActive } from '../utils/reloadGuard';
 import './AttendanceConfirm.css';
 import {
   requestGeoLocation,
@@ -107,15 +109,12 @@ const AttendanceConfirm = () => {
   }, [authenticatedOfficer, qrSessionId, verifiedStationId]);
 
   useEffect(() => {
-    if (!hasPendingVerification) return undefined;
-
-    const warnBeforeUnload = (event) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-
-    window.addEventListener('beforeunload', warnBeforeUnload);
-    return () => window.removeEventListener('beforeunload', warnBeforeUnload);
+    // Keeps the native beforeunload prompt (unstylable, but unavoidable for
+    // actual browser refresh/Ctrl+R/tab close) active only while verification
+    // is unfinished; the in-app navigationBlocker dialog below covers
+    // in-app reload/navigation actions with a custom IGNIS SAFE modal instead.
+    setReloadGuardActive(hasPendingVerification);
+    return () => setReloadGuardActive(false);
   }, [hasPendingVerification]);
 
 useEffect(() => {
@@ -813,34 +812,10 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
             )}
 
             {navigationBlocker.state === 'blocked' && (
-              <div className="attendance-confirm-overlay" role="presentation">
-                <div
-                  className="attendance-confirm-dialog"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="attendanceLeaveTitle"
-                >
-                  <div className="attendance-confirm-dialog-icon warning" aria-hidden="true">!</div>
-                  <h2 id="attendanceLeaveTitle">Leave attendance verification?</h2>
-                  <p>Your verification details have not been recorded. Are you sure you want to leave?</p>
-                  <div className="attendance-confirm-dialog-actions">
-                    <button
-                      type="button"
-                      className="attendance-confirm-cancel"
-                      onClick={() => navigationBlocker.reset()}
-                    >
-                      Stay Here
-                    </button>
-                    <button
-                      type="button"
-                      className="attendance-confirm-danger"
-                      onClick={() => navigationBlocker.proceed()}
-                    >
-                      Yes, Leave
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <ReloadGuardDialog
+                onStay={() => navigationBlocker.reset()}
+                onContinue={() => navigationBlocker.proceed()}
+              />
             )}
           </>
         )}

@@ -75,7 +75,7 @@ const ACCOUNTS_TABS = [
   { key: 'profile-changes', label: 'Profile Change Requests' }
 ];
 const ACCOUNTS_TAB_KEYS = ACCOUNTS_TABS.map((tab) => tab.key);
-const ACCOUNT_PAGE_SIZE = 10;
+const ACCOUNT_PAGE_SIZE = 5;
 const SERVICE_STATUS_OPTIONS = ['Active', 'Retired', 'Resigned', 'Separated', 'Dismissed', 'Deceased'];
 const EMPTY_PERSONNEL_FORM = {
   first_name: '',
@@ -761,58 +761,83 @@ function AccountDirectoryGroup({
           <h4>{title}</h4>
           <p>{description}</p>
         </div>
-        <span>{totalCount}</span>
+        <span className="account-directory-group-count">
+          {totalCount} {totalCount === 1 ? 'account' : 'accounts'}
+        </span>
       </div>
 
       {accounts.length === 0 ? (
         <div className="account-directory-group-empty">{emptyMessage}</div>
       ) : (
-        <div className="account-directory-entries">
-          {accounts.map((account, index) => {
-            const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim()
-              || (variant === 'admin' ? 'Admin' : 'Personnel');
-            const normalizedStatus = String(account.status || 'inactive').toLowerCase().replace(/\s+/g, '-');
-            const normalizedServiceStatus = String(account.service_status || 'Active').toLowerCase().replace(/\s+/g, '-');
+        <div className="account-directory-table-wrap">
+          <table className="account-directory-table">
+            <thead>
+              <tr>
+                <th className="col-name">Name</th>
+                <th className="col-email">Email</th>
+                <th className="col-rank-role">Rank/Role</th>
+                <th className="col-status">Status</th>
+                <th className="col-leave">Leave Status</th>
+                <th className="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.map((account) => {
+                const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim()
+                  || (variant === 'admin' ? 'Admin' : 'Personnel');
+                const normalizedStatus = String(account.status || 'inactive').toLowerCase().replace(/\s+/g, '-');
+                const normalizedServiceStatus = String(account.service_status || 'Active').toLowerCase().replace(/\s+/g, '-');
+                const onLeave = isOnLeave(account);
 
-            return (
-              <article className="account-directory-entry" key={account.admin_id || account.id}>
-                <span className="account-directory-entry-number">{startIndex + index}</span>
-                <div className="account-directory-entry-content">
-                  <div className="account-directory-entry-heading">
-                    <div className="account-directory-entry-identity">
-                      <strong title={accountName}>{accountName}</strong>
+                return (
+                  <tr className="account-directory-row" key={account.admin_id || account.id}>
+                    <td className="col-name" data-label="Name">
+                      <div className="account-directory-name-cell">
+                        <PersonnelAvatar account={account} className="account-directory-avatar" />
+                        <strong title={accountName}>{accountName}</strong>
+                      </div>
+                    </td>
+                    <td className="col-email" data-label="Email">
                       <span title={account.email || ''}>{account.email || '—'}</span>
-                    </div>
-                    <div className="account-directory-status-group">
-                      <span className={`status-pill ${normalizedStatus}`}>
-                        {formatStatusLabel(account.status, 'Inactive')}
-                      </span>
-                      {variant === 'personnel' && (
-                        <span className={`status-pill service-status-pill ${normalizedServiceStatus}`}>
-                          {formatStatusLabel(account.service_status, 'Active')}
+                    </td>
+                    <td className="col-rank-role" data-label="Rank/Role">
+                      <div className="account-directory-rank-role-cell">
+                        <span className="account-directory-rank">{account.rank || '—'}</span>
+                        <span className="account-directory-role">{account.role || '—'}</span>
+                      </div>
+                    </td>
+                    <td className="col-status" data-label="Status">
+                      <div className="account-directory-status-group">
+                        <span className={`status-pill ${normalizedStatus}`}>
+                          {formatStatusLabel(account.status, 'Inactive')}
                         </span>
+                        {variant === 'personnel' && (
+                          <span className={`status-pill service-status-pill ${normalizedServiceStatus}`}>
+                            {formatStatusLabel(account.service_status, 'Active')}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="col-leave" data-label="Leave Status">
+                      {onLeave ? (
+                        <span className="account-directory-leave-dates">
+                          {formatLeaveDate(account.leave_start_date)} – {formatLeaveDate(account.leave_end_date)}
+                        </span>
+                      ) : (
+                        <span className="account-directory-leave-none">Not on leave</span>
                       )}
-                    </div>
-                  </div>
-
-                  <div className="account-directory-entry-meta">
-                    <span><b>Rank:</b> {account.rank || '—'}</span>
-                    <span><b>Role:</b> {account.role || '—'}</span>
-                    {isOnLeave(account) && (
-                      <span>
-                        <b>Leave:</b> {formatLeaveDate(account.leave_start_date)} – {formatLeaveDate(account.leave_end_date)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <RowActionsMenu
-                  ariaLabel={`Open actions for ${accountName}`}
-                  actions={getAccountActions(account)}
-                />
-              </article>
-            );
-          })}
+                    </td>
+                    <td className="col-actions" data-label="Actions">
+                      <RowActionsMenu
+                        ariaLabel={`Open actions for ${accountName}`}
+                        actions={getAccountActions(account)}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 

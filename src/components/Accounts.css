@@ -1412,96 +1412,152 @@
   font-weight: 800;
 }
 
-.account-directory-entries {
-  display: flex;
-  flex-direction: column;
+.account-directory-table-wrap {
+  overflow-x: auto;
 }
 
-.account-directory-entry {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 36px;
-  align-items: center;
-  gap: 0.75rem;
-  min-width: 0;
-  padding: 0.85rem 0.9rem;
+.account-directory-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.account-directory-table thead {
+  background: #f8fafc;
+}
+
+.account-directory-table th {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.account-directory-table th.col-actions {
+  text-align: right;
+}
+
+.account-directory-table th.col-name,
+.account-directory-table td.col-name {
+  width: 22%;
+}
+
+.account-directory-table th.col-email,
+.account-directory-table td.col-email {
+  width: 24%;
+}
+
+.account-directory-table th.col-rank-role,
+.account-directory-table td.col-rank-role {
+  width: 13%;
+}
+
+.account-directory-table th.col-status,
+.account-directory-table td.col-status {
+  width: 17%;
+}
+
+.account-directory-table th.col-leave,
+.account-directory-table td.col-leave {
+  width: 16%;
+}
+
+.account-directory-table th.col-actions,
+.account-directory-table td.col-actions {
+  width: 60px;
+}
+
+.account-directory-row td {
+  padding: 1rem;
   border-bottom: 1px solid #edf1f5;
+  vertical-align: middle;
+  font-size: 0.82rem;
+  color: #334155;
 }
 
-.account-directory-entry:last-child {
+.account-directory-row:last-child td {
   border-bottom: 0;
 }
 
-.account-directory-entry:hover {
+.account-directory-row:hover td {
   background: #fffafa;
 }
 
-.account-directory-entry-number {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: #f1f5f9;
-  color: #64748b;
-  font-size: 0.7rem;
-  font-weight: 800;
-}
-
-.account-directory-entry-content,
-.account-directory-entry-identity {
+.account-directory-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
   min-width: 0;
 }
 
-.account-directory-entry-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
+.account-directory-avatar {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  object-fit: cover;
 }
 
-.account-directory-entry-identity {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.account-directory-entry-identity strong,
-.account-directory-entry-identity span {
+.account-directory-name-cell strong {
   overflow: hidden;
+  color: #1e293b;
+  font-size: 0.85rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.account-directory-entry-identity strong {
-  color: #1e293b;
-  font-size: 0.85rem;
+.account-directory-table td.col-email span {
+  display: block;
+  overflow: hidden;
+  color: #475569;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.account-directory-entry-identity span {
+.account-directory-rank-role-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.account-directory-rank {
+  color: #1e293b;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.account-directory-role {
   color: #64748b;
   font-size: 0.72rem;
+  text-transform: capitalize;
 }
 
-.account-directory-entry-heading .status-pill {
-  flex: 0 0 auto;
-  max-width: 135px;
-  text-align: center;
-  white-space: normal;
-}
-
-.account-directory-entry-meta {
-  display: flex;
+.account-directory-table .account-directory-status-group {
+  flex-direction: row;
   flex-wrap: wrap;
-  gap: 0.3rem 0.85rem;
-  margin-top: 0.45rem;
-  color: #64748b;
-  font-size: 0.7rem;
-  line-height: 1.35;
+  align-items: flex-start;
+  gap: 0.35rem;
 }
 
-.account-directory-entry-meta b {
-  color: #475569;
-  font-weight: 700;
+.account-directory-leave-dates {
+  color: #5b21b6;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.account-directory-leave-none {
+  color: #94a3b8;
+  font-size: 0.78rem;
+}
+
+.account-directory-table td.col-actions {
+  text-align: right;
 }
 
 .account-directory-group-empty,
@@ -2040,6 +2096,16 @@
 .status-pill.active {
   background: #dcfce7;
   color: #15803d;
+}
+
+.status-pill.inactive {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.status-pill.suspended {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .status-pill.pending-activation {
@@ -4348,25 +4414,74 @@
     flex-direction: column;
   }
 
-  .account-directory-entry {
-    grid-template-columns: 28px minmax(0, 1fr) 36px;
-    gap: 0.55rem;
-    padding: 0.8rem 0.7rem;
+  .account-directory-table-wrap {
+    overflow-x: visible;
   }
 
-  .account-directory-entry-heading {
-    flex-direction: column;
-    gap: 0.45rem;
+  .account-directory-table,
+  .account-directory-table thead,
+  .account-directory-table tbody,
+  .account-directory-table tr,
+  .account-directory-table th,
+  .account-directory-table td {
+    display: block;
+    width: auto;
   }
 
-  .account-directory-entry-heading .status-pill,
-  .account-directory-entry-heading .account-directory-status-group {
-    align-self: flex-start;
+  .account-directory-table thead {
+    display: none;
   }
 
-  .account-directory-status-group {
-    flex-direction: row;
-    flex-wrap: wrap;
+  .account-directory-row {
+    margin-bottom: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid #edf1f5;
+    border-radius: 10px;
+  }
+
+  .account-directory-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .account-directory-row td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f1f5f9;
+    text-align: right;
+  }
+
+  .account-directory-row td::before {
+    flex: 0 0 auto;
+    content: attr(data-label);
+    color: #94a3b8;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .account-directory-row td.col-name {
+    justify-content: flex-start;
+  }
+
+  .account-directory-row td.col-name::before {
+    content: none;
+  }
+
+  .account-directory-row td.col-actions {
+    border-bottom: 0;
+  }
+
+  .account-directory-row td.col-actions::before {
+    content: none;
+  }
+
+  .account-directory-table .account-directory-status-group {
+    justify-content: flex-end;
   }
 
   .accounts-directory-page-controls {

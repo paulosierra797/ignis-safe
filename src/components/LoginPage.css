@@ -775,9 +775,11 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 2rem;
+  justify-content: flex-start;
+  --login-brand-gap: clamp(1.5rem, 2.6vw, 2rem);
+  gap: var(--login-brand-gap);
   padding: clamp(1.75rem, 4vw, 3rem);
+  padding-top: clamp(2.5rem, 6vw, 4rem);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-right: 0;
   border-radius: 28px 0 0 28px;
@@ -791,13 +793,25 @@
   backdrop-filter: blur(3px) saturate(1.14);
 }
 
+/* Groups the IGNIS SAFE logo card with the BFP badge and yellow rule below
+   it. inline-grid sizes its single column to the widest item (the logo
+   card), so the narrower BFP badge and rule center under it automatically
+   while the card itself stays pinned to the panel's left content margin -
+   the same margin the Welcome heading uses. */
+.login-brand-top {
+  position: relative;
+  z-index: 2;
+  display: inline-grid;
+  justify-items: center;
+  row-gap: var(--login-brand-gap);
+}
+
 .logo-section {
   position: relative;
   z-index: 2;
   width: fit-content;
+  justify-self: start;
   padding: 0.6rem 0.85rem;
-  /* Pull the card left of the panel's own padding, leaving a small fixed inset from the edge. */
-  margin-left: calc(0.75rem - clamp(1.75rem, 4vw, 3rem));
   border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.96);
@@ -817,7 +831,7 @@
   position: relative;
   z-index: 2;
   max-width: 390px;
-  margin: auto 0;
+  margin: 0;
 }
 
 /* The source PNG carries heavy transparent padding around the shield
@@ -831,7 +845,6 @@
   aspect-ratio: 234 / 298;
   overflow: hidden;
   display: block;
-  margin-bottom: 1.5rem;
   filter: drop-shadow(0 12px 18px rgba(27, 5, 7, 0.24));
 }
 
@@ -849,7 +862,6 @@
 .login-brand-rule {
   width: 58px;
   height: 4px;
-  margin-bottom: 1.25rem;
   border-radius: 999px;
   background: linear-gradient(90deg, #fbbf24, #fb923c);
 }
@@ -990,16 +1002,13 @@
 
   .login-left {
     padding: 1.5rem;
+    --login-brand-gap: 1.25rem;
     border-right: 1px solid rgba(255, 255, 255, 0.14);
     border-bottom: 0;
     border-radius: 22px 22px 0 0;
     background:
       linear-gradient(120deg, rgba(73, 8, 13, 0.75), rgba(128, 17, 23, 0.58)),
       rgba(70, 8, 12, 0.56);
-  }
-
-  .logo-section {
-    margin-left: calc(0.75rem - 1.5rem);
   }
 
   .login-right {
@@ -1012,21 +1021,10 @@
   .login-brand-content {
     width: 100%;
     max-width: none;
-    margin: 0.75rem 0 0;
-    display: grid;
-    grid-template-columns: 112px minmax(0, 1fr);
-    align-items: center;
-    gap: 0.3rem 1.35rem;
   }
 
   .login-bfp-logo-frame {
-    grid-row: 1 / 4;
     width: 88px;
-    margin: 0;
-  }
-
-  .login-brand-rule {
-    margin: 0 0 0.35rem;
   }
 
   .login-brand-content h1 {
@@ -1061,23 +1059,16 @@
   }
 
   .login-left {
-    gap: 1.25rem;
+    --login-brand-gap: 1rem;
     padding: 1.1rem;
   }
 
   .logo-section {
     padding: 0.45rem 0.6rem;
-    margin-left: calc(0.75rem - 1.1rem);
   }
 
   .login-logo {
     width: 110px;
-  }
-
-  .login-brand-content {
-    margin-top: 0.9rem;
-    grid-template-columns: 88px minmax(0, 1fr);
-    gap: 0.25rem 0.95rem;
   }
 
   .login-bfp-logo-frame {
@@ -1087,7 +1078,6 @@
   .login-brand-rule {
     width: 42px;
     height: 3px;
-    margin-bottom: 0.25rem;
   }
 
   .login-brand-content h1 {

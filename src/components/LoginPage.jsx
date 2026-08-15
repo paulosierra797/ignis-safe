@@ -25,11 +25,11 @@ const LoginBrandPanel = ({ portal }) => {
 
   return (
   <aside className="login-left" aria-label={`IGNIS SAFE ${isPersonnel ? 'personnel' : 'admin'} welcome`}>
-    <div className="logo-section">
-      <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
-    </div>
+    <div className="login-brand-top">
+      <div className="logo-section">
+        <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
+      </div>
 
-    <div className="login-brand-content">
       <span className="login-bfp-logo-frame">
         <img
           src={bfpDasmaLogo}
@@ -37,7 +37,11 @@ const LoginBrandPanel = ({ portal }) => {
           className="login-bfp-logo"
         />
       </span>
+
       <div className="login-brand-rule" aria-hidden="true" />
+    </div>
+
+    <div className="login-brand-content">
       <h1>{isPersonnel ? 'Welcome, Personnel!' : 'Welcome, Admins!'}</h1>
       <p>
         {isPersonnel

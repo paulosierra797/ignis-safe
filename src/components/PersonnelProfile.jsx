@@ -846,6 +846,12 @@ const showModal = ({ type = "info", message, onConfirm }) => {
       ref={webcamRef}
       screenshotFormat="image/jpeg"
       videoConstraints={{ facingMode: "user" }}
+      // Keep the natural (non-mirrored) camera orientation, same as the
+      // Windows Camera app - do not add CSS mirroring (e.g. scaleX(-1))
+      // here, unlike AttendanceConfirm's preview. getScreenshot() below
+      // already reads the unmirrored source when mirrored is false, so
+      // the captured Face ID image stays consistent with what's shown.
+      mirrored={false}
       className="face-webcam"
     />
 

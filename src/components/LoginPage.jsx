@@ -29,7 +29,9 @@ const LoginBrandPanel = ({ portal }) => {
       <div className="logo-section">
         <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
       </div>
+    </div>
 
+    <div className="login-bfp-group">
       <span className="login-bfp-logo-frame">
         <img
           src={bfpDasmaLogo}

@@ -152,6 +152,14 @@
   position: relative;
   width: 100%;
   height: 100%;
+  /* Mirror the whole preview (video + face-box together) so it matches
+     the Windows Camera app's left/right orientation, like a normal
+     front-camera app. Flipping the wrapper - not just the video - keeps
+     the face-box overlay aligned with the face, since both are flipped
+     as one unit. This is purely a display transform: getScreenshot()
+     still reads the underlying <video> element's raw, unmirrored pixels,
+     so Face ID capture and detection are unaffected. */
+  transform: scaleX(-1);
 }
 
 .face-webcam {

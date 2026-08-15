@@ -735,6 +735,9 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             )}
           </div>
           <div className="landing-editor-actions">
+            <button type="button" className="btn btn-outline" onClick={() => scrollToNavSection(previewSectionRef, 'preview')}>
+              Quick Preview
+            </button>
             <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges || saving}>
               Discard changes
             </button>
@@ -760,6 +763,9 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             <p>Edit the public landing page sections.</p>
           </div>
           <div className="landing-editor-actions">
+            <button type="button" className="btn btn-outline" onClick={() => scrollToNavSection(previewSectionRef, 'preview')}>
+              Quick Preview
+            </button>
             <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges || saving}>
               Discard changes
             </button>

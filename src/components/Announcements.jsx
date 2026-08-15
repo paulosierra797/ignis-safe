@@ -847,13 +847,6 @@ export default function Announcements() {
               <div className="landing-nav-toolbar" aria-label="Landing page section navigation">
                 <button
                   type="button"
-                  className={`landing-nav-toolbar-btn${landingActiveSection === 'preview' ? ' is-active' : ''}`}
-                  onClick={() => landingEditorRef.current?.scrollToSection('preview')}
-                >
-                  Quick Preview
-                </button>
-                <button
-                  type="button"
                   className={`landing-nav-toolbar-btn${landingActiveSection === 'content' ? ' is-active' : ''}`}
                   onClick={() => landingEditorRef.current?.scrollToSection('content')}
                 >

@@ -158,6 +158,17 @@
   color: #ffffff;
 }
 
+.btn-outline {
+  background: #ffffff;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.btn-outline:hover:not(:disabled) {
+  border-color: #b91c1c;
+  background: #fff7f7;
+}
+
 .landing-editor-alert {
   background: #dcfce7;
   color: #166534;

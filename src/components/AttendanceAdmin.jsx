@@ -4,38 +4,17 @@ import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import { getAttendanceRecords } from '../utils/attendanceService';
+import {
+  exportAttendancePdf,
+  formatDistance,
+  getAttendanceStatusLabel,
+  getCheckLabel,
+  getVerificationLabel
+} from '../utils/attendancePdfExport';
 import { logAdminActivity } from '../utils/usersService';
 import { useUser } from '../context/UserContext';
 import './AttendanceAdmin.css';
-
-const formatDistance = (distanceMeters) => {
-  const distance = Number(distanceMeters);
-  if (!Number.isFinite(distance)) return 'Not recorded';
-  if (distance >= 1000) return `${(distance / 1000).toFixed(2)} km`;
-  return `${Math.round(distance)} m`;
-};
-
-const getVerificationLabel = (status) => {
-  if (status === 'passed') return 'Passed';
-  if (status === 'failed') return 'Failed';
-  if (status === 'partial') return 'Partial';
-  return 'Not recorded';
-};
-
-const getCheckLabel = (value) => {
-  if (value === true) return 'Passed';
-  if (value === false) return 'Failed';
-  return 'Not recorded';
-};
-
-const getAttendanceStatusLabel = (record) => {
-  if (record.timeIn && record.timeOut) return 'Completed';
-  if (record.timeIn) return 'Time In recorded';
-  return 'Not recorded';
-};
 
 const AttendanceAdmin = () => {
   const { currentUser } = useUser();
@@ -46,6 +25,8 @@ const AttendanceAdmin = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [exportMessage, setExportMessage] = useState(null);
 
   useEffect(() => {
     if (!selectedRecord) return undefined;
@@ -118,6 +99,11 @@ const AttendanceAdmin = () => {
     });
   }, [attendanceData, dateFilter, searchPersonal, searchQuery]);
 
+  // Any filter change makes a previous export notice stale.
+  useEffect(() => {
+    setExportMessage(null);
+  }, [dateFilter, searchPersonal, searchQuery]);
+
   const handleClearFilters = () => {
     setSearchPersonal('');
     setDateFilter(null);
@@ -168,47 +154,48 @@ const AttendanceAdmin = () => {
   };
 
   const exportToPDF = async () => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('Attendance Management Report', 14, 22);
-    doc.setFontSize(11);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-    const tableData = filteredAttendance.map((item, index) => [
-      index + 1,
-      item.name,
-      item.rank,
-      item.date,
-      item.timeIn || '--',
-      item.timeOut || '--'
-    ]);
-    doc.autoTable({
-      head: [['No.', 'Name', 'Rank', 'Date', 'Time In', 'Time Out']],
-      body: tableData,
-      startY: 35,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [214, 69, 61], // Ember red
-        textColor: [255, 255, 255],
-        fontStyle: 'bold'
-      },
-      styles: {
-        fontSize: 10,
-        cellPadding: 3
-      }
-    });
-    doc.save(`attendance_report_${new Date().toISOString().split('T')[0]}.pdf`);
+    if (isExportingPdf) return;
 
-    await logAdminActivity({
-      actorId: currentUser?.admin_id || null,
-      actorName: currentUser?.name || currentUser?.email || 'Admin User',
-      action: 'Attendance Export PDF',
-      actionType: 'export',
-      details: `Exported ${filteredAttendance.length} attendance record(s) to PDF.`,
-      metadata: {
-        format: 'pdf',
-        record_count: filteredAttendance.length
+    setExportMessage(null);
+    setIsExportingPdf(true);
+
+    try {
+      // Exports exactly what the table shows: the Search Personnel, header
+      // search and Date filters are already applied to filteredAttendance.
+      const result = await exportAttendancePdf({
+        records: filteredAttendance,
+        personnelSearch: searchPersonal || searchQuery,
+        dateFilter
+      });
+
+      if (!result.success) {
+        setExportMessage({ type: 'error', text: result.message });
+        return;
       }
-    });
+
+      await logAdminActivity({
+        actorId: currentUser?.admin_id || null,
+        actorName: currentUser?.name || currentUser?.email || 'Admin User',
+        action: 'Attendance Export PDF',
+        actionType: 'export',
+        details: `Exported ${result.recordCount} attendance record(s) to PDF.`,
+        metadata: {
+          format: 'pdf',
+          record_count: result.recordCount,
+          file_name: result.fileName,
+          personnel_search: searchPersonal || searchQuery || null,
+          date_filter: dateFilter ? dateFilter.toLocaleDateString() : null
+        }
+      });
+    } catch (error) {
+      console.error('Attendance PDF export failed:', error);
+      setExportMessage({
+        type: 'error',
+        text: error?.message || 'Failed to generate the attendance PDF. Please try again.'
+      });
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
   return (
@@ -223,8 +210,25 @@ const AttendanceAdmin = () => {
 
         <div className="attendance-admin-actions">
           <button className="export-csv-btn" onClick={exportToCSV}>Export CSV</button>
-          <button className="export-pdf-btn" onClick={exportToPDF}>Export PDF</button>
+          <button
+            type="button"
+            className="export-pdf-btn"
+            onClick={exportToPDF}
+            disabled={isExportingPdf}
+          >
+            {isExportingPdf ? 'Generating PDF...' : 'Export PDF'}
+          </button>
         </div>
+
+        {exportMessage && (
+          <div
+            className={`attendance-export-message ${exportMessage.type}`}
+            role="alert"
+            aria-live="assertive"
+          >
+            {exportMessage.text}
+          </div>
+        )}
 
         {loadError && <div className="signature-cell">{loadError}</div>}
 

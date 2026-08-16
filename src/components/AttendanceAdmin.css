@@ -67,8 +67,37 @@
   transition: background-color 0.3s;
 }
 
-.export-pdf-btn:hover {
+.export-pdf-btn:hover:not(:disabled) {
   background-color: #c82333;
+}
+
+.export-pdf-btn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.attendance-export-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -8px 0 20px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  border-left: 4px solid transparent;
+}
+
+.attendance-export-message.error {
+  background-color: #fdecea;
+  border-left-color: #d6453d;
+  color: #8f2a24;
+}
+
+.attendance-export-message.success {
+  background-color: #eaf7ef;
+  border-left-color: #28a745;
+  color: #1b6b34;
 }
 
 .export-btn {

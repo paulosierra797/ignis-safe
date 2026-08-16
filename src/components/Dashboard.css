@@ -735,7 +735,10 @@
   min-width: 0;
   font-size: 0.88rem;
   font-weight: 500;
-  line-height: 1.2;
+  /* Tall enough to contain Poppins' descenders, which the overflow rule
+     below would otherwise shave off ("g" in Learning, "y" in Analytics).
+     The item's 50px min-height absorbs this, so nothing reflows. */
+  line-height: 1.45;
   white-space: nowrap;
   /* Safety net: a label longer than the reserved space is clipped inside
      the item instead of bleeding over the scrollbar. */

@@ -9,6 +9,7 @@ import {
   FaClipboardList,
   FaFileAlt,
   FaHistory,
+  FaInfoCircle,
   FaQuestionCircle,
   FaSitemap,
   FaTachometerAlt,
@@ -191,6 +192,7 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
     { id: 'users', icon: FaUserCog, label: 'Users', path: '/dashboard/users', permission: 'manage_users' },
     { id: 'learning-materials', icon: FaBookOpen, label: 'Learning Materials', path: '/dashboard/learning-materials', permission: 'manage_users' },
     { id: 'assessment-questions', icon: FaQuestionCircle, label: 'Assessment Questions', path: '/dashboard/assessment-questions', permission: 'manage_users' },
+    { id: 'about-us', icon: FaInfoCircle, label: 'About Us Content', path: '/dashboard/about-us', permission: 'manage_users' },
     { id: 'audit-logs', icon: FaClipboardList, label: 'Audit Logs', path: '/dashboard/audit-logs', permission: 'view_audit_logs' },
   ];
 

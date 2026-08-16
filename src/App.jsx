@@ -36,6 +36,7 @@ const Chart = lazy(() => import('./components/Chart'));
 const Accounts = lazy(() => import('./components/Accounts'));
 const Progress = lazy(() => import('./components/Progress'));
 const AuditLogs = lazy(() => import('./components/AuditLogs'));
+const AboutUsContent = lazy(() => import('./components/AboutUsContent'));
 const Announcements = lazy(() => import('./components/Announcements'));
 const PersonnelProfile = lazy(() => import('./components/PersonnelProfile'));
 const AdminProfile = lazy(() => import('./components/AdminProfile'));
@@ -199,6 +200,7 @@ function App() {
               <Route path="/attendance-confirm" element={<AttendanceConfirm />} />
               <Route path="/dashboard/analytics" element={<ProtectedRoute allowedRoles={['admin']}><Analytics /></ProtectedRoute>} />
               <Route path="/dashboard/assessment-questions" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="manage_users"><AssessmentQuestions /></ProtectedRoute>} />
+              <Route path="/dashboard/about-us" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="manage_users"><AboutUsContent /></ProtectedRoute>} />
               <Route path="/dashboard/learning-materials" element={<ProtectedRoute allowedRoles={['admin']}><LearningMaterials /></ProtectedRoute>} />
               <Route path="/dashboard/chart" element={<ProtectedRoute allowedRoles={['admin']}><Chart /></ProtectedRoute>} />
               <Route path="/dashboard/accounts" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="view_accounts"><Accounts /></ProtectedRoute>} />

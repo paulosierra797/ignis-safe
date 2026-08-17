@@ -8,7 +8,7 @@
 .history-content {
   flex: 1;
   min-width: 0;
-  margin-left: 250px;
+  margin-left: var(--sidebar-width);
   padding: 0 3rem 2rem;
   height: 100vh;
   overflow-y: auto;

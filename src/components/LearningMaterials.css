@@ -11,7 +11,7 @@
 .learning-materials-main {
   flex: 1;
   min-width: 0;
-  margin-left: 250px;
+  margin-left: var(--sidebar-width);
   padding: 0 1.75rem 2rem;
   overflow-x: hidden;
 }
@@ -21,7 +21,7 @@
 }
 
 body.sidebar-collapsed .learning-materials-main {
-  margin-left: 72px;
+  margin-left: var(--sidebar-collapsed-width);
 }
 
 .learning-material-card,

@@ -8,7 +8,7 @@
 .aboutus-main {
   flex: 1;
   min-width: 0;
-  margin-left: 250px;
+  margin-left: var(--sidebar-width);
   padding: 0 2rem 3rem;
   overflow-x: hidden;
 }

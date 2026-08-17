@@ -14,6 +14,17 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Single source of truth for the sidebar footprint: the sidebar's own
+     width and the left offset every main content area uses to clear it.
+     Everything inside the sidebar (label font-size, gaps, padding) is
+     rem-based, so the rail is sized in rem too and keeps the same
+     proportional room for labels like "Assessment Questions" at any
+     browser text-size or zoom level. The px floor keeps the familiar
+     desktop width; the px ceiling stops the rail from swallowing the
+     page at very large text sizes. */
+  --sidebar-width: clamp(256px, 16.5rem, 360px);
+  --sidebar-collapsed-width: 72px;
 }
 
 html {
@@ -49,7 +60,7 @@ button {
 }
 
 body.sidebar-collapsed {
-  --sidebar-width: 72px;
+  --sidebar-width: var(--sidebar-collapsed-width);
 }
 
 a {

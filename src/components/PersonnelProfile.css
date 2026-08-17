@@ -400,7 +400,7 @@
 
 .personnel-profile-content {
   flex: 1;
-  margin-left: 250px;
+  margin-left: var(--sidebar-width);
   padding: 2rem 3rem;
   padding-top: calc(var(--profile-header-height, 96px) + 2rem);
   height: 100vh;
@@ -420,7 +420,7 @@
 .personnel-profile-header-fixed {
   position: fixed;
   top: 0;
-  left: 250px;
+  left: var(--sidebar-width);
   right: 0;
   z-index: 900;
   background-color: #ffffff;
@@ -435,7 +435,7 @@
 }
 
 body.sidebar-collapsed .personnel-profile-header-fixed {
-  left: 72px;
+  left: var(--sidebar-collapsed-width);
 }
 
 .profile-content {

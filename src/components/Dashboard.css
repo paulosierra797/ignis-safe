@@ -8,7 +8,7 @@
 
 .dashboard-main {
   flex: 1;
-  margin-left: 250px;
+  margin-left: var(--sidebar-width);
   padding: 2rem;
    color: #1f2937;
 }
@@ -612,7 +612,7 @@
 
 /* Sidebar Styles */
 .sidebar {
-  width: 250px;
+  width: var(--sidebar-width);
   background: linear-gradient(180deg, #B91C1C 0%, #7f1d1d 100%);
   color: white;
   padding: 0;
@@ -735,15 +735,14 @@
   min-width: 0;
   font-size: 0.88rem;
   font-weight: 500;
-  /* Tall enough to contain Poppins' descenders, which the overflow rule
-     below would otherwise shave off ("g" in Learning, "y" in Analytics).
-     The item's 50px min-height absorbs this, so nothing reflows. */
+  /* Tall enough to contain Poppins' descenders ("g" in Learning, "y" in
+     Analytics). The item's 50px min-height absorbs this, so nothing reflows. */
   line-height: 1.45;
-  white-space: nowrap;
-  /* Safety net: a label longer than the reserved space is clipped inside
-     the item instead of bleeding over the scrollbar. */
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Never truncate. The rail is sized in rem (see --sidebar-width) so every
+     label fits on one line at any normal text size; if a text size ever
+     outgrows the ceiling, the label wraps to a second line — which the
+     item's flexible height absorbs — instead of showing an ellipsis. */
+  overflow-wrap: break-word;
 }
 
 .nav-badge {
@@ -863,7 +862,7 @@
 }
 
 .sidebar--collapsed {
-  width: 72px;
+  width: var(--sidebar-collapsed-width);
 }
 
 .sidebar--collapsed .sidebar-header {
@@ -922,11 +921,11 @@ body.sidebar-collapsed .personnel-ops-content,
 body.sidebar-collapsed .personnel-profile-content,
 body.sidebar-collapsed .audit-logs-main,
 body.sidebar-collapsed .announcements-main {
-  margin-left: 72px !important;
+  margin-left: var(--sidebar-collapsed-width) !important;
 }
 
 body.sidebar-collapsed .sidebar {
-  width: 72px !important;
+  width: var(--sidebar-collapsed-width) !important;
 }
 
 body.sidebar-collapsed .sidebar-header {
@@ -969,7 +968,9 @@ body.sidebar-collapsed .nav-section {
     left: 0;
     height: 100vh;
     z-index: 1600;
-    width: 250px;
+    /* Same rail width as desktop, but never wide enough to cover the whole
+       screen on a small phone. */
+    width: min(var(--sidebar-width), 85vw);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;

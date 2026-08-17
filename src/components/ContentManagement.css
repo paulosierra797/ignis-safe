@@ -7,7 +7,7 @@
 
 .content-management-main {
   flex: 1;
-  margin-left: 250px;
+  margin-left: var(--sidebar-width);
   padding: 2rem;
   display: grid;
   gap: 1.2rem;

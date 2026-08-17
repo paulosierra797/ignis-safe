@@ -9,7 +9,7 @@
   --page-header-gutter-y: 30px;
   flex: 1;
   padding: 30px 40px;
-  margin-left: 250px;
+  margin-left: var(--sidebar-width);
 }
 
 @media (max-width: 900px) {

@@ -8,7 +8,7 @@
 
 .personnel-ops-content {
   flex: 1;
-  margin-left: 250px;
+  margin-left: var(--sidebar-width);
   padding: 2rem 3rem;
 }
 

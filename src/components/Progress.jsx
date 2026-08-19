@@ -12,13 +12,14 @@ import {
   FiMail,
   FiMapPin,
   FiPlayCircle,
+  FiStar,
   FiUser,
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import './Progress.css';
-import { getProgressPageData } from '../utils/progressService';
+import { getProgressPageData, getUserFeedback } from '../utils/progressService';
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -106,6 +107,8 @@ export default function Progress() {
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [expandedTests, setExpandedTests] = useState({});
+  const [userFeedback, setUserFeedback] = useState([]);
+  const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
   const completionBlurTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -197,7 +200,30 @@ export default function Progress() {
     setShowModal(false);
     setSelectedUser(null);
     setExpandedTests({});
+    setUserFeedback([]);
   };
+
+  useEffect(() => {
+    if (!showModal || !selectedUser?.id) return undefined;
+
+    let isMounted = true;
+
+    const loadFeedback = async () => {
+      setIsFeedbackLoading(true);
+
+      const { data } = await getUserFeedback(selectedUser.id);
+      if (!isMounted) return;
+
+      setUserFeedback(data);
+      setIsFeedbackLoading(false);
+    };
+
+    loadFeedback();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showModal, selectedUser?.id]);
 
   const toggleTestExpanded = (moduleName) => {
     setExpandedTests(prev => ({
@@ -637,6 +663,33 @@ export default function Progress() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div className="progress-modal-full">
+                  <h4><FiStar className="progress-modal-section-icon" aria-hidden="true" />User Feedback</h4>
+                  {isFeedbackLoading ? (
+                    <p className="progress-modal-feedback-empty">Loading feedback...</p>
+                  ) : userFeedback.length === 0 ? (
+                    <p className="progress-modal-feedback-empty">No feedback submitted yet.</p>
+                  ) : (
+                    <div className="progress-modal-feedback-list">
+                      {userFeedback.map((item) => (
+                        <div key={item.id} className="progress-modal-feedback-card">
+                          <div className="progress-modal-feedback-header">
+                            <span className="progress-modal-feedback-rating">
+                              <FiStar aria-hidden="true" /> {item.rating} / 5
+                            </span>
+                            <span className="progress-modal-feedback-date">
+                              {formatLongDate(item.created_at)}
+                            </span>
+                          </div>
+                          <p className="progress-modal-feedback-comment">
+                            {item.comment && item.comment.trim() ? item.comment : 'No comment provided.'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

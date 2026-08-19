@@ -113,6 +113,23 @@ const buildModuleProgress = ({ profileId, module, moduleProgressRow, attemptsFor
   };
 };
 
+export const getUserFeedback = async (userId) => {
+  if (!userId) return { data: [], error: null };
+
+  const { data, error } = await supabase
+    .from('user_feedback')
+    .select('id, rating, comment, created_at')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching user feedback:', error);
+    return { data: [], error: error.message };
+  }
+
+  return { data: data || [], error: null };
+};
+
 export const getProgressPageData = async () => {
   try {
     const [

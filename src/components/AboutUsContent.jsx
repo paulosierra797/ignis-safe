@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   FiPlus, FiEdit2, FiTrash2, FiArrowUp, FiArrowDown, FiSave, FiX,
   FiChevronDown, FiChevronRight
@@ -10,11 +10,44 @@ import './AppDialog.css';
 import { useUser } from '../context/UserContext';
 import { logAdminActivity } from '../utils/usersService';
 import * as aboutUsService from '../utils/aboutUsService';
+import UnsavedChangesPrompt from './UnsavedChangesPrompt';
 
 const nextOrder = (rows = []) => rows.reduce(
   (max, row) => Math.max(max, Number(row.display_order) || 0),
   0
 ) + 1;
+
+const SAVE_SUCCESS_MESSAGE = 'Changes saved successfully.';
+const UNSAVED_TITLE = 'Unsaved Changes';
+const UNSAVED_MESSAGE = 'You have unsaved changes. If you leave this page, your changes will be lost.';
+
+// A NULL column and a field the admin cleared both render as an empty input
+// (every field here is bound as `value || ''`), so treat them as equal -
+// otherwise clearing an already-empty field would look like an edit.
+const isEmptyValue = (value) => value === null || value === undefined || value === '';
+
+const sameFieldValue = (a, b) => {
+  if (isEmptyValue(a) && isEmptyValue(b)) return true;
+  return Object.is(a, b);
+};
+
+// Compares a form against the exact snapshot it was seeded with - the row
+// Supabase returned, or the blank defaults of an "add" row. Loading and
+// re-rendering never change a value, so neither ever reports dirty.
+const isFormDirty = (form, baseline) => {
+  if (!form || !baseline) return false;
+  const keys = new Set([...Object.keys(form), ...Object.keys(baseline)]);
+  return [...keys].some((key) => !sameFieldValue(form[key], baseline[key]));
+};
+
+// Each card publishes its own dirty flag to the page shell, which owns the
+// single navigation blocker for the whole About Us screen.
+function useReportDirty(reportDirty, scope, dirty) {
+  useEffect(() => {
+    reportDirty(scope, dirty);
+    return () => reportDirty(scope, false);
+  }, [reportDirty, scope, dirty]);
+}
 
 const logAboutUsActivity = (currentUser, action, details) => {
   logAdminActivity({
@@ -163,6 +196,9 @@ function useEditableList({
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null); // null | 'new' | <id>
   const [form, setForm] = useState({});
+  // The row (or blank defaults) the open editor started from, so "dirty" means
+  // "differs from the last saved Supabase value", not "an editor is open".
+  const [formBaseline, setFormBaseline] = useState(null);
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null);
 
@@ -186,9 +222,14 @@ function useEditableList({
   }, []);
 
   const setField = (key, value) => setForm((current) => ({ ...current, [key]: value }));
-  const startAdd = (defaults = {}) => { setEditingId('new'); setForm(defaults); };
-  const startEdit = (row) => { setEditingId(getId(row)); setForm(mapToForm(row)); };
-  const cancelEdit = () => { setEditingId(null); setForm({}); };
+  const startAdd = (defaults = {}) => { setEditingId('new'); setForm(defaults); setFormBaseline(defaults); };
+  const startEdit = (row) => {
+    const initial = mapToForm(row);
+    setEditingId(getId(row));
+    setForm(initial);
+    setFormBaseline(initial);
+  };
+  const cancelEdit = () => { setEditingId(null); setForm({}); setFormBaseline(null); };
 
   const save = async () => {
     setBusy(true);
@@ -201,7 +242,7 @@ function useEditableList({
       return false;
     }
 
-    notify('success', `${entityLabel} ${isNew ? 'added' : 'updated'}.`);
+    notify('success', SAVE_SUCCESS_MESSAGE);
     cancelEdit();
     await refresh();
     return true;
@@ -239,8 +280,10 @@ function useEditableList({
     await refresh();
   };
 
+  const isDirty = editingId !== null && isFormDirty(form, formBaseline);
+
   return {
-    rows, loading, editingId, form, busy, pendingDelete,
+    rows, loading, editingId, form, busy, pendingDelete, isDirty,
     setField, startAdd, startEdit, cancelEdit, save,
     confirmDelete, cancelDeleteRequest, doDelete, move, refresh
   };
@@ -252,6 +295,9 @@ function useEditableList({
 
 function useSingletonForm({ load, update, notify, entityLabel }) {
   const [form, setForm] = useState(null);
+  // Last known Supabase values. Only a successful save moves this forward, so a
+  // failed save keeps the edited values on screen and still reads as dirty.
+  const [baseline, setBaseline] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -262,6 +308,7 @@ function useSingletonForm({ load, update, notify, entityLabel }) {
       if (!isMounted) return;
       if (error) notify('error', `Failed to load ${entityLabel}: ${error}`);
       setForm(data || {});
+      setBaseline(data || {});
       setLoading(false);
     })();
     return () => { isMounted = false; };
@@ -281,18 +328,21 @@ function useSingletonForm({ load, update, notify, entityLabel }) {
     }
 
     setForm(data);
-    notify('success', `${entityLabel} saved.`);
+    setBaseline(data);
+    notify('success', SAVE_SUCCESS_MESSAGE);
     return true;
   };
 
-  return { form, loading, saving, setField, save };
+  const isDirty = isFormDirty(form, baseline);
+
+  return { form, loading, saving, isDirty, setField, save };
 }
 
 // ---------------------------------------------------------------------------
 // Card 1 — IGNIS SAFE
 // ---------------------------------------------------------------------------
 
-function IgnisSafeCard({ currentUser, notify }) {
+function IgnisSafeCard({ currentUser, notify, reportDirty, requestSave }) {
   const ignis = useSingletonForm({
     load: aboutUsService.getIgnis,
     update: aboutUsService.updateIgnis,
@@ -336,6 +386,8 @@ function IgnisSafeCard({ currentUser, notify }) {
     const saved = await ignis.save();
     if (saved) logAboutUsActivity(currentUser, 'About Us Content Updated', 'Updated IGNIS SAFE overview content.');
   };
+
+  useReportDirty(reportDirty, 'ignis-safe', ignis.isDirty || chips.isDirty || meanings.isDirty);
 
   return (
     <section id="ignis-safe" className="aboutus-card">
@@ -392,7 +444,7 @@ function IgnisSafeCard({ currentUser, notify }) {
           </div>
 
           <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={handleSaveIgnis} disabled={ignis.saving}>
+            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSaveIgnis)} disabled={ignis.saving}>
               <FiSave aria-hidden="true" /> {ignis.saving ? 'Saving...' : 'Save IGNIS SAFE content'}
             </button>
           </div>
@@ -408,7 +460,7 @@ function IgnisSafeCard({ currentUser, notify }) {
         </div>
 
         {chips.editingId === 'new' && (
-          <ChipEditRow form={chips.form} setField={chips.setField} onSave={chips.save} onCancel={chips.cancelEdit} busy={chips.busy} />
+          <ChipEditRow form={chips.form} setField={chips.setField} onSave={() => requestSave(chips.save)} onCancel={chips.cancelEdit} busy={chips.busy} />
         )}
 
         {chips.loading ? <div className="aboutus-loading">Loading...</div> : (
@@ -416,7 +468,7 @@ function IgnisSafeCard({ currentUser, notify }) {
             {chips.rows.map((row, index) => (
               <li key={row.id} className="aboutus-item-row">
                 {chips.editingId === row.id ? (
-                  <ChipEditRow form={chips.form} setField={chips.setField} onSave={chips.save} onCancel={chips.cancelEdit} busy={chips.busy} />
+                  <ChipEditRow form={chips.form} setField={chips.setField} onSave={() => requestSave(chips.save)} onCancel={chips.cancelEdit} busy={chips.busy} />
                 ) : (
                   <>
                     <div className="aboutus-item-summary">
@@ -457,7 +509,7 @@ function IgnisSafeCard({ currentUser, notify }) {
         </div>
 
         {meanings.editingId === 'new' && (
-          <NameMeaningEditRow form={meanings.form} setField={meanings.setField} onSave={meanings.save} onCancel={meanings.cancelEdit} busy={meanings.busy} />
+          <NameMeaningEditRow form={meanings.form} setField={meanings.setField} onSave={() => requestSave(meanings.save)} onCancel={meanings.cancelEdit} busy={meanings.busy} />
         )}
 
         {meanings.loading ? <div className="aboutus-loading">Loading...</div> : (
@@ -465,7 +517,7 @@ function IgnisSafeCard({ currentUser, notify }) {
             {meanings.rows.map((row, index) => (
               <li key={row.id} className="aboutus-item-row">
                 {meanings.editingId === row.id ? (
-                  <NameMeaningEditRow form={meanings.form} setField={meanings.setField} onSave={meanings.save} onCancel={meanings.cancelEdit} busy={meanings.busy} />
+                  <NameMeaningEditRow form={meanings.form} setField={meanings.setField} onSave={() => requestSave(meanings.save)} onCancel={meanings.cancelEdit} busy={meanings.busy} />
                 ) : (
                   <>
                     <div className="aboutus-item-summary">
@@ -534,7 +586,7 @@ function NameMeaningEditRow({ form, setField, onSave, onCancel, busy }) {
 // Card 2 — Developers & Adviser
 // ---------------------------------------------------------------------------
 
-function DevelopersCard({ currentUser, notify }) {
+function DevelopersCard({ currentUser, notify, reportDirty, requestSave }) {
   const team = useEditableList({
     load: aboutUsService.listTeamMembers,
     create: (form, rows) => aboutUsService.createTeamMember({
@@ -561,6 +613,8 @@ function DevelopersCard({ currentUser, notify }) {
     email: '', bio_en: '', bio_tl: '', asset_path: '', linkedin_url: '', is_active: true
   };
 
+  useReportDirty(reportDirty, 'developers', team.isDirty);
+
   return (
     <section id="developers" className="aboutus-card">
       <header className="aboutus-card-header">
@@ -576,7 +630,7 @@ function DevelopersCard({ currentUser, notify }) {
       </header>
 
       {team.editingId === 'new' && (
-        <TeamMemberEditRow form={team.form} setField={team.setField} onSave={team.save} onCancel={team.cancelEdit} busy={team.busy} />
+        <TeamMemberEditRow form={team.form} setField={team.setField} onSave={() => requestSave(team.save)} onCancel={team.cancelEdit} busy={team.busy} />
       )}
 
       {team.loading ? <div className="aboutus-loading">Loading...</div> : (
@@ -584,7 +638,7 @@ function DevelopersCard({ currentUser, notify }) {
           {team.rows.map((row, index) => (
             <li key={row.id} className="aboutus-item-row">
               {team.editingId === row.id ? (
-                <TeamMemberEditRow form={team.form} setField={team.setField} onSave={team.save} onCancel={team.cancelEdit} busy={team.busy} />
+                <TeamMemberEditRow form={team.form} setField={team.setField} onSave={() => requestSave(team.save)} onCancel={team.cancelEdit} busy={team.busy} />
               ) : (
                 <>
                   <div className="aboutus-item-summary">
@@ -647,7 +701,7 @@ function TeamMemberEditRow({ form, setField, onSave, onCancel, busy }) {
 // Card 3 — BFP Dasmariñas
 // ---------------------------------------------------------------------------
 
-function PartnerCard({ currentUser, notify }) {
+function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
   const partner = useSingletonForm({
     load: aboutUsService.getPartnerInfo,
     update: aboutUsService.updatePartnerInfo,
@@ -676,6 +730,8 @@ function PartnerCard({ currentUser, notify }) {
     const saved = await partner.save();
     if (saved) logAboutUsActivity(currentUser, 'About Us Content Updated', 'Updated BFP Dasmariñas station content.');
   };
+
+  useReportDirty(reportDirty, 'bfp-dasmarinas', partner.isDirty || numbers.isDirty);
 
   return (
     <section id="bfp-dasmarinas" className="aboutus-card">
@@ -719,7 +775,7 @@ function PartnerCard({ currentUser, notify }) {
           </div>
 
           <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={handleSavePartner} disabled={partner.saving}>
+            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSavePartner)} disabled={partner.saving}>
               <FiSave aria-hidden="true" /> {partner.saving ? 'Saving...' : 'Save BFP Dasmariñas content'}
             </button>
           </div>
@@ -738,7 +794,7 @@ function PartnerCard({ currentUser, notify }) {
         </p>
 
         {numbers.editingId === 'new' && (
-          <ContactNumberEditRow form={numbers.form} setField={numbers.setField} onSave={numbers.save} onCancel={numbers.cancelEdit} busy={numbers.busy} />
+          <ContactNumberEditRow form={numbers.form} setField={numbers.setField} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
         )}
 
         {numbers.loading ? <div className="aboutus-loading">Loading...</div> : (
@@ -746,7 +802,7 @@ function PartnerCard({ currentUser, notify }) {
             {numbers.rows.map((row, index) => (
               <li key={row.contact_key} className="aboutus-item-row">
                 {numbers.editingId === row.contact_key ? (
-                  <ContactNumberEditRow form={numbers.form} setField={numbers.setField} onSave={numbers.save} onCancel={numbers.cancelEdit} busy={numbers.busy} />
+                  <ContactNumberEditRow form={numbers.form} setField={numbers.setField} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
                 ) : (
                   <>
                     <div className="aboutus-item-summary">
@@ -799,7 +855,7 @@ function ContactNumberEditRow({ form, setField, onSave, onCancel, busy }) {
 // Card 4 — Emergency Contacts
 // ---------------------------------------------------------------------------
 
-function EmergencyCard({ currentUser, notify }) {
+function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
   const emergency = useSingletonForm({
     load: aboutUsService.getEmergencyInfo,
     update: aboutUsService.updateEmergencyInfo,
@@ -830,6 +886,8 @@ function EmergencyCard({ currentUser, notify }) {
     if (saved) logAboutUsActivity(currentUser, 'About Us Content Updated', 'Updated Emergency Contacts content.');
   };
 
+  useReportDirty(reportDirty, 'emergency-contacts', emergency.isDirty || numbers.isDirty);
+
   return (
     <section id="emergency-contacts" className="aboutus-card">
       <header className="aboutus-card-header">
@@ -851,7 +909,7 @@ function EmergencyCard({ currentUser, notify }) {
           </div>
 
           <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={handleSaveEmergency} disabled={emergency.saving}>
+            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSaveEmergency)} disabled={emergency.saving}>
               <FiSave aria-hidden="true" /> {emergency.saving ? 'Saving...' : 'Save Emergency Contacts content'}
             </button>
           </div>
@@ -870,7 +928,7 @@ function EmergencyCard({ currentUser, notify }) {
         </p>
 
         {numbers.editingId === 'new' && (
-          <EmergencyNumberEditRow form={numbers.form} setField={numbers.setField} onSave={numbers.save} onCancel={numbers.cancelEdit} busy={numbers.busy} />
+          <EmergencyNumberEditRow form={numbers.form} setField={numbers.setField} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
         )}
 
         {numbers.loading ? <div className="aboutus-loading">Loading...</div> : (
@@ -878,7 +936,7 @@ function EmergencyCard({ currentUser, notify }) {
             {numbers.rows.map((row, index) => (
               <li key={row.id} className="aboutus-item-row">
                 {numbers.editingId === row.id ? (
-                  <EmergencyNumberEditRow form={numbers.form} setField={numbers.setField} onSave={numbers.save} onCancel={numbers.cancelEdit} busy={numbers.busy} />
+                  <EmergencyNumberEditRow form={numbers.form} setField={numbers.setField} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
                 ) : (
                   <>
                     <div className="aboutus-item-summary">
@@ -935,7 +993,7 @@ function EmergencyNumberEditRow({ form, setField, onSave, onCancel, busy }) {
 // Card 5 — Cavite BFP Directory (groups -> entries -> phones)
 // ---------------------------------------------------------------------------
 
-function DirectoryCard({ currentUser, notify }) {
+function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   const info = useSingletonForm({
     load: aboutUsService.getDirectoryInfo,
     update: aboutUsService.updateDirectoryInfo,
@@ -948,12 +1006,17 @@ function DirectoryCard({ currentUser, notify }) {
   const [expandedGroup, setExpandedGroup] = useState(null);
   const [expandedEntry, setExpandedEntry] = useState(null);
 
+  // Each open editor keeps the snapshot it started from alongside its form, so
+  // dirty means "differs from the last saved Supabase value" here too.
   const [groupEditing, setGroupEditing] = useState(null); // null | 'new' | group_key
   const [groupForm, setGroupForm] = useState({});
+  const [groupBaseline, setGroupBaseline] = useState(null);
   const [entryEditing, setEntryEditing] = useState(null); // { groupKey, entryKey|'new' } | null
   const [entryForm, setEntryForm] = useState({});
+  const [entryBaseline, setEntryBaseline] = useState(null);
   const [phoneEditing, setPhoneEditing] = useState(null); // { entryKey, id|'new' } | null
   const [phoneForm, setPhoneForm] = useState({});
+  const [phoneBaseline, setPhoneBaseline] = useState(null);
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(null); // { kind, ...refs, label }
 
@@ -978,9 +1041,18 @@ function DirectoryCard({ currentUser, notify }) {
   };
 
   // --- groups ---
-  const startAddGroup = () => { setGroupEditing('new'); setGroupForm({ title_en: '', title_tl: '', is_active: true }); };
-  const startEditGroup = (group) => { setGroupEditing(group.group_key); setGroupForm({ ...group }); };
-  const cancelGroupEdit = () => { setGroupEditing(null); setGroupForm({}); };
+  const startAddGroup = () => {
+    const defaults = { title_en: '', title_tl: '', is_active: true };
+    setGroupEditing('new');
+    setGroupForm(defaults);
+    setGroupBaseline(defaults);
+  };
+  const startEditGroup = (group) => {
+    setGroupEditing(group.group_key);
+    setGroupForm({ ...group });
+    setGroupBaseline({ ...group });
+  };
+  const cancelGroupEdit = () => { setGroupEditing(null); setGroupForm({}); setGroupBaseline(null); };
 
   const saveGroup = async () => {
     setBusy(true);
@@ -991,7 +1063,7 @@ function DirectoryCard({ currentUser, notify }) {
     setBusy(false);
 
     if (error) { notify('error', `Failed to save district/group: ${error}`); return; }
-    notify('success', `District/group ${isNew ? 'added' : 'updated'}.`);
+    notify('success', SAVE_SUCCESS_MESSAGE);
     cancelGroupEdit();
     await refreshTree();
   };
@@ -1005,9 +1077,18 @@ function DirectoryCard({ currentUser, notify }) {
   };
 
   // --- entries ---
-  const startAddEntry = (groupKey) => { setEntryEditing({ groupKey, entryKey: 'new' }); setEntryForm({ name_en: '', name_tl: '', email: '', is_active: true }); };
-  const startEditEntry = (groupKey, entry) => { setEntryEditing({ groupKey, entryKey: entry.entry_key }); setEntryForm({ ...entry }); };
-  const cancelEntryEdit = () => { setEntryEditing(null); setEntryForm({}); };
+  const startAddEntry = (groupKey) => {
+    const defaults = { name_en: '', name_tl: '', email: '', is_active: true };
+    setEntryEditing({ groupKey, entryKey: 'new' });
+    setEntryForm(defaults);
+    setEntryBaseline(defaults);
+  };
+  const startEditEntry = (groupKey, entry) => {
+    setEntryEditing({ groupKey, entryKey: entry.entry_key });
+    setEntryForm({ ...entry });
+    setEntryBaseline({ ...entry });
+  };
+  const cancelEntryEdit = () => { setEntryEditing(null); setEntryForm({}); setEntryBaseline(null); };
 
   const saveEntry = async () => {
     if (!entryEditing) return;
@@ -1027,7 +1108,7 @@ function DirectoryCard({ currentUser, notify }) {
     setBusy(false);
 
     if (error) { notify('error', `Failed to save station: ${error}`); return; }
-    notify('success', `Station ${isNew ? 'added' : 'updated'}.`);
+    notify('success', SAVE_SUCCESS_MESSAGE);
     cancelEntryEdit();
     await refreshTree();
   };
@@ -1041,9 +1122,18 @@ function DirectoryCard({ currentUser, notify }) {
   };
 
   // --- phones ---
-  const startAddPhone = (entryKey) => { setPhoneEditing({ entryKey, id: 'new' }); setPhoneForm({ display_value: '', dial_value: '' }); };
-  const startEditPhone = (entryKey, phone) => { setPhoneEditing({ entryKey, id: phone.id }); setPhoneForm({ ...phone }); };
-  const cancelPhoneEdit = () => { setPhoneEditing(null); setPhoneForm({}); };
+  const startAddPhone = (entryKey) => {
+    const defaults = { display_value: '', dial_value: '' };
+    setPhoneEditing({ entryKey, id: 'new' });
+    setPhoneForm(defaults);
+    setPhoneBaseline(defaults);
+  };
+  const startEditPhone = (entryKey, phone) => {
+    setPhoneEditing({ entryKey, id: phone.id });
+    setPhoneForm({ ...phone });
+    setPhoneBaseline({ ...phone });
+  };
+  const cancelPhoneEdit = () => { setPhoneEditing(null); setPhoneForm({}); setPhoneBaseline(null); };
 
   const savePhone = async () => {
     if (!phoneEditing) return;
@@ -1061,7 +1151,7 @@ function DirectoryCard({ currentUser, notify }) {
     setBusy(false);
 
     if (error) { notify('error', `Failed to save phone number: ${error}`); return; }
-    notify('success', `Phone number ${isNew ? 'added' : 'updated'}.`);
+    notify('success', SAVE_SUCCESS_MESSAGE);
     cancelPhoneEdit();
     await refreshTree();
   };
@@ -1097,6 +1187,15 @@ function DirectoryCard({ currentUser, notify }) {
     await refreshTree();
   };
 
+  useReportDirty(
+    reportDirty,
+    'cavite-directory',
+    info.isDirty
+      || (groupEditing !== null && isFormDirty(groupForm, groupBaseline))
+      || (Boolean(entryEditing) && isFormDirty(entryForm, entryBaseline))
+      || (Boolean(phoneEditing) && isFormDirty(phoneForm, phoneBaseline))
+  );
+
   return (
     <section id="cavite-directory" className="aboutus-card">
       <header className="aboutus-card-header">
@@ -1117,7 +1216,7 @@ function DirectoryCard({ currentUser, notify }) {
               onChangeEn={(v) => info.setField('no_results_en', v)} onChangeTl={(v) => info.setField('no_results_tl', v)} />
           </div>
           <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={handleSaveInfo} disabled={info.saving}>
+            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSaveInfo)} disabled={info.saving}>
               <FiSave aria-hidden="true" /> {info.saving ? 'Saving...' : 'Save directory content'}
             </button>
           </div>
@@ -1138,7 +1237,7 @@ function DirectoryCard({ currentUser, notify }) {
               onChangeEn={(v) => setGroupForm((f) => ({ ...f, title_en: v }))} onChangeTl={(v) => setGroupForm((f) => ({ ...f, title_tl: v }))} />
             <div className="aboutus-edit-row-actions">
               <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelGroupEdit} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-              <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={saveGroup} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
+              <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveGroup)} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         )}
@@ -1156,7 +1255,7 @@ function DirectoryCard({ currentUser, notify }) {
                       <ActiveCheckbox checked={groupForm.is_active} onChange={(v) => setGroupForm((f) => ({ ...f, is_active: v }))} />
                       <div className="aboutus-edit-row-actions">
                         <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelGroupEdit} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-                        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={saveGroup} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
+                        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveGroup)} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
                       </div>
                     </div>
                   ) : (
@@ -1193,7 +1292,7 @@ function DirectoryCard({ currentUser, notify }) {
                       </div>
 
                       {entryEditing?.groupKey === group.group_key && entryEditing.entryKey === 'new' && (
-                        <EntryEditRow form={entryForm} setForm={setEntryForm} onSave={saveEntry} onCancel={cancelEntryEdit} busy={busy} />
+                        <EntryEditRow form={entryForm} setForm={setEntryForm} onSave={() => requestSave(saveEntry)} onCancel={cancelEntryEdit} busy={busy} />
                       )}
 
                       <ul className="aboutus-directory-entry-list">
@@ -1202,7 +1301,7 @@ function DirectoryCard({ currentUser, notify }) {
                           return (
                             <li key={entry.entry_key} className="aboutus-directory-entry">
                               {entryEditing?.groupKey === group.group_key && entryEditing.entryKey === entry.entry_key ? (
-                                <EntryEditRow form={entryForm} setForm={setEntryForm} onSave={saveEntry} onCancel={cancelEntryEdit} busy={busy} />
+                                <EntryEditRow form={entryForm} setForm={setEntryForm} onSave={() => requestSave(saveEntry)} onCancel={cancelEntryEdit} busy={busy} />
                               ) : (
                                 <div className="aboutus-item-row">
                                   <button type="button" className="aboutus-directory-toggle" onClick={() => setExpandedEntry(entryExpanded ? null : entry.entry_key)}>
@@ -1238,14 +1337,14 @@ function DirectoryCard({ currentUser, notify }) {
                                   </div>
 
                                   {phoneEditing?.entryKey === entry.entry_key && phoneEditing.id === 'new' && (
-                                    <PhoneEditRow form={phoneForm} setForm={setPhoneForm} onSave={savePhone} onCancel={cancelPhoneEdit} busy={busy} />
+                                    <PhoneEditRow form={phoneForm} setForm={setPhoneForm} onSave={() => requestSave(savePhone)} onCancel={cancelPhoneEdit} busy={busy} />
                                   )}
 
                                   <ul className="aboutus-directory-phone-list">
                                     {entry.phones.map((phone, phoneIndex) => (
                                       <li key={phone.id} className="aboutus-item-row aboutus-item-row-compact">
                                         {phoneEditing?.entryKey === entry.entry_key && phoneEditing.id === phone.id ? (
-                                          <PhoneEditRow form={phoneForm} setForm={setPhoneForm} onSave={savePhone} onCancel={cancelPhoneEdit} busy={busy} />
+                                          <PhoneEditRow form={phoneForm} setForm={setPhoneForm} onSave={() => requestSave(savePhone)} onCancel={cancelPhoneEdit} busy={busy} />
                                         ) : (
                                           <>
                                             <div className="aboutus-item-summary">
@@ -1342,7 +1441,7 @@ function PhoneEditRow({ form, setForm, onSave, onCancel, busy }) {
 // Card 6 — General About Us UI texts (sections + ui texts)
 // ---------------------------------------------------------------------------
 
-function GeneralTextsCard({ currentUser, notify }) {
+function GeneralTextsCard({ currentUser, notify, reportDirty, requestSave }) {
   const sections = useEditableList({
     load: aboutUsService.listSections,
     create: async () => ({ error: 'Adding new sections is not supported.' }),
@@ -1361,6 +1460,7 @@ function GeneralTextsCard({ currentUser, notify }) {
   const [loadingTexts, setLoadingTexts] = useState(true);
   const [textEditingKey, setTextEditingKey] = useState(null);
   const [textForm, setTextForm] = useState({});
+  const [textBaseline, setTextBaseline] = useState(null);
   const [textBusy, setTextBusy] = useState(false);
   const [textSearch, setTextSearch] = useState('');
 
@@ -1374,8 +1474,8 @@ function GeneralTextsCard({ currentUser, notify }) {
     })();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const startEditText = (row) => { setTextEditingKey(row.key); setTextForm({ ...row }); };
-  const cancelEditText = () => { setTextEditingKey(null); setTextForm({}); };
+  const startEditText = (row) => { setTextEditingKey(row.key); setTextForm({ ...row }); setTextBaseline({ ...row }); };
+  const cancelEditText = () => { setTextEditingKey(null); setTextForm({}); setTextBaseline(null); };
 
   const saveText = async () => {
     setTextBusy(true);
@@ -1383,11 +1483,17 @@ function GeneralTextsCard({ currentUser, notify }) {
     setTextBusy(false);
 
     if (error) { notify('error', `Failed to save UI text: ${error}`); return; }
-    notify('success', 'UI text saved.');
+    notify('success', SAVE_SUCCESS_MESSAGE);
     setUiTexts((rows) => rows.map((row) => (row.key === textEditingKey ? { ...row, text_en: textForm.text_en, text_tl: textForm.text_tl } : row)));
     cancelEditText();
     logAboutUsActivity(currentUser, 'About Us Content Updated', `Updated the "${textEditingKey}" UI text.`);
   };
+
+  useReportDirty(
+    reportDirty,
+    'general-texts',
+    sections.isDirty || (textEditingKey !== null && isFormDirty(textForm, textBaseline))
+  );
 
   const filteredTexts = textSearch.trim()
     ? uiTexts.filter((row) => `${row.key} ${row.text_en} ${row.text_tl}`.toLowerCase().includes(textSearch.trim().toLowerCase()))
@@ -1416,7 +1522,7 @@ function GeneralTextsCard({ currentUser, notify }) {
                     <ActiveCheckbox checked={sections.form.is_active} onChange={(v) => sections.setField('is_active', v)} />
                     <div className="aboutus-edit-row-actions">
                       <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={sections.cancelEdit} disabled={sections.busy}><FiX aria-hidden="true" /> Cancel</button>
-                      <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={sections.save} disabled={sections.busy}><FiSave aria-hidden="true" /> {sections.busy ? 'Saving...' : 'Save'}</button>
+                      <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(sections.save)} disabled={sections.busy}><FiSave aria-hidden="true" /> {sections.busy ? 'Saving...' : 'Save'}</button>
                     </div>
                   </div>
                 ) : (
@@ -1461,7 +1567,7 @@ function GeneralTextsCard({ currentUser, notify }) {
                       onChangeEn={(v) => setTextForm((f) => ({ ...f, text_en: v }))} onChangeTl={(v) => setTextForm((f) => ({ ...f, text_tl: v }))} />
                     <div className="aboutus-edit-row-actions">
                       <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelEditText} disabled={textBusy}><FiX aria-hidden="true" /> Cancel</button>
-                      <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={saveText} disabled={textBusy}><FiSave aria-hidden="true" /> {textBusy ? 'Saving...' : 'Save'}</button>
+                      <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveText)} disabled={textBusy}><FiSave aria-hidden="true" /> {textBusy ? 'Saving...' : 'Save'}</button>
                     </div>
                   </div>
                 ) : (
@@ -1490,6 +1596,44 @@ function GeneralTextsCard({ currentUser, notify }) {
 // Page shell
 // ---------------------------------------------------------------------------
 
+function ConfirmSaveModal({ busy, onCancel, onConfirm }) {
+  return (
+    <div
+      className="app-unsaved-overlay"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="aboutusSaveTitle"
+      aria-describedby="aboutusSaveMessage"
+    >
+      <div className="app-unsaved-dialog">
+        <div className="app-unsaved-icon" aria-hidden="true">?</div>
+        <h2 id="aboutusSaveTitle" className="app-unsaved-title">Save Changes?</h2>
+        <p id="aboutusSaveMessage" className="app-unsaved-message">
+          Are you sure you want to save these changes? The updated content will be reflected in the IGNIS SAFE mobile app.
+        </p>
+        <div className="app-unsaved-actions">
+          <button
+            type="button"
+            className="app-unsaved-button app-unsaved-button--cancel"
+            onClick={onCancel}
+            disabled={busy}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="app-unsaved-button app-unsaved-button--save"
+            onClick={onConfirm}
+            disabled={busy}
+          >
+            {busy ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const QUICK_NAV_ITEMS = [
   { id: 'ignis-safe', label: 'IGNIS SAFE' },
   { id: 'developers', label: 'Developers & Adviser' },
@@ -1502,8 +1646,40 @@ const QUICK_NAV_ITEMS = [
 export default function AboutUsContent() {
   const { currentUser } = useUser();
   const [message, setMessage] = useState({ type: '', text: '' });
+  // Dirty flags keyed by card id; any truthy entry means something on this page
+  // has not reached Supabase yet.
+  const [dirtyScopes, setDirtyScopes] = useState({});
+  const [pendingSave, setPendingSave] = useState(null);
+  const [confirmingSave, setConfirmingSave] = useState(false);
 
   const notify = (type, text) => setMessage({ type, text });
+
+  const reportDirty = useCallback((scope, dirty) => {
+    setDirtyScopes((current) => (
+      Boolean(current[scope]) === Boolean(dirty)
+        ? current
+        : { ...current, [scope]: Boolean(dirty) }
+    ));
+  }, []);
+
+  // Every Save button on this page routes through here, so the confirmation
+  // dialog is the only path from a click to a Supabase write.
+  const requestSave = useCallback((run) => setPendingSave(() => run), []);
+
+  const hasUnsavedChanges = Object.values(dirtyScopes).some(Boolean);
+
+  const handleConfirmSave = async () => {
+    if (!pendingSave) return;
+    setConfirmingSave(true);
+    try {
+      // The save handlers report their own success/failure through notify() and
+      // leave the edited values on screen when the write fails.
+      await pendingSave();
+    } finally {
+      setConfirmingSave(false);
+      setPendingSave(null);
+    }
+  };
 
   const scrollToSection = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1526,13 +1702,29 @@ export default function AboutUsContent() {
           ))}
         </nav>
 
-        <IgnisSafeCard currentUser={currentUser} notify={notify} />
-        <DevelopersCard currentUser={currentUser} notify={notify} />
-        <PartnerCard currentUser={currentUser} notify={notify} />
-        <EmergencyCard currentUser={currentUser} notify={notify} />
-        <DirectoryCard currentUser={currentUser} notify={notify} />
-        <GeneralTextsCard currentUser={currentUser} notify={notify} />
+        <IgnisSafeCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
+        <DevelopersCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
+        <PartnerCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
+        <EmergencyCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
+        <DirectoryCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
+        <GeneralTextsCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
       </div>
+
+      <UnsavedChangesPrompt
+        when={hasUnsavedChanges}
+        title={UNSAVED_TITLE}
+        message={UNSAVED_MESSAGE}
+        stayLabel="Stay on Page"
+        leaveLabel="Discard Changes"
+      />
+
+      {pendingSave && (
+        <ConfirmSaveModal
+          busy={confirmingSave}
+          onCancel={() => setPendingSave(null)}
+          onConfirm={handleConfirmSave}
+        />
+      )}
     </div>
   );
 }

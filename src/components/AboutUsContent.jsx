@@ -125,7 +125,7 @@ function FieldPair({ label, valueEn, valueTl, onChangeEn, onChangeTl, multiline,
   return (
     <div className="aboutus-field-pair">
       <span className="aboutus-field-pair-label">{label}</span>
-      <div className="aboutus-language-grid">
+      <div className="aboutus-language-grid aboutus-language-grid--lang">
         <label className="aboutus-field">
           <span>English</span>
           <Field
@@ -1502,12 +1502,12 @@ function GeneralTextsCard({ currentUser, notify, reportDirty, requestSave }) {
   return (
     <section id="general-texts" className="aboutus-card">
       <header className="aboutus-card-header">
-        <h2>General About Us UI Texts</h2>
-        <p>Section titles/subtitles, display order, active status, and shared interface labels.</p>
+        <h2>Other Page Text</h2>
+        <p>Section titles, subtitles, and other small pieces of text shown on the About Us page.</p>
       </header>
 
       <div className="aboutus-subsection">
-        <h3>Section titles &amp; subtitles</h3>
+        <h3>Section Titles &amp; Subtitles</h3>
         {sections.loading ? <div className="aboutus-loading">Loading...</div> : (
           <ul className="aboutus-item-list">
             {sections.rows.map((row, index) => (
@@ -1546,7 +1546,7 @@ function GeneralTextsCard({ currentUser, notify, reportDirty, requestSave }) {
 
       <div className="aboutus-subsection">
         <div className="aboutus-list-header">
-          <h3>Interface labels</h3>
+          <h3>Other Text</h3>
           <input
             type="search"
             className="aboutus-search-input"
@@ -1640,7 +1640,7 @@ const QUICK_NAV_ITEMS = [
   { id: 'bfp-dasmarinas', label: 'BFP Dasmariñas' },
   { id: 'emergency-contacts', label: 'Emergency Contacts' },
   { id: 'cavite-directory', label: 'Cavite BFP Directory' },
-  { id: 'general-texts', label: 'General UI Texts' },
+  { id: 'general-texts', label: 'Other Page Text' },
 ];
 
 export default function AboutUsContent() {

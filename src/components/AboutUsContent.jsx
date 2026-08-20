@@ -1079,10 +1079,10 @@ function PhoneEditRow({ form, setForm, onSave, onCancel, busy }) {
 }
 
 // ---------------------------------------------------------------------------
-// Card 4 — General About Us UI texts (sections + ui texts)
+// Card 4 — General About Us UI texts (sections)
 // ---------------------------------------------------------------------------
 
-function GeneralTextsCard({ currentUser, notify, reportDirty, requestSave }) {
+function GeneralTextsCard({ notify, reportDirty, requestSave }) {
   const sections = useEditableList({
     load: aboutUsService.listSections,
     create: async () => ({ error: 'Adding new sections is not supported.' }),
@@ -1097,54 +1097,13 @@ function GeneralTextsCard({ currentUser, notify, reportDirty, requestSave }) {
     entityLabel: 'section'
   });
 
-  const [uiTexts, setUiTexts] = useState([]);
-  const [loadingTexts, setLoadingTexts] = useState(true);
-  const [textEditingKey, setTextEditingKey] = useState(null);
-  const [textForm, setTextForm] = useState({});
-  const [textBaseline, setTextBaseline] = useState(null);
-  const [textBusy, setTextBusy] = useState(false);
-  const [textSearch, setTextSearch] = useState('');
-
-  useEffect(() => {
-    (async () => {
-      setLoadingTexts(true);
-      const { data, error } = await aboutUsService.listUiTexts();
-      if (error) notify('error', `Failed to load UI texts: ${error}`);
-      setUiTexts(data || []);
-      setLoadingTexts(false);
-    })();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const startEditText = (row) => { setTextEditingKey(row.key); setTextForm({ ...row }); setTextBaseline({ ...row }); };
-  const cancelEditText = () => { setTextEditingKey(null); setTextForm({}); setTextBaseline(null); };
-
-  const saveText = async () => {
-    setTextBusy(true);
-    const { error } = await aboutUsService.updateUiText(textEditingKey, { text_en: textForm.text_en, text_tl: textForm.text_tl });
-    setTextBusy(false);
-
-    if (error) { notify('error', `Failed to save UI text: ${error}`); return; }
-    notify('success', SAVE_SUCCESS_MESSAGE);
-    setUiTexts((rows) => rows.map((row) => (row.key === textEditingKey ? { ...row, text_en: textForm.text_en, text_tl: textForm.text_tl } : row)));
-    cancelEditText();
-    logAboutUsActivity(currentUser, 'About Us Content Updated', `Updated the "${textEditingKey}" UI text.`);
-  };
-
-  useReportDirty(
-    reportDirty,
-    'general-texts',
-    sections.isDirty || (textEditingKey !== null && isFormDirty(textForm, textBaseline))
-  );
-
-  const filteredTexts = textSearch.trim()
-    ? uiTexts.filter((row) => `${row.key} ${row.text_en} ${row.text_tl}`.toLowerCase().includes(textSearch.trim().toLowerCase()))
-    : uiTexts;
+  useReportDirty(reportDirty, 'general-texts', sections.isDirty);
 
   return (
     <section id="general-texts" className="aboutus-card">
       <header className="aboutus-card-header">
         <h2>Other Page Text</h2>
-        <p>Section titles, subtitles, and other small pieces of text shown on the About Us page.</p>
+        <p>Section titles and subtitles shown on the About Us page.</p>
       </header>
 
       <div className="aboutus-subsection">
@@ -1181,51 +1140,6 @@ function GeneralTextsCard({ currentUser, notify, reportDirty, requestSave }) {
                 )}
               </li>
             ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="aboutus-subsection">
-        <div className="aboutus-list-header">
-          <h3>Other Text</h3>
-          <input
-            type="search"
-            className="aboutus-search-input"
-            placeholder="Search by key or text..."
-            value={textSearch}
-            onChange={(event) => setTextSearch(event.target.value)}
-          />
-        </div>
-
-        {loadingTexts ? <div className="aboutus-loading">Loading...</div> : (
-          <ul className="aboutus-item-list">
-            {filteredTexts.map((row) => (
-              <li key={row.key} className="aboutus-item-row">
-                {textEditingKey === row.key ? (
-                  <div className="aboutus-edit-row">
-                    <span className="aboutus-field-pair-label">{row.key}</span>
-                    <FieldPair label="Text" valueEn={textForm.text_en} valueTl={textForm.text_tl}
-                      onChangeEn={(v) => setTextForm((f) => ({ ...f, text_en: v }))} onChangeTl={(v) => setTextForm((f) => ({ ...f, text_tl: v }))} />
-                    <div className="aboutus-edit-row-actions">
-                      <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelEditText} disabled={textBusy}><FiX aria-hidden="true" /> Cancel</button>
-                      <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveText)} disabled={textBusy}><FiSave aria-hidden="true" /> {textBusy ? 'Saving...' : 'Save'}</button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="aboutus-item-summary">
-                      <strong>{row.key}</strong>
-                      <span className="aboutus-item-sub">EN: {row.text_en}</span>
-                      <span className="aboutus-item-sub">TL: {row.text_tl}</span>
-                    </div>
-                    <div className="aboutus-item-actions">
-                      <button type="button" className="aboutus-icon-btn" onClick={() => startEditText(row)} aria-label={`Edit ${row.key}`} title="Edit"><FiEdit2 aria-hidden="true" /></button>
-                    </div>
-                  </>
-                )}
-              </li>
-            ))}
-            {filteredTexts.length === 0 && <li className="aboutus-empty">No matching UI texts.</li>}
           </ul>
         )}
       </div>
@@ -1344,7 +1258,7 @@ export default function AboutUsContent() {
         <PartnerCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
         <EmergencyCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
         <DirectoryCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
-        <GeneralTextsCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
+        <GeneralTextsCard notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
       </div>
 
       <UnsavedChangesPrompt

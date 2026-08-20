@@ -339,366 +339,7 @@ function useSingletonForm({ load, update, notify, entityLabel }) {
 }
 
 // ---------------------------------------------------------------------------
-// Card 1 — IGNIS SAFE
-// ---------------------------------------------------------------------------
-
-function IgnisSafeCard({ currentUser, notify, reportDirty, requestSave }) {
-  const ignis = useSingletonForm({
-    load: aboutUsService.getIgnis,
-    update: aboutUsService.updateIgnis,
-    notify,
-    entityLabel: 'IGNIS SAFE content'
-  });
-
-  const chips = useEditableList({
-    load: aboutUsService.listIgnisChips,
-    create: (form, rows) => aboutUsService.createIgnisChip({
-      label_en: form.label_en, label_tl: form.label_tl, icon_key: form.icon_key,
-      display_order: nextOrder(rows)
-    }),
-    update: (form) => aboutUsService.updateIgnisChip(form.id, {
-      label_en: form.label_en, label_tl: form.label_tl, icon_key: form.icon_key, is_active: form.is_active
-    }),
-    remove: (row) => aboutUsService.deleteIgnisChip(row.id),
-    reorder: aboutUsService.reorderIgnisChips,
-    getId: (row) => row.id,
-    notify,
-    entityLabel: 'feature chip'
-  });
-
-  const meanings = useEditableList({
-    load: aboutUsService.listNameMeanings,
-    create: (form, rows) => aboutUsService.createNameMeaning({
-      term_en: form.term_en, term_tl: form.term_tl, body_en: form.body_en, body_tl: form.body_tl,
-      display_order: nextOrder(rows)
-    }),
-    update: (form) => aboutUsService.updateNameMeaning(form.id, {
-      term_en: form.term_en, term_tl: form.term_tl, body_en: form.body_en, body_tl: form.body_tl, is_active: form.is_active
-    }),
-    remove: (row) => aboutUsService.deleteNameMeaning(row.id),
-    reorder: aboutUsService.reorderNameMeanings,
-    getId: (row) => row.id,
-    notify,
-    entityLabel: 'name meaning'
-  });
-
-  const handleSaveIgnis = async () => {
-    const saved = await ignis.save();
-    if (saved) logAboutUsActivity(currentUser, 'About Us Content Updated', 'Updated IGNIS SAFE overview content.');
-  };
-
-  useReportDirty(reportDirty, 'ignis-safe', ignis.isDirty || chips.isDirty || meanings.isDirty);
-
-  return (
-    <section id="ignis-safe" className="aboutus-card">
-      <header className="aboutus-card-header">
-        <h2>IGNIS SAFE</h2>
-        <p>Mission overview, logo meaning, and the goal &amp; feature chips shown on the About Us page.</p>
-      </header>
-
-      {ignis.loading || !ignis.form ? (
-        <div className="aboutus-loading">Loading...</div>
-      ) : (
-        <>
-          <div className="aboutus-subsection">
-            <h3>Overview</h3>
-            <FieldPair label="Heading" valueEn={ignis.form.heading_en} valueTl={ignis.form.heading_tl}
-              onChangeEn={(v) => ignis.setField('heading_en', v)} onChangeTl={(v) => ignis.setField('heading_tl', v)} />
-            <FieldPair label="Description" multiline valueEn={ignis.form.description_en} valueTl={ignis.form.description_tl}
-              onChangeEn={(v) => ignis.setField('description_en', v)} onChangeTl={(v) => ignis.setField('description_tl', v)} />
-            <FieldPair label="Goal" multiline valueEn={ignis.form.goal_en} valueTl={ignis.form.goal_tl}
-              onChangeEn={(v) => ignis.setField('goal_en', v)} onChangeTl={(v) => ignis.setField('goal_tl', v)} />
-          </div>
-
-          <div className="aboutus-subsection">
-            <h3>Logo</h3>
-            <SingleField label="Logo asset path" value={ignis.form.logo_asset_path}
-              onChange={(v) => ignis.setField('logo_asset_path', v)} placeholder="assets/logo.png" />
-            <FieldPair label="Logo meaning" multiline valueEn={ignis.form.logo_description_en} valueTl={ignis.form.logo_description_tl}
-              onChangeEn={(v) => ignis.setField('logo_description_en', v)} onChangeTl={(v) => ignis.setField('logo_description_tl', v)} />
-          </div>
-
-          <div className="aboutus-subsection">
-            <h3>Brand meaning</h3>
-            <FieldPair label="Brand heading" valueEn={ignis.form.brand_heading_en} valueTl={ignis.form.brand_heading_tl}
-              onChangeEn={(v) => ignis.setField('brand_heading_en', v)} onChangeTl={(v) => ignis.setField('brand_heading_tl', v)} />
-            <FieldPair label={'"Together" statement'} multiline valueEn={ignis.form.together_en} valueTl={ignis.form.together_tl}
-              onChangeEn={(v) => ignis.setField('together_en', v)} onChangeTl={(v) => ignis.setField('together_tl', v)} />
-            <FieldPair label="Focus heading" multiline valueEn={ignis.form.focus_heading_en} valueTl={ignis.form.focus_heading_tl}
-              onChangeEn={(v) => ignis.setField('focus_heading_en', v)} onChangeTl={(v) => ignis.setField('focus_heading_tl', v)} />
-            <FieldPair label="Focus body" multiline valueEn={ignis.form.focus_body_en} valueTl={ignis.form.focus_body_tl}
-              onChangeEn={(v) => ignis.setField('focus_body_en', v)} onChangeTl={(v) => ignis.setField('focus_body_tl', v)} />
-            <FieldPair label="Essence statement" multiline valueEn={ignis.form.essence_en} valueTl={ignis.form.essence_tl}
-              onChangeEn={(v) => ignis.setField('essence_en', v)} onChangeTl={(v) => ignis.setField('essence_tl', v)} />
-          </div>
-
-          <div className="aboutus-subsection">
-            <h3>Team section heading &amp; intro</h3>
-            <p className="aboutus-hint">Shown above the Developers &amp; Adviser list on the mobile app.</p>
-            <FieldPair label="Team heading" valueEn={ignis.form.team_heading_en} valueTl={ignis.form.team_heading_tl}
-              onChangeEn={(v) => ignis.setField('team_heading_en', v)} onChangeTl={(v) => ignis.setField('team_heading_tl', v)} />
-            <FieldPair label="Team intro" multiline rows={4} valueEn={ignis.form.team_intro_en} valueTl={ignis.form.team_intro_tl}
-              onChangeEn={(v) => ignis.setField('team_intro_en', v)} onChangeTl={(v) => ignis.setField('team_intro_tl', v)} />
-            <FieldPair label="Team tip" multiline valueEn={ignis.form.team_tip_en} valueTl={ignis.form.team_tip_tl}
-              onChangeEn={(v) => ignis.setField('team_tip_en', v)} onChangeTl={(v) => ignis.setField('team_tip_tl', v)} />
-          </div>
-
-          <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSaveIgnis)} disabled={ignis.saving}>
-              <FiSave aria-hidden="true" /> {ignis.saving ? 'Saving...' : 'Save IGNIS SAFE content'}
-            </button>
-          </div>
-        </>
-      )}
-
-      <div className="aboutus-subsection">
-        <div className="aboutus-list-header">
-          <h3>Goal &amp; feature chips</h3>
-          <button type="button" className="aboutus-btn aboutus-btn-outline" onClick={() => chips.startAdd({ label_en: '', label_tl: '', icon_key: '', is_active: true })}>
-            <FiPlus aria-hidden="true" /> Add chip
-          </button>
-        </div>
-
-        {chips.editingId === 'new' && (
-          <ChipEditRow form={chips.form} setField={chips.setField} onSave={() => requestSave(chips.save)} onCancel={chips.cancelEdit} busy={chips.busy} />
-        )}
-
-        {chips.loading ? <div className="aboutus-loading">Loading...</div> : (
-          <ul className="aboutus-item-list">
-            {chips.rows.map((row, index) => (
-              <li key={row.id} className="aboutus-item-row">
-                {chips.editingId === row.id ? (
-                  <ChipEditRow form={chips.form} setField={chips.setField} onSave={() => requestSave(chips.save)} onCancel={chips.cancelEdit} busy={chips.busy} />
-                ) : (
-                  <>
-                    <div className="aboutus-item-summary">
-                      <strong>{row.label_en}</strong>
-                      <span className="aboutus-item-sub">{row.label_tl}</span>
-                      {row.icon_key && <span className="aboutus-item-sub">Icon: {row.icon_key}</span>}
-                      <StatusBadge active={row.is_active} />
-                    </div>
-                    <div className="aboutus-item-actions">
-                      <ReorderButtons index={index} count={chips.rows.length} busy={chips.busy} onMoveUp={() => chips.move(index, -1)} onMoveDown={() => chips.move(index, 1)} />
-                      <button type="button" className="aboutus-icon-btn" onClick={() => chips.startEdit(row)} aria-label="Edit chip" title="Edit"><FiEdit2 aria-hidden="true" /></button>
-                      <button type="button" className="aboutus-icon-btn aboutus-icon-btn-danger" onClick={() => chips.confirmDelete(row)} aria-label="Delete chip" title="Delete"><FiTrash2 aria-hidden="true" /></button>
-                    </div>
-                  </>
-                )}
-              </li>
-            ))}
-            {chips.rows.length === 0 && <li className="aboutus-empty">No chips yet.</li>}
-          </ul>
-        )}
-
-        <ConfirmDeleteModal
-          open={Boolean(chips.pendingDelete)}
-          title="Delete feature chip"
-          message={`Delete the "${chips.pendingDelete?.label_en}" chip?`}
-          busy={chips.busy}
-          onCancel={chips.cancelDeleteRequest}
-          onConfirm={async () => { await chips.doDelete(); logAboutUsActivity(currentUser, 'About Us Content Deleted', 'Deleted an IGNIS SAFE feature chip.'); }}
-        />
-      </div>
-
-      <div className="aboutus-subsection">
-        <div className="aboutus-list-header">
-          <h3>Logo / name meaning</h3>
-          <button type="button" className="aboutus-btn aboutus-btn-outline" onClick={() => meanings.startAdd({ term_en: '', term_tl: '', body_en: '', body_tl: '', is_active: true })}>
-            <FiPlus aria-hidden="true" /> Add term
-          </button>
-        </div>
-
-        {meanings.editingId === 'new' && (
-          <NameMeaningEditRow form={meanings.form} setField={meanings.setField} onSave={() => requestSave(meanings.save)} onCancel={meanings.cancelEdit} busy={meanings.busy} />
-        )}
-
-        {meanings.loading ? <div className="aboutus-loading">Loading...</div> : (
-          <ul className="aboutus-item-list">
-            {meanings.rows.map((row, index) => (
-              <li key={row.id} className="aboutus-item-row">
-                {meanings.editingId === row.id ? (
-                  <NameMeaningEditRow form={meanings.form} setField={meanings.setField} onSave={() => requestSave(meanings.save)} onCancel={meanings.cancelEdit} busy={meanings.busy} />
-                ) : (
-                  <>
-                    <div className="aboutus-item-summary">
-                      <strong>{row.term_en}</strong>
-                      <span className="aboutus-item-sub">{row.body_en}</span>
-                      <StatusBadge active={row.is_active} />
-                    </div>
-                    <div className="aboutus-item-actions">
-                      <ReorderButtons index={index} count={meanings.rows.length} busy={meanings.busy} onMoveUp={() => meanings.move(index, -1)} onMoveDown={() => meanings.move(index, 1)} />
-                      <button type="button" className="aboutus-icon-btn" onClick={() => meanings.startEdit(row)} aria-label="Edit term" title="Edit"><FiEdit2 aria-hidden="true" /></button>
-                      <button type="button" className="aboutus-icon-btn aboutus-icon-btn-danger" onClick={() => meanings.confirmDelete(row)} aria-label="Delete term" title="Delete"><FiTrash2 aria-hidden="true" /></button>
-                    </div>
-                  </>
-                )}
-              </li>
-            ))}
-            {meanings.rows.length === 0 && <li className="aboutus-empty">No terms yet.</li>}
-          </ul>
-        )}
-
-        <ConfirmDeleteModal
-          open={Boolean(meanings.pendingDelete)}
-          title="Delete name meaning"
-          message={`Delete the "${meanings.pendingDelete?.term_en}" term?`}
-          busy={meanings.busy}
-          onCancel={meanings.cancelDeleteRequest}
-          onConfirm={async () => { await meanings.doDelete(); logAboutUsActivity(currentUser, 'About Us Content Deleted', 'Deleted an IGNIS SAFE name-meaning term.'); }}
-        />
-      </div>
-    </section>
-  );
-}
-
-function ChipEditRow({ form, setField, onSave, onCancel, busy }) {
-  return (
-    <div className="aboutus-edit-row">
-      <FieldPair label="Label" valueEn={form.label_en} valueTl={form.label_tl}
-        onChangeEn={(v) => setField('label_en', v)} onChangeTl={(v) => setField('label_tl', v)} />
-      <SingleField label="Icon key" value={form.icon_key} onChange={(v) => setField('icon_key', v)} placeholder="view_in_ar" />
-      <ActiveCheckbox checked={form.is_active} onChange={(v) => setField('is_active', v)} />
-      <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
-      </div>
-    </div>
-  );
-}
-
-function NameMeaningEditRow({ form, setField, onSave, onCancel, busy }) {
-  return (
-    <div className="aboutus-edit-row">
-      <FieldPair label="Term" valueEn={form.term_en} valueTl={form.term_tl}
-        onChangeEn={(v) => setField('term_en', v)} onChangeTl={(v) => setField('term_tl', v)} />
-      <FieldPair label="Meaning" multiline valueEn={form.body_en} valueTl={form.body_tl}
-        onChangeEn={(v) => setField('body_en', v)} onChangeTl={(v) => setField('body_tl', v)} />
-      <ActiveCheckbox checked={form.is_active} onChange={(v) => setField('is_active', v)} />
-      <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Card 2 — Developers & Adviser
-// ---------------------------------------------------------------------------
-
-function DevelopersCard({ currentUser, notify, reportDirty, requestSave }) {
-  const team = useEditableList({
-    load: aboutUsService.listTeamMembers,
-    create: (form, rows) => aboutUsService.createTeamMember({
-      full_name: form.full_name, display_first: form.display_first, display_last: form.display_last,
-      role_en: form.role_en, role_tl: form.role_tl, email: form.email || null,
-      bio_en: form.bio_en, bio_tl: form.bio_tl, asset_path: form.asset_path,
-      linkedin_url: form.linkedin_url || null, display_order: nextOrder(rows)
-    }),
-    update: (form) => aboutUsService.updateTeamMember(form.id, {
-      full_name: form.full_name, display_first: form.display_first, display_last: form.display_last,
-      role_en: form.role_en, role_tl: form.role_tl, email: form.email || null,
-      bio_en: form.bio_en, bio_tl: form.bio_tl, asset_path: form.asset_path,
-      linkedin_url: form.linkedin_url || null, is_active: form.is_active
-    }),
-    remove: (row) => aboutUsService.deleteTeamMember(row.id),
-    reorder: aboutUsService.reorderTeamMembers,
-    getId: (row) => row.id,
-    notify,
-    entityLabel: 'team member'
-  });
-
-  const emptyForm = {
-    full_name: '', display_first: '', display_last: '', role_en: '', role_tl: '',
-    email: '', bio_en: '', bio_tl: '', asset_path: '', linkedin_url: '', is_active: true
-  };
-
-  useReportDirty(reportDirty, 'developers', team.isDirty);
-
-  return (
-    <section id="developers" className="aboutus-card">
-      <header className="aboutus-card-header">
-        <div className="aboutus-list-header">
-          <div>
-            <h2>Developers &amp; Adviser</h2>
-            <p>The team profiles shown on the About Us page.</p>
-          </div>
-          <button type="button" className="aboutus-btn aboutus-btn-outline" onClick={() => team.startAdd(emptyForm)}>
-            <FiPlus aria-hidden="true" /> Add member
-          </button>
-        </div>
-      </header>
-
-      {team.editingId === 'new' && (
-        <TeamMemberEditRow form={team.form} setField={team.setField} onSave={() => requestSave(team.save)} onCancel={team.cancelEdit} busy={team.busy} />
-      )}
-
-      {team.loading ? <div className="aboutus-loading">Loading...</div> : (
-        <ul className="aboutus-item-list">
-          {team.rows.map((row, index) => (
-            <li key={row.id} className="aboutus-item-row">
-              {team.editingId === row.id ? (
-                <TeamMemberEditRow form={team.form} setField={team.setField} onSave={() => requestSave(team.save)} onCancel={team.cancelEdit} busy={team.busy} />
-              ) : (
-                <>
-                  <div className="aboutus-item-summary">
-                    <strong>{row.full_name}</strong>
-                    <span className="aboutus-item-sub">{row.role_en}</span>
-                    {row.email && <span className="aboutus-item-sub">{row.email}</span>}
-                    <span className="aboutus-item-sub">{row.asset_path}</span>
-                    <StatusBadge active={row.is_active} />
-                  </div>
-                  <div className="aboutus-item-actions">
-                    <ReorderButtons index={index} count={team.rows.length} busy={team.busy} onMoveUp={() => team.move(index, -1)} onMoveDown={() => team.move(index, 1)} />
-                    <button type="button" className="aboutus-icon-btn" onClick={() => team.startEdit(row)} aria-label="Edit member" title="Edit"><FiEdit2 aria-hidden="true" /></button>
-                    <button type="button" className="aboutus-icon-btn aboutus-icon-btn-danger" onClick={() => team.confirmDelete(row)} aria-label="Delete member" title="Delete"><FiTrash2 aria-hidden="true" /></button>
-                  </div>
-                </>
-              )}
-            </li>
-          ))}
-          {team.rows.length === 0 && <li className="aboutus-empty">No team members yet.</li>}
-        </ul>
-      )}
-
-      <ConfirmDeleteModal
-        open={Boolean(team.pendingDelete)}
-        title="Delete team member"
-        message={`Delete "${team.pendingDelete?.full_name}" from the Developers & Adviser list?`}
-        busy={team.busy}
-        onCancel={team.cancelDeleteRequest}
-        onConfirm={async () => { await team.doDelete(); logAboutUsActivity(currentUser, 'About Us Content Deleted', 'Deleted a Developers & Adviser team member.'); }}
-      />
-    </section>
-  );
-}
-
-function TeamMemberEditRow({ form, setField, onSave, onCancel, busy }) {
-  return (
-    <div className="aboutus-edit-row">
-      <SingleField label="Full name" value={form.full_name} onChange={(v) => setField('full_name', v)} />
-      <div className="aboutus-language-grid">
-        <SingleField label="Display first name" value={form.display_first} onChange={(v) => setField('display_first', v)} />
-        <SingleField label="Display last name" value={form.display_last} onChange={(v) => setField('display_last', v)} />
-      </div>
-      <FieldPair label="Role" valueEn={form.role_en} valueTl={form.role_tl}
-        onChangeEn={(v) => setField('role_en', v)} onChangeTl={(v) => setField('role_tl', v)} />
-      <SingleField label="Email (optional)" type="email" value={form.email} onChange={(v) => setField('email', v)} />
-      <FieldPair label="Bio" multiline valueEn={form.bio_en} valueTl={form.bio_tl}
-        onChangeEn={(v) => setField('bio_en', v)} onChangeTl={(v) => setField('bio_tl', v)} />
-      <SingleField label="Image path" value={form.asset_path} onChange={(v) => setField('asset_path', v)} placeholder="assets/dev_example.jpg" />
-      <SingleField label="LinkedIn URL (optional)" type="url" value={form.linkedin_url} onChange={(v) => setField('linkedin_url', v)} />
-      <ActiveCheckbox checked={form.is_active} onChange={(v) => setField('is_active', v)} />
-      <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Card 3 — BFP Dasmariñas
+// Card 1 — BFP Dasmariñas
 // ---------------------------------------------------------------------------
 
 function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
@@ -852,7 +493,7 @@ function ContactNumberEditRow({ form, setField, onSave, onCancel, busy }) {
 }
 
 // ---------------------------------------------------------------------------
-// Card 4 — Emergency Contacts
+// Card 2 — Emergency Contacts
 // ---------------------------------------------------------------------------
 
 function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
@@ -990,7 +631,7 @@ function EmergencyNumberEditRow({ form, setField, onSave, onCancel, busy }) {
 }
 
 // ---------------------------------------------------------------------------
-// Card 5 — Cavite BFP Directory (groups -> entries -> phones)
+// Card 3 — Cavite BFP Directory (groups -> entries -> phones)
 // ---------------------------------------------------------------------------
 
 function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
@@ -1438,7 +1079,7 @@ function PhoneEditRow({ form, setForm, onSave, onCancel, busy }) {
 }
 
 // ---------------------------------------------------------------------------
-// Card 6 — General About Us UI texts (sections + ui texts)
+// Card 4 — General About Us UI texts (sections + ui texts)
 // ---------------------------------------------------------------------------
 
 function GeneralTextsCard({ currentUser, notify, reportDirty, requestSave }) {
@@ -1635,8 +1276,6 @@ function ConfirmSaveModal({ busy, onCancel, onConfirm }) {
 }
 
 const QUICK_NAV_ITEMS = [
-  { id: 'ignis-safe', label: 'IGNIS SAFE' },
-  { id: 'developers', label: 'Developers & Adviser' },
   { id: 'bfp-dasmarinas', label: 'BFP Dasmariñas' },
   { id: 'emergency-contacts', label: 'Emergency Contacts' },
   { id: 'cavite-directory', label: 'Cavite BFP Directory' },
@@ -1702,8 +1341,6 @@ export default function AboutUsContent() {
           ))}
         </nav>
 
-        <IgnisSafeCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
-        <DevelopersCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
         <PartnerCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
         <EmergencyCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
         <DirectoryCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />

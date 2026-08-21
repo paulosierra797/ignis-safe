@@ -267,6 +267,7 @@ Deno.serve(async (request) => {
             conversation_id: conversation.id,
             sender_type: 'system',
             body: acknowledgement,
+            created_at: now,
           },
         ]);
       if (messageError) {

@@ -33,6 +33,7 @@ export default function Footer() {
             <a href={sectionHref('about')}>About</a>
             <a href={sectionHref('process')}>Online Application</a>
             <a href={sectionHref('contact')}>Contact Us</a>
+            <Link to="/send-message">Send Us a Message</Link>
             <a href={sectionHref('faq')}>FAQ</a>
           </div>
         </nav>

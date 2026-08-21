@@ -5,7 +5,6 @@ import HeroSection from './HeroSection';
 import AboutSection from './AboutSection';
 import ProcessSection from './ProcessSection';
 import ContactSection from './ContactSection';
-import SendMessageSection from './SendMessageSection';
 import FAQSection from './FAQSection';
 import Footer from './Footer';
 import { LandingContentPreviewProvider } from '../context/LandingContentContext';
@@ -160,7 +159,6 @@ export default function LandingPreview({ content }) {
                   <AboutSection />
                   <ProcessSection />
                   <ContactSection />
-                  <SendMessageSection />
                   <FAQSection />
                   <Footer />
                 </div>

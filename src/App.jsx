@@ -6,7 +6,6 @@ import LandingAnnouncements from './components/LandingAnnouncements'
 import AboutSection from './components/AboutSection'
 import ProcessSection from './components/ProcessSection'
 import ContactSection from './components/ContactSection'
-import SendMessageSection from './components/SendMessageSection'
 import FAQSection from './components/FAQSection'
 import Footer from './components/Footer'
 import FloatingContactButton from './components/FloatingContactButton'
@@ -47,6 +46,7 @@ const OrganizationalChartView = lazy(() => import('./components/OrganizationalCh
 const TermsPage = lazy(() => import('./components/TermsPage'));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
 const ConfirmSignupPage = lazy(() => import('./components/ConfirmSignupPage'));
+const SendMessagePage = lazy(() => import('./components/SendMessagePage'));
 
 const ROUTE_PRELOADERS = {
   '/dashboard': loadDashboard,
@@ -163,7 +163,6 @@ function LandingPage() {
       <AboutSection />
       <ProcessSection />
       <ContactSection />
-      <SendMessageSection />
       <FAQSection />
       <Footer />
       <FloatingContactButton />
@@ -211,6 +210,7 @@ function App() {
               <Route path="/dashboard/announcements" element={<ProtectedRoute allowedRoles={['admin']}><Announcements /></ProtectedRoute>} />
               <Route path="/personnel/announcements" element={<ProtectedRoute allowedRoles={['personnel']}><Announcements /></ProtectedRoute>} />
               <Route path="/organizational-chart" element={<OrganizationalChartView />} />
+              <Route path="/send-message" element={<SendMessagePage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               </Routes>

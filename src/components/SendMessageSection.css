@@ -1,5 +1,6 @@
 .send-message {
-  padding: clamp(1.5rem, 3vw, 2.5rem) 0 clamp(3rem, 5vw, 4.75rem);
+  min-height: calc(100vh - 76px);
+  padding: clamp(2.5rem, 5vw, 4.5rem) 0 clamp(3rem, 5vw, 4.75rem);
   background:
     radial-gradient(circle at 8% 18%, rgba(185, 28, 28, 0.05), transparent 24%),
     radial-gradient(circle at 94% 80%, rgba(245, 158, 11, 0.045), transparent 22%),
@@ -232,6 +233,13 @@
   font-weight: 850;
 }
 
+.send-message-inquiries-card > p {
+  margin: 0.45rem 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 .send-message-email-value {
   min-width: 0;
   display: flex;
@@ -294,6 +302,11 @@
 
 .send-message-inquiries-list li {
   min-width: 0;
+}
+
+.send-message-inquiries-list button {
+  width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -302,14 +315,41 @@
   border-radius: 11px;
   background: #f8fafc;
   color: #334155;
+  font-family: inherit;
   font-size: 0.86rem;
   font-weight: 650;
+  text-align: left;
+  cursor: pointer;
   transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-.send-message-inquiries-list li:hover {
+.send-message-inquiries-list button:hover,
+.send-message-inquiries-list button:focus-visible {
   border-color: #dca5a5;
   transform: translateY(-1px);
+  outline: none;
+}
+
+.send-message-inquiries-list button.is-selected {
+  border-color: #b91c1c;
+  background: #fff7f7;
+  color: #991b1b;
+}
+
+.send-message-inquiries-list button > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+
+.send-message-inquiry-arrow {
+  flex: 0 0 auto;
+  color: #94a3b8;
+}
+
+.send-message-inquiries-list button:hover .send-message-inquiry-arrow,
+.send-message-inquiries-list button:focus-visible .send-message-inquiry-arrow,
+.send-message-inquiries-list button.is-selected .send-message-inquiry-arrow {
+  color: #b91c1c;
 }
 
 @media (max-width: 900px) {

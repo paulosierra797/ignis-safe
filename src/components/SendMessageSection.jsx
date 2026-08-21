@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   FiUser,
   FiMail,
@@ -12,6 +12,7 @@ import {
   FiAlertCircle,
   FiFileText,
   FiUsers,
+  FiArrowRight,
 } from 'react-icons/fi'
 import './SendMessageSection.css'
 import { sendContactMessage } from '../utils/contactMessageService'
@@ -28,20 +29,43 @@ const TOPIC_OPTIONS = [
 ]
 
 const INQUIRIES = [
-  { icon: FiHelpCircle, label: 'General Inquiry' },
-  { icon: FiAlertCircle, label: 'Emergency Information' },
-  { icon: FiFileText, label: 'Online Application' },
-  { icon: FiUsers, label: 'Public Assistance' },
+  {
+    icon: FiHelpCircle,
+    label: 'General Inquiry',
+    prompt: 'Hello, I would like to ask about ',
+  },
+  {
+    icon: FiAlertCircle,
+    label: 'Emergency Information',
+    prompt: 'Hello, I would like information about emergency procedures or contact details regarding ',
+  },
+  {
+    icon: FiFileText,
+    label: 'Online Application',
+    prompt: 'Hello, I need assistance with my online application regarding ',
+  },
+  {
+    icon: FiUsers,
+    label: 'Public Assistance',
+    prompt: 'Hello, I would like to request public assistance regarding ',
+  },
 ]
 
 const INITIAL_FORM = { name: '', email: '', topic: '', message: '' }
 
-export default function SendMessageSection() {
-  const [form, setForm] = useState(INITIAL_FORM)
+const getInquiryPrompt = (topic) => INQUIRIES.find((inquiry) => inquiry.label === topic)?.prompt || ''
+
+export default function SendMessageSection({ initialTopic = '' }) {
+  const [form, setForm] = useState(() => ({
+    ...INITIAL_FORM,
+    topic: initialTopic,
+    message: getInquiryPrompt(initialTopic),
+  }))
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
   const [copied, setCopied] = useState(false)
+  const messageRef = useRef(null)
 
   const handleChange = (field) => (event) => {
     const { value } = event.target
@@ -54,6 +78,22 @@ export default function SendMessageSection() {
     if (value.length > MESSAGE_MAX_LENGTH) return
     setForm((prev) => ({ ...prev, message: value }))
     if (submitError) setSubmitError('')
+  }
+
+  const handleInquirySelect = (inquiry) => {
+    setForm((prev) => ({
+      ...prev,
+      topic: inquiry.label,
+      message: !prev.message.trim() || INQUIRIES.some((item) => item.prompt === prev.message)
+        ? inquiry.prompt
+        : prev.message,
+    }))
+    setSubmitError('')
+    requestAnimationFrame(() => {
+      messageRef.current?.focus()
+      const end = messageRef.current?.value.length || 0
+      messageRef.current?.setSelectionRange(end, end)
+    })
   }
 
   const handleSubmit = async (event) => {
@@ -191,6 +231,7 @@ export default function SendMessageSection() {
                 </span>
               </div>
               <textarea
+                ref={messageRef}
                 id="sm-message"
                 rows={5}
                 placeholder="Tell us how we can help..."
@@ -241,13 +282,22 @@ export default function SendMessageSection() {
 
             <div className="send-message-card send-message-inquiries-card">
               <h3>Inquiries</h3>
+              <p>Choose a concern to prepare the topic and a helpful message starter.</p>
               <ul className="send-message-inquiries-list">
                 {INQUIRIES.map((inquiry) => (
                   <li key={inquiry.label}>
-                    <span className="send-message-icon send-message-icon-sm" aria-hidden="true">
-                      <inquiry.icon />
-                    </span>
-                    <span>{inquiry.label}</span>
+                    <button
+                      type="button"
+                      className={form.topic === inquiry.label ? 'is-selected' : ''}
+                      aria-pressed={form.topic === inquiry.label}
+                      onClick={() => handleInquirySelect(inquiry)}
+                    >
+                      <span className="send-message-icon send-message-icon-sm" aria-hidden="true">
+                        <inquiry.icon />
+                      </span>
+                      <span>{inquiry.label}</span>
+                      <FiArrowRight className="send-message-inquiry-arrow" aria-hidden="true" />
+                    </button>
                   </li>
                 ))}
               </ul>

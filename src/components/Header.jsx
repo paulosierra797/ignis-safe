@@ -7,7 +7,7 @@ import { FiChevronDown, FiLogIn, FiMenu, FiX } from 'react-icons/fi';
 // Order matches the actual DOM order of sections on the landing page — the
 // scroll-spy loop below relies on this order, which is independent of the
 // order these ids are presented in the nav.
-const SCROLL_SECTION_IDS = ['home', 'announcements', 'about', 'process', 'contact', 'send-message', 'faq'];
+const SCROLL_SECTION_IDS = ['home', 'announcements', 'about', 'process', 'contact', 'faq'];
 
 const PRIMARY_NAV_ITEMS = [
   { id: 'home', label: 'Home' },
@@ -23,7 +23,7 @@ const ABOUT_MENU_ITEMS = [
 
 const CONTACT_MENU_ITEMS = [
   { id: 'contact', label: 'Contact Us', type: 'section' },
-  { id: 'send-message', label: 'Send Us a Message', type: 'section' }
+  { id: 'send-message', label: 'Send Us a Message', type: 'route', to: '/send-message' }
 ];
 
 // Sets up the shared outside-click / Escape-to-close behavior for a hover-or-click
@@ -168,7 +168,7 @@ export default function Header() {
     (isLandingPage && (activeSection === 'about' || activeSection === 'faq')) ||
     location.pathname === '/organizational-chart';
   const isContactActive =
-    isLandingPage && (activeSection === 'contact' || activeSection === 'send-message');
+    (isLandingPage && activeSection === 'contact') || location.pathname === '/send-message';
   const suppressTrackingRef = useRef(false);
   const suppressTimeoutRef = useRef(null);
   // Hash present the moment this Header instance mounts — set when a
@@ -389,6 +389,11 @@ export default function Header() {
     closeContact();
   };
 
+  const handleContactRouteSelect = () => {
+    closeContact();
+    setMenuOpen(false);
+  };
+
   const handleContactToggleClick = () => {
     if (supportsHoverRef.current) {
       openContact();
@@ -534,6 +539,7 @@ export default function Header() {
             location={location}
             sectionHref={sectionHref}
             onItemSectionClick={handleContactSectionSelect}
+            onItemRouteClick={handleContactRouteSelect}
           />
 
           <Link className="landing-login-link login-btn" to="/login" onClick={() => setMenuOpen(false)}>

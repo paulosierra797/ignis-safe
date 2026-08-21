@@ -47,6 +47,7 @@ const TermsPage = lazy(() => import('./components/TermsPage'));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
 const ConfirmSignupPage = lazy(() => import('./components/ConfirmSignupPage'));
 const SendMessagePage = lazy(() => import('./components/SendMessagePage'));
+const VisitorMessages = lazy(() => import('./components/VisitorMessages'));
 
 const ROUTE_PRELOADERS = {
   '/dashboard': loadDashboard,
@@ -208,6 +209,7 @@ function App() {
               <Route path="/dashboard/progress" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="view_progress"><Progress /></ProtectedRoute>} />
               <Route path="/dashboard/audit-logs" element={<ProtectedRoute allowedRoles={['admin']}><AuditLogs /></ProtectedRoute>} />
               <Route path="/dashboard/announcements" element={<ProtectedRoute allowedRoles={['admin']}><Announcements /></ProtectedRoute>} />
+              <Route path="/dashboard/visitor-messages" element={<ProtectedRoute allowedRoles={['admin']}><VisitorMessages /></ProtectedRoute>} />
               <Route path="/personnel/announcements" element={<ProtectedRoute allowedRoles={['personnel']}><Announcements /></ProtectedRoute>} />
               <Route path="/organizational-chart" element={<OrganizationalChartView />} />
               <Route path="/send-message" element={<SendMessagePage />} />

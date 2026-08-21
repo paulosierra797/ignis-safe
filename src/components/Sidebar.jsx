@@ -7,6 +7,7 @@ import {
   FaCalendarCheck,
   FaChartLine,
   FaClipboardList,
+  FaComments,
   FaFileAlt,
   FaHistory,
   FaInfoCircle,
@@ -23,6 +24,7 @@ import { useUser } from '../context/UserContext';
 import { useLayout } from '../context/LayoutContext';
 import { getPendingProfileChangeRequestsCount } from '../utils/profileChangeRequestsService';
 import { getPendingAcknowledgementCount } from '../utils/announcementsService';
+import { listAdminVisitorConversations } from '../utils/visitorChatService';
 
 const PERSONNEL_ANNOUNCEMENTS_PATH = '/personnel/announcements';
 
@@ -39,6 +41,7 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
   const sidebarRef = useRef(null);
   const { isSidebarCollapsed, isMobileSidebarOpen, closeMobileSidebar } = useLayout();
   const [pendingProfileChangeRequests, setPendingProfileChangeRequests] = useState(0);
+  const [unreadVisitorMessages, setUnreadVisitorMessages] = useState(0);
   const [hasPendingAnnouncementAck, setHasPendingAnnouncementAck] = useState(false);
   const [pendingAnnouncementNudges, setPendingAnnouncementNudges] = useState(0);
   const [latestAnnouncementNudge, setLatestAnnouncementNudge] = useState(null);
@@ -51,11 +54,42 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
   const menuItems = [
     { id: 'dashboard', icon: FaTachometerAlt, label: 'Dashboard', path: '/dashboard', permission: 'view_dashboard' },
     { id: 'reports', icon: FaFileAlt, label: 'Reports', path: '/dashboard/reports', permission: 'view_dashboard' },
+    { id: 'visitor-messages', icon: FaComments, label: 'Visitor Messages', path: '/dashboard/visitor-messages', permission: 'view_dashboard', badge: unreadVisitorMessages },
     { id: 'accounts', icon: FaUsers, label: 'Personnel', path: '/dashboard/accounts', permission: 'view_accounts', badge: pendingProfileChangeRequests },
     { id: 'announcements', icon: FaBullhorn, label: 'Content Management', path: '/dashboard/announcements', permission: 'manage_users' },
     { id: 'attendance-admin', icon: FaCalendarCheck, label: 'Attendance', path: '/attendance-admin', permission: 'view_attendance' },
     { id: 'chart', icon: FaSitemap, label: 'Organizational Chart', path: '/dashboard/chart', permission: 'view_charts' },
   ];
+
+  useEffect(() => {
+    if (variant !== 'admin') {
+      setUnreadVisitorMessages(0);
+      return undefined;
+    }
+
+    let isMounted = true;
+    const loadUnreadMessages = async () => {
+      const result = await listAdminVisitorConversations();
+      if (isMounted && !result.error) {
+        setUnreadVisitorMessages(result.data?.unreadCount || 0);
+      }
+    };
+
+    void loadUnreadMessages();
+    const intervalId = window.setInterval(loadUnreadMessages, 15000);
+    const handleMessagesChanged = (event) => {
+      if (!event?.detail?.scope || event.detail.scope === 'visitor_messages') {
+        void loadUnreadMessages();
+      }
+    };
+    window.addEventListener('ignis-safe:data-changed', handleMessagesChanged);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener('ignis-safe:data-changed', handleMessagesChanged);
+    };
+  }, [variant]);
 
   useEffect(() => {
     if (variant !== 'admin' || !hasPermission('manage_users')) {

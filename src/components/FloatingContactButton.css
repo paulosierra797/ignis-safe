@@ -9,6 +9,10 @@
   gap: 0.75rem;
 }
 
+.floating-contact-panel {
+  animation: floating-contact-open 0.2s ease-out;
+}
+
 .floating-contact-button {
   min-height: 54px;
   display: inline-flex;
@@ -22,7 +26,6 @@
   font-family: inherit;
   font-size: 0.88rem;
   font-weight: 800;
-  text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
   box-shadow: 0 14px 30px rgba(153, 27, 27, 0.35);
@@ -48,181 +51,11 @@
   font-size: 1.1rem;
 }
 
-.floating-contact-button-label {
-  line-height: 1;
-}
-
-.floating-contact-panel {
-  width: min(390px, calc(100vw - 2rem));
-  overflow: hidden;
-  border: 1px solid #eadede;
-  border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 24px 60px rgba(48, 15, 17, 0.24);
-  animation: floating-contact-open 0.2s ease-out;
-}
-
-.floating-contact-panel-header {
-  min-height: 82px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  background: #94161b;
-  color: #ffffff;
-}
-
-.floating-contact-panel-icon {
-  width: 42px;
-  height: 42px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
-  font-size: 1.2rem;
-}
-
-.floating-contact-panel-header h2,
-.floating-contact-panel-header p {
-  margin: 0;
-}
-
-.floating-contact-panel-header h2 {
-  font-size: 1rem;
-  line-height: 1.3;
-}
-
-.floating-contact-panel-header p {
-  margin-top: 0.15rem;
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 0.76rem;
-}
-
-.floating-contact-close {
-  width: 40px;
-  height: 40px;
-  display: inline-grid;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  font-size: 1.15rem;
-  cursor: pointer;
-}
-
-.floating-contact-close:hover,
-.floating-contact-close:focus-visible {
-  background: rgba(255, 255, 255, 0.2);
-  outline: 2px solid #f8d575;
-  outline-offset: 2px;
-}
-
-.floating-contact-panel-body {
-  padding: 1rem;
-}
-
-.floating-contact-intro {
-  margin: 0 0 0.8rem;
-  color: #64748b;
-  font-size: 0.78rem;
-  line-height: 1.55;
-}
-
-.floating-contact-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.55rem;
-}
-
-.floating-contact-options a {
-  min-width: 0;
-  min-height: 72px;
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.7rem;
-  border: 1px solid #e6eaf0;
-  border-radius: 6px;
-  background: #f8fafc;
-  color: #334155;
-  font-size: 0.72rem;
-  font-weight: 750;
-  line-height: 1.3;
-  text-decoration: none;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-
-.floating-contact-options a > svg:first-child {
-  color: #b91c1c;
-  font-size: 1rem;
-}
-
-.floating-contact-options a > svg:last-child {
-  color: #94a3b8;
-}
-
-.floating-contact-options a:hover,
-.floating-contact-options a:focus-visible {
-  border-color: #c24145;
-  background: #fff7f7;
-  outline: none;
-}
-
-.floating-contact-write {
-  min-height: 44px;
-  margin-top: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-radius: 6px;
-  background: #b91c1c;
-  color: #ffffff;
-  font-size: 0.8rem;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.floating-contact-write:hover,
-.floating-contact-write:focus-visible {
-  background: #991b1b;
-  outline: 2px solid #f4b41a;
-  outline-offset: 2px;
-}
-
-.floating-contact-emergency {
-  margin-top: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  color: #64748b;
-  font-size: 0.72rem;
-  text-decoration: none;
-}
-
-.floating-contact-emergency svg,
-.floating-contact-emergency strong {
-  color: #b91c1c;
-}
-
-.floating-contact-emergency:hover,
-.floating-contact-emergency:focus-visible {
-  color: #991b1b;
-  outline: none;
-}
+.floating-contact-button-label { line-height: 1; }
 
 @keyframes floating-contact-open {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (max-width: 640px) {
@@ -230,25 +63,8 @@
     right: 1rem;
     bottom: 1rem;
   }
-
-  .floating-contact-panel {
-    max-height: calc(100vh - 6.5rem);
-    overflow-y: auto;
-  }
-}
-
-@media (max-width: 400px) {
-  .floating-contact-options {
-    grid-template-columns: 1fr;
-  }
-
-  .floating-contact-options a {
-    min-height: 52px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .floating-contact-panel {
-    animation: none;
-  }
+  .floating-contact-panel { animation: none; }
 }

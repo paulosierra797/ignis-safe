@@ -1,9 +1,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.97.0';
 import { corsHeaders } from '../_shared/cors.ts';
+import { maskOffensiveLanguage } from '../_shared/contentModeration.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const MAX_MESSAGE_LENGTH = 1500;
+const MIN_MESSAGE_LENGTH = 3;
+const MESSAGE_COOLDOWN_MS = 15 * 1000;
 const RECOVERY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
 const serviceClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -50,49 +53,83 @@ const getRequestSource = (request: Request) => {
     || 'unknown';
 };
 
-const getRateKey = async (request: Request, action: string, subject = '') => {
-  const dayBucket = new Date().toISOString().slice(0, 10);
+const getRateKey = async (
+  request: Request,
+  action: string,
+  subject = '',
+  includeRequestSource = true,
+) => {
   return sha256([
-    dayBucket,
     action,
-    getRequestSource(request),
+    includeRequestSource ? getRequestSource(request) : 'shared',
     subject,
     SERVICE_ROLE_KEY.slice(-32),
   ].join(':'));
 };
 
-const enforceRateLimit = async ({
+const enforceRateLimits = async ({
   request,
   action,
-  subject,
-  windowMs,
-  limit,
+  rules,
 }: {
   request: Request;
   action: 'start' | 'restore' | 'message';
-  subject?: string;
-  windowMs: number;
-  limit: number;
+  rules: Array<{
+    subject: string;
+    windowMs: number;
+    limit: number;
+    includeRequestSource?: boolean;
+  }>;
 }) => {
-  const keyHash = await getRateKey(request, action, subject);
-  const since = new Date(Date.now() - windowMs).toISOString();
+  const keyHashes = await Promise.all(rules.map((rule) => getRateKey(
+    request,
+    action,
+    rule.subject,
+    rule.includeRequestSource !== false,
+  )));
+  const { data, error } = await serviceClient.rpc('consume_visitor_chat_rate_limits', {
+    p_key_hashes: keyHashes,
+    p_action: action,
+    p_window_seconds: rules.map((rule) => Math.ceil(rule.windowMs / 1000)),
+    p_limits: rules.map((rule) => rule.limit),
+  });
+  if (error) throw error;
+  return data === true;
+};
 
-  const { count, error: countError } = await serviceClient
-    .from('visitor_chat_rate_events')
-    .select('id', { count: 'exact', head: true })
-    .eq('key_hash', keyHash)
-    .eq('action', action)
-    .gte('occurred_at', since);
+const normalizedMessageFingerprint = (value: string) => value
+  .toLowerCase()
+  .replace(/\s+/gu, ' ')
+  .trim();
 
-  if (countError) throw countError;
-  if ((count || 0) >= limit) return false;
+const validateMessageContent = (message: string) => {
+  if (message.length < MIN_MESSAGE_LENGTH || message.length > MAX_MESSAGE_LENGTH) {
+    return 'Your message must contain ' + MIN_MESSAGE_LENGTH + ' to '
+      + MAX_MESSAGE_LENGTH + ' characters.';
+  }
+  if ((message.match(/https?:\/\/|www\./giu) || []).length > 2) {
+    return 'Please include no more than two links in one message.';
+  }
+  if (/(.)\1{14,}/u.test(message) || !/[\p{L}\p{N}]{2}/u.test(message)) {
+    return 'Please write a clear message before sending.';
+  }
+  return '';
+};
 
-  const { error: insertError } = await serviceClient
-    .from('visitor_chat_rate_events')
-    .insert({ key_hash: keyHash, action });
-  if (insertError) throw insertError;
+const isRecentDuplicate = async (conversationId: string, message: string) => {
+  const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+  const { data, error } = await serviceClient
+    .from('visitor_messages')
+    .select('body')
+    .eq('conversation_id', conversationId)
+    .eq('sender_type', 'visitor')
+    .gte('created_at', cutoff)
+    .order('created_at', { ascending: false })
+    .limit(10);
+  if (error) throw error;
 
-  return true;
+  const fingerprint = normalizedMessageFingerprint(message);
+  return (data || []).some((item) => normalizedMessageFingerprint(item.body) === fingerprint);
 };
 
 const loadConversation = async (recoveryCode: unknown) => {
@@ -107,6 +144,10 @@ const loadConversation = async (recoveryCode: unknown) => {
     .maybeSingle();
 
   if (error) throw error;
+  if (data?.delete_after && new Date(data.delete_after).getTime() <= Date.now()) {
+    await serviceClient.from('visitor_conversations').delete().eq('id', data.id);
+    return null;
+  }
   return data;
 };
 
@@ -159,19 +200,6 @@ const fetchConversation = async (conversation: Record<string, unknown>, markRead
   };
 };
 
-const cleanExpiredData = async () => {
-  const rateCutoff = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
-  const conversationCutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-  await Promise.all([
-    serviceClient.from('visitor_chat_rate_events').delete().lt('occurred_at', rateCutoff),
-    serviceClient
-      .from('visitor_conversations')
-      .delete()
-      .eq('status', 'resolved')
-      .lt('resolved_at', conversationCutoff),
-  ]);
-};
-
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -196,7 +224,9 @@ Deno.serve(async (request) => {
 
       const visitorName = normalizeText(body?.name);
       const visitorEmail = normalizeText(body?.email).toLowerCase();
-      const message = normalizeText(body?.message);
+      const rawMessage = normalizeText(body?.message);
+      const validationError = validateMessageContent(rawMessage);
+      const message = maskOffensiveLanguage(rawMessage);
       const clientMessageId = String(body?.clientMessageId || '');
 
       if (visitorName.length < 2 || visitorName.length > 80) {
@@ -205,28 +235,31 @@ Deno.serve(async (request) => {
       if (!isValidEmail(visitorEmail) || visitorEmail.length > 254) {
         return jsonResponse({ error: 'Please enter a valid email address.' }, 400);
       }
-      if (!message || message.length > MAX_MESSAGE_LENGTH) {
-        return jsonResponse({
-          error: 'Your message must contain 1 to ' + MAX_MESSAGE_LENGTH + ' characters.',
-        }, 400);
-      }
+      if (validationError) return jsonResponse({ error: validationError }, 400);
       if (!isValidClientId(clientMessageId)) {
         return jsonResponse({ error: 'Unable to safely identify this message. Please try again.' }, 400);
       }
 
-      const allowed = await enforceRateLimit({
+      const emailHash = await sha256(visitorEmail);
+      const allowed = await enforceRateLimits({
         request,
         action: 'start',
-        windowMs: 60 * 60 * 1000,
-        limit: 3,
+        rules: [
+          { subject: 'connection-short', windowMs: 30 * 60 * 1000, limit: 1 },
+          { subject: 'connection-day', windowMs: 24 * 60 * 60 * 1000, limit: 3 },
+          {
+            subject: 'email-' + emailHash,
+            windowMs: 24 * 60 * 60 * 1000,
+            limit: 2,
+            includeRequestSource: false,
+          },
+        ],
       });
       if (!allowed) {
         return jsonResponse({
           error: 'Too many new conversations were created from this connection. Please try again later.',
         }, 429);
       }
-
-      await cleanExpiredData();
 
       const recoveryCode = createRecoveryCode();
       const accessCodeHash = await sha256(normalizeRecoveryCode(recoveryCode));
@@ -282,11 +315,13 @@ Deno.serve(async (request) => {
     if (action === 'fetch') {
       const conversation = await loadConversation(body?.recoveryCode);
       if (!conversation) {
-        const allowed = await enforceRateLimit({
+        const allowed = await enforceRateLimits({
           request,
           action: 'restore',
-          windowMs: 60 * 60 * 1000,
-          limit: 10,
+          rules: [
+            { subject: 'invalid-recovery', windowMs: 30 * 60 * 1000, limit: 5 },
+            { subject: 'invalid-recovery-day', windowMs: 24 * 60 * 60 * 1000, limit: 12 },
+          ],
         });
         return jsonResponse({
           error: allowed
@@ -305,26 +340,63 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: 'Conversation access could not be verified.' }, 403);
       }
 
-      const allowed = await enforceRateLimit({
-        request,
-        action: 'message',
-        subject: String(conversation.id),
-        windowMs: 60 * 1000,
-        limit: 8,
-      });
-      if (!allowed) {
-        return jsonResponse({ error: 'You are sending messages too quickly. Please wait a moment.' }, 429);
-      }
-
-      const message = normalizeText(body?.message);
+      const rawMessage = normalizeText(body?.message);
       const clientMessageId = String(body?.clientMessageId || '');
-      if (!message || message.length > MAX_MESSAGE_LENGTH) {
-        return jsonResponse({
-          error: 'Your message must contain 1 to ' + MAX_MESSAGE_LENGTH + ' characters.',
-        }, 400);
-      }
+      const validationError = validateMessageContent(rawMessage);
+      if (validationError) return jsonResponse({ error: validationError }, 400);
       if (!isValidClientId(clientMessageId)) {
         return jsonResponse({ error: 'Unable to safely identify this message. Please try again.' }, 400);
+      }
+
+      const { data: existingMessage, error: existingMessageError } = await serviceClient
+        .from('visitor_messages')
+        .select('id')
+        .eq('conversation_id', conversation.id)
+        .eq('client_message_id', clientMessageId)
+        .maybeSingle();
+      if (existingMessageError) throw existingMessageError;
+      if (existingMessage) {
+        const result = await fetchConversation(conversation, true);
+        return jsonResponse({ data: result, error: null });
+      }
+
+      if (new Date(conversation.created_at).getTime() > Date.now() - MESSAGE_COOLDOWN_MS) {
+        return jsonResponse({ error: 'Please wait 15 seconds before sending another message.' }, 429);
+      }
+
+      const message = maskOffensiveLanguage(rawMessage);
+      if (await isRecentDuplicate(String(conversation.id), message)) {
+        return jsonResponse({ error: 'This message was already sent. Please write a new message.' }, 409);
+      }
+
+      const allowed = await enforceRateLimits({
+        request,
+        action: 'message',
+        rules: [
+          {
+            subject: String(conversation.id) + '-cooldown',
+            windowMs: MESSAGE_COOLDOWN_MS,
+            limit: 1,
+            includeRequestSource: false,
+          },
+          {
+            subject: String(conversation.id) + '-ten-minutes',
+            windowMs: 10 * 60 * 1000,
+            limit: 5,
+            includeRequestSource: false,
+          },
+          {
+            subject: String(conversation.id) + '-daily',
+            windowMs: 24 * 60 * 60 * 1000,
+            limit: 25,
+            includeRequestSource: false,
+          },
+        ],
+      });
+      if (!allowed) {
+        return jsonResponse({
+          error: 'Message limit reached. Please wait before sending another message.',
+        }, 429);
       }
 
       const now = new Date().toISOString();
@@ -344,6 +416,12 @@ Deno.serve(async (request) => {
         .from('visitor_conversations')
         .update({
           status: 'open',
+          is_archived: false,
+          archived_at: null,
+          archived_by: null,
+          deletion_requested_at: null,
+          deletion_requested_by: null,
+          delete_after: null,
           resolved_at: null,
           resolved_by: null,
           last_message_preview: message.slice(0, 180),

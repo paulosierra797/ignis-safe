@@ -5,6 +5,11 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const MAX_MESSAGE_LENGTH = 1500;
+const DELETION_GRACE_DAYS = 30;
+const CONVERSATION_COLUMNS = 'id, visitor_label, visitor_name, visitor_email, status, '
+  + 'last_message_preview, last_sender_type, last_message_at, visitor_last_read_at, '
+  + 'admin_last_read_at, resolved_at, resolved_by, is_archived, archived_at, archived_by, '
+  + 'deletion_requested_at, deletion_requested_by, delete_after, created_at, updated_at';
 
 const serviceClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
@@ -50,7 +55,7 @@ const authenticateAdmin = async (request: Request) => {
 const getConversation = async (conversationId: unknown) => {
   const { data, error } = await serviceClient
     .from('visitor_conversations')
-    .select('id, visitor_label, visitor_name, visitor_email, status, last_message_preview, last_sender_type, last_message_at, visitor_last_read_at, admin_last_read_at, resolved_at, resolved_by, created_at, updated_at')
+    .select(CONVERSATION_COLUMNS)
     .eq('id', String(conversationId || ''))
     .maybeSingle();
   if (error) throw error;
@@ -126,9 +131,11 @@ Deno.serve(async (request) => {
     const action = String(body?.action || '');
 
     if (action === 'list') {
+      const archived = body?.archived === true;
       const { data, error } = await serviceClient
         .from('visitor_conversations')
-        .select('id, visitor_label, visitor_name, visitor_email, status, last_message_preview, last_sender_type, last_message_at, visitor_last_read_at, admin_last_read_at, resolved_at, created_at, updated_at')
+        .select(CONVERSATION_COLUMNS)
+        .eq('is_archived', archived)
         .order('last_message_at', { ascending: false })
         .limit(250);
       if (error) throw error;
@@ -162,6 +169,9 @@ Deno.serve(async (request) => {
     if (action === 'reply') {
       const conversation = await getConversation(body?.conversationId);
       if (!conversation) return jsonResponse({ error: 'Conversation not found.' }, 404);
+      if (conversation.is_archived) {
+        return jsonResponse({ error: 'Restore this conversation before replying.' }, 409);
+      }
 
       const message = normalizeText(body?.message);
       const clientMessageId = String(body?.clientMessageId || '');
@@ -210,6 +220,9 @@ Deno.serve(async (request) => {
     if (action === 'set-status') {
       const conversation = await getConversation(body?.conversationId);
       if (!conversation) return jsonResponse({ error: 'Conversation not found.' }, 404);
+      if (conversation.is_archived) {
+        return jsonResponse({ error: 'Restore this conversation before changing its status.' }, 409);
+      }
 
       const status = body?.status === 'resolved' ? 'resolved' : 'open';
       const now = new Date().toISOString();
@@ -227,6 +240,82 @@ Deno.serve(async (request) => {
 
       const refreshed = await getConversation(conversation.id);
       return jsonResponse({ data: { conversation: refreshed }, error: null });
+    }
+
+    if (action === 'archive') {
+      const conversation = await getConversation(body?.conversationId);
+      if (!conversation) return jsonResponse({ error: 'Conversation not found.' }, 404);
+
+      const now = new Date().toISOString();
+      const { data, error } = await serviceClient
+        .from('visitor_conversations')
+        .update({
+          is_archived: true,
+          archived_at: conversation.archived_at || now,
+          archived_by: conversation.archived_by || admin.admin_id,
+          admin_last_read_at: now,
+          updated_at: now,
+        })
+        .eq('id', conversation.id)
+        .select(CONVERSATION_COLUMNS)
+        .single();
+      if (error) throw error;
+      return jsonResponse({ data: { conversation: data }, error: null });
+    }
+
+    if (action === 'restore') {
+      const conversation = await getConversation(body?.conversationId);
+      if (!conversation) return jsonResponse({ error: 'Conversation not found.' }, 404);
+
+      const now = new Date().toISOString();
+      const { data, error } = await serviceClient
+        .from('visitor_conversations')
+        .update({
+          is_archived: false,
+          archived_at: null,
+          archived_by: null,
+          deletion_requested_at: null,
+          deletion_requested_by: null,
+          delete_after: null,
+          admin_last_read_at: now,
+          updated_at: now,
+        })
+        .eq('id', conversation.id)
+        .select(CONVERSATION_COLUMNS)
+        .single();
+      if (error) throw error;
+      return jsonResponse({ data: { conversation: data }, error: null });
+    }
+
+    if (action === 'schedule-delete') {
+      const conversation = await getConversation(body?.conversationId);
+      if (!conversation) return jsonResponse({ error: 'Conversation not found.' }, 404);
+      if (!conversation.is_archived) {
+        return jsonResponse({ error: 'Archive this conversation before scheduling deletion.' }, 409);
+      }
+
+      if (conversation.delete_after) {
+        return jsonResponse({ data: { conversation }, error: null });
+      }
+
+      const now = new Date();
+      const deleteAfter = new Date(
+        now.getTime() + DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      const { data, error } = await serviceClient
+        .from('visitor_conversations')
+        .update({
+          deletion_requested_at: now.toISOString(),
+          deletion_requested_by: admin.admin_id,
+          delete_after: deleteAfter,
+          admin_last_read_at: now.toISOString(),
+          updated_at: now.toISOString(),
+        })
+        .eq('id', conversation.id)
+        .select(CONVERSATION_COLUMNS)
+        .single();
+      if (error) throw error;
+      return jsonResponse({ data: { conversation: data }, error: null });
     }
 
     return jsonResponse({ error: 'Unsupported messaging action.' }, 400);

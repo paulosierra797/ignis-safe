@@ -55,8 +55,8 @@ export const sendVisitorMessage = ({ recoveryCode, message, clientMessageId }) =
     clientMessageId,
   });
 
-export const listAdminVisitorConversations = () =>
-  invoke('admin-visitor-chat', { action: 'list' });
+export const listAdminVisitorConversations = ({ archived = false } = {}) =>
+  invoke('admin-visitor-chat', { action: 'list', archived });
 
 export const getAdminVisitorConversation = (conversationId) =>
   invoke('admin-visitor-chat', { action: 'get', conversationId });
@@ -75,6 +75,15 @@ export const setVisitorConversationStatus = ({ conversationId, status }) =>
     conversationId,
     status,
   });
+
+export const archiveVisitorConversation = (conversationId) =>
+  invoke('admin-visitor-chat', { action: 'archive', conversationId });
+
+export const restoreVisitorConversation = (conversationId) =>
+  invoke('admin-visitor-chat', { action: 'restore', conversationId });
+
+export const scheduleVisitorConversationDeletion = (conversationId) =>
+  invoke('admin-visitor-chat', { action: 'schedule-delete', conversationId });
 
 export const readVisitorChatAccess = () => {
   try {

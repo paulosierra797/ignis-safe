@@ -18,8 +18,17 @@ export default function useVisitorChat({ active = false } = {}) {
   const [hasUnreadReply, setHasUnreadReply] = useState(false);
   const [loading, setLoading] = useState(Boolean(access?.recoveryCode));
   const [sending, setSending] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [error, setError] = useState('');
   const requestInFlightRef = useRef(false);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return undefined;
+    const intervalId = window.setInterval(() => {
+      setCooldownSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [cooldownSeconds]);
 
   const applyResult = useCallback((data) => {
     if (!data) return;
@@ -127,12 +136,18 @@ export default function useVisitorChat({ active = false } = {}) {
     storeVisitorChatAccess(nextAccess);
     setAccess(nextAccess);
     applyResult(result.data);
+    setCooldownSeconds(15);
     return result;
   };
 
   const sendMessage = async (message) => {
     if (!access?.recoveryCode || sending) {
       return { error: 'The conversation is not ready yet.' };
+    }
+    if (cooldownSeconds > 0) {
+      const result = { error: `Please wait ${cooldownSeconds} seconds before sending again.` };
+      setError(result.error);
+      return result;
     }
 
     const pending = { message, clientMessageId: crypto.randomUUID() };
@@ -153,6 +168,7 @@ export default function useVisitorChat({ active = false } = {}) {
 
     clearPendingVisitorMessage();
     applyResult(result.data);
+    setCooldownSeconds(15);
     return result;
   };
 
@@ -185,6 +201,7 @@ export default function useVisitorChat({ active = false } = {}) {
     setMessages([]);
     setHasUnreadReply(false);
     setError('');
+    setCooldownSeconds(0);
   };
 
   return {
@@ -194,6 +211,7 @@ export default function useVisitorChat({ active = false } = {}) {
     hasUnreadReply,
     loading,
     sending,
+    cooldownSeconds,
     error,
     setError,
     startConversation,

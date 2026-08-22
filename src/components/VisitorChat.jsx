@@ -42,6 +42,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
     messages,
     loading,
     sending,
+    cooldownSeconds,
     error,
     setError,
     startConversation,
@@ -249,8 +250,15 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
               placeholder="Write a message..."
               maxLength={VISITOR_CHAT_MAX_LENGTH}
             />
-            <span className="visitor-chat-composer-count">{composer.length}/{VISITOR_CHAT_MAX_LENGTH}</span>
-            <button type="submit" disabled={sending || !composer.trim()} aria-label="Send message">
+            <span className="visitor-chat-composer-count">
+              {cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : `${composer.length}/${VISITOR_CHAT_MAX_LENGTH}`}
+            </span>
+            <button
+              type="submit"
+              disabled={sending || cooldownSeconds > 0 || !composer.trim()}
+              aria-label={cooldownSeconds > 0 ? `Send available in ${cooldownSeconds} seconds` : 'Send message'}
+              title={cooldownSeconds > 0 ? `Please wait ${cooldownSeconds} seconds` : 'Send message'}
+            >
               <FiSend aria-hidden="true" />
             </button>
           </form>

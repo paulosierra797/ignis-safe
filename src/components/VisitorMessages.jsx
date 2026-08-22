@@ -1,21 +1,29 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FiArrowLeft,
+  FiArchive,
+  FiAlertTriangle,
   FiCheckCircle,
   FiClock,
   FiMail,
   FiMessageCircle,
   FiRefreshCw,
+  FiRotateCcw,
   FiSearch,
   FiSend,
+  FiTrash2,
   FiUser,
+  FiX,
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import {
+  archiveVisitorConversation,
   getAdminVisitorConversation,
   listAdminVisitorConversations,
   replyToVisitorConversation,
+  restoreVisitorConversation,
+  scheduleVisitorConversationDeletion,
   setVisitorConversationStatus,
   VISITOR_CHAT_MAX_LENGTH,
 } from '../utils/visitorChatService';
@@ -47,25 +55,33 @@ export default function VisitorMessages() {
   const [thread, setThread] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [archivedView, setArchivedView] = useState(false);
   const [reply, setReply] = useState('');
   const [loadingList, setLoadingList] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
   const [sending, setSending] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [updatingArchive, setUpdatingArchive] = useState(false);
+  const [pendingDeletion, setPendingDeletion] = useState(null);
   const [error, setError] = useState('');
   const messagesRef = useRef(null);
 
   const loadConversations = useCallback(async ({ quiet = false } = {}) => {
     if (!quiet) setLoadingList(true);
-    const result = await listAdminVisitorConversations();
+    const result = await listAdminVisitorConversations({ archived: archivedView });
     if (!quiet) setLoadingList(false);
     if (result.error) {
       if (!quiet) setError(result.error);
       return;
     }
-    setConversations(result.data?.conversations || []);
-    setSelectedId((current) => current || result.data?.conversations?.[0]?.id || '');
-  }, []);
+    const nextConversations = result.data?.conversations || [];
+    setConversations(nextConversations);
+    setSelectedId((current) => (
+      nextConversations.some((item) => item.id === current)
+        ? current
+        : nextConversations[0]?.id || ''
+    ));
+  }, [archivedView]);
 
   const loadThread = useCallback(async (conversationId, { quiet = false } = {}) => {
     if (!conversationId) return;
@@ -160,6 +176,63 @@ export default function VisitorMessages() {
     await loadConversations({ quiet: true });
   };
 
+  const handleArchive = async () => {
+    if (!thread?.conversation || updatingArchive) return;
+    setUpdatingArchive(true);
+    setError('');
+    const result = await archiveVisitorConversation(thread.conversation.id);
+    setUpdatingArchive(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setThread(null);
+    setSelectedId('');
+    await loadConversations({ quiet: true });
+  };
+
+  const handleRestore = async () => {
+    if (!thread?.conversation || updatingArchive) return;
+    setUpdatingArchive(true);
+    setError('');
+    const result = await restoreVisitorConversation(thread.conversation.id);
+    setUpdatingArchive(false);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    setThread(null);
+    setSelectedId('');
+    await loadConversations({ quiet: true });
+  };
+
+  const handleScheduleDeletion = async () => {
+    if (!pendingDeletion || updatingArchive) return;
+    setUpdatingArchive(true);
+    setError('');
+    const result = await scheduleVisitorConversationDeletion(pendingDeletion.id);
+    setUpdatingArchive(false);
+    if (result.error) {
+      setError(result.error);
+      setPendingDeletion(null);
+      return;
+    }
+    setThread((current) => ({ ...current, conversation: result.data.conversation }));
+    setConversations((current) => current.map((item) => (
+      item.id === pendingDeletion.id ? { ...item, ...result.data.conversation } : item
+    )));
+    setPendingDeletion(null);
+  };
+
+  const handleArchiveViewToggle = () => {
+    setArchivedView((current) => !current);
+    setSelectedId('');
+    setThread(null);
+    setStatusFilter('all');
+    setReply('');
+    setError('');
+  };
+
   return (
     <div className="visitor-messages-page">
       <Sidebar />
@@ -168,13 +241,36 @@ export default function VisitorMessages() {
 
         <section className="visitor-messages-intro">
           <div>
-            <span>PUBLIC COMMUNICATION</span>
-            <h2>Website Conversations</h2>
-            <p>Read and reply to messages sent through the public website. Visitor names and emails are shown for clear follow-up.</p>
+            <span>{archivedView ? 'CONVERSATION ARCHIVE' : 'PUBLIC COMMUNICATION'}</span>
+            <h2>{archivedView ? 'Archived Conversations' : 'Website Conversations'}</h2>
+            <p>
+              {archivedView
+                ? 'Restore conversations to the active inbox or schedule permanent deletion after a 30-day recovery period.'
+                : 'Read and reply to messages sent through the public website. Visitor names and emails are shown for clear follow-up.'}
+            </p>
           </div>
-          <div className="visitor-messages-summary">
-            <span><strong>{conversations.filter((item) => item.unread).length}</strong> Unread</span>
-            <span><strong>{conversations.filter((item) => item.status === 'open').length}</strong> Open</span>
+          <div className="visitor-messages-intro-actions">
+            <div className="visitor-messages-summary">
+              {archivedView ? (
+                <>
+                  <span><strong>{conversations.length}</strong> Archived</span>
+                  <span><strong>{conversations.filter((item) => item.delete_after).length}</strong> Pending deletion</span>
+                </>
+              ) : (
+                <>
+                  <span><strong>{conversations.filter((item) => item.unread).length}</strong> Unread</span>
+                  <span><strong>{conversations.filter((item) => item.status === 'open').length}</strong> Open</span>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              className="visitor-archive-view-button"
+              onClick={handleArchiveViewToggle}
+            >
+              {archivedView ? <FiArrowLeft /> : <FiArchive />}
+              {archivedView ? 'Back to inbox' : 'View archive'}
+            </button>
           </div>
         </section>
 
@@ -233,6 +329,9 @@ export default function VisitorMessages() {
                     <span className="visitor-conversation-preview">{conversation.last_message_preview}</span>
                     <span className="visitor-conversation-meta">
                       <span className={`visitor-conversation-status is-${conversation.status}`}>{conversation.status}</span>
+                      {conversation.delete_after && (
+                        <span className="visitor-conversation-delete-status">Deletes {formatListTime(conversation.delete_after)}</span>
+                      )}
                       {conversation.unread && <span className="visitor-conversation-unread">New</span>}
                     </span>
                   </span>
@@ -262,16 +361,62 @@ export default function VisitorMessages() {
                     <a href={`mailto:${thread.conversation.visitor_email}`}><FiMail /> {thread.conversation.visitor_email}</a>
                     <span>{thread.conversation.visitor_label}</span>
                   </div>
-                  <button
-                    type="button"
-                    className={`visitor-thread-status-action is-${thread.conversation.status}`}
-                    onClick={handleStatusChange}
-                    disabled={updatingStatus}
-                  >
-                    {thread.conversation.status === 'resolved' ? <FiClock /> : <FiCheckCircle />}
-                    {updatingStatus ? 'Updating...' : thread.conversation.status === 'resolved' ? 'Reopen' : 'Mark Resolved'}
-                  </button>
+                  <div className="visitor-thread-actions">
+                    {archivedView ? (
+                      <>
+                        <button
+                          type="button"
+                          className="visitor-thread-restore-action"
+                          onClick={handleRestore}
+                          disabled={updatingArchive}
+                        >
+                          <FiRotateCcw />
+                          {updatingArchive ? 'Restoring...' : 'Restore'}
+                        </button>
+                        <button
+                          type="button"
+                          className="visitor-thread-delete-action"
+                          onClick={() => setPendingDeletion(thread.conversation)}
+                          disabled={updatingArchive || Boolean(thread.conversation.delete_after)}
+                        >
+                          <FiTrash2 />
+                          {thread.conversation.delete_after ? 'Deletion scheduled' : 'Delete conversation'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className={`visitor-thread-status-action is-${thread.conversation.status}`}
+                          onClick={handleStatusChange}
+                          disabled={updatingStatus}
+                        >
+                          {thread.conversation.status === 'resolved' ? <FiClock /> : <FiCheckCircle />}
+                          {updatingStatus ? 'Updating...' : thread.conversation.status === 'resolved' ? 'Reopen' : 'Mark Resolved'}
+                        </button>
+                        <button
+                          type="button"
+                          className="visitor-thread-archive-action"
+                          onClick={handleArchive}
+                          disabled={updatingArchive}
+                        >
+                          <FiArchive />
+                          {updatingArchive ? 'Archiving...' : 'Archive'}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </header>
+
+                {thread.conversation.delete_after && (
+                  <div className="visitor-thread-deletion-notice" role="status">
+                    <FiAlertTriangle />
+                    <span>
+                      Permanent deletion is scheduled for <strong>{formatDateTime(thread.conversation.delete_after)}</strong>.
+                      Restore this conversation before then to cancel deletion.
+                    </span>
+                  </div>
+                )}
 
                 <div className="visitor-thread-messages" ref={messagesRef}>
                   {(thread.messages || []).map((message) => {
@@ -289,7 +434,7 @@ export default function VisitorMessages() {
                   })}
                 </div>
 
-                <form className="visitor-thread-composer" onSubmit={handleReply}>
+                {!archivedView ? <form className="visitor-thread-composer" onSubmit={handleReply}>
                   <div>
                     <label htmlFor="visitor-admin-reply" className="sr-only">Reply to visitor</label>
                     <textarea
@@ -314,12 +459,54 @@ export default function VisitorMessages() {
                     <FiSend />
                     <span>{sending ? 'Sending...' : 'Send'}</span>
                   </button>
-                </form>
+                </form> : (
+                  <div className="visitor-thread-archived-note">
+                    <FiArchive /> Restore this conversation before replying or changing its status.
+                  </div>
+                )}
               </>
             ) : null}
           </div>
         </section>
       </main>
+
+      {pendingDeletion && (
+        <div className="visitor-delete-modal-backdrop" role="presentation" onMouseDown={() => setPendingDeletion(null)}>
+          <section
+            className="visitor-delete-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="visitor-delete-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="visitor-delete-modal-close"
+              onClick={() => setPendingDeletion(null)}
+              aria-label="Close deletion confirmation"
+            >
+              <FiX />
+            </button>
+            <span className="visitor-delete-modal-icon"><FiAlertTriangle /></span>
+            <p className="visitor-delete-modal-eyebrow">30-DAY RECOVERY PERIOD</p>
+            <h2 id="visitor-delete-title">Delete this conversation?</h2>
+            <p>
+              The conversation with <strong>{pendingDeletion.visitor_name}</strong> will remain in the archive for 30 days.
+              You can restore it during that period. Afterward, the conversation and all of its messages will be permanently deleted.
+            </p>
+            <div className="visitor-delete-modal-preview">
+              <span>{pendingDeletion.visitor_name}</span>
+              <small>{pendingDeletion.visitor_email}</small>
+            </div>
+            <div className="visitor-delete-modal-actions">
+              <button type="button" onClick={() => setPendingDeletion(null)} disabled={updatingArchive}>Cancel</button>
+              <button type="button" onClick={handleScheduleDeletion} disabled={updatingArchive}>
+                <FiTrash2 /> {updatingArchive ? 'Scheduling...' : 'Schedule deletion'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

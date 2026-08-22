@@ -663,24 +663,24 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1.25rem 1rem;
+  padding: 0.85rem 1rem;
   background-color: transparent;
 }
 
 .sidebar-logo {
-  width: 60px;
-  height: 60px;
+  width: 52px;
+  height: 52px;
 }
 
 .sidebar-title {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.5px;
 }
 
 .sidebar-nav {
   flex: 1;
-  padding: 1rem 0;
+  padding: 0.6rem 0;
 }
 
 .nav-list {
@@ -699,9 +699,9 @@
   gap: 0.625rem;
   box-sizing: border-box;
   width: calc(100% - 1rem);
-  min-height: 50px;
+  min-height: 44px;
   margin: 0 0.5rem;
-  padding: 0.75rem 0.5rem;
+  padding: 0.58rem 0.5rem;
   border-radius: 8px;
   color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
@@ -724,7 +724,7 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 24px;
-  font-size: 1.05rem;
+  font-size: 1rem;
   width: 24px;
   height: 24px;
   text-align: center;
@@ -733,7 +733,7 @@
 .nav-label {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 500;
   /* Tall enough to contain Poppins' descenders ("g" in Learning, "y" in
      Analytics). The item's 50px min-height absorbs this, so nothing reflows. */
@@ -1032,8 +1032,8 @@ body.sidebar-collapsed .nav-section {
 }
 
 .nav-section {
-  margin-top: 1.25rem;
-  padding-top: 1rem;
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 

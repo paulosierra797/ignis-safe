@@ -4,6 +4,32 @@
   flex-direction: column;
 }
 
+.app-route-loader {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f7f8fa;
+}
+
+.app-route-loader span {
+  width: 34px;
+  height: 34px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #b91c1c;
+  border-radius: 50%;
+  animation: app-route-spin 0.75s linear infinite;
+}
+
+@keyframes app-route-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-route-loader span {
+    animation: none;
+  }
+}
+
 .expandable-text-wrap {
   min-width: 0;
 }

@@ -1,16 +1,10 @@
 import { lazy, Suspense, useEffect } from 'react'
 import './App.css'
+import './components/WorkspaceDensity.css'
 import Header from './components/Header'
 import HeroSection from './components/HeroSection'
-import LandingAnnouncements from './components/LandingAnnouncements'
-import AboutSection from './components/AboutSection'
-import ProcessSection from './components/ProcessSection'
-import ContactSection from './components/ContactSection'
-import FAQSection from './components/FAQSection'
 import Footer from './components/Footer'
-import FloatingContactButton from './components/FloatingContactButton'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import LoginPage from './components/LoginPage';
 import { UserProvider, useUser } from './context/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { LandingContentProvider } from './context/LandingContentContext';
@@ -20,48 +14,107 @@ import AppSessionTracker from './components/AppSessionTracker';
 const loadDashboard = () => import('./components/Dashboard');
 const loadAnalytics = () => import('./components/Analytics');
 const loadPersonnelOperations = () => import('./components/PersonnelOperations');
+const loadLogin = () => import('./components/LoginPage');
+const loadReports = () => import('./components/Reports');
+const loadAttendanceAdmin = () => import('./components/AttendanceAdmin');
+const loadAttendancePersonnel = () => import('./components/AttendancePersonnel');
+const loadAssessmentQuestions = () => import('./components/AssessmentQuestions');
+const loadLearningMaterials = () => import('./components/LearningMaterials');
+const loadChart = () => import('./components/Chart');
+const loadAccounts = () => import('./components/Accounts');
+const loadProgress = () => import('./components/Progress');
+const loadAuditLogs = () => import('./components/AuditLogs');
+const loadAboutUsContent = () => import('./components/AboutUsContent');
+const loadAnnouncements = () => import('./components/Announcements');
+const loadPersonnelProfile = () => import('./components/PersonnelProfile');
+const loadAdminProfile = () => import('./components/AdminProfile');
+const loadHistory = () => import('./components/History');
+const loadAdminReports = () => import('./components/AdminReports');
+const loadVisitorMessages = () => import('./components/VisitorMessages');
 
 const Dashboard = lazy(loadDashboard);
-const Reports = lazy(() => import('./components/Reports'));
-const AttendanceAdmin = lazy(() => import('./components/AttendanceAdmin'));
-const AttendancePersonnel = lazy(() => import('./components/AttendancePersonnel'));
+const LoginPage = lazy(loadLogin);
+const Reports = lazy(loadReports);
+const AttendanceAdmin = lazy(loadAttendanceAdmin);
+const AttendancePersonnel = lazy(loadAttendancePersonnel);
 const AttendanceLogin = lazy(() => import('./components/AttendanceLogin'));
 const AttendanceScan = lazy(() => import('./components/AttendanceScan'));
 const AttendanceConfirm = lazy(() => import('./components/AttendanceConfirm'));
 const Analytics = lazy(loadAnalytics);
-const AssessmentQuestions = lazy(() => import('./components/AssessmentQuestions'));
-const LearningMaterials = lazy(() => import('./components/LearningMaterials'));
-const Chart = lazy(() => import('./components/Chart'));
-const Accounts = lazy(() => import('./components/Accounts'));
-const Progress = lazy(() => import('./components/Progress'));
-const AuditLogs = lazy(() => import('./components/AuditLogs'));
-const AboutUsContent = lazy(() => import('./components/AboutUsContent'));
-const Announcements = lazy(() => import('./components/Announcements'));
-const PersonnelProfile = lazy(() => import('./components/PersonnelProfile'));
-const AdminProfile = lazy(() => import('./components/AdminProfile'));
-const History = lazy(() => import('./components/History'));
+const AssessmentQuestions = lazy(loadAssessmentQuestions);
+const LearningMaterials = lazy(loadLearningMaterials);
+const Chart = lazy(loadChart);
+const Accounts = lazy(loadAccounts);
+const Progress = lazy(loadProgress);
+const AuditLogs = lazy(loadAuditLogs);
+const AboutUsContent = lazy(loadAboutUsContent);
+const Announcements = lazy(loadAnnouncements);
+const PersonnelProfile = lazy(loadPersonnelProfile);
+const AdminProfile = lazy(loadAdminProfile);
+const History = lazy(loadHistory);
 const PersonnelOperations = lazy(loadPersonnelOperations);
-const AdminReports = lazy(() => import('./components/AdminReports'));
+const AdminReports = lazy(loadAdminReports);
 const OrganizationalChartView = lazy(() => import('./components/OrganizationalChartView'));
 const TermsPage = lazy(() => import('./components/TermsPage'));
 const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
 const ConfirmSignupPage = lazy(() => import('./components/ConfirmSignupPage'));
 const SendMessagePage = lazy(() => import('./components/SendMessagePage'));
-const VisitorMessages = lazy(() => import('./components/VisitorMessages'));
+const VisitorMessages = lazy(loadVisitorMessages);
+const LandingAnnouncements = lazy(() => import('./components/LandingAnnouncements'));
+const AboutSection = lazy(() => import('./components/AboutSection'));
+const ProcessSection = lazy(() => import('./components/ProcessSection'));
+const ContactSection = lazy(() => import('./components/ContactSection'));
+const FAQSection = lazy(() => import('./components/FAQSection'));
+const FloatingContactButton = lazy(() => import('./components/FloatingContactButton'));
 
 const ROUTE_PRELOADERS = {
+  '/login': loadLogin,
   '/dashboard': loadDashboard,
   '/dashboard/analytics': loadAnalytics,
+  '/dashboard/profile': loadAdminProfile,
+  '/dashboard/accounts': loadAccounts,
+  '/dashboard/reports': loadAdminReports,
+  '/dashboard/users': loadProgress,
+  '/dashboard/progress': loadProgress,
+  '/dashboard/announcements': loadAnnouncements,
+  '/dashboard/visitor-messages': loadVisitorMessages,
+  '/dashboard/assessment-questions': loadAssessmentQuestions,
+  '/dashboard/learning-materials': loadLearningMaterials,
+  '/dashboard/chart': loadChart,
+  '/dashboard/about-us': loadAboutUsContent,
+  '/dashboard/audit-logs': loadAuditLogs,
   '/personnel/operations': loadPersonnelOperations,
+  '/personnel/profile': loadPersonnelProfile,
+  '/personnel/history': loadHistory,
+  '/personnel/announcements': loadAnnouncements,
+  '/reports': loadReports,
+  '/attendance-admin': loadAttendanceAdmin,
+  '/attendance-personnel': loadAttendancePersonnel,
 };
 
 function RoutePreloader() {
-  const { pathname } = useLocation();
-
   useEffect(() => {
-    const preload = ROUTE_PRELOADERS[pathname];
-    if (preload) void preload();
-  }, [pathname]);
+    const preloaded = new Set();
+    const preloadFromEvent = (event) => {
+      const link = event.target instanceof Element ? event.target.closest('a[href]') : null;
+      if (!link) return;
+
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin || preloaded.has(url.pathname)) return;
+
+      const preload = ROUTE_PRELOADERS[url.pathname];
+      if (!preload) return;
+      preloaded.add(url.pathname);
+      void preload();
+    };
+
+    document.addEventListener('pointerover', preloadFromEvent, { passive: true });
+    document.addEventListener('focusin', preloadFromEvent);
+    return () => {
+      document.removeEventListener('pointerover', preloadFromEvent);
+      document.removeEventListener('focusin', preloadFromEvent);
+    };
+  }, []);
 
   return null;
 }
@@ -160,13 +213,13 @@ function LandingPage() {
     <>
       <Header />
       <HeroSection />
-      <LandingAnnouncements />
-      <AboutSection />
-      <ProcessSection />
-      <ContactSection />
-      <FAQSection />
+      <Suspense fallback={null}><LandingAnnouncements /></Suspense>
+      <Suspense fallback={null}><AboutSection /></Suspense>
+      <Suspense fallback={null}><ProcessSection /></Suspense>
+      <Suspense fallback={null}><ContactSection /></Suspense>
+      <Suspense fallback={null}><FAQSection /></Suspense>
       <Footer />
-      <FloatingContactButton />
+      <Suspense fallback={null}><FloatingContactButton /></Suspense>
     </>
   );
 }
@@ -180,7 +233,13 @@ function App() {
         <LandingContentProvider>
           <div className="app">
             <ScrollToTop />
-            <Suspense fallback={null}>
+            <Suspense
+              fallback={(
+                <div className="app-route-loader" role="status" aria-label="Loading page">
+                  <span aria-hidden="true" />
+                </div>
+              )}
+            >
               <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />

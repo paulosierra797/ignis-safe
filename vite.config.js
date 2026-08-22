@@ -33,11 +33,28 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes('node_modules')) return undefined
+          const normalizedId = id.replaceAll('\\', '/')
+          if (!normalizedId.includes('/node_modules/')) return undefined
           if (/node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) {
             return 'vendor-react'
           }
-          if (id.includes('node_modules/@supabase/')) return 'vendor-supabase'
+          if (normalizedId.includes('/node_modules/@supabase/')) return 'vendor-supabase'
+          if (
+            normalizedId.includes('/node_modules/chart.js/')
+            || normalizedId.includes('/node_modules/react-chartjs-2/')
+          ) return 'vendor-charts'
+          if (
+            normalizedId.includes('/node_modules/jspdf/')
+            || normalizedId.includes('/node_modules/jspdf-autotable/')
+          ) return 'vendor-documents'
+          if (
+            normalizedId.includes('/node_modules/@mediapipe/')
+            || normalizedId.includes('/node_modules/@techstark/')
+            || normalizedId.includes('/node_modules/@vladmandic/')
+            || normalizedId.includes('/node_modules/react-webcam/')
+          ) {
+            return 'vendor-vision'
+          }
           return undefined
         }
       }

@@ -1,0 +1,337 @@
+:root {
+  --workspace-gutter-x: 1.5rem;
+  --workspace-gutter-y: 1.25rem;
+  --workspace-section-gap: 1rem;
+  --workspace-card-padding: 1rem;
+}
+
+:is(
+  .dashboard-main,
+  .accounts-main,
+  .admin-reports-main,
+  .admin-profile-content,
+  .analytics-main,
+  .assessment-questions-main,
+  .attendance-admin-content,
+  .attendance-personnel-content,
+  .chart-main,
+  .content-management-main,
+  .history-content,
+  .investigation-main,
+  .landing-editor-main,
+  .learning-materials-main,
+  .progress-main,
+  .reports-main,
+  .user-announcements-main,
+  .personnel-ops-content,
+  .personnel-profile-content,
+  .audit-logs-main,
+  .announcements-main,
+  .aboutus-main,
+  .visitor-messages-main
+) {
+  --page-content-gutter-x: var(--workspace-gutter-x);
+  --page-content-gutter-y: var(--workspace-gutter-y);
+  min-width: 0;
+}
+
+@media (min-width: 901px) {
+  :is(
+    .dashboard-main,
+    .accounts-main,
+    .admin-profile-content,
+    .analytics-main,
+    .assessment-questions-main,
+    .attendance-admin-content,
+    .attendance-personnel-content,
+    .chart-main,
+    .content-management-main,
+    .history-content,
+    .investigation-main,
+    .landing-editor-main,
+    .learning-materials-main,
+    .progress-main,
+    .reports-main,
+    .user-announcements-main,
+    .personnel-ops-content,
+    .personnel-profile-content,
+    .audit-logs-main,
+    .announcements-main,
+    .aboutus-main,
+    .visitor-messages-main
+  ) {
+    padding: var(--workspace-gutter-y) var(--workspace-gutter-x) !important;
+  }
+
+  .admin-reports-main {
+    padding: 0 var(--workspace-gutter-x) var(--workspace-gutter-y) !important;
+  }
+
+  :is(
+    .dashboard-main,
+    .accounts-main,
+    .admin-profile-content,
+    .analytics-main,
+    .assessment-questions-main,
+    .attendance-admin-content,
+    .attendance-personnel-content,
+    .chart-main,
+    .content-management-main,
+    .history-content,
+    .investigation-main,
+    .landing-editor-main,
+    .learning-materials-main,
+    .progress-main,
+    .reports-main,
+    .user-announcements-main,
+    .personnel-ops-content,
+    .personnel-profile-content,
+    .audit-logs-main,
+    .announcements-main,
+    .aboutus-main,
+    .visitor-messages-main
+  ) > .page-header {
+    margin: calc(0px - var(--workspace-gutter-y))
+      calc(0px - var(--workspace-gutter-x)) var(--workspace-section-gap) !important;
+    padding: 0.8rem var(--workspace-gutter-x) !important;
+  }
+
+  .admin-reports-main > .page-header {
+    margin: 0 calc(0px - var(--workspace-gutter-x)) var(--workspace-section-gap) !important;
+    padding: 0.8rem var(--workspace-gutter-x) !important;
+  }
+}
+
+:is(
+  .dashboard-main,
+  .accounts-main,
+  .admin-reports-main,
+  .admin-profile-content,
+  .analytics-main,
+  .assessment-questions-main,
+  .attendance-admin-content,
+  .attendance-personnel-content,
+  .chart-main,
+  .content-management-main,
+  .history-content,
+  .investigation-main,
+  .landing-editor-main,
+  .learning-materials-main,
+  .progress-main,
+  .reports-main,
+  .user-announcements-main,
+  .personnel-ops-content,
+  .personnel-profile-content,
+  .audit-logs-main,
+  .announcements-main,
+  .aboutus-main,
+  .visitor-messages-main
+) > .page-header .page-title {
+  font-size: 1.45rem !important;
+}
+
+:is(
+  .dashboard-main,
+  .accounts-main,
+  .admin-reports-main,
+  .analytics-main,
+  .assessment-questions-main,
+  .attendance-admin-content,
+  .attendance-personnel-content,
+  .history-content,
+  .learning-materials-main,
+  .progress-main,
+  .reports-main,
+  .personnel-ops-content,
+  .audit-logs-main,
+  .announcements-main,
+  .visitor-messages-main
+) :is(table th, table td) {
+  padding: 0.6rem 0.7rem !important;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+:is(
+  .dashboard-main,
+  .accounts-main,
+  .admin-reports-main,
+  .analytics-main,
+  .assessment-questions-main,
+  .attendance-admin-content,
+  .attendance-personnel-content,
+  .history-content,
+  .learning-materials-main,
+  .progress-main,
+  .reports-main,
+  .personnel-ops-content,
+  .audit-logs-main,
+  .announcements-main,
+  .visitor-messages-main
+) :is(input, select, textarea) {
+  line-height: 1.4;
+}
+
+:is(
+  .metric-card,
+  .chart-card,
+  .ops-card,
+  .reports-content,
+  .report-upload-card,
+  .shift-summary-card,
+  .admin-reports-card,
+  .analytics-card,
+  .analytics-summary-card
+) {
+  padding: var(--workspace-card-padding) !important;
+  border-radius: 8px !important;
+}
+
+:is(
+  .metrics-section,
+  .charts-section,
+  .accounts-tabs-wrap,
+  .accounts-header,
+  .analytics-filters,
+  .audit-logs-filters,
+  .report-cards-grid
+) {
+  margin-bottom: var(--workspace-section-gap) !important;
+}
+
+:is(
+  .metrics-grid,
+  .metrics-grid-4,
+  .charts-grid,
+  .personnel-ops-grid,
+  .report-cards-grid,
+  .analytics-grid
+) {
+  gap: var(--workspace-section-gap) !important;
+}
+
+.main-number {
+  font-size: 1.65rem !important;
+}
+
+.accounts-tab {
+  padding: 0.6rem 0.85rem !important;
+  font-size: 0.82rem !important;
+}
+
+.reports-content .create-report-header h2 {
+  margin-bottom: 0.45rem;
+  font-size: 1.3rem;
+}
+
+.reports-content .create-report-description {
+  margin-bottom: 1rem;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --workspace-gutter-x: 0.75rem;
+    --workspace-gutter-y: 0.75rem;
+    --workspace-card-padding: 0.85rem;
+  }
+
+  :is(
+    .dashboard-main,
+    .accounts-main,
+    .admin-reports-main,
+    .admin-profile-content,
+    .analytics-main,
+    .assessment-questions-main,
+    .attendance-admin-content,
+    .attendance-personnel-content,
+    .chart-main,
+    .content-management-main,
+    .history-content,
+    .investigation-main,
+    .landing-editor-main,
+    .learning-materials-main,
+    .progress-main,
+    .reports-main,
+    .user-announcements-main,
+    .personnel-ops-content,
+    .personnel-profile-content,
+    .audit-logs-main,
+    .announcements-main,
+    .aboutus-main,
+    .visitor-messages-main
+  ) {
+    padding: var(--workspace-gutter-y) var(--workspace-gutter-x) !important;
+  }
+
+  :is(
+    .dashboard-main,
+    .accounts-main,
+    .admin-reports-main,
+    .admin-profile-content,
+    .analytics-main,
+    .assessment-questions-main,
+    .attendance-admin-content,
+    .attendance-personnel-content,
+    .chart-main,
+    .content-management-main,
+    .history-content,
+    .investigation-main,
+    .landing-editor-main,
+    .learning-materials-main,
+    .progress-main,
+    .reports-main,
+    .user-announcements-main,
+    .personnel-ops-content,
+    .personnel-profile-content,
+    .audit-logs-main,
+    .announcements-main,
+    .aboutus-main,
+    .visitor-messages-main
+  ) > .page-header {
+    margin: calc(0px - var(--workspace-gutter-y))
+      calc(0px - var(--workspace-gutter-x)) 0.75rem !important;
+    padding: 0.65rem 0.75rem !important;
+    border-radius: 0 0 8px 8px !important;
+  }
+
+  :is(
+    .metrics-grid,
+    .metrics-grid-4,
+    .charts-grid,
+    .report-cards-grid
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  :is(
+    .metrics-grid,
+    .metrics-grid-4,
+    .charts-grid,
+    .report-cards-grid
+  ) {
+    grid-template-columns: 1fr;
+  }
+
+  :is(
+    .dashboard-main,
+    .accounts-main,
+    .admin-reports-main,
+    .analytics-main,
+    .assessment-questions-main,
+    .attendance-admin-content,
+    .attendance-personnel-content,
+    .history-content,
+    .learning-materials-main,
+    .progress-main,
+    .reports-main,
+    .personnel-ops-content,
+    .audit-logs-main,
+    .announcements-main,
+    .visitor-messages-main
+  ) :is(table th, table td) {
+    padding: 0.55rem 0.6rem !important;
+  }
+}

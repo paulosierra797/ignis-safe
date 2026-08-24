@@ -1690,29 +1690,55 @@
   }
 
   .login-left {
-    min-height: 194px;
-    gap: 0.5rem 0.85rem;
-    padding: 0.7rem 0.85rem;
+    min-height: 220px;
+    grid-template-areas:
+      "ignis"
+      "bfp"
+      "content";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    justify-items: center;
+    gap: 0.3rem;
+    padding: 0.65rem 0.85rem;
+  }
+
+  .login-brand-top {
+    justify-self: center;
+  }
+
+  .login-bfp-group {
+    align-items: center;
+    gap: 0.2rem;
   }
 
   .login-logo {
-    width: clamp(166px, 48vw, 188px);
+    width: clamp(168px, 50vw, 190px);
   }
 
   .login-bfp-logo-frame {
-    width: 52px;
+    width: 46px;
+  }
+
+  .login-brand-rule {
+    width: 36px;
+  }
+
+  .login-brand-content {
+    width: 100%;
+    max-width: 320px;
+    text-align: center;
   }
 
   .login-brand-content h1 {
     margin: 0 0 0.2rem;
-    font-size: clamp(1.35rem, 5.5vw, 1.58rem);
-    text-align: left;
+    font-size: clamp(1.35rem, 5.5vw, 1.55rem);
+    text-align: center;
   }
 
   .login-brand-content p {
     display: block;
-    max-width: 100%;
-    margin-inline: 0;
+    max-width: 310px;
+    margin-inline: auto;
     font-size: 0.7rem;
     line-height: 1.35;
   }

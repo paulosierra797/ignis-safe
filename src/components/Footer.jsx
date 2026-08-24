@@ -18,7 +18,9 @@ export default function Footer() {
       <div className="footer-container footer-main">
         <div className="footer-brand">
           <div className="footer-logo">
-            <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="footer-logo-image" />
+            <span className="footer-logo-image-frame">
+              <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="footer-logo-image" />
+            </span>
             <div>
               <span>Bureau of Fire Protection</span>
               <h3>Dasmariñas City Fire Station</h3>

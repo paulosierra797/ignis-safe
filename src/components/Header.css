@@ -74,7 +74,7 @@
 
 .header-container {
   width: min(100%, 1440px);
-  min-height: 66px;
+  min-height: 78px;
   margin: 0 auto;
   padding: 0.55rem 2rem;
   display: flex;
@@ -92,11 +92,24 @@
   text-decoration: none;
 }
 
-.landing-brand-logo {
-  width: 48px;
-  height: 48px;
+.landing-brand-logo-frame {
+  position: relative;
+  width: 54px;
+  aspect-ratio: 234 / 298;
+  overflow: hidden;
+  display: block;
   flex: 0 0 auto;
-  object-fit: contain;
+}
+
+.landing-brand-logo {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 233.33%;
+  max-width: none;
+  height: auto;
+  display: block;
+  transform: translate(-27.11%, -18.82%);
 }
 
 .landing-brand-text {
@@ -313,12 +326,11 @@
   }
 
   .header-container {
-    min-height: 62px;
+    min-height: 72px;
   }
 
-  .landing-brand-logo {
-    width: 44px;
-    height: 44px;
+  .landing-brand-logo-frame {
+    width: 50px;
   }
 
   .menu-btn {
@@ -450,9 +462,8 @@
     gap: 0.55rem;
   }
 
-  .landing-brand-logo {
-    width: 40px;
-    height: 40px;
+  .landing-brand-logo-frame {
+    width: 46px;
   }
 
   .landing-brand-text h4 {

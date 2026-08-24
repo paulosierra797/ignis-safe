@@ -31,11 +31,24 @@
   gap: 0.8rem;
 }
 
-.footer-logo-image {
-  width: 54px;
-  height: 54px;
+.footer-logo-image-frame {
+  position: relative;
+  width: 68px;
+  aspect-ratio: 234 / 298;
+  overflow: hidden;
+  display: block;
   flex: 0 0 auto;
-  object-fit: contain;
+}
+
+.footer-logo-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 233.33%;
+  max-width: none;
+  height: auto;
+  display: block;
+  transform: translate(-27.11%, -18.82%);
 }
 
 .footer-logo span {
@@ -188,6 +201,10 @@
 
   .footer-brand {
     grid-column: auto;
+  }
+
+  .footer-logo-image-frame {
+    width: 60px;
   }
 
   .footer-bottom-inner {

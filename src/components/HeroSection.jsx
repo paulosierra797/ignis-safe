@@ -1,7 +1,17 @@
 import { useMemo, useRef, useState } from 'react';
+import {
+  FiArrowRight,
+  FiBell,
+  FiCheckCircle,
+  FiExternalLink,
+  FiFileText,
+  FiPhoneCall,
+} from 'react-icons/fi';
 import './HeroSection.css'
-import bfppic from '../assets/bfp_pic.jpg'
+import firestation from '../assets/firestation.jpg'
 import { useLandingContent } from '../context/LandingContentContext';
+
+const FSIS_APPLICATION_URL = 'https://fsis.e-bfp.com/';
 
 export default function HeroSection() {
   const { content } = useLandingContent();
@@ -20,7 +30,7 @@ export default function HeroSection() {
       }));
     }
 
-    return [{ id: 'default-banner-photo', url: bfppic, alt: 'BFP Dasmariñas fire station personnel' }];
+    return [{ id: 'default-banner-photo', url: firestation, alt: 'BFP Dasmariñas City Fire Station and fire truck' }];
   }, [content.hero.photos]);
 
   const hasMultiplePhotos = bannerPhotos.length > 1;
@@ -60,64 +70,101 @@ export default function HeroSection() {
 
   return (
     <section className="hero" id="home">
-      <div className="hero-container">
-        <div className="hero-content">
-          <h1>{content.hero.title}</h1>
-          <p>
-            <span className="hero-lead">{content.hero.lead}</span>
-            {content.hero.description}
-          </p>
-        </div>
-        <div className="hero-image">
-          <div
-            className="hero-carousel"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
-            <div className="hero-image-frame">
-              <img
-                key={activePhoto.id || activePhoto.url}
-                src={activePhoto.url}
-                alt={activePhoto.alt}
-                className={`hero-image-img hero-carousel-photo is-${slideDirection}`}
-                loading={safeActivePhotoIndex === 0 ? 'eager' : 'lazy'}
-              />
-            </div>
+      <div
+        className="hero-carousel"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        <img
+          key={activePhoto.id || activePhoto.url}
+          src={activePhoto.url}
+          alt={activePhoto.alt}
+          className={`hero-image-img hero-carousel-photo is-${slideDirection}`}
+          loading={safeActivePhotoIndex === 0 ? 'eager' : 'lazy'}
+          fetchPriority={safeActivePhotoIndex === 0 ? 'high' : 'auto'}
+        />
+        <div className="hero-image-overlay" aria-hidden="true" />
 
-            {hasMultiplePhotos && (
-              <>
-                <button
-                  type="button"
-                  className="hero-carousel-arrow hero-carousel-arrow--previous"
-                  onClick={goToPreviousPhoto}
-                  aria-label="Show previous banner photo"
-                >
-                  ‹
-                </button>
-                <button
-                  type="button"
-                  className="hero-carousel-arrow hero-carousel-arrow--next"
-                  onClick={goToNextPhoto}
-                  aria-label="Show next banner photo"
-                >
-                  ›
-                </button>
-                <div className="hero-carousel-dots" role="group" aria-label="Main banner photos">
-                  {bannerPhotos.map((photo, index) => (
-                    <button
-                      key={photo.id || photo.url}
-                      type="button"
-                      className={`hero-carousel-dot${index === safeActivePhotoIndex ? ' is-active' : ''}`}
-                      onClick={() => goToPhoto(index, index > safeActivePhotoIndex ? 'next' : 'previous')}
-                      aria-label={`Show banner photo ${index + 1}`}
-                      aria-pressed={index === safeActivePhotoIndex}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
+        <div className="hero-container">
+          <div className="hero-content">
+            <span className="hero-eyebrow">Official city fire station portal</span>
+            <h1>{content.hero.title}</h1>
+            <p>
+              <span className="hero-lead">{content.hero.lead}</span>
+              {content.hero.description}
+            </p>
+            <div className="hero-actions">
+              <a
+                className="hero-primary-action"
+                href={FSIS_APPLICATION_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Start online application
+                <FiExternalLink aria-hidden="true" />
+              </a>
+              <a className="hero-secondary-action" href="#process">
+                View requirements
+              </a>
+            </div>
+          </div>
+
+          <div className="hero-service-status">
+            <FiCheckCircle aria-hidden="true" />
+            <span>Station services and online guidance available</span>
           </div>
         </div>
+
+        {hasMultiplePhotos && (
+          <>
+            <button
+              type="button"
+              className="hero-carousel-arrow hero-carousel-arrow--previous"
+              onClick={goToPreviousPhoto}
+              aria-label="Show previous banner photo"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="hero-carousel-arrow hero-carousel-arrow--next"
+              onClick={goToNextPhoto}
+              aria-label="Show next banner photo"
+            >
+              ›
+            </button>
+            <div className="hero-carousel-dots" role="group" aria-label="Main banner photos">
+              {bannerPhotos.map((photo, index) => (
+                <button
+                  key={photo.id || photo.url}
+                  type="button"
+                  className={`hero-carousel-dot${index === safeActivePhotoIndex ? ' is-active' : ''}`}
+                  onClick={() => goToPhoto(index, index > safeActivePhotoIndex ? 'next' : 'previous')}
+                  aria-label={`Show banner photo ${index + 1}`}
+                  aria-pressed={index === safeActivePhotoIndex}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="hero-services" aria-label="Common public services">
+        <a href="#process" className="hero-service-link">
+          <FiFileText aria-hidden="true" />
+          <span><strong>FSIC &amp; FSEC</strong><small>Requirements and application process</small></span>
+          <FiArrowRight aria-hidden="true" />
+        </a>
+        <a href="#announcements" className="hero-service-link">
+          <FiBell aria-hidden="true" />
+          <span><strong>Public advisories</strong><small>Latest announcements and updates</small></span>
+          <FiArrowRight aria-hidden="true" />
+        </a>
+        <a href="#contact" className="hero-service-link">
+          <FiPhoneCall aria-hidden="true" />
+          <span><strong>Contact the station</strong><small>Hotlines and official channels</small></span>
+          <FiArrowRight aria-hidden="true" />
+        </a>
       </div>
     </section>
   )

@@ -2,45 +2,80 @@
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: #94161b;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 8px 24px rgba(91, 10, 14, 0.2);
+  background: #ffffff;
+  border-bottom: 1px solid #e2e7ee;
+  box-shadow: 0 8px 24px rgba(20, 33, 58, 0.08);
 }
 
-.header::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 3px;
-  background: #f4b41a;
+.landing-emergency-bar {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  background: #7d1015;
+  color: #ffffff;
+}
+
+.landing-emergency-content {
+  width: min(100%, 1440px);
+  margin: 0 auto;
+  padding: 0.38rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.landing-emergency-call,
+.landing-hotline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #ffffff;
+  font-size: 0.73rem;
+  text-decoration: none;
+}
+
+.landing-emergency-call svg {
+  width: 15px;
+  height: 15px;
+}
+
+.landing-hotline-link {
+  color: #f7d266;
+  font-weight: 700;
+}
+
+.landing-hotline-link:hover,
+.landing-hotline-link:focus-visible {
+  color: #ffffff;
+  text-decoration: underline;
 }
 
 .header-container {
   width: min(100%, 1440px);
-  min-height: 76px;
+  min-height: 66px;
   margin: 0 auto;
-  padding: 0.65rem 2rem;
+  padding: 0.55rem 2rem;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 2rem;
+  justify-content: space-between;
+  gap: clamp(1rem, 2.3vw, 2.5rem);
 }
 
 .landing-brand {
+  min-width: 220px;
   display: inline-flex;
   align-items: center;
-  gap: 0.85rem;
-  min-width: 0;
-  color: #ffffff;
+  gap: 0.75rem;
+  color: #172033;
   text-decoration: none;
 }
 
 .landing-brand-logo {
-  width: 62px;
-  height: 62px;
+  width: 48px;
+  height: 48px;
   flex: 0 0 auto;
   object-fit: contain;
-  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.2));
 }
 
 .landing-brand-text {
@@ -49,64 +84,63 @@
 
 .landing-brand-text h4 {
   margin: 0;
-  color: #ffffff;
-  font-size: 0.84rem;
+  color: #172033;
+  font-size: 0.72rem;
   font-weight: 800;
   line-height: 1.25;
-  letter-spacing: 0.025em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .nav {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  justify-content: flex-end;
+  gap: 0.15rem;
 }
 
 .nav-link {
   position: relative;
+  min-height: 42px;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.65rem 0.75rem;
-  border: none;
-  border-radius: 6px;
-  background: none;
-  color: rgba(255, 255, 255, 0.9);
-  text-decoration: none;
+  gap: 0.32rem;
+  padding: 0.55rem 0.65rem;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #344054;
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.77rem;
   font-weight: 650;
   white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
-  transition: color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+  transition: color 0.18s ease, background-color 0.18s ease;
 }
 
 .nav-link::after {
   content: '';
   position: absolute;
-  right: 0.75rem;
-  bottom: 0.25rem;
-  left: 0.75rem;
+  right: 0.65rem;
+  bottom: 0;
+  left: 0.65rem;
   height: 3px;
-  border-radius: 999px;
   background: #f4b41a;
   transform: scaleX(0);
   transform-origin: center;
-  transition: transform 0.2s ease;
+  transition: transform 0.18s ease;
 }
 
 .nav-link:hover,
 .nav-link:focus-visible {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.13);
-  transform: translateY(-1px);
+  color: #8f1519;
+  background: #fff5f5;
   outline: none;
 }
 
 .nav-link.is-active {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.12);
+  color: #8f1519;
 }
 
 .nav-link.is-active::after {
@@ -121,7 +155,7 @@
   width: 13px;
   height: 13px;
   flex: 0 0 auto;
-  transition: transform 0.2s ease;
+  transition: transform 0.18s ease;
 }
 
 .nav-dropdown-arrow.open {
@@ -130,17 +164,17 @@
 
 .nav-dropdown-menu {
   position: absolute;
-  top: calc(100% + 0.5rem);
+  top: calc(100% + 0.45rem);
   left: 0;
   z-index: 1100;
-  min-width: 230px;
+  min-width: 220px;
   margin: 0;
-  padding: 0.5rem;
+  padding: 0.45rem;
   list-style: none;
   background: #ffffff;
-  border: 1px solid rgba(148, 22, 27, 0.12);
-  border-radius: 10px;
-  box-shadow: 0 16px 32px rgba(31, 10, 10, 0.24);
+  border: 1px solid #e2e7ee;
+  border-radius: 7px;
+  box-shadow: 0 16px 34px rgba(20, 33, 58, 0.16);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-6px);
@@ -160,69 +194,64 @@
 .nav-dropdown-menu a {
   display: block;
   padding: 0.65rem 0.75rem;
-  border-radius: 7px;
-  color: #7a1216;
-  text-decoration: none;
-  font-size: 0.86rem;
+  border-radius: 5px;
+  color: #344054;
+  font-size: 0.82rem;
   font-weight: 650;
   white-space: nowrap;
-  transition: color 0.2s ease, background-color 0.2s ease;
+  text-decoration: none;
 }
 
 .nav-dropdown-menu a:hover,
-.nav-dropdown-menu a:focus-visible {
-  background: rgba(148, 22, 27, 0.08);
-  color: #591014;
+.nav-dropdown-menu a:focus-visible,
+.nav-dropdown-menu a.is-active {
+  color: #8f1519;
+  background: #fff1f1;
   outline: none;
 }
 
-.nav-dropdown-menu a.is-active {
-  background: rgba(148, 22, 27, 0.1);
-  color: #591014;
-  font-weight: 800;
-}
-
 .landing-login-link {
-  margin-left: 0.45rem;
+  margin-left: 0.35rem;
   text-decoration: none;
 }
 
 .login-btn {
-  min-height: 42px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  padding: 0.6rem 1.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 7px;
-  background: #ffffff;
-  color: #991b1b;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid #9f151a;
+  border-radius: 6px;
+  background: #9f151a;
+  color: #ffffff;
+  font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(69, 10, 10, 0.18);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 7px 16px rgba(127, 16, 21, 0.18);
+  transition: background-color 0.18s ease, transform 0.18s ease;
 }
 
 .login-btn:hover,
 .login-btn:focus-visible {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(69, 10, 10, 0.24);
+  background: #7d1015;
+  transform: translateY(-1px);
   outline: none;
 }
 
 .menu-btn {
   display: none;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-  font-size: 1.45rem;
+  border: 1px solid #d7dde6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #8f1519;
+  font-size: 1.35rem;
 }
 
 .landing-nav-backdrop {
@@ -230,18 +259,19 @@
 }
 
 @media (max-width: 1180px) {
+  .landing-emergency-content,
   .header-container {
-    min-height: 68px;
-    padding: 0.5rem 1rem;
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  .header-container {
+    min-height: 62px;
   }
 
   .landing-brand-logo {
-    width: 54px;
-    height: 54px;
-  }
-
-  .landing-brand-text h4 {
-    font-size: 0.75rem;
+    width: 44px;
+    height: 44px;
   }
 
   .menu-btn {
@@ -256,17 +286,19 @@
     z-index: 10001;
     width: min(360px, 100%);
     min-height: 100dvh;
-    padding: 6.5rem 1.5rem 2rem;
+    padding: 6.5rem 1.25rem 2rem;
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 0.45rem;
-    background: #8f1519;
-    box-shadow: -20px 0 40px rgba(31, 10, 10, 0.3);
+    justify-content: flex-start;
+    gap: 0.35rem;
+    overflow-y: auto;
+    background: #ffffff;
+    box-shadow: -20px 0 40px rgba(20, 33, 58, 0.22);
     transform: translateX(105%);
     visibility: hidden;
     pointer-events: none;
-    transition: transform 0.28s ease, visibility 0.28s ease;
+    transition: transform 0.25s ease, visibility 0.25s ease;
   }
 
   .nav.active {
@@ -283,17 +315,16 @@
     width: 100%;
     height: 100%;
     border: 0;
-    background: rgba(15, 23, 42, 0.52);
+    background: rgba(15, 23, 42, 0.56);
   }
 
   .nav-link {
     width: 100%;
-    padding: 0.9rem 1rem;
-    border: 1px solid transparent;
-    border-bottom-color: rgba(255, 255, 255, 0.14);
-    border-radius: 7px;
-    color: #ffffff;
-    font-size: 0.98rem;
+    min-height: 48px;
+    justify-content: flex-start;
+    padding: 0.8rem 0.9rem;
+    border-bottom: 1px solid #edf0f4;
+    font-size: 0.93rem;
   }
 
   .nav-dropdown-toggle {
@@ -301,11 +332,11 @@
   }
 
   .nav-link::after {
-    top: 0.75rem;
+    top: 0.8rem;
     right: auto;
-    bottom: 0.75rem;
+    bottom: 0.8rem;
     left: 0;
-    width: 4px;
+    width: 3px;
     height: auto;
     transform: scaleY(0);
   }
@@ -321,35 +352,26 @@
     margin: 0;
     padding: 0 0 0 0.75rem;
     overflow: hidden;
-    background: none;
-    border: none;
+    background: transparent;
+    border: 0;
     box-shadow: none;
     opacity: 1;
     visibility: visible;
     transform: none;
-    transition: max-height 0.25s ease;
+    transition: max-height 0.22s ease;
   }
 
   .nav-dropdown-menu.open {
     max-height: 220px;
-    margin: 0.15rem 0 0.3rem;
+    margin: 0.1rem 0 0.25rem;
   }
 
   .nav-dropdown-menu a {
-    padding: 0.75rem 1rem;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.92rem;
-  }
-
-  .nav-dropdown-menu a:hover,
-  .nav-dropdown-menu a:focus-visible,
-  .nav-dropdown-menu a.is-active {
-    background: rgba(255, 255, 255, 0.12);
-    color: #ffffff;
+    padding: 0.72rem 0.9rem;
   }
 
   .landing-login-link {
-    margin: 0.75rem 0 0;
+    margin: 0.65rem 0 0;
   }
 
   .login-btn {
@@ -357,19 +379,41 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px) {
+  .landing-emergency-content {
+    justify-content: center;
+  }
+
+  .landing-hotline-link {
+    display: none;
+  }
+
+  .landing-emergency-call {
+    font-size: 0.68rem;
+  }
+
   .landing-brand {
-    gap: 0.6rem;
+    min-width: 0;
+    gap: 0.55rem;
   }
 
   .landing-brand-logo {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
   }
 
   .landing-brand-text h4 {
-    max-width: 220px;
-    font-size: 0.67rem;
+    max-width: 210px;
+    font-size: 0.62rem;
     line-height: 1.2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav,
+  .nav-dropdown-menu,
+  .nav-link::after,
+  .login-btn {
+    transition: none;
   }
 }

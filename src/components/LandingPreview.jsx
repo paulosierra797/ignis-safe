@@ -156,8 +156,8 @@ export default function LandingPreview({ content }) {
                 <div className="app" onClickCapture={blockLinkNavigation}>
                   <Header />
                   <HeroSection />
-                  <AboutSection />
                   <ProcessSection />
+                  <AboutSection />
                   <ContactSection />
                   <FAQSection />
                   <Footer />

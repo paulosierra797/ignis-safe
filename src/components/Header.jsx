@@ -2,12 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import './Header.css';
 import logo from '../assets/bfp_dasma.png';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FiChevronDown, FiLogIn, FiMenu, FiX } from 'react-icons/fi';
+import { FiChevronDown, FiLogIn, FiMenu, FiPhoneCall, FiX } from 'react-icons/fi';
 
 // Order matches the actual DOM order of sections on the landing page — the
 // scroll-spy loop below relies on this order, which is independent of the
 // order these ids are presented in the nav.
-const SCROLL_SECTION_IDS = ['home', 'announcements', 'about', 'process', 'contact', 'faq'];
+const SCROLL_SECTION_IDS = ['home', 'announcements', 'process', 'about', 'contact', 'faq'];
 
 const PRIMARY_NAV_ITEMS = [
   { id: 'home', label: 'Home' },
@@ -446,6 +446,21 @@ export default function Header() {
 
   return (
     <header className="header">
+      <div className="landing-emergency-bar">
+        <div className="landing-emergency-content">
+          <a href="tel:911" className="landing-emergency-call">
+            <FiPhoneCall aria-hidden="true" />
+            <span>Emergency? Call <strong>911</strong> immediately.</span>
+          </a>
+          <a
+            href={sectionHref('contact')}
+            className="landing-hotline-link"
+            onClick={(event) => handleSectionClick(event, 'contact')}
+          >
+            Station hotlines
+          </a>
+        </div>
+      </div>
       <div className="header-container">
         <a className="landing-brand" href={sectionHref('home')} onClick={(event) => handleSectionClick(event, 'home')}>
           <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="landing-brand-logo" />

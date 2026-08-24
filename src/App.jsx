@@ -214,8 +214,8 @@ function LandingPage() {
       <Header />
       <HeroSection />
       <Suspense fallback={null}><LandingAnnouncements /></Suspense>
-      <Suspense fallback={null}><AboutSection /></Suspense>
       <Suspense fallback={null}><ProcessSection /></Suspense>
+      <Suspense fallback={null}><AboutSection /></Suspense>
       <Suspense fallback={null}><ContactSection /></Suspense>
       <Suspense fallback={null}><FAQSection /></Suspense>
       <Footer />

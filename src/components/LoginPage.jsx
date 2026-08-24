@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaArrowLeft, FaEye, FaEyeSlash } from 'react-icons/fa';
+import { FaArrowLeft, FaEye, FaEyeSlash, FaLock } from 'react-icons/fa';
 import { supabase } from '../utils/supabaseClient';
 import {
 sendPasswordResetEmail,
@@ -829,6 +829,18 @@ useEffect(() => {
     <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
             <div className="login-form-container">
+              <div className="login-card-intro">
+                <span className="login-card-intro-icon" aria-hidden="true">
+                  <FaLock />
+                </span>
+                <div>
+                  <p className="login-card-kicker">Secure access</p>
+                  <h2>{displayPortal === 'personnel' ? 'Personnel Sign In' : 'Administrator Sign In'}</h2>
+                  <p className="login-card-summary">
+                    Sign in with your authorized IGNIS SAFE account.
+                  </p>
+                </div>
+              </div>
               <form onSubmit={handleLogin} className="login-form">
                 <div className="form-group">
                   <label htmlFor="email">Email</label>

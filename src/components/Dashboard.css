@@ -620,6 +620,7 @@
   flex-direction: column;
   position: fixed;
   height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   /* Reserve the scrollbar gutter at all times so nav items keep the same
      usable width whether or not the list currently overflows, and never
@@ -662,25 +663,30 @@
 .sidebar-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
+  flex: 0 0 auto;
+  gap: 0.6rem;
+  padding: 0.6rem 0.85rem;
   background-color: transparent;
 }
 
 .sidebar-logo {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
 }
 
 .sidebar-title {
-  font-size: 1rem;
+  min-width: 0;
+  font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .sidebar-nav {
   flex: 1;
-  padding: 0.6rem 0;
+  min-height: 0;
+  padding: 0.3rem 0;
 }
 
 .nav-list {
@@ -696,13 +702,13 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: 0.5rem;
   box-sizing: border-box;
   width: calc(100% - 1rem);
-  min-height: 44px;
+  min-height: 39px;
   margin: 0 0.5rem;
-  padding: 0.58rem 0.5rem;
-  border-radius: 8px;
+  padding: 0.4rem 0.5rem;
+  border-radius: 7px;
   color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
   transition: all 0.2s ease;
@@ -723,21 +729,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 24px;
-  font-size: 1rem;
-  width: 24px;
-  height: 24px;
+  flex: 0 0 22px;
+  font-size: 0.92rem;
+  width: 22px;
+  height: 22px;
   text-align: center;
 }
 
 .nav-label {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 500;
-  /* Tall enough to contain Poppins' descenders ("g" in Learning, "y" in
-     Analytics). The item's 50px min-height absorbs this, so nothing reflows. */
-  line-height: 1.45;
+  line-height: 1.3;
   /* Never truncate. The rail is sized in rem (see --sidebar-width) so every
      label fits on one line at any normal text size; if a text size ever
      outgrows the ceiling, the label wraps to a second line — which the
@@ -750,10 +754,10 @@
   margin-left: auto;
   background: #fbbf24;
   color: #1f2937;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
   line-height: 1;
-  padding: 0.28rem 0.5rem;
+  padding: 0.22rem 0.42rem;
   border-radius: 999px;
   min-width: 1.4rem;
   text-align: center;
@@ -867,12 +871,12 @@
 
 .sidebar--collapsed .sidebar-header {
   justify-content: center;
-  padding: 1rem 0.5rem;
+  padding: 0.65rem 0.5rem;
 }
 
 .sidebar--collapsed .sidebar-logo {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
 }
 
 .sidebar--collapsed .sidebar-title,
@@ -886,7 +890,8 @@
   gap: 0;
   margin: 0 0.45rem;
   width: auto;
-  padding: 0.875rem 0;
+  min-height: 39px;
+  padding: 0.5rem 0;
 }
 
 .sidebar--collapsed .nav-item.active {
@@ -898,7 +903,7 @@
 }
 
 .sidebar--collapsed .nav-section {
-  margin-top: 1rem;
+  margin-top: 0.55rem;
 }
 
 body.sidebar-collapsed .dashboard-main,
@@ -943,7 +948,8 @@ body.sidebar-collapsed .nav-item {
   gap: 0;
   margin: 0 0.45rem;
   width: auto;
-  padding: 0.875rem 0;
+  min-height: 39px;
+  padding: 0.5rem 0;
 }
 
 body.sidebar-collapsed .nav-item.active {
@@ -955,7 +961,7 @@ body.sidebar-collapsed .nav-icon {
 }
 
 body.sidebar-collapsed .nav-section {
-  margin-top: 1rem;
+  margin-top: 0.55rem;
 }
 
 /* Mobile drawer styles */
@@ -967,6 +973,7 @@ body.sidebar-collapsed .nav-section {
     top: 0;
     left: 0;
     height: 100vh;
+    height: 100dvh;
     z-index: 1600;
     /* Same rail width as desktop, but never wide enough to cover the whole
        screen on a small phone. */
@@ -1032,24 +1039,82 @@ body.sidebar-collapsed .nav-section {
 }
 
 .nav-section {
-  margin-top: 0.85rem;
-  padding-top: 0.75rem;
+  margin-top: 0.55rem;
+  padding-top: 0.45rem;
   border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .sidebar .section-title {
   width: calc(100% - 1rem);
-  margin: 0 0.5rem 0.55rem;
-  padding: 0.55rem 0.5rem;
+  margin: 0 0.5rem 0.35rem;
+  padding: 0.4rem 0.5rem;
   border-left: 3px solid #fbbf24;
   border-radius: 0 6px 6px 0;
   background: rgba(255, 255, 255, 0.1);
-  font-size: 0.75rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #fef3c7;
   white-space: nowrap;
+}
+
+/* Keep every destination visible on shorter viewports while preserving
+   flexible row height for browser text scaling and wrapped labels. */
+@media (max-height: 760px) {
+  .sidebar-header {
+    gap: 0.5rem;
+    padding: 0.42rem 0.75rem;
+  }
+
+  .sidebar-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .sidebar-title { font-size: 0.82rem; }
+  .sidebar-nav { padding: 0.15rem 0; }
+
+  .nav-item,
+  .sidebar--collapsed .nav-item,
+  body.sidebar-collapsed .nav-item {
+    min-height: 34px;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+  }
+
+  .nav-icon {
+    flex-basis: 20px;
+    width: 20px;
+    height: 20px;
+    font-size: 0.82rem;
+  }
+
+  .nav-label {
+    font-size: 0.72rem;
+    line-height: 1.2;
+  }
+
+  .nav-section {
+    margin-top: 0.3rem;
+    padding-top: 0.3rem;
+  }
+
+  .sidebar .section-title {
+    margin-bottom: 0.2rem;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+    font-size: 0.62rem;
+  }
+
+  .sidebar--collapsed .sidebar-header {
+    padding: 0.45rem 0.4rem;
+  }
+
+  .sidebar--collapsed .sidebar-logo {
+    width: 34px;
+    height: 34px;
+  }
 }
 .knowledge-percent.gain {
   color: #22c55e;

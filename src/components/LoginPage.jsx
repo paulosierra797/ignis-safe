@@ -17,7 +17,6 @@ import { setAuthFlowGated } from '../utils/authFlowGate';
 import { logPersonnelActivity } from '../utils/activityLogService';
 
 import './LoginPage.css';
-import ignissafe from '../assets/Logo1.png'
 import bfpDasmaLogo from '../assets/bfp_dasma.png';
 
 const LoginBrandPanel = ({ portal }) => {
@@ -25,12 +24,6 @@ const LoginBrandPanel = ({ portal }) => {
 
   return (
   <aside className="login-left" aria-label={`IGNIS SAFE ${isPersonnel ? 'personnel' : 'admin'} welcome`}>
-    <div className="login-brand-top">
-      <div className="logo-section">
-        <img src={ignissafe} alt="Ignis Safe Logo" className="login-logo" />
-      </div>
-    </div>
-
     <div className="login-bfp-group">
       <span className="login-bfp-logo-frame">
         <img

@@ -1448,21 +1448,7 @@
   .login-left {
     --login-brand-gap: clamp(1.15rem, 2.2vh, 1.55rem);
     justify-content: center;
-    padding-top: clamp(7rem, 15vh, 8rem);
-  }
-
-  .login-brand-top {
-    position: absolute;
-    top: clamp(1.75rem, 4vh, 2.25rem);
-    left: clamp(1.5rem, 3vw, 2.35rem);
-  }
-
-  .logo-section {
-    padding: 0.75rem 1rem;
-  }
-
-  .login-logo {
-    width: clamp(220px, 16vw, 255px);
+    padding-top: clamp(2.25rem, 4vw, 3rem);
   }
 
   .login-bfp-logo-frame {
@@ -1496,21 +1482,7 @@
   .login-left {
     --login-brand-gap: 1rem;
     justify-content: center;
-    padding: 5.35rem 1.5rem 1.15rem;
-  }
-
-  .login-brand-top {
-    position: absolute;
-    top: 1.15rem;
-    left: 1.5rem;
-  }
-
-  .logo-section {
-    padding: 0.55rem 0.8rem;
-  }
-
-  .login-logo {
-    width: clamp(185px, 17vw, 220px);
+    padding: 1.35rem 1.5rem;
   }
 
   .login-bfp-logo-frame {
@@ -1573,13 +1545,11 @@
   }
 
   .login-left {
-    min-height: 204px;
+    min-height: 150px;
     display: grid;
-    grid-template-areas:
-      "ignis ignis"
-      "bfp content";
+    grid-template-areas: "bfp content";
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto;
+    grid-template-rows: auto;
     align-items: center;
     align-content: center;
     justify-content: stretch;
@@ -1610,24 +1580,8 @@
     height: 3px;
   }
 
-  .login-brand-top {
-    position: relative;
-    top: auto;
-    left: auto;
-    grid-area: ignis;
-    justify-self: start;
-  }
-
-  .logo-section {
-    padding: 0.5rem 0.75rem;
-  }
-
-  .login-logo {
-    width: clamp(180px, 32vw, 215px);
-  }
-
   .login-bfp-logo-frame {
-    width: 62px;
+    width: 70px;
   }
 
   .login-brand-content {
@@ -1690,20 +1644,15 @@
   }
 
   .login-left {
-    min-height: 220px;
+    min-height: 154px;
     grid-template-areas:
-      "ignis"
       "bfp"
       "content";
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto auto;
     justify-items: center;
     gap: 0.3rem;
     padding: 0.65rem 0.85rem;
-  }
-
-  .login-brand-top {
-    justify-self: center;
   }
 
   .login-bfp-group {
@@ -1711,12 +1660,8 @@
     gap: 0.2rem;
   }
 
-  .login-logo {
-    width: clamp(168px, 50vw, 190px);
-  }
-
   .login-bfp-logo-frame {
-    width: 46px;
+    width: 54px;
   }
 
   .login-brand-rule {

@@ -110,7 +110,7 @@ export function startVersionPolling(onUpdateAvailable) {
 // navigating to a unique URL. The cleanup is time-bounded so a browser API
 // cannot leave the refresh button waiting forever. The query marker forces a
 // fresh document request and is removed from the address bar on startup.
-export async function applyUpdate() {
+export async function applyUpdate({ fallbackToHome = false } = {}) {
   const cleanupBrowserCaches = async () => {
     if ('caches' in window) {
       const keys = await caches.keys();
@@ -135,7 +135,12 @@ export async function applyUpdate() {
     new Promise((resolve) => window.setTimeout(resolve, CLEANUP_TIMEOUT_MS))
   ]);
 
-  const url = new URL(window.location.href);
+  // A route whose lazy chunk was removed by a deployment can keep failing
+  // when that exact history entry is reloaded. Manual recovery can return to
+  // the stable application entry point while still requesting a unique URL.
+  const url = fallbackToHome
+    ? new URL('/', window.location.origin)
+    : new URL(window.location.href);
   url.searchParams.set(UPDATE_QUERY_PARAM, String(Date.now()));
   window.location.replace(url.toString());
 }

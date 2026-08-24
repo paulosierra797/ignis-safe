@@ -38,7 +38,7 @@ export default function RouteErrorBoundary() {
   // routine "a deploy happened" case (that's UpdateToast's job).
   const title = chunkError ? 'Update needed' : 'Something went wrong';
   const message = chunkError
-    ? "A new version of IGNIS SAFE was just deployed and this tab couldn't load it automatically. Refresh to continue."
+    ? "This tab could not finish loading the latest IGNIS SAFE version. Continue to reopen the application with the newest files."
     : 'An unexpected error occurred while loading this page.';
 
   return (
@@ -74,7 +74,7 @@ export default function RouteErrorBoundary() {
       <p style={{ margin: 0, color: '#4b5563', maxWidth: '28rem' }}>{message}</p>
       <button
         type="button"
-        onClick={() => applyUpdate()}
+        onClick={() => applyUpdate({ fallbackToHome: chunkError })}
         style={{
           padding: '0.65rem 1.5rem',
           borderRadius: '8px',
@@ -88,7 +88,7 @@ export default function RouteErrorBoundary() {
           boxShadow: '0 10px 22px rgba(153, 27, 27, 0.3)'
         }}
       >
-        Refresh page
+        {chunkError ? 'Continue to IGNIS SAFE' : 'Refresh page'}
       </button>
     </div>
   );

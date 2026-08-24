@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useUser } from './UserContext';
 import { getLandingContentFromDb, saveLandingContentToDb } from '../utils/landingContentService';
 import { MAX_BANNER_PHOTOS } from '../utils/bannerPhotoService';
+import { LANDING_LANGUAGE_STORAGE_KEY, normalizeDasmarinasText } from '../utils/landingLanguage';
 
 const STORAGE_KEY = 'ignis_landing_content_v1';
 
@@ -10,9 +11,15 @@ const STORAGE_KEY = 'ignis_landing_content_v1';
 export const DEFAULT_LANDING_CONTENT = {
   hero: {
     title: 'Protecting lives, property and community',
-    lead: 'Welcome to our Dasmariñas Fire Station portal.',
+    lead: 'Welcome to the BFP Dasmariñas City Fire Station portal.',
     description:
-      'Learn about our services, contact details and FSIC & FSEC organization for safety, preparedness, and community support.',
+      'Access fire safety services, public advisories, contact details, and FSIC and FSEC application guidance.',
+    tagalog: {
+      title: 'Pinangangalagaan ang buhay, ari-arian, at komunidad',
+      lead: 'Maligayang pagdating sa portal ng BFP Dasmariñas City Fire Station.',
+      description:
+        'Alamin ang mga serbisyo sa kaligtasan sa sunog, pampublikong abiso, detalye sa pakikipag-ugnayan, at gabay sa aplikasyon ng FSIC at FSEC.'
+    },
     photos: []
   },
   about: {
@@ -23,7 +30,17 @@ export const DEFAULT_LANDING_CONTENT = {
     missionText:
       'We commit to prevent and suppress destructive fires, investigate its causes; enforce Fire Code and other related laws; respond to man-made and natural disasters and other emergencies.',
     visionTitle: 'Our Vision',
-    visionText: 'A modern fire service fully capable of ensuring a fire safe nation by 2034.'
+    visionText: 'A modern fire service fully capable of ensuring a fire safe nation by 2034.',
+    tagalog: {
+      title: 'Tungkol sa amin',
+      intro:
+        'Ang Dasmariñas Fire Station ay nakatuon sa pangangalaga ng buhay, kaligtasan, at kapaligiran sa pamamagitan ng propesyonal na pagtugon sa emergency, serbisyong medikal, at disaster response. Ang aming mga bumbero at first responder ay handang maglingkod sa komunidad sa lahat ng oras.',
+      missionTitle: 'Ang Aming Misyon',
+      missionText:
+        'Nangangako kaming pigilan at supilin ang mapaminsalang sunog, imbestigahan ang mga sanhi nito, ipatupad ang Fire Code at kaugnay na batas, at tumugon sa mga sakuna at iba pang emergency.',
+      visionTitle: 'Ang Aming Bisyon',
+      visionText: 'Isang makabagong serbisyo ng bumbero na ganap na may kakayahang tiyakin ang isang bansang ligtas sa sunog pagsapit ng 2034.'
+    }
   },
   contact: {
     title: 'CONTACT INFORMATION',
@@ -33,7 +50,51 @@ export const DEFAULT_LANDING_CONTENT = {
     mobile: '0995 336 9534',
     email: 'dasmariasfire@gmail.com',
     facebookLabel: 'BFP-Dasmariñas FS Cavite',
-    facebookUrl: 'https://www.facebook.com/GOLF.E207/'
+    facebookUrl: 'https://www.facebook.com/GOLF.E207/',
+    tagalog: {
+      title: 'IMPORMASYON SA PAKIKIPAG-UGNAYAN',
+      emergencyTitle: 'EMERGENCY HOTLINE NG BFP:'
+    }
+  },
+  trust: {
+    english: {
+      eyebrow: 'Trust and accessibility',
+      title: 'Official information made easier to access',
+      intro: 'Use verified BFP guidance, clear emergency directions, and public services designed to work across devices.',
+      items: [
+        {
+          title: 'Official BFP information',
+          text: 'Public advisories and service guidance come from the Dasmariñas City Fire Station.'
+        },
+        {
+          title: 'Accessible public service',
+          text: 'Readable contrast, keyboard-friendly controls, and responsive layouts support more visitors.'
+        },
+        {
+          title: 'Privacy-aware messaging',
+          text: 'Visitor messages are used only to manage the requested conversation and should never include passwords.'
+        }
+      ]
+    },
+    tagalog: {
+      eyebrow: 'Tiwala at accessibility',
+      title: 'Mas madaling ma-access ang opisyal na impormasyon',
+      intro: 'Gamitin ang beripikadong gabay ng BFP, malinaw na direksyon sa emergency, at mga serbisyong gumagana sa iba\'t ibang device.',
+      items: [
+        {
+          title: 'Opisyal na impormasyon ng BFP',
+          text: 'Ang mga pampublikong abiso at gabay sa serbisyo ay mula sa Dasmariñas City Fire Station.'
+        },
+        {
+          title: 'Accessible na pampublikong serbisyo',
+          text: 'Ang malinaw na contrast, keyboard-friendly na controls, at responsive layout ay tumutulong sa mas maraming bisita.'
+        },
+        {
+          title: 'Paggalang sa privacy ng mensahe',
+          text: 'Ginagamit lamang ang mensahe ng bisita para sa hinihinging pag-uusap at hindi dapat maglaman ng password.'
+        }
+      ]
+    }
   },
   process: {
     english: {
@@ -236,15 +297,61 @@ const normalizeHeroPhotos = (photos) => (
     : []
 );
 
+const normalizeCopyObject = (value) => {
+  if (typeof value === 'string') return normalizeDasmarinasText(value);
+  if (Array.isArray(value)) return value.map(normalizeCopyObject);
+  if (!value || typeof value !== 'object') return value;
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, child]) => [key, normalizeCopyObject(child)])
+  );
+};
+
 const mergeWithDefaults = (candidate = {}) => ({
   hero: {
     ...DEFAULT_LANDING_CONTENT.hero,
     ...(candidate.hero || {}),
+    title: normalizeDasmarinasText(candidate.hero?.title ?? DEFAULT_LANDING_CONTENT.hero.title),
+    lead: normalizeDasmarinasText(candidate.hero?.lead ?? DEFAULT_LANDING_CONTENT.hero.lead),
+    description: normalizeDasmarinasText(candidate.hero?.description ?? DEFAULT_LANDING_CONTENT.hero.description),
+    tagalog: normalizeCopyObject({
+      ...DEFAULT_LANDING_CONTENT.hero.tagalog,
+      ...(candidate.hero?.tagalog || {})
+    }),
     photos: normalizeHeroPhotos(candidate.hero?.photos)
   },
-  about: { ...DEFAULT_LANDING_CONTENT.about, ...(candidate.about || {}) },
-  contact: { ...DEFAULT_LANDING_CONTENT.contact, ...(candidate.contact || {}) },
-  process: {
+  about: normalizeCopyObject({
+    ...DEFAULT_LANDING_CONTENT.about,
+    ...(candidate.about || {}),
+    tagalog: {
+      ...DEFAULT_LANDING_CONTENT.about.tagalog,
+      ...(candidate.about?.tagalog || {})
+    }
+  }),
+  contact: {
+    ...DEFAULT_LANDING_CONTENT.contact,
+    ...(candidate.contact || {}),
+    title: normalizeDasmarinasText(candidate.contact?.title ?? DEFAULT_LANDING_CONTENT.contact.title),
+    emergencyTitle: normalizeDasmarinasText(candidate.contact?.emergencyTitle ?? DEFAULT_LANDING_CONTENT.contact.emergencyTitle),
+    facebookLabel: normalizeDasmarinasText(candidate.contact?.facebookLabel ?? DEFAULT_LANDING_CONTENT.contact.facebookLabel),
+    tagalog: normalizeCopyObject({
+      ...DEFAULT_LANDING_CONTENT.contact.tagalog,
+      ...(candidate.contact?.tagalog || {})
+    })
+  },
+  trust: normalizeCopyObject({
+    english: {
+      ...DEFAULT_LANDING_CONTENT.trust.english,
+      ...(candidate.trust?.english || {}),
+      items: candidate.trust?.english?.items || DEFAULT_LANDING_CONTENT.trust.english.items
+    },
+    tagalog: {
+      ...DEFAULT_LANDING_CONTENT.trust.tagalog,
+      ...(candidate.trust?.tagalog || {}),
+      items: candidate.trust?.tagalog?.items || DEFAULT_LANDING_CONTENT.trust.tagalog.items
+    }
+  }),
+  process: normalizeCopyObject({
     english: {
       ...DEFAULT_LANDING_CONTENT.process.english,
       ...(candidate.process?.english || {}),
@@ -257,8 +364,8 @@ const mergeWithDefaults = (candidate = {}) => ({
       processSteps:
         candidate.process?.tagalog?.processSteps || DEFAULT_LANDING_CONTENT.process.tagalog.processSteps
     }
-  },
-  faq: {
+  }),
+  faq: normalizeCopyObject({
     english: {
       ...DEFAULT_LANDING_CONTENT.faq.english,
       ...(candidate.faq?.english || {}),
@@ -269,7 +376,7 @@ const mergeWithDefaults = (candidate = {}) => ({
       ...(candidate.faq?.tagalog || {}),
       faqs: candidate.faq?.tagalog?.faqs || DEFAULT_LANDING_CONTENT.faq.tagalog.faqs
     }
-  }
+  })
 });
 
 const readStoredContent = () => {
@@ -282,6 +389,15 @@ const readStoredContent = () => {
   } catch (error) {
     console.error('Error loading landing content from storage:', error);
     return DEFAULT_LANDING_CONTENT;
+  }
+};
+
+const readStoredLanguage = () => {
+  try {
+    const stored = localStorage.getItem(LANDING_LANGUAGE_STORAGE_KEY);
+    return stored === 'tagalog' ? 'tagalog' : 'english';
+  } catch {
+    return 'english';
   }
 };
 
@@ -302,6 +418,25 @@ export const LandingContentProvider = ({ children }) => {
     || location.pathname.endsWith('/announcements');
   const [content, setContentState] = useState(() => readStoredContent());
   const [loadingContent, setLoadingContent] = useState(shouldSyncContent);
+  const [language, setLanguageState] = useState(() => readStoredLanguage());
+
+  useEffect(() => {
+    document.documentElement.lang = language === 'tagalog' ? 'fil' : 'en';
+
+    try {
+      localStorage.setItem(LANDING_LANGUAGE_STORAGE_KEY, language);
+    } catch {
+      // Keep the selected language for this session when storage is unavailable.
+    }
+  }, [language]);
+
+  const setLanguage = (nextLanguage) => {
+    setLanguageState(nextLanguage === 'tagalog' ? 'tagalog' : 'english');
+  };
+
+  const toggleLanguage = () => {
+    setLanguageState((current) => (current === 'english' ? 'tagalog' : 'english'));
+  };
 
   useEffect(() => {
     if (!shouldSyncContent) return undefined;
@@ -381,6 +516,9 @@ export const LandingContentProvider = ({ children }) => {
     resetContent,
     defaults: DEFAULT_LANDING_CONTENT,
     loadingContent,
+    language,
+    setLanguage,
+    toggleLanguage,
   };
 
   return <LandingContentContext.Provider value={value}>{children}</LandingContentContext.Provider>;
@@ -390,6 +528,7 @@ export const LandingContentProvider = ({ children }) => {
 // content into the real landing-page components without touching the
 // live saved content or triggering a database write.
 export const LandingContentPreviewProvider = ({ content, children }) => {
+  const [language, setLanguageState] = useState('english');
   const value = useMemo(
     () => ({
       content: mergeWithDefaults(content),
@@ -397,8 +536,11 @@ export const LandingContentPreviewProvider = ({ content, children }) => {
       resetContent: async () => ({ error: null }),
       defaults: DEFAULT_LANDING_CONTENT,
       loadingContent: false,
+      language,
+      setLanguage: (nextLanguage) => setLanguageState(nextLanguage === 'tagalog' ? 'tagalog' : 'english'),
+      toggleLanguage: () => setLanguageState((current) => (current === 'english' ? 'tagalog' : 'english')),
     }),
-    [content]
+    [content, language]
   );
 
   return <LandingContentContext.Provider value={value}>{children}</LandingContentContext.Provider>;

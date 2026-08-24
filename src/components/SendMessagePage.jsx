@@ -6,7 +6,7 @@ export default function SendMessagePage() {
   return (
     <>
       <Header />
-      <main>
+      <main id="main-content">
         <SendMessageSection />
       </main>
       <Footer />

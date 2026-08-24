@@ -5,8 +5,12 @@ import { OrgCard, initialOrgData, normalizeOrgData } from './Chart';
 import { getOrgChartConfig } from '../utils/orgChartService';
 import './Chart.css';
 import './OrganizationalChartView.css';
+import { useLandingContent } from '../context/LandingContentContext';
+import { getLandingUiCopy } from '../utils/landingLanguage';
 
 export default function OrganizationalChartView() {
+  const { language } = useLandingContent();
+  const copy = getLandingUiCopy(language);
   const [orgData, setOrgData] = useState(initialOrgData);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -36,19 +40,18 @@ export default function OrganizationalChartView() {
     <>
       <Header />
 
-      <section className="org-chart-page">
+      <section className="org-chart-page" id="main-content">
         <div className="org-chart-page-container">
           <div className="org-chart-page-header">
-            <p className="org-chart-page-eyebrow">PUBLIC INFORMATION</p>
-            <h2>Organizational Chart</h2>
+            <p className="org-chart-page-eyebrow">{copy.publicInformation}</p>
+            <h2>{copy.organizationalChart}</h2>
             <p className="org-chart-page-note">
-              Current leadership and personnel structure of the Bureau of Fire Protection
-              Dasmariñas City Fire Station.
+              {copy.organizationalChartNote}
             </p>
           </div>
 
           <div className="org-chart">
-            {isLoading && <p className="chart-loading">Loading organizational chart...</p>}
+            {isLoading && <p className="chart-loading">{copy.loadingOrganizationalChart}</p>}
 
             <div className="org-level">
               <OrgCard node={orgData.top} editMode={false} canEdit={false} />

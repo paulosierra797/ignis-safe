@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import './Header.css';
 import logo from '../assets/bfp_dasma.png';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FiChevronDown, FiLogIn, FiMenu, FiPhoneCall, FiX } from 'react-icons/fi';
+import { FiChevronDown, FiGlobe, FiLogIn, FiMenu, FiPhoneCall, FiX } from 'react-icons/fi';
+import { useLandingContent } from '../context/LandingContentContext';
+import { getLandingUiCopy } from '../utils/landingLanguage';
 
 // Order matches the actual DOM order of sections on the landing page — the
 // scroll-spy loop below relies on this order, which is independent of the
@@ -10,20 +12,20 @@ import { FiChevronDown, FiLogIn, FiMenu, FiPhoneCall, FiX } from 'react-icons/fi
 const SCROLL_SECTION_IDS = ['home', 'announcements', 'process', 'about', 'contact', 'faq'];
 
 const PRIMARY_NAV_ITEMS = [
-  { id: 'home', label: 'Home' },
-  { id: 'announcements', label: 'Announcements' },
-  { id: 'process', label: 'Online Application' }
+  { id: 'home', labelKey: 'home' },
+  { id: 'announcements', labelKey: 'announcements' },
+  { id: 'process', labelKey: 'onlineApplication' }
 ];
 
 const ABOUT_MENU_ITEMS = [
-  { id: 'about', label: 'About', type: 'section' },
-  { id: 'faq', label: 'FAQ', type: 'section' },
-  { id: 'organizational-chart', label: 'Organizational Chart', type: 'route', to: '/organizational-chart' }
+  { id: 'about', labelKey: 'aboutUs', type: 'section' },
+  { id: 'faq', labelKey: 'faq', type: 'section' },
+  { id: 'organizational-chart', labelKey: 'organizationalChart', type: 'route', to: '/organizational-chart' }
 ];
 
 const CONTACT_MENU_ITEMS = [
-  { id: 'contact', label: 'Contact Us', type: 'section' },
-  { id: 'send-message', label: 'Send Us a Message', type: 'route', to: '/send-message' }
+  { id: 'contact', labelKey: 'contactUs', type: 'section' },
+  { id: 'send-message', labelKey: 'sendMessage', type: 'route', to: '/send-message' }
 ];
 
 // Sets up the shared outside-click / Escape-to-close behavior for a hover-or-click
@@ -145,6 +147,8 @@ function NavDropdown({
 }
 
 export default function Header() {
+  const { language, toggleLanguage } = useLandingContent();
+  const copy = getLandingUiCopy(language);
   const [menuOpen, setMenuOpen] = useState(false);
   // Single source of truth for which nav dropdown is open — only one of
   // 'about' | 'contact' | null at a time, so opening one always closes the
@@ -185,6 +189,9 @@ export default function Header() {
   const supportsHoverRef = useRef(
     typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches
   );
+  const primaryNavItems = PRIMARY_NAV_ITEMS.map((item) => ({ ...item, label: copy[item.labelKey] }));
+  const aboutMenuItems = ABOUT_MENU_ITEMS.map((item) => ({ ...item, label: copy[item.labelKey] }));
+  const contactMenuItems = CONTACT_MENU_ITEMS.map((item) => ({ ...item, label: copy[item.labelKey] }));
 
   const suppressTrackingUntilScrollEnd = useCallback(() => {
     suppressTrackingRef.current = true;
@@ -446,18 +453,19 @@ export default function Header() {
 
   return (
     <header className="header">
+      <a className="landing-skip-link" href="#main-content">Skip to main content</a>
       <div className="landing-emergency-bar">
         <div className="landing-emergency-content">
           <a href="tel:911" className="landing-emergency-call">
             <FiPhoneCall aria-hidden="true" />
-            <span>Emergency? Call <strong>911</strong> immediately.</span>
+            <span>{copy.emergencyMessage}</span>
           </a>
           <a
             href={sectionHref('contact')}
             className="landing-hotline-link"
             onClick={(event) => handleSectionClick(event, 'contact')}
           >
-            Station hotlines
+            {copy.stationHotlines}
           </a>
         </div>
       </div>
@@ -497,7 +505,7 @@ export default function Header() {
         )}
 
         <nav id="landing-navigation" className={`nav ${menuOpen ? 'active' : ''}`} aria-label="Main navigation">
-          {PRIMARY_NAV_ITEMS.map((item) => (
+          {primaryNavItems.map((item) => (
             <a
               key={item.id}
               className={`nav-link ${isLandingPage && activeSection === item.id ? 'is-active' : ''}`}
@@ -511,10 +519,10 @@ export default function Header() {
 
           <NavDropdown
             menuId="about-us-menu"
-            ariaLabel="About Us"
-            toggleLabel="About Us"
+            ariaLabel={copy.aboutUs}
+            toggleLabel={copy.aboutUs}
             toggleActive={isAboutActive}
-            items={ABOUT_MENU_ITEMS}
+            items={aboutMenuItems}
             open={aboutOpen}
             containerRef={aboutRef}
             toggleRef={aboutToggleRef}
@@ -535,10 +543,10 @@ export default function Header() {
 
           <NavDropdown
             menuId="contact-us-menu"
-            ariaLabel="Contact Us"
-            toggleLabel="Contact Us"
+            ariaLabel={copy.contactUs}
+            toggleLabel={copy.contactUs}
             toggleActive={isContactActive}
-            items={CONTACT_MENU_ITEMS}
+            items={contactMenuItems}
             open={contactOpen}
             containerRef={contactRef}
             toggleRef={contactToggleRef}
@@ -557,9 +565,19 @@ export default function Header() {
             onItemRouteClick={handleContactRouteSelect}
           />
 
+          <button
+            type="button"
+            className="landing-language-toggle"
+            onClick={toggleLanguage}
+            aria-label={`Language: ${copy.languageName}. Switch to ${copy.alternateLanguageName}.`}
+          >
+            <FiGlobe aria-hidden="true" />
+            <span>{copy.languageCode}</span>
+          </button>
+
           <Link className="landing-login-link login-btn" to="/login" onClick={() => setMenuOpen(false)}>
             <FiLogIn aria-hidden="true" />
-            Login
+            {copy.login}
           </Link>
         </nav>
       </div>

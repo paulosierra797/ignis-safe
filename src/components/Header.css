@@ -7,6 +7,27 @@
   box-shadow: 0 8px 24px rgba(20, 33, 58, 0.08);
 }
 
+.landing-skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.75rem;
+  z-index: 12000;
+  padding: 0.65rem 0.85rem;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #7d1015;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 8px 22px rgba(20, 33, 58, 0.24);
+  transform: translateY(-160%);
+  transition: transform 0.18s ease;
+}
+
+.landing-skip-link:focus {
+  transform: translateY(0);
+}
+
 .landing-emergency-bar {
   min-height: 34px;
   display: flex;
@@ -215,6 +236,32 @@
   text-decoration: none;
 }
 
+.landing-language-toggle {
+  min-width: 52px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid #d7dde6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #344054;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.landing-language-toggle:hover,
+.landing-language-toggle:focus-visible {
+  border-color: #9f151a;
+  color: #8f1519;
+  background: #fff5f5;
+  outline: none;
+}
+
 .login-btn {
   min-height: 40px;
   display: inline-flex;
@@ -372,6 +419,12 @@
 
   .landing-login-link {
     margin: 0.65rem 0 0;
+  }
+
+  .landing-language-toggle {
+    width: 100%;
+    min-height: 46px;
+    margin-top: 0.45rem;
   }
 
   .login-btn {

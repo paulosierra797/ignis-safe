@@ -22,6 +22,38 @@ import {
   VISITOR_CHAT_MAX_LENGTH,
 } from '../utils/visitorChatService';
 import './VisitorChat.css';
+import { useLandingContent } from '../context/LandingContentContext';
+
+const CHAT_COPY = {
+  english: {
+    messageUs: 'Message Us', team: 'BFP Dasmariñas Team', visitor: 'Visitor', you: 'You', conversation: 'Conversation',
+    restoring: 'Restoring your conversation...', restoringDetail: 'Your previous messages are being loaded securely.',
+    recoveryTitle: 'Private recovery code', recoveryHelp: 'Keep this code private. Use it to continue the conversation on another device.',
+    copied: 'Copied', copyCode: 'Copy code', writeMessage: 'Write a message', wait: 'Wait', sendMessage: 'Send message',
+    resolved: 'Resolved. A new message will reopen this conversation.', browserReplies: 'Replies stay available in this browser.',
+    openFull: 'Open full conversation', startDifferent: 'Start a different conversation', startAgain: 'Start again', back: 'Back',
+    continueTitle: 'Continue a conversation', continueHelp: 'Enter the private recovery code shown when your first message was sent.',
+    recoveryCode: 'Recovery code', checking: 'Checking...', continueConversation: 'Continue conversation', startTitle: 'Start a conversation',
+    startHelp: 'Send your question directly to the BFP Dasmariñas team. Your replies will appear here.', name: 'Name', fullName: 'Your full name',
+    email: 'Gmail / Email', message: 'Message', helpPlaceholder: 'How can we help you?', sending: 'Sending...',
+    privacy: 'Your name, email, and messages are used only to manage this conversation. Do not send passwords or sensitive records.',
+    restoreLink: 'Already have a conversation? Use recovery code', close: 'Close message box'
+  },
+  tagalog: {
+    messageUs: 'Mag-message', team: 'BFP Dasmariñas Team', visitor: 'Bisita', you: 'Ikaw', conversation: 'Pag-uusap',
+    restoring: 'Binabalik ang iyong pag-uusap...', restoringDetail: 'Ligtas na kinukuha ang iyong mga naunang mensahe.',
+    recoveryTitle: 'Pribadong recovery code', recoveryHelp: 'Panatilihing pribado ang code na ito. Gamitin ito upang ipagpatuloy ang pag-uusap sa ibang device.',
+    copied: 'Nakopya', copyCode: 'Kopyahin ang code', writeMessage: 'Sumulat ng mensahe', wait: 'Maghintay', sendMessage: 'Ipadala ang mensahe',
+    resolved: 'Resolved na ito. Muling bubuksan ng bagong mensahe ang pag-uusap.', browserReplies: 'Mananatiling available ang mga sagot sa browser na ito.',
+    openFull: 'Buksan ang buong pag-uusap', startDifferent: 'Magsimula ng ibang pag-uusap', startAgain: 'Magsimula muli', back: 'Bumalik',
+    continueTitle: 'Ipagpatuloy ang pag-uusap', continueHelp: 'Ilagay ang pribadong recovery code na ipinakita noong naipadala ang una mong mensahe.',
+    recoveryCode: 'Recovery code', checking: 'Sinusuri...', continueConversation: 'Ipagpatuloy ang pag-uusap', startTitle: 'Magsimula ng pag-uusap',
+    startHelp: 'Direktang ipadala ang iyong tanong sa BFP Dasmariñas team. Lalabas dito ang kanilang sagot.', name: 'Pangalan', fullName: 'Buong pangalan',
+    email: 'Gmail / Email', message: 'Mensahe', helpPlaceholder: 'Paano ka namin matutulungan?', sending: 'Ipinapadala...',
+    privacy: 'Ginagamit lamang ang iyong pangalan, email, at mga mensahe upang pamahalaan ang pag-uusap na ito. Huwag magpadala ng password o sensitibong rekord.',
+    restoreLink: 'May dati ka nang pag-uusap? Gamitin ang recovery code', close: 'Isara ang message box'
+  }
+};
 
 const INITIAL_DETAILS = { name: '', email: '', message: '', website: '' };
 
@@ -36,6 +68,8 @@ const formatMessageTime = (value) => {
 };
 
 export default function VisitorChat({ variant = 'full', active = true, onClose }) {
+  const { language } = useLandingContent();
+  const copy = CHAT_COPY[language] || CHAT_COPY.english;
   const {
     access,
     conversation,
@@ -67,7 +101,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
 
   const isCompact = variant === 'compact';
   const hasConversation = Boolean(access?.recoveryCode && conversation);
-  const displayName = conversation?.visitorName || 'Visitor';
+  const displayName = conversation?.visitorName || copy.visitor;
 
   useEffect(() => {
     if (hasConversation) return;
@@ -149,8 +183,8 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
       <header className="visitor-chat-header">
         <span className="visitor-chat-brand-icon" aria-hidden="true"><FiMessageCircle /></span>
         <div className="visitor-chat-header-copy">
-          <h1>{hasConversation ? displayName : 'Message Us'}</h1>
-          <p><span className="visitor-chat-online-dot" /> BFP Dasmarinas Team</p>
+          <h1>{hasConversation ? displayName : copy.messageUs}</h1>
+          <p><span className="visitor-chat-online-dot" /> {copy.team}</p>
         </div>
         {hasConversation && (
           <button
@@ -164,7 +198,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
           </button>
         )}
         {isCompact && (
-          <button type="button" className="visitor-chat-close" onClick={onClose} aria-label="Close message box">
+          <button type="button" className="visitor-chat-close" onClick={onClose} aria-label={copy.close}>
             <FiX aria-hidden="true" />
           </button>
         )}
@@ -173,27 +207,27 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
       {loading && !conversation ? (
         <div className="visitor-chat-state">
           <FiRefreshCw className="visitor-chat-spinner" aria-hidden="true" />
-          <strong>Restoring your conversation...</strong>
-          <p>Your previous messages are being loaded securely.</p>
+          <strong>{copy.restoring}</strong>
+          <p>{copy.restoringDetail}</p>
         </div>
       ) : hasConversation ? (
         <>
           {showRecoveryCode && (
             <div className="visitor-chat-recovery" role="status">
               <div>
-                <strong>Private recovery code</strong>
-                <p>Keep this code private. Use it to continue the conversation on another device.</p>
+                <strong>{copy.recoveryTitle}</strong>
+                <p>{copy.recoveryHelp}</p>
               </div>
               <code>{access.recoveryCode}</code>
               <button type="button" onClick={handleCopyRecoveryCode}>
                 {copied ? <FiCheck aria-hidden="true" /> : <FiCopy aria-hidden="true" />}
-                {copied ? 'Copied' : 'Copy code'}
+                {copied ? copy.copied : copy.copyCode}
               </button>
             </div>
           )}
 
           <div className="visitor-chat-messages" ref={messageListRef} aria-live="polite">
-            <div className="visitor-chat-date-divider"><span>Conversation</span></div>
+            <div className="visitor-chat-date-divider"><span>{copy.conversation}</span></div>
             {sortedMessages.map((message) => {
               if (message.sender_type === 'system') {
                 return (
@@ -217,7 +251,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                   )}
                   <div>
                     <span className="visitor-chat-sender">
-                      {isVisitor ? 'You' : 'BFP Dasmarinas Team'}
+                      {isVisitor ? copy.you : copy.team}
                     </span>
                     <p>{message.body}</p>
                     <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}</time>
@@ -230,7 +264,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
           {error && <p className="visitor-chat-error" role="alert">{error}</p>}
 
           <form className="visitor-chat-composer" onSubmit={handleSend}>
-            <label htmlFor={`visitor-chat-composer-${variant}`} className="sr-only">Write a message</label>
+            <label htmlFor={`visitor-chat-composer-${variant}`} className="sr-only">{copy.writeMessage}</label>
             <textarea
               id={`visitor-chat-composer-${variant}`}
               rows={1}
@@ -247,28 +281,28 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                   event.currentTarget.form?.requestSubmit();
                 }
               }}
-              placeholder="Write a message..."
+              placeholder={`${copy.writeMessage}...`}
               maxLength={VISITOR_CHAT_MAX_LENGTH}
             />
             <span className="visitor-chat-composer-count">
-              {cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : `${composer.length}/${VISITOR_CHAT_MAX_LENGTH}`}
+              {cooldownSeconds > 0 ? `${copy.wait} ${cooldownSeconds}s` : `${composer.length}/${VISITOR_CHAT_MAX_LENGTH}`}
             </span>
             <button
               type="submit"
               disabled={sending || cooldownSeconds > 0 || !composer.trim()}
-              aria-label={cooldownSeconds > 0 ? `Send available in ${cooldownSeconds} seconds` : 'Send message'}
-              title={cooldownSeconds > 0 ? `Please wait ${cooldownSeconds} seconds` : 'Send message'}
+              aria-label={cooldownSeconds > 0 ? `${copy.wait} ${cooldownSeconds}s` : copy.sendMessage}
+              title={cooldownSeconds > 0 ? `${copy.wait} ${cooldownSeconds}s` : copy.sendMessage}
             >
               <FiSend aria-hidden="true" />
             </button>
           </form>
 
           <footer className="visitor-chat-footer">
-            <span>{conversation.status === 'resolved' ? 'Resolved. A new message will reopen this conversation.' : 'Replies stay available in this browser.'}</span>
+            <span>{conversation.status === 'resolved' ? copy.resolved : copy.browserReplies}</span>
             {isCompact ? (
-              <Link to="/send-message">Open full conversation <FiExternalLink aria-hidden="true" /></Link>
+              <Link to="/send-message">{copy.openFull} <FiExternalLink aria-hidden="true" /></Link>
             ) : (
-              <button type="button" onClick={handleStartDifferentConversation}>Start a different conversation</button>
+              <button type="button" onClick={handleStartDifferentConversation}>{copy.startDifferent}</button>
             )}
           </footer>
         </>
@@ -277,7 +311,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
           {error && (
             <div className="visitor-chat-reconnect-error" role="alert">
               <p>{error}</p>
-              <button type="button" onClick={handleStartDifferentConversation}>Start again</button>
+              <button type="button" onClick={handleStartDifferentConversation}>{copy.startAgain}</button>
             </div>
           )}
 
@@ -291,13 +325,13 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                   setError('');
                 }}
               >
-                <FiArrowLeft aria-hidden="true" /> Back
+                <FiArrowLeft aria-hidden="true" /> {copy.back}
               </button>
               <div>
-                <h2>Continue a conversation</h2>
-                <p>Enter the private recovery code shown when your first message was sent.</p>
+                <h2>{copy.continueTitle}</h2>
+                <p>{copy.continueHelp}</p>
               </div>
-              <label htmlFor={`visitor-recovery-code-${variant}`}>Recovery code</label>
+              <label htmlFor={`visitor-recovery-code-${variant}`}>{copy.recoveryCode}</label>
               <input
                 id={`visitor-recovery-code-${variant}`}
                 type="text"
@@ -308,24 +342,24 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                 required
               />
               <button type="submit" className="visitor-chat-primary" disabled={loading || !recoveryInput.trim()}>
-                {loading ? 'Checking...' : 'Continue conversation'}
+                {loading ? copy.checking : copy.continueConversation}
               </button>
             </form>
           ) : (
             <form className="visitor-chat-start-form" onSubmit={handleStart} noValidate>
               <div className="visitor-chat-welcome">
-                <h2>Start a conversation</h2>
-                <p>Send your question directly to the BFP Dasmarinas team. Your replies will appear here.</p>
+                <h2>{copy.startTitle}</h2>
+                <p>{copy.startHelp}</p>
               </div>
 
               <div className="visitor-chat-field">
-                <label htmlFor={`visitor-name-${variant}`}><FiUser aria-hidden="true" /> Name</label>
+                <label htmlFor={`visitor-name-${variant}`}><FiUser aria-hidden="true" /> {copy.name}</label>
                 <input
                   id={`visitor-name-${variant}`}
                   type="text"
                   value={details.name}
                   onChange={updateDetail('name')}
-                  placeholder="Your full name"
+                  placeholder={copy.fullName}
                   minLength={2}
                   maxLength={80}
                   autoComplete="name"
@@ -334,7 +368,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
               </div>
 
               <div className="visitor-chat-field">
-                <label htmlFor={`visitor-email-${variant}`}><FiMail aria-hidden="true" /> Gmail / Email</label>
+                <label htmlFor={`visitor-email-${variant}`}><FiMail aria-hidden="true" /> {copy.email}</label>
                 <input
                   id={`visitor-email-${variant}`}
                   type="email"
@@ -349,7 +383,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
 
               <div className="visitor-chat-field">
                 <div className="visitor-chat-field-heading">
-                  <label htmlFor={`visitor-message-${variant}`}><FiMessageCircle aria-hidden="true" /> Message</label>
+                  <label htmlFor={`visitor-message-${variant}`}><FiMessageCircle aria-hidden="true" /> {copy.message}</label>
                   <span>{details.message.length}/{VISITOR_CHAT_MAX_LENGTH}</span>
                 </div>
                 <textarea
@@ -357,7 +391,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                   rows={isCompact ? 3 : 5}
                   value={details.message}
                   onChange={updateDetail('message')}
-                  placeholder="How can we help you?"
+                  placeholder={copy.helpPlaceholder}
                   maxLength={VISITOR_CHAT_MAX_LENGTH}
                   required
                 />
@@ -377,7 +411,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
 
               <p className="visitor-chat-privacy">
                 <FiShield aria-hidden="true" />
-                Your name, email, and messages are used only to manage this conversation. Do not send passwords or sensitive records.
+                {copy.privacy}
               </p>
 
               <button
@@ -386,11 +420,11 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                 disabled={sending || !details.name.trim() || !details.email.trim() || !details.message.trim()}
               >
                 <FiSend aria-hidden="true" />
-                {sending ? 'Sending...' : 'Send message'}
+                {sending ? copy.sending : copy.sendMessage}
               </button>
 
               <button type="button" className="visitor-chat-restore-link" onClick={() => setRestoreMode(true)}>
-                Already have a conversation? Use recovery code
+                {copy.restoreLink}
               </button>
             </form>
           )}

@@ -2,6 +2,8 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { getPublicAnnouncements } from '../utils/announcementsService';
 import CloseButton from './CloseButton';
 import './LandingAnnouncements.css';
+import { useLandingContent } from '../context/LandingContentContext';
+import { getLandingUiCopy, normalizeDasmarinasText } from '../utils/landingLanguage';
 
 const formatDate = (isoDate) => {
   if (!isoDate) return '';
@@ -14,7 +16,7 @@ const formatDate = (isoDate) => {
   });
 };
 
-function ExpandableAnnouncementMessage({ content }) {
+function ExpandableAnnouncementMessage({ content, copy }) {
   const [expanded, setExpanded] = useState(false);
   const [canExpand, setCanExpand] = useState(false);
   const contentRef = useRef(null);
@@ -48,7 +50,7 @@ function ExpandableAnnouncementMessage({ content }) {
         ref={contentRef}
         className={`landing-announcement-content${expanded ? '' : ' is-clamped'}`}
       >
-        {content}
+        {normalizeDasmarinasText(content)}
       </p>
       {canExpand && (
         <button
@@ -57,7 +59,7 @@ function ExpandableAnnouncementMessage({ content }) {
           onClick={() => setExpanded((current) => !current)}
           aria-expanded={expanded}
         >
-          {expanded ? 'See less' : 'See more'}
+          {expanded ? copy.seeLess : copy.seeMore}
         </button>
       )}
     </div>
@@ -65,6 +67,8 @@ function ExpandableAnnouncementMessage({ content }) {
 }
 
 export default function LandingAnnouncements() {
+  const { language } = useLandingContent();
+  const copy = getLandingUiCopy(language);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -123,18 +127,18 @@ window.addEventListener("resize", handleResize);
       <div className="landing-announcements-container">
         <div className="landing-announcements-header">
           <div>
-            <p className="landing-announcements-eyebrow">PUBLIC NOTICE</p>
-            <h2>Latest announcements</h2>
+            <p className="landing-announcements-eyebrow">{copy.publicNotice}</p>
+            <h2>{copy.latestAnnouncements}</h2>
           </div>
           <p className="landing-announcements-note">
-            Official updates posted for the public audience on the landing page.
+            {copy.announcementNote}
           </p>
         </div>
 
         {loading ? (
-          <div className="landing-announcements-empty">Loading announcements...</div>
+          <div className="landing-announcements-empty">{copy.loadingAnnouncements}</div>
         ) : announcements.length === 0 ? (
-          <div className="landing-announcements-empty">No public announcements yet.</div>
+          <div className="landing-announcements-empty">{copy.noAnnouncements}</div>
         ) : (
           <>
           <div className="landing-announcements-grid">
@@ -143,9 +147,9 @@ window.addEventListener("resize", handleResize);
   (safeCurrentPage - 1) * itemsPerPage + itemsPerPage
 ).map((announcement) => (
               <article key={announcement.announcement_id} className="landing-announcement-card">
-                <span className="landing-announcement-tag">Public</span>
-                <h3>{announcement.title}</h3>
-                <ExpandableAnnouncementMessage content={announcement.content} />
+                <span className="landing-announcement-tag">{copy.publicLabel}</span>
+                <h3>{normalizeDasmarinasText(announcement.title)}</h3>
+                <ExpandableAnnouncementMessage content={announcement.content} copy={copy} />
                 {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
                   <div className="landing-announcement-attachments">
                     {announcement.attachments.map((attachment, index) => (
@@ -157,7 +161,7 @@ window.addEventListener("resize", handleResize);
                           onClick={() => setSelectedAnnouncement(announcement)}
                           aria-label={`Expand ${announcement.title}`}
                         >
-                          <img src={attachment.file_url} alt={attachment.file_name || 'Attached image'} loading="lazy" />
+                          <img src={attachment.file_url} alt={normalizeDasmarinasText(attachment.file_name || 'Attached image')} loading="lazy" />
                         </button>
                       ) : (
                         <a
@@ -167,7 +171,7 @@ window.addEventListener("resize", handleResize);
                           target="_blank"
                           rel="noreferrer"
                         >
-                          {attachment.file_name || 'Attachment'}
+                          {normalizeDasmarinasText(attachment.file_name || 'Attachment')}
                         </a>
                       )
                     ))}
@@ -178,7 +182,7 @@ window.addEventListener("resize", handleResize);
                   className="landing-announcement-expand-button"
                   onClick={() => setSelectedAnnouncement(announcement)}
                 >
-                  View full announcement
+                  {copy.viewFullAnnouncement}
                   <span aria-hidden="true">↗</span>
                 </button>
                 <div className="landing-announcement-meta">
@@ -194,16 +198,16 @@ window.addEventListener("resize", handleResize);
                 className="landing-pagination-button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={safeCurrentPage === 1}
-                aria-label="Previous page"
+                aria-label={copy.previousPage}
               >
                 &larr;
               </button>
-              <span className="landing-pagination-info">Page {safeCurrentPage} of {totalPages}</span>
+              <span className="landing-pagination-info">{copy.page} {safeCurrentPage} {copy.of} {totalPages}</span>
               <button
                 className="landing-pagination-button"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={safeCurrentPage === totalPages}
-                aria-label="Next page"
+                aria-label={copy.nextPage}
               >
                 &rarr;
               </button>
@@ -227,18 +231,18 @@ window.addEventListener("resize", handleResize);
             aria-labelledby={`landing-announcement-modal-title-${selectedAnnouncement.announcement_id}`}
           >
             <div className="landing-announcement-modal-header">
-              <span className="landing-announcement-tag">Public notice</span>
+              <span className="landing-announcement-tag">{copy.publicNotice}</span>
               <CloseButton
                 className="landing-announcement-modal-close"
                 onClick={() => setSelectedAnnouncement(null)}
-                label="Close announcement"
+                label={copy.closeAnnouncement}
               />
             </div>
 
             <h2 id={`landing-announcement-modal-title-${selectedAnnouncement.announcement_id}`}>
-              {selectedAnnouncement.title}
+              {normalizeDasmarinasText(selectedAnnouncement.title)}
             </h2>
-            <p className="landing-announcement-modal-content">{selectedAnnouncement.content}</p>
+            <p className="landing-announcement-modal-content">{normalizeDasmarinasText(selectedAnnouncement.content)}</p>
 
             {Array.isArray(selectedAnnouncement.attachments) && selectedAnnouncement.attachments.length > 0 && (
               <div className="landing-announcement-modal-attachments">
@@ -251,8 +255,8 @@ window.addEventListener("resize", handleResize);
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <img src={attachment.file_url} alt={attachment.file_name || 'Attached image'} />
-                      <span>{attachment.file_name || 'Open original image'}</span>
+                      <img src={attachment.file_url} alt={normalizeDasmarinasText(attachment.file_name || 'Attached image')} />
+                      <span>{normalizeDasmarinasText(attachment.file_name || copy.openOriginalImage)}</span>
                     </a>
                   ) : (
                     <a
@@ -262,7 +266,7 @@ window.addEventListener("resize", handleResize);
                       target="_blank"
                       rel="noreferrer"
                     >
-                      {attachment.file_name || 'Attachment'}
+                      {normalizeDasmarinasText(attachment.file_name || 'Attachment')}
                     </a>
                   )
                 ))}

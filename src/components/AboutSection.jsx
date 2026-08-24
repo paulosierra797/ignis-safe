@@ -3,9 +3,12 @@ import { FiArrowRight, FiEye, FiShield } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import personnelPhoto from '../assets/bfp_pic.jpg';
 import { useLandingContent } from '../context/LandingContentContext';
+import { getLandingUiCopy, getLocalizedSection, normalizeDasmarinasText } from '../utils/landingLanguage';
 
 export default function AboutSection() {
-  const { content } = useLandingContent();
+  const { content, language } = useLandingContent();
+  const copy = getLandingUiCopy(language);
+  const aboutContent = getLocalizedSection(content.about, language);
 
   return (
     <section className="about" id="about">
@@ -20,31 +23,31 @@ export default function AboutSection() {
         </div>
 
         <div className="about-content">
-          <p className="about-eyebrow">Serving Dasmariñas</p>
-          <h2>{content.about.title}</h2>
+          <p className="about-eyebrow">{copy.servingCity}</p>
+          <h2>{normalizeDasmarinasText(aboutContent.title)}</h2>
           <p className="about-intro">
-            {content.about.intro}
+            {normalizeDasmarinasText(aboutContent.intro)}
           </p>
 
           <div className="values-grid">
             <div className="value-card">
               <FiShield aria-hidden="true" />
               <div>
-                <h3>{content.about.missionTitle}</h3>
-                <p>{content.about.missionText}</p>
+                <h3>{normalizeDasmarinasText(aboutContent.missionTitle)}</h3>
+                <p>{normalizeDasmarinasText(aboutContent.missionText)}</p>
               </div>
             </div>
             <div className="value-card highlight">
               <FiEye aria-hidden="true" />
               <div>
-                <h3>{content.about.visionTitle}</h3>
-                <p>{content.about.visionText}</p>
+                <h3>{normalizeDasmarinasText(aboutContent.visionTitle)}</h3>
+                <p>{normalizeDasmarinasText(aboutContent.visionText)}</p>
               </div>
             </div>
           </div>
 
           <Link className="about-chart-link" to="/organizational-chart">
-            View organizational chart
+            {copy.viewOrgChart}
             <FiArrowRight aria-hidden="true" />
           </Link>
         </div>

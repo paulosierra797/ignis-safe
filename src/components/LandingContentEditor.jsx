@@ -41,7 +41,7 @@ const clearLandingDraft = () => {
 
 const isValidLandingDraftShape = (value) => Boolean(
   value && typeof value === 'object' &&
-  value.hero && value.about && value.contact && value.process && value.faq
+  value.hero && value.about && value.contact && value.trust && value.process && value.faq
 );
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
@@ -65,6 +65,9 @@ const LANDING_FIELD_MAP = [
   { label: 'Main Page Title', get: (c) => c.hero.title },
   { label: 'Welcome Message', get: (c) => c.hero.lead },
   { label: 'Supporting Description', get: (c) => c.hero.description },
+  { label: 'Main Page Title (Filipino)', get: (c) => c.hero.tagalog.title },
+  { label: 'Welcome Message (Filipino)', get: (c) => c.hero.tagalog.lead },
+  { label: 'Supporting Description (Filipino)', get: (c) => c.hero.tagalog.description },
   { label: 'Main Banner Photos', get: (c) => summarizeHeroPhotos(c.hero.photos) },
   { label: 'About Us Section Heading', get: (c) => c.about.title },
   { label: 'About Us Description', get: (c) => c.about.intro },
@@ -72,8 +75,16 @@ const LANDING_FIELD_MAP = [
   { label: 'Mission Description', get: (c) => c.about.missionText },
   { label: 'Vision Title', get: (c) => c.about.visionTitle },
   { label: 'Vision Description', get: (c) => c.about.visionText },
+  { label: 'About Us Section Heading (Filipino)', get: (c) => c.about.tagalog.title },
+  { label: 'About Us Description (Filipino)', get: (c) => c.about.tagalog.intro },
+  { label: 'Mission Title (Filipino)', get: (c) => c.about.tagalog.missionTitle },
+  { label: 'Mission Description (Filipino)', get: (c) => c.about.tagalog.missionText },
+  { label: 'Vision Title (Filipino)', get: (c) => c.about.tagalog.visionTitle },
+  { label: 'Vision Description (Filipino)', get: (c) => c.about.tagalog.visionText },
   { label: 'Contact Section Heading', get: (c) => c.contact.title },
   { label: 'Emergency Hotline Title', get: (c) => c.contact.emergencyTitle },
+  { label: 'Contact Section Heading (Filipino)', get: (c) => c.contact.tagalog.title },
+  { label: 'Emergency Hotline Title (Filipino)', get: (c) => c.contact.tagalog.emergencyTitle },
   { label: 'Landline Number 1', get: (c) => c.contact.landlinePrimary },
   { label: 'Landline Number 2', get: (c) => c.contact.landlineSecondary },
   { label: 'Mobile Number', get: (c) => c.contact.mobile },
@@ -94,7 +105,32 @@ const getChangedFields = (oldContent, newContent) => {
   });
 
   ['english', 'tagalog'].forEach((locale) => {
-    const localeLabel = locale === 'english' ? 'English' : 'Tagalog';
+    const localeLabel = locale === 'english' ? 'English' : 'Filipino';
+
+    ['eyebrow', 'title', 'intro'].forEach((field) => {
+      const oldValue = oldContent.trust[locale][field];
+      const newValue = newContent.trust[locale][field];
+      if (String(oldValue ?? '') !== String(newValue ?? '')) {
+        changes.push({
+          label: `Trust and Accessibility (${localeLabel}) ${field}`,
+          oldValue: displayValue(oldValue),
+          newValue: displayValue(newValue),
+        });
+      }
+    });
+
+    (newContent.trust[locale].items || []).forEach((item, index) => {
+      const oldItem = oldContent.trust[locale].items?.[index] || {};
+      ['title', 'text'].forEach((field) => {
+        if (String(oldItem[field] ?? '') !== String(item[field] ?? '')) {
+          changes.push({
+            label: `Trust and Accessibility (${localeLabel}) Item ${index + 1} ${field}`,
+            oldValue: displayValue(oldItem[field]),
+            newValue: displayValue(item[field]),
+          });
+        }
+      });
+    });
 
     const oldTitle = oldContent.process[locale].title;
     const newTitle = newContent.process[locale].title;
@@ -396,6 +432,47 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       [section]: {
         ...prev[section],
         [field]: value,
+      },
+    }));
+  };
+
+  const updateLocalizedField = (section, field, value) => {
+    setDraft((prev) => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        tagalog: {
+          ...prev[section].tagalog,
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const updateTrustField = (locale, field, value) => {
+    setDraft((prev) => ({
+      ...prev,
+      trust: {
+        ...prev.trust,
+        [locale]: {
+          ...prev.trust[locale],
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const updateTrustItem = (locale, index, field, value) => {
+    setDraft((prev) => ({
+      ...prev,
+      trust: {
+        ...prev.trust,
+        [locale]: {
+          ...prev.trust[locale],
+          items: prev.trust[locale].items.map((item, itemIndex) => (
+            itemIndex === index ? { ...item, [field]: value } : item
+          )),
+        },
       },
     }));
   };
@@ -806,6 +883,19 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             <AutoResizeTextarea minHeight={110} maxHeight={300} value={draft.hero.description} onChange={(e) => updateField('hero', 'description', e.target.value)} />
           </Field>
 
+          <div className="sub-editor">
+            <h3>Filipino translation</h3>
+            <Field label="Main Page Title (Filipino)">
+              <input type="text" value={draft.hero.tagalog.title} onChange={(e) => updateLocalizedField('hero', 'title', e.target.value)} />
+            </Field>
+            <Field label="Welcome Message (Filipino)">
+              <input type="text" value={draft.hero.tagalog.lead} onChange={(e) => updateLocalizedField('hero', 'lead', e.target.value)} />
+            </Field>
+            <Field label="Supporting Description (Filipino)">
+              <AutoResizeTextarea minHeight={110} maxHeight={300} value={draft.hero.tagalog.description} onChange={(e) => updateLocalizedField('hero', 'description', e.target.value)} />
+            </Field>
+          </div>
+
           <div className="banner-photo-manager">
             <input
               ref={bannerPhotoInputRef}
@@ -963,6 +1053,15 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           >
             <AutoResizeTextarea minHeight={160} maxHeight={380} value={draft.about.intro} onChange={(e) => updateField('about', 'intro', e.target.value)} />
           </Field>
+          <div className="sub-editor">
+            <h3>Filipino translation</h3>
+            <Field label="Section Heading (Filipino)">
+              <input type="text" value={draft.about.tagalog.title} onChange={(e) => updateLocalizedField('about', 'title', e.target.value)} />
+            </Field>
+            <Field label="About Us Description (Filipino)">
+              <AutoResizeTextarea minHeight={160} maxHeight={380} value={draft.about.tagalog.intro} onChange={(e) => updateLocalizedField('about', 'intro', e.target.value)} />
+            </Field>
+          </div>
         </GroupCard>
 
         <GroupCard
@@ -994,6 +1093,21 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           >
             <AutoResizeTextarea minHeight={90} maxHeight={240} value={draft.about.visionText} onChange={(e) => updateField('about', 'visionText', e.target.value)} />
           </Field>
+          <div className="sub-editor">
+            <h3>Filipino translation</h3>
+            <Field label="Mission Title (Filipino)">
+              <input type="text" value={draft.about.tagalog.missionTitle} onChange={(e) => updateLocalizedField('about', 'missionTitle', e.target.value)} />
+            </Field>
+            <Field label="Mission Description (Filipino)">
+              <AutoResizeTextarea minHeight={110} maxHeight={280} value={draft.about.tagalog.missionText} onChange={(e) => updateLocalizedField('about', 'missionText', e.target.value)} />
+            </Field>
+            <Field label="Vision Title (Filipino)">
+              <input type="text" value={draft.about.tagalog.visionTitle} onChange={(e) => updateLocalizedField('about', 'visionTitle', e.target.value)} />
+            </Field>
+            <Field label="Vision Description (Filipino)">
+              <AutoResizeTextarea minHeight={90} maxHeight={240} value={draft.about.tagalog.visionText} onChange={(e) => updateLocalizedField('about', 'visionText', e.target.value)} />
+            </Field>
+          </div>
         </GroupCard>
 
         <GroupCard
@@ -1058,6 +1172,15 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           >
             <input type="text" value={draft.contact.facebookUrl} onChange={(e) => updateField('contact', 'facebookUrl', e.target.value)} />
           </Field>
+          <div className="sub-editor">
+            <h3>Filipino translation</h3>
+            <Field label="Section Heading (Filipino)">
+              <input type="text" value={draft.contact.tagalog.title} onChange={(e) => updateLocalizedField('contact', 'title', e.target.value)} />
+            </Field>
+            <Field label="Emergency Hotline Title (Filipino)">
+              <input type="text" value={draft.contact.tagalog.emergencyTitle} onChange={(e) => updateLocalizedField('contact', 'emergencyTitle', e.target.value)} />
+            </Field>
+          </div>
         </GroupCard>
       </div>
 
@@ -1087,7 +1210,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           ))}
         </SectionBlock>
 
-        <SectionBlock number="06" title="Process Section (Tagalog)">
+        <SectionBlock number="06" title="Process Section (Filipino)">
           <Field label="Section title">
             <input type="text" value={draft.process.tagalog.title} onChange={(e) => updateNested('process', 'tagalog', 'title', e.target.value)} />
           </Field>
@@ -1128,7 +1251,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           ))}
         </SectionBlock>
 
-        <SectionBlock number="08" title="FAQ Section (Tagalog)">
+        <SectionBlock number="08" title="FAQ Section (Filipino)">
           <Field label="Section title">
             <input type="text" value={draft.faq.tagalog.title} onChange={(e) => updateNested('faq', 'tagalog', 'title', e.target.value)} />
           </Field>
@@ -1143,6 +1266,34 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             </div>
           ))}
         </SectionBlock>
+
+        {['english', 'tagalog'].map((locale, localeIndex) => (
+          <SectionBlock
+            key={`trust-${locale}`}
+            number={String(9 + localeIndex).padStart(2, '0')}
+            title={`Trust and Accessibility (${locale === 'english' ? 'English' : 'Filipino'})`}
+          >
+            <Field label="Eyebrow">
+              <input type="text" value={draft.trust[locale].eyebrow} onChange={(e) => updateTrustField(locale, 'eyebrow', e.target.value)} />
+            </Field>
+            <Field label="Section title">
+              <input type="text" value={draft.trust[locale].title} onChange={(e) => updateTrustField(locale, 'title', e.target.value)} />
+            </Field>
+            <Field label="Introduction">
+              <AutoResizeTextarea minHeight={100} maxHeight={240} value={draft.trust[locale].intro} onChange={(e) => updateTrustField(locale, 'intro', e.target.value)} />
+            </Field>
+            {draft.trust[locale].items.map((item, index) => (
+              <div key={`trust-${locale}-${index}`} className="sub-editor">
+                <Field label={`Trust item ${index + 1} title`}>
+                  <input type="text" value={item.title} onChange={(e) => updateTrustItem(locale, index, 'title', e.target.value)} />
+                </Field>
+                <Field label={`Trust item ${index + 1} description`}>
+                  <AutoResizeTextarea minHeight={90} maxHeight={220} value={item.text} onChange={(e) => updateTrustItem(locale, index, 'text', e.target.value)} />
+                </Field>
+              </div>
+            ))}
+          </SectionBlock>
+        ))}
       </div>
       </div>
 

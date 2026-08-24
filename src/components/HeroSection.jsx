@@ -10,11 +10,14 @@ import {
 import './HeroSection.css'
 import firestation from '../assets/firestation.jpg'
 import { useLandingContent } from '../context/LandingContentContext';
+import { getLandingUiCopy, getLocalizedSection, normalizeDasmarinasText } from '../utils/landingLanguage';
 
 const FSIS_APPLICATION_URL = 'https://fsis.e-bfp.com/';
 
 export default function HeroSection() {
-  const { content } = useLandingContent();
+  const { content, language } = useLandingContent();
+  const copy = getLandingUiCopy(language);
+  const heroContent = getLocalizedSection(content.hero, language);
   const touchStartXRef = useRef(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState('next');
@@ -78,7 +81,7 @@ export default function HeroSection() {
         <img
           key={activePhoto.id || activePhoto.url}
           src={activePhoto.url}
-          alt={activePhoto.alt}
+          alt={normalizeDasmarinasText(activePhoto.alt)}
           className={`hero-image-img hero-carousel-photo is-${slideDirection}`}
           loading={safeActivePhotoIndex === 0 ? 'eager' : 'lazy'}
           fetchPriority={safeActivePhotoIndex === 0 ? 'high' : 'auto'}
@@ -87,11 +90,11 @@ export default function HeroSection() {
 
         <div className="hero-container">
           <div className="hero-content">
-            <span className="hero-eyebrow">Official city fire station portal</span>
-            <h1>{content.hero.title}</h1>
+            <span className="hero-eyebrow">{copy.heroEyebrow}</span>
+            <h1>{normalizeDasmarinasText(heroContent.title)}</h1>
             <p>
-              <span className="hero-lead">{content.hero.lead}</span>
-              {content.hero.description}
+              <span className="hero-lead">{normalizeDasmarinasText(heroContent.lead)}</span>
+              {normalizeDasmarinasText(heroContent.description)}
             </p>
             <div className="hero-actions">
               <a
@@ -100,18 +103,18 @@ export default function HeroSection() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Start online application
+                {copy.startApplication}
                 <FiExternalLink aria-hidden="true" />
               </a>
               <a className="hero-secondary-action" href="#process">
-                View requirements
+                {copy.viewRequirements}
               </a>
             </div>
           </div>
 
           <div className="hero-service-status">
             <FiCheckCircle aria-hidden="true" />
-            <span>Station services and online guidance available</span>
+            <span>{copy.servicesAvailable}</span>
           </div>
         </div>
 
@@ -152,17 +155,17 @@ export default function HeroSection() {
       <div className="hero-services" aria-label="Common public services">
         <a href="#process" className="hero-service-link">
           <FiFileText aria-hidden="true" />
-          <span><strong>FSIC &amp; FSEC</strong><small>Requirements and application process</small></span>
+          <span><strong>{copy.fsicFsec}</strong><small>{copy.requirementsProcess}</small></span>
           <FiArrowRight aria-hidden="true" />
         </a>
         <a href="#announcements" className="hero-service-link">
           <FiBell aria-hidden="true" />
-          <span><strong>Public advisories</strong><small>Latest announcements and updates</small></span>
+          <span><strong>{copy.publicAdvisories}</strong><small>{copy.latestUpdates}</small></span>
           <FiArrowRight aria-hidden="true" />
         </a>
         <a href="#contact" className="hero-service-link">
           <FiPhoneCall aria-hidden="true" />
-          <span><strong>Contact the station</strong><small>Hotlines and official channels</small></span>
+          <span><strong>{copy.contactStation}</strong><small>{copy.hotlinesChannels}</small></span>
           <FiArrowRight aria-hidden="true" />
         </a>
       </div>

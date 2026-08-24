@@ -66,6 +66,7 @@ const ProcessSection = lazy(() => import('./components/ProcessSection'));
 const ContactSection = lazy(() => import('./components/ContactSection'));
 const FAQSection = lazy(() => import('./components/FAQSection'));
 const FloatingContactButton = lazy(() => import('./components/FloatingContactButton'));
+const TrustAccessibilitySection = lazy(() => import('./components/TrustAccessibilitySection'));
 
 const ROUTE_PRELOADERS = {
   '/login': loadLogin,
@@ -212,12 +213,15 @@ function LandingPage() {
   return (
     <>
       <Header />
-      <HeroSection />
-      <Suspense fallback={null}><LandingAnnouncements /></Suspense>
-      <Suspense fallback={null}><ProcessSection /></Suspense>
-      <Suspense fallback={null}><AboutSection /></Suspense>
-      <Suspense fallback={null}><ContactSection /></Suspense>
-      <Suspense fallback={null}><FAQSection /></Suspense>
+      <main id="main-content">
+        <HeroSection />
+        <Suspense fallback={null}><TrustAccessibilitySection /></Suspense>
+        <Suspense fallback={null}><LandingAnnouncements /></Suspense>
+        <Suspense fallback={null}><ProcessSection /></Suspense>
+        <Suspense fallback={null}><AboutSection /></Suspense>
+        <Suspense fallback={null}><ContactSection /></Suspense>
+        <Suspense fallback={null}><FAQSection /></Suspense>
+      </main>
       <Footer />
       <Suspense fallback={null}><FloatingContactButton /></Suspense>
     </>

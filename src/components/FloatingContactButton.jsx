@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { FiMessageCircle, FiX } from 'react-icons/fi';
 import VisitorChat from './VisitorChat';
 import './FloatingContactButton.css';
+import { useLandingContent } from '../context/LandingContentContext';
+import { getLandingUiCopy } from '../utils/landingLanguage';
 
 export default function FloatingContactButton() {
+  const { language } = useLandingContent();
+  const copy = getLandingUiCopy(language);
   const [open, setOpen] = useState(false);
   const widgetRef = useRef(null);
 
@@ -28,14 +32,14 @@ export default function FloatingContactButton() {
         type="button"
         className="floating-contact-button"
         onClick={() => setOpen((current) => !current)}
-        aria-label={open ? 'Close Message Us box' : 'Open Message Us box'}
+        aria-label={open ? copy.close : copy.messageUs}
         aria-expanded={open}
         aria-controls="floating-contact-panel"
       >
         <span className="floating-contact-button-dot" aria-hidden="true">
           {open ? <FiX /> : <FiMessageCircle />}
         </span>
-        <span className="floating-contact-button-label">{open ? 'Close' : 'Message Us'}</span>
+        <span className="floating-contact-button-label">{open ? copy.close : copy.messageUs}</span>
       </button>
     </div>
   );

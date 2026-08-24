@@ -1,35 +1,34 @@
-import { useState } from 'react'
 import './ProcessSection.css'
 import { useLandingContent } from '../context/LandingContentContext';
 import fsisQrCode from '../assets/qrcode_fsis.e-bfp.com.png';
+import { getLandingUiCopy, normalizeDasmarinasText } from '../utils/landingLanguage';
 
 const FSIS_APPLICATION_URL = 'https://fsis.e-bfp.com/';
 
 export default function ProcessSection() {
-  const [isTagalog, setIsTagalog] = useState(false)
-  const { content: landingContent } = useLandingContent();
-
-  const currentContent = isTagalog ? landingContent.process.tagalog : landingContent.process.english
+  const { content: landingContent, language, toggleLanguage } = useLandingContent();
+  const copy = getLandingUiCopy(language);
+  const currentContent = landingContent.process[language] || landingContent.process.english;
 
   return (
     <section className="process" id="process">
       <div className="process-container">
         <div className="process-heading-row">
           <div>
-            <p className="landing-section-eyebrow">Step-by-step processing guide</p>
-            <h2>{currentContent.title}</h2>
+            <p className="landing-section-eyebrow">{copy.processEyebrow}</p>
+            <h2>{normalizeDasmarinasText(currentContent.title)}</h2>
             <p className="process-heading-description">
-              Follow the required account, application, payment, and document-release steps.
+              {copy.processDescription}
             </p>
           </div>
           <button
             type="button"
             className="language-toggle process-language-toggle"
-            onClick={() => setIsTagalog(!isTagalog)}
-            aria-label={`Show process guide in ${isTagalog ? 'English' : 'Tagalog'}`}
+            onClick={toggleLanguage}
+            aria-label={`Show process guide in ${copy.alternateLanguageName}`}
           >
             <span aria-hidden="true">文</span>
-            {isTagalog ? 'English' : 'Tagalog'}
+            {copy.alternateLanguageName}
           </button>
         </div>
         
@@ -37,7 +36,7 @@ export default function ProcessSection() {
           {currentContent.processSteps.map((section, idx) => (
             <article key={idx} className="process-column">
               <span className="process-column-number">{String(idx + 1).padStart(2, '0')}</span>
-              <h3>{section.title}</h3>
+              <h3>{normalizeDasmarinasText(section.title)}</h3>
               <ol className="steps-list">
                 {section.steps.map((step) => {
                   const isFsisPortalStep = idx === 0 && step.num === 1;
@@ -48,7 +47,7 @@ export default function ProcessSection() {
                     <span className="step-text">
                       {isFsisPortalStep ? (
                         <>
-                          {isTagalog ? 'Pumunta sa ' : 'Go to '}
+                          {copy.goToPortal}
                           <a
                             className="fsis-portal-link"
                             href={FSIS_APPLICATION_URL}
@@ -57,13 +56,13 @@ export default function ProcessSection() {
                           >
                             fsis.e-bfp.com
                           </a>
-                          {isTagalog ? ' o i-scan ang QR code sa ibaba.' : ' or scan the QR code below.'}
+                          {copy.orScanQr}
                           <a
                             className="fsis-qr-link"
                             href={FSIS_APPLICATION_URL}
                             target="_blank"
                             rel="noopener noreferrer"
-                            aria-label="Open the FSIS online application portal"
+                            aria-label={copy.openFsisPortal}
                           >
                             <img
                               className="fsis-qr-image"
@@ -72,7 +71,7 @@ export default function ProcessSection() {
                             />
                           </a>
                         </>
-                      ) : step.text}
+                      ) : normalizeDasmarinasText(step.text)}
                     </span>
                   </li>
                   );

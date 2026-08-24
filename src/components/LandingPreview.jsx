@@ -7,6 +7,7 @@ import ProcessSection from './ProcessSection';
 import ContactSection from './ContactSection';
 import FAQSection from './FAQSection';
 import Footer from './Footer';
+import TrustAccessibilitySection from './TrustAccessibilitySection';
 import { LandingContentPreviewProvider } from '../context/LandingContentContext';
 import './LandingPreview.css';
 
@@ -155,11 +156,14 @@ export default function LandingPreview({ content }) {
               <LandingContentPreviewProvider content={content}>
                 <div className="app" onClickCapture={blockLinkNavigation}>
                   <Header />
-                  <HeroSection />
-                  <ProcessSection />
-                  <AboutSection />
-                  <ContactSection />
-                  <FAQSection />
+                  <main id="main-content">
+                    <HeroSection />
+                    <TrustAccessibilitySection />
+                    <ProcessSection />
+                    <AboutSection />
+                    <ContactSection />
+                    <FAQSection />
+                  </main>
                   <Footer />
                 </div>
               </LandingContentPreviewProvider>

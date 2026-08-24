@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import './FAQSection.css'
 import { useLandingContent } from '../context/LandingContentContext';
+import { getLandingUiCopy, normalizeDasmarinasText } from '../utils/landingLanguage';
 
 export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState(null)
-  const [isTagalog, setIsTagalog] = useState(false)
-  const { content } = useLandingContent();
-  const currentContent = isTagalog ? content.faq.tagalog : content.faq.english
+  const { content, language, toggleLanguage } = useLandingContent();
+  const copy = getLandingUiCopy(language);
+  const currentContent = content.faq[language] || content.faq.english;
 
   const toggleFAQ = (index) => {
     setOpenIndex(openIndex === index ? null : index)
@@ -17,20 +18,20 @@ export default function FAQSection() {
       <div className="faq-container">
         <div className="faq-heading-row">
           <div>
-            <p className="landing-section-eyebrow">Quick answers</p>
-            <h2>{currentContent.title}</h2>
+            <p className="landing-section-eyebrow">{copy.quickAnswers}</p>
+            <h2>{normalizeDasmarinasText(currentContent.title)}</h2>
           </div>
           <button
             type="button"
             className="language-toggle faq-language-toggle"
             onClick={() => {
-              setIsTagalog(!isTagalog)
+              toggleLanguage()
               setOpenIndex(null)
             }}
-            aria-label={`Show frequently asked questions in ${isTagalog ? 'English' : 'Tagalog'}`}
+            aria-label={`Show frequently asked questions in ${copy.alternateLanguageName}`}
           >
             <span aria-hidden="true">文</span>
-            {isTagalog ? 'English' : 'Tagalog'}
+            {copy.alternateLanguageName}
           </button>
         </div>
 
@@ -47,7 +48,7 @@ export default function FAQSection() {
                 aria-expanded={openIndex === index}
               >
                 <span className="faq-number">{String(index + 1).padStart(2, '0')}</span>
-                <span>{faq.question}</span>
+                <span>{normalizeDasmarinasText(faq.question)}</span>
                 <span className="toggle-icon" aria-hidden="true">{openIndex === index ? '−' : '+'}</span>
               </button>
               
@@ -56,11 +57,11 @@ export default function FAQSection() {
                   {Array.isArray(faq.answer) ? (
                     <ul>
                       {faq.answer.map((item, i) => (
-                        <li key={i}>{item}</li>
+                        <li key={i}>{normalizeDasmarinasText(item)}</li>
                       ))}
                     </ul>
                   ) : (
-                    <p>{faq.answer}</p>
+                    <p>{normalizeDasmarinasText(faq.answer)}</p>
                   )}
                 </div>
               )}

@@ -1,46 +1,8 @@
-import { useEffect } from 'react';
-import { useRouteError, isRouteErrorResponse } from 'react-router-dom';
-import { FiRefreshCw } from 'react-icons/fi';
-import {
-  isChunkLoadError,
-  hasAlreadyAttemptedReload,
-  markReloadAttempted
-} from '../utils/chunkErrorRecovery';
-import { applyUpdate } from '../utils/versionCheck';
+import { FiAlertCircle } from 'react-icons/fi';
 
-// Replaces React Router's default "Unexpected Application Error" screen.
-// A failed dynamic import (stale chunk hash from a previous deploy) is
-// recoverable with a single hard reload, which re-fetches the current
-// index.html and its up-to-date chunk map - so we do that automatically
-// instead of showing a dead end. Any other error, or a chunk error that
-// persists after the reload, falls through to a friendly manual-retry screen.
+// Replaces React Router's default development-style error output with a
+// user-facing fallback for genuine route failures.
 export default function RouteErrorBoundary() {
-  const error = useRouteError();
-
-  const chunkError = !isRouteErrorResponse(error) && isChunkLoadError(error);
-  // Read synchronously at render time (not derived state) so it stays
-  // consistent between this render and the effect below without setState.
-  const willAutoReload = chunkError && !hasAlreadyAttemptedReload();
-
-  useEffect(() => {
-    if (willAutoReload) {
-      markReloadAttempted();
-      void applyUpdate();
-    }
-  }, [willAutoReload]);
-
-  if (willAutoReload) {
-    return null;
-  }
-
-  // This only renders once the one-time auto-reload above has already been
-  // tried and the page is still broken - a genuinely unusable build, not the
-  // routine "a deploy happened" case (that's UpdateToast's job).
-  const title = chunkError ? 'Update needed' : 'Something went wrong';
-  const message = chunkError
-    ? "This tab could not finish loading the latest IGNIS SAFE version. Continue to reopen the application with the newest files."
-    : 'An unexpected error occurred while loading this page.';
-
   return (
     <div
       style={{
@@ -68,13 +30,15 @@ export default function RouteErrorBoundary() {
         }}
         aria-hidden="true"
       >
-        <FiRefreshCw />
+        <FiAlertCircle />
       </div>
-      <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#1f2937' }}>{title}</h1>
-      <p style={{ margin: 0, color: '#4b5563', maxWidth: '28rem' }}>{message}</p>
+      <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#1f2937' }}>Something went wrong</h1>
+      <p style={{ margin: 0, color: '#4b5563', maxWidth: '28rem' }}>
+        This page could not be opened. Return to the home page and try again.
+      </p>
       <button
         type="button"
-        onClick={() => applyUpdate({ fallbackToHome: chunkError })}
+        onClick={() => window.location.replace('/')}
         style={{
           padding: '0.65rem 1.5rem',
           borderRadius: '8px',
@@ -88,7 +52,7 @@ export default function RouteErrorBoundary() {
           boxShadow: '0 10px 22px rgba(153, 27, 27, 0.3)'
         }}
       >
-        {chunkError ? 'Continue to IGNIS SAFE' : 'Refresh page'}
+        Return to home
       </button>
     </div>
   );

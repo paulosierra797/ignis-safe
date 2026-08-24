@@ -52,58 +52,6 @@
   line-height: 1.6;
 }
 
-.language-toggle {
-  min-height: 42px;
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.85rem;
-  border: 1px solid #e2aaaa;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #991b1b;
-  font-size: 0.8rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition: transform 0.18s ease, background-color 0.18s ease;
-}
-
-.language-toggle:hover,
-.language-toggle:focus-visible {
-  transform: translateY(-1px);
-  background: #fff4f4;
-  outline: none;
-}
-
-.language-toggle > span {
-  width: 24px;
-  height: 24px;
-  display: inline-grid;
-  place-items: center;
-  border-radius: 5px;
-  background: #991b1b;
-  color: #ffffff;
-  font-size: 0.7rem;
-}
-
-.process-language-toggle {
-  border-color: rgba(255, 255, 255, 0.48);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-}
-
-.process-language-toggle > span {
-  background: #f4c542;
-  color: #631014;
-}
-
-.process-language-toggle:hover,
-.process-language-toggle:focus-visible {
-  background: rgba(255, 255, 255, 0.16);
-}
-
 .process-grid {
   margin-top: 2rem;
   display: grid;
@@ -263,10 +211,6 @@
     gap: 1rem;
   }
 
-  .language-toggle {
-    align-self: flex-start;
-  }
-
   .process-grid {
     grid-template-columns: 1fr;
     gap: 1.2rem;
@@ -278,11 +222,5 @@
 
   .process-column h3 {
     min-height: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .language-toggle {
-    transition: none;
   }
 }

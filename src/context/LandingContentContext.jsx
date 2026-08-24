@@ -15,7 +15,7 @@ export const DEFAULT_LANDING_CONTENT = {
     description:
       'Access fire safety services, public advisories, contact details, and FSIC and FSEC application guidance.',
     tagalog: {
-      title: 'Pinangangalagaan ang buhay, ari-arian, at komunidad',
+      title: 'Pagprotekta sa buhay, ari-arian, at komunidad',
       lead: 'Maligayang pagdating sa portal ng BFP Dasmariñas City Fire Station.',
       description:
         'Alamin ang mga serbisyo sa kaligtasan sa sunog, pampublikong abiso, detalye sa pakikipag-ugnayan, at gabay sa aplikasyon ng FSIC at FSEC.'
@@ -34,12 +34,7 @@ export const DEFAULT_LANDING_CONTENT = {
     tagalog: {
       title: 'Tungkol sa amin',
       intro:
-        'Ang Dasmariñas Fire Station ay nakatuon sa pangangalaga ng buhay, kaligtasan, at kapaligiran sa pamamagitan ng propesyonal na pagtugon sa emergency, serbisyong medikal, at disaster response. Ang aming mga bumbero at first responder ay handang maglingkod sa komunidad sa lahat ng oras.',
-      missionTitle: 'Ang Aming Misyon',
-      missionText:
-        'Nangangako kaming pigilan at supilin ang mapaminsalang sunog, imbestigahan ang mga sanhi nito, ipatupad ang Fire Code at kaugnay na batas, at tumugon sa mga sakuna at iba pang emergency.',
-      visionTitle: 'Ang Aming Bisyon',
-      visionText: 'Isang makabagong serbisyo ng bumbero na ganap na may kakayahang tiyakin ang isang bansang ligtas sa sunog pagsapit ng 2034.'
+        'Ang Dasmariñas Fire Station ay nakatuon sa pangangalaga ng buhay, kaligtasan, at kapaligiran sa pamamagitan ng propesyonal na pagtugon sa emergency, serbisyong medikal, at disaster response. Ang aming mga bumbero at first responder ay handang maglingkod sa komunidad sa lahat ng oras.'
     }
   },
   contact: {
@@ -279,6 +274,7 @@ export const DEFAULT_LANDING_CONTENT = {
 };
 
 const LandingContentContext = createContext();
+const PREVIOUS_FILIPINO_HERO_TITLE = 'Pinangangalagaan ang buhay, ari-arian, at komunidad';
 
 const normalizeHeroPhotos = (photos) => (
   Array.isArray(photos)
@@ -316,7 +312,10 @@ const mergeWithDefaults = (candidate = {}) => ({
     description: normalizeDasmarinasText(candidate.hero?.description ?? DEFAULT_LANDING_CONTENT.hero.description),
     tagalog: normalizeCopyObject({
       ...DEFAULT_LANDING_CONTENT.hero.tagalog,
-      ...(candidate.hero?.tagalog || {})
+      ...(candidate.hero?.tagalog || {}),
+      title: candidate.hero?.tagalog?.title === PREVIOUS_FILIPINO_HERO_TITLE
+        ? DEFAULT_LANDING_CONTENT.hero.tagalog.title
+        : candidate.hero?.tagalog?.title ?? DEFAULT_LANDING_CONTENT.hero.tagalog.title
     }),
     photos: normalizeHeroPhotos(candidate.hero?.photos)
   },
@@ -324,8 +323,8 @@ const mergeWithDefaults = (candidate = {}) => ({
     ...DEFAULT_LANDING_CONTENT.about,
     ...(candidate.about || {}),
     tagalog: {
-      ...DEFAULT_LANDING_CONTENT.about.tagalog,
-      ...(candidate.about?.tagalog || {})
+      title: normalizeDasmarinasText(candidate.about?.tagalog?.title ?? DEFAULT_LANDING_CONTENT.about.tagalog.title),
+      intro: normalizeDasmarinasText(candidate.about?.tagalog?.intro ?? DEFAULT_LANDING_CONTENT.about.tagalog.intro)
     }
   }),
   contact: {

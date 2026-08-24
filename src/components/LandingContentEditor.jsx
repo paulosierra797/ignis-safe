@@ -77,10 +77,6 @@ const LANDING_FIELD_MAP = [
   { label: 'Vision Description', get: (c) => c.about.visionText },
   { label: 'About Us Section Heading (Filipino)', get: (c) => c.about.tagalog.title },
   { label: 'About Us Description (Filipino)', get: (c) => c.about.tagalog.intro },
-  { label: 'Mission Title (Filipino)', get: (c) => c.about.tagalog.missionTitle },
-  { label: 'Mission Description (Filipino)', get: (c) => c.about.tagalog.missionText },
-  { label: 'Vision Title (Filipino)', get: (c) => c.about.tagalog.visionTitle },
-  { label: 'Vision Description (Filipino)', get: (c) => c.about.tagalog.visionText },
   { label: 'Contact Section Heading', get: (c) => c.contact.title },
   { label: 'Emergency Hotline Title', get: (c) => c.contact.emergencyTitle },
   { label: 'Contact Section Heading (Filipino)', get: (c) => c.contact.tagalog.title },
@@ -1067,7 +1063,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         <GroupCard
           number="03"
           title="Mission"
-          description="The Mission and Vision cards shown on the landing page."
+          description="The official Mission and Vision cards shown unchanged in both language modes."
         >
           <Field
             label="Mission Title"
@@ -1093,21 +1089,6 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           >
             <AutoResizeTextarea minHeight={90} maxHeight={240} value={draft.about.visionText} onChange={(e) => updateField('about', 'visionText', e.target.value)} />
           </Field>
-          <div className="sub-editor">
-            <h3>Filipino translation</h3>
-            <Field label="Mission Title (Filipino)">
-              <input type="text" value={draft.about.tagalog.missionTitle} onChange={(e) => updateLocalizedField('about', 'missionTitle', e.target.value)} />
-            </Field>
-            <Field label="Mission Description (Filipino)">
-              <AutoResizeTextarea minHeight={110} maxHeight={280} value={draft.about.tagalog.missionText} onChange={(e) => updateLocalizedField('about', 'missionText', e.target.value)} />
-            </Field>
-            <Field label="Vision Title (Filipino)">
-              <input type="text" value={draft.about.tagalog.visionTitle} onChange={(e) => updateLocalizedField('about', 'visionTitle', e.target.value)} />
-            </Field>
-            <Field label="Vision Description (Filipino)">
-              <AutoResizeTextarea minHeight={90} maxHeight={240} value={draft.about.tagalog.visionText} onChange={(e) => updateLocalizedField('about', 'visionText', e.target.value)} />
-            </Field>
-          </div>
         </GroupCard>
 
         <GroupCard

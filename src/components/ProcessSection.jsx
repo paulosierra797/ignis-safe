@@ -6,7 +6,7 @@ import { getLandingUiCopy, normalizeDasmarinasText } from '../utils/landingLangu
 const FSIS_APPLICATION_URL = 'https://fsis.e-bfp.com/';
 
 export default function ProcessSection() {
-  const { content: landingContent, language, toggleLanguage } = useLandingContent();
+  const { content: landingContent, language } = useLandingContent();
   const copy = getLandingUiCopy(language);
   const currentContent = landingContent.process[language] || landingContent.process.english;
 
@@ -21,15 +21,6 @@ export default function ProcessSection() {
               {copy.processDescription}
             </p>
           </div>
-          <button
-            type="button"
-            className="language-toggle process-language-toggle"
-            onClick={toggleLanguage}
-            aria-label={`Show process guide in ${copy.alternateLanguageName}`}
-          >
-            <span aria-hidden="true">文</span>
-            {copy.alternateLanguageName}
-          </button>
         </div>
         
         <div className="process-grid">

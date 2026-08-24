@@ -5,7 +5,7 @@ import { getLandingUiCopy, normalizeDasmarinasText } from '../utils/landingLangu
 
 export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState(null)
-  const { content, language, toggleLanguage } = useLandingContent();
+  const { content, language } = useLandingContent();
   const copy = getLandingUiCopy(language);
   const currentContent = content.faq[language] || content.faq.english;
 
@@ -21,18 +21,6 @@ export default function FAQSection() {
             <p className="landing-section-eyebrow">{copy.quickAnswers}</p>
             <h2>{normalizeDasmarinasText(currentContent.title)}</h2>
           </div>
-          <button
-            type="button"
-            className="language-toggle faq-language-toggle"
-            onClick={() => {
-              toggleLanguage()
-              setOpenIndex(null)
-            }}
-            aria-label={`Show frequently asked questions in ${copy.alternateLanguageName}`}
-          >
-            <span aria-hidden="true">文</span>
-            {copy.alternateLanguageName}
-          </button>
         </div>
 
         <div className="faq-list">

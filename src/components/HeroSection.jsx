@@ -72,7 +72,7 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="hero" id="home">
+    <section className="hero" id="home" data-language={language}>
       <div
         className="hero-carousel"
         onTouchStart={handleTouchStart}

@@ -159,7 +159,7 @@ export const getProgressPageData = async () => {
         .select('id, module_id, type, title'),
       supabase
         .from('admin')
-        .select('admin_id, role, status'),
+        .select('admin_id'),
     ]);
 
     if (profilesError) throw profilesError;
@@ -175,17 +175,15 @@ export const getProgressPageData = async () => {
     const safeAttempts = attempts || [];
     const safeAssessments = assessments || [];
     const safeAdminRows = adminRows || [];
-    // Admin/Personnel accounts can also gain a `profiles` row (mobile learning
-    // access), so every profile is shown here with its account type — this is
-    // the account-level view, unlike the mobile-only counts used elsewhere.
-    const accountTypeById = new Map(
-      safeAdminRows.map((row) => {
-        const normalizedRole = String(row.role || '').trim().toLowerCase();
-        const accountType = normalizedRole === 'admin' ? 'Admin' : 'Personnel';
-        return [String(row.admin_id || '').trim(), accountType];
-      })
+    // Internal admin and personnel accounts can also have a profiles row, but
+    // the Users page is the public mobile-app user directory. Keep back-office
+    // accounts in their dedicated account-management views.
+    const internalAccountIds = new Set(
+      safeAdminRows.map((row) => String(row.admin_id || '').trim()).filter(Boolean)
     );
-    const appUserProfiles = safeProfiles;
+    const appUserProfiles = safeProfiles.filter((profile) => (
+      !internalAccountIds.has(String(profile.id || '').trim())
+    ));
 
     const progressByUserModule = safeModuleProgressRows.reduce((accumulator, row) => {
       accumulator[`${row.user_id}-${row.module_id}`] = row;
@@ -235,7 +233,7 @@ export const getProgressPageData = async () => {
 
       return {
         id: profile.id,
-        accountType: accountTypeById.get(String(profile.id || '').trim()) || 'Mobile User',
+        accountType: 'Mobile User',
         name:
           `${profile.first_name || ''} ${profile.last_name || ''}`.trim() ||
           profile.username ||

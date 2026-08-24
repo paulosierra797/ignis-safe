@@ -12,6 +12,8 @@ const MIN_CHECK_GAP_MS = 60 * 1000;
 const INITIAL_CHECK_DELAY_MS = 10000;
 
 const DISMISSED_KEY = 'ignis-safe:dismissed-build-id';
+const UPDATE_QUERY_PARAM = '_ignis_update';
+const CLEANUP_TIMEOUT_MS = 1500;
 
 export function getCurrentBuildId() {
   return CURRENT_BUILD_ID;
@@ -31,6 +33,22 @@ export function markDismissed(buildId) {
   } catch {
     // sessionStorage unavailable (private mode, etc) - worst case the toast
     // can reappear after "Later", which is harmless.
+  }
+}
+
+export function clearUpdateMarker() {
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(UPDATE_QUERY_PARAM)) return;
+
+    url.searchParams.delete(UPDATE_QUERY_PARAM);
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${url.pathname}${url.search}${url.hash}`
+    );
+  } catch {
+    // A malformed or restricted URL should never prevent the app from loading.
   }
 }
 
@@ -88,30 +106,36 @@ export function startVersionPolling(onUpdateAvailable) {
   };
 }
 
-// Best-effort clear of any Cache Storage entries / service worker
-// registrations (defensive - the app doesn't currently register either, but
-// this keeps "Refresh Now" correct if one is ever added) before reloading.
-// The reload itself is what actually picks up the new index.html and its
-// current chunk map; Vercel serves index.html as non-immutable/revalidate,
-// so a plain reload already bypasses stale hashed-asset caching.
+// Best-effort clear of Cache Storage and service worker registrations before
+// navigating to a unique URL. The cleanup is time-bounded so a browser API
+// cannot leave the refresh button waiting forever. The query marker forces a
+// fresh document request and is removed from the address bar on startup.
 export async function applyUpdate() {
-  try {
+  const cleanupBrowserCaches = async () => {
     if ('caches' in window) {
       const keys = await caches.keys();
       await Promise.all(keys.map((key) => caches.delete(key)));
     }
-  } catch {
-    // best-effort only
-  }
+  };
 
-  try {
+  const unregisterServiceWorkers = async () => {
     if ('serviceWorker' in navigator) {
       const registrations = await navigator.serviceWorker.getRegistrations();
       await Promise.all(registrations.map((registration) => registration.unregister()));
     }
-  } catch {
-    // best-effort only
-  }
+  };
 
-  window.location.reload();
+  const cleanup = Promise.allSettled([
+    cleanupBrowserCaches(),
+    unregisterServiceWorkers()
+  ]);
+
+  await Promise.race([
+    cleanup,
+    new Promise((resolve) => window.setTimeout(resolve, CLEANUP_TIMEOUT_MS))
+  ]);
+
+  const url = new URL(window.location.href);
+  url.searchParams.set(UPDATE_QUERY_PARAM, String(Date.now()));
+  window.location.replace(url.toString());
 }

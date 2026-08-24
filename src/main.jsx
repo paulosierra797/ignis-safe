@@ -4,6 +4,9 @@ import App from './App.jsx'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import RouteErrorBoundary from './components/RouteErrorBoundary.jsx';
 import UpdateToast from './components/UpdateToast.jsx';
+import { clearUpdateMarker } from './utils/versionCheck.js';
+
+clearUpdateMarker();
 
 const router = createBrowserRouter([
   {

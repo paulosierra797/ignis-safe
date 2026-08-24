@@ -25,7 +25,7 @@ export default function RouteErrorBoundary() {
   useEffect(() => {
     if (willAutoReload) {
       markReloadAttempted();
-      window.location.reload();
+      void applyUpdate();
     }
   }, [willAutoReload]);
 

@@ -54,7 +54,7 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
   const menuItems = [
     { id: 'dashboard', icon: FaTachometerAlt, label: 'Dashboard', path: '/dashboard', permission: 'view_dashboard' },
     { id: 'reports', icon: FaFileAlt, label: 'Reports', path: '/dashboard/reports', permission: 'view_dashboard' },
-    { id: 'visitor-messages', icon: FaComments, label: 'Visitor Messages', path: '/dashboard/visitor-messages', permission: 'view_dashboard', badge: unreadVisitorMessages },
+    { id: 'visitor-messages', icon: FaComments, label: 'Messages', path: '/dashboard/visitor-messages', permission: 'view_dashboard', badge: unreadVisitorMessages },
     { id: 'accounts', icon: FaUsers, label: 'Personnel', path: '/dashboard/accounts', permission: 'view_accounts', badge: pendingProfileChangeRequests },
     { id: 'announcements', icon: FaBullhorn, label: 'Content Management', path: '/dashboard/announcements', permission: 'manage_users' },
     { id: 'attendance-admin', icon: FaCalendarCheck, label: 'Attendance', path: '/attendance-admin', permission: 'view_attendance' },

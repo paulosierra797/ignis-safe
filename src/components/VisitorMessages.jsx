@@ -51,6 +51,7 @@ const formatListTime = (value) => {
 
 export default function VisitorMessages() {
   const [conversations, setConversations] = useState([]);
+  const [inboxSummary, setInboxSummary] = useState({ unread: 0, open: 0 });
   const [selectedId, setSelectedId] = useState('');
   const [thread, setThread] = useState(null);
   const [search, setSearch] = useState('');
@@ -76,6 +77,12 @@ export default function VisitorMessages() {
     }
     const nextConversations = result.data?.conversations || [];
     setConversations(nextConversations);
+    if (!archivedView) {
+      setInboxSummary({
+        unread: nextConversations.filter((item) => item.unread).length,
+        open: nextConversations.filter((item) => item.status === 'open').length,
+      });
+    }
     setSelectedId((current) => (
       nextConversations.some((item) => item.id === current)
         ? current
@@ -237,47 +244,73 @@ export default function VisitorMessages() {
     <div className="visitor-messages-page">
       <Sidebar />
       <main className="visitor-messages-main">
-        <PageHeader title="Visitor Messages" />
+        <PageHeader title="Messages" />
 
         <section className="visitor-messages-intro">
           <div>
-            <span>{archivedView ? 'CONVERSATION ARCHIVE' : 'PUBLIC COMMUNICATION'}</span>
-            <h2>{archivedView ? 'Archived Conversations' : 'Website Conversations'}</h2>
-            <p>
-              {archivedView
-                ? 'Restore conversations to the active inbox or schedule permanent deletion after a 30-day recovery period.'
-                : 'Read and reply to messages sent through the public website. Visitor names and emails are shown for clear follow-up.'}
-            </p>
+            <span>PUBLIC COMMUNICATION</span>
+            <h2>Website Conversations</h2>
+            <p>Read and reply to messages sent through the public website. Visitor names and emails are shown for clear follow-up.</p>
           </div>
           <div className="visitor-messages-intro-actions">
             <div className="visitor-messages-summary">
-              {archivedView ? (
-                <>
-                  <span><strong>{conversations.length}</strong> Archived</span>
-                  <span><strong>{conversations.filter((item) => item.delete_after).length}</strong> Pending deletion</span>
-                </>
-              ) : (
-                <>
-                  <span><strong>{conversations.filter((item) => item.unread).length}</strong> Unread</span>
-                  <span><strong>{conversations.filter((item) => item.status === 'open').length}</strong> Open</span>
-                </>
-              )}
+              <span><strong>{inboxSummary.unread}</strong> Unread</span>
+              <span><strong>{inboxSummary.open}</strong> Open</span>
             </div>
             <button
               type="button"
               className="visitor-archive-view-button"
               onClick={handleArchiveViewToggle}
+              aria-label="View archived conversations"
+              title="View archived conversations"
             >
-              {archivedView ? <FiArrowLeft /> : <FiArchive />}
-              {archivedView ? 'Back to inbox' : 'View archive'}
+              <FiArchive />
             </button>
           </div>
         </section>
 
-        {error && <div className="visitor-messages-error" role="alert">{error}</div>}
+        {!archivedView && error && <div className="visitor-messages-error" role="alert">{error}</div>}
 
-        <section className={`visitor-messages-workspace ${selectedId ? 'has-selection' : ''}`}>
-          <aside className="visitor-conversation-list" aria-label="Visitor conversations">
+        {archivedView && (
+          <button
+            type="button"
+            className="visitor-archive-modal-backdrop"
+            onClick={handleArchiveViewToggle}
+            aria-label="Close archived conversations"
+          />
+        )}
+
+        <div className={`visitor-messages-workspace-frame ${archivedView ? 'is-archive-modal' : ''}`}>
+          {archivedView && (
+            <header className="visitor-archive-modal-header">
+              <div className="visitor-archive-modal-title">
+                <span className="visitor-archive-modal-icon"><FiArchive /></span>
+                <div>
+                  <span>CONVERSATION ARCHIVE</span>
+                  <h2>Archived Conversations</h2>
+                  <p>Restore a conversation or schedule permanent deletion after the 30-day recovery period.</p>
+                </div>
+              </div>
+              <div className="visitor-archive-modal-summary">
+                <span><strong>{conversations.length}</strong> Archived</span>
+                <span><strong>{conversations.filter((item) => item.delete_after).length}</strong> Pending deletion</span>
+              </div>
+              <button
+                type="button"
+                className="visitor-archive-modal-close"
+                onClick={handleArchiveViewToggle}
+                aria-label="Close archived conversations"
+                title="Close archive"
+              >
+                <FiX />
+              </button>
+            </header>
+          )}
+
+          {archivedView && error && <div className="visitor-messages-error visitor-archive-modal-error" role="alert">{error}</div>}
+
+          <section className={`visitor-messages-workspace ${selectedId ? 'has-selection' : ''}`}>
+            <aside className="visitor-conversation-list" aria-label="Visitor conversations">
             <div className="visitor-conversation-tools">
               <label>
                 <FiSearch aria-hidden="true" />
@@ -338,9 +371,9 @@ export default function VisitorMessages() {
                 </button>
               ))}
             </div>
-          </aside>
+            </aside>
 
-          <div className="visitor-thread">
+            <div className="visitor-thread">
             {!selectedId ? (
               <div className="visitor-thread-empty">
                 <FiMessageCircle />
@@ -466,8 +499,9 @@ export default function VisitorMessages() {
                 )}
               </>
             ) : null}
-          </div>
-        </section>
+            </div>
+          </section>
+        </div>
       </main>
 
       {pendingDeletion && (

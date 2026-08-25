@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.admin-visitor-chat]
 verify_jwt = true
+
+[functions.request-backoffice-password-reset]
+verify_jwt = false

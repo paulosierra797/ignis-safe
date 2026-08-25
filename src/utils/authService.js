@@ -466,15 +466,106 @@ export const sendPasswordResetEmail = async (email) => {
       return { data: null, error: 'Please enter your email address.' };
     }
 
-    const { data, error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo: `${window.location.origin}/login`
-    });
+    const { data: response, error: invokeError } = await supabase.functions.invoke(
+      'request-backoffice-password-reset',
+      {
+        body: {
+          email: normalizedEmail,
+          redirectTo: `${window.location.origin}/login`
+        }
+      }
+    );
 
-    if (error) throw error;
-    return { data, error: null };
+    if (invokeError) {
+      console.error('Password reset function failed:', invokeError);
+      return {
+        data: null,
+        error: 'Password recovery is temporarily unavailable. Please try again later.'
+      };
+    }
+
+    if (response?.error) {
+      return {
+        data: null,
+        error: response.error.message || 'Password reset failed.',
+        code: response.error.code || 'PASSWORD_RESET_FAILED'
+      };
+    }
+
+    return { data: response?.data || null, error: null };
   } catch (error) {
     console.error('Error sending reset email:', error);
-    return { data: null, error: error?.message || 'Password reset failed.' };
+    return {
+      data: null,
+      error: 'Password recovery is temporarily unavailable. Please try again later.'
+    };
+  }
+};
+
+const RECOVERABLE_WEBSITE_ROLES = new Set(['admin', 'personnel']);
+const RECOVERABLE_WEBSITE_STATUSES = new Set(['active', 'inactive', 'on leave']);
+
+// Recovery sessions must still belong to an eligible website account. This
+// prevents mobile-only Auth users from reaching the website password form by
+// supplying their own recovery code or recovery link.
+export const verifyBackofficeRecoveryAccount = async (authUser = null) => {
+  try {
+    let user = authUser;
+
+    if (!user?.id) {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      user = userData?.user || null;
+    }
+
+    if (!user?.id) {
+      return {
+        authorized: false,
+        data: null,
+        error: 'This recovery link or code is invalid or has expired.'
+      };
+    }
+
+    const { data: account, error: accountError } = await supabase
+      .from('admin')
+      .select('admin_id, email, role, status')
+      .eq('admin_id', user.id)
+      .maybeSingle();
+
+    const normalizedRole = String(account?.role || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[_-]+/g, ' ');
+    const normalizedStatus = String(account?.status || '').trim().toLowerCase();
+    const emailsMatch = normalizeEmail(account?.email) === normalizeEmail(user.email);
+    const authorized =
+      !accountError &&
+      Boolean(account?.admin_id) &&
+      RECOVERABLE_WEBSITE_ROLES.has(normalizedRole) &&
+      RECOVERABLE_WEBSITE_STATUSES.has(normalizedStatus) &&
+      emailsMatch;
+
+    if (!authorized) {
+      if (accountError) {
+        console.error('Could not validate recovery account:', accountError);
+      }
+      await supabase.auth.signOut({ scope: 'local' });
+      return {
+        authorized: false,
+        data: null,
+        error: 'This account is not authorized for Admin or Personnel website access.'
+      };
+    }
+
+    return { authorized: true, data: account, error: null };
+  } catch (error) {
+    console.error('Error validating recovery account:', error);
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+    return {
+      authorized: false,
+      data: null,
+      error: 'We could not verify this website account. Please request a new reset code.'
+    };
   }
 };
 
@@ -482,8 +573,8 @@ export const sendPasswordResetEmail = async (email) => {
 export const verifyRecoveryCode = async (email, token) => {
   try {
     const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token,
+      email: normalizeEmail(email),
+      token: String(token || '').trim(),
       type: 'recovery'
     });
 

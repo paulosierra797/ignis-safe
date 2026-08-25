@@ -1,10 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FaArrowLeft, FaEye, FaEyeSlash, FaLock } from 'react-icons/fa';
+import {
+  FaArrowLeft,
+  FaCheck,
+  FaEnvelope,
+  FaEye,
+  FaEyeSlash,
+  FaKey,
+  FaLock,
+  FaShieldAlt
+} from 'react-icons/fa';
 import { supabase } from '../utils/supabaseClient';
 import {
 sendPasswordResetEmail,
 verifyRecoveryCode,
+verifyBackofficeRecoveryAccount,
 sendLoginOtp,
 updatePassword,
 signOut,
@@ -49,6 +59,19 @@ const LoginBrandPanel = ({ portal }) => {
   </aside>
   );
 };
+
+const RecoveryHeader = ({ icon, kicker, title, description, tone = 'default' }) => (
+  <header className="recovery-header">
+    <span className={`recovery-header-icon recovery-header-icon--${tone}`} aria-hidden="true">
+      {React.createElement(icon)}
+    </span>
+    <div className="recovery-header-copy">
+      <p className="recovery-kicker">{kicker}</p>
+      <h1>{title}</h1>
+    </div>
+    {description && <p className="recovery-description">{description}</p>}
+  </header>
+);
 
 const REMEMBER_ME_KEY = 'remember_me';
 const REMEMBERED_EMAIL_KEY = 'remembered_email';
@@ -110,7 +133,7 @@ export default function LoginPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [forgotPasswordStep, setForgotPasswordStep] = useState(null); // null, 'request', 'emailSent', 'verifyCode', 'setPassword', 'resetDone'
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(null); // null, 'request', 'validatingRecovery', 'emailSent', 'verifyCode', 'setPassword', 'resetDone'
   const [resetEmail, setResetEmail] = useState("");
   const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -168,10 +191,82 @@ const logLoginIfPersonnel = (user) => {
     const recoveryInHash = window.location.hash.includes('type=recovery');
     const recoveryInQuery = new URLSearchParams(window.location.search).get('type') === 'recovery';
 
-    if (recoveryInHash || recoveryInQuery) {
+    if (!recoveryInHash && !recoveryInQuery) return undefined;
+
+    let active = true;
+    let validationStarted = false;
+    let authSubscription = null;
+    setAuthFlowGated(true);
+    setForgotPasswordStep('validatingRecovery');
+    setError('');
+
+    const stopRecoveryListener = () => {
+      authSubscription?.unsubscribe();
+      authSubscription = null;
+    };
+
+    const validateRecoveryUser = async (user) => {
+      if (!active || validationStarted || !user?.id) return;
+      validationStarted = true;
+
+      const authorization = await verifyBackofficeRecoveryAccount(user);
+      if (!active) return;
+
+      stopRecoveryListener();
+      window.history.replaceState({}, document.title, '/login');
+
+      if (!authorization.authorized) {
+        setAuthFlowGated(false);
+        setForgotPasswordStep('request');
+        setError(authorization.error);
+        return;
+      }
+
+      setResetEmail(user.email || '');
       setForgotPasswordStep('setPassword');
       setError('');
-    }
+    };
+
+    const findRecoverySession = async () => {
+      const retryDelays = [0, 200, 600, 1200];
+
+      for (const delay of retryDelays) {
+        if (delay) {
+          await new Promise((resolve) => window.setTimeout(resolve, delay));
+        }
+        if (!active || validationStarted) return;
+
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          await validateRecoveryUser(userData.user);
+          return;
+        }
+      }
+
+      if (active && !validationStarted) {
+        stopRecoveryListener();
+        setAuthFlowGated(false);
+        window.history.replaceState({}, document.title, '/login');
+        setForgotPasswordStep('request');
+        setError('This recovery link is invalid or has expired. Request a new reset code.');
+      }
+    };
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || session?.user) {
+        window.setTimeout(() => {
+          void validateRecoveryUser(session?.user);
+        }, 0);
+      }
+    });
+    authSubscription = authListener?.subscription || null;
+
+    void findRecoverySession();
+
+    return () => {
+      active = false;
+      stopRecoveryListener();
+    };
   }, []);
 
   useEffect(() => {
@@ -316,6 +411,7 @@ const handleLogin = async (e) => {
 };
   const handleForgotPasswordClick = (e) => {
     e.preventDefault();
+    setAuthFlowGated(true);
     setForgotPasswordStep('request');
     setError("");
   };
@@ -348,21 +444,6 @@ const handleLogin = async (e) => {
     }
   };
 
-  useEffect(() => {
-    isResetFlowActiveRef.current = Boolean(forgotPasswordStep);
-  }, [forgotPasswordStep]);
-
-  useEffect(() => {
-    return () => {
-      if (isResetFlowActiveRef.current) {
-        setAuthFlowGated(false);
-        void signOut();
-      }
-    };
-  }, []);
-
- 
-
   const handleSetPassword = async (e) => {
     e.preventDefault();
     const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
@@ -386,6 +467,13 @@ const handleLogin = async (e) => {
     setLoading(true);
 
     try {
+      const authorization = await verifyBackofficeRecoveryAccount();
+      if (!authorization.authorized) {
+        setForgotPasswordStep('request');
+        setError(authorization.error);
+        return;
+      }
+
       const { error: passwordError } = await updatePassword(newPassword);
 
       if (passwordError) {
@@ -418,10 +506,19 @@ const handleLogin = async (e) => {
     setLoading(true);
 
     try {
-      const { error: verifyError } = await verifyRecoveryCode(resetEmail.trim(), resetCode.trim());
+      const { data: recoveryData, error: verifyError } = await verifyRecoveryCode(
+        resetEmail.trim(),
+        resetCode.trim()
+      );
       if (verifyError) {
         setError(`Invalid or expired reset code. ${verifyError}`);
-        setLoading(false);
+        return;
+      }
+
+      const recoveryUser = recoveryData?.user || recoveryData?.session?.user || null;
+      const authorization = await verifyBackofficeRecoveryAccount(recoveryUser);
+      if (!authorization.authorized) {
+        setError(authorization.error);
         return;
       }
 
@@ -650,47 +747,78 @@ useEffect(() => {
       </div>
     </div>
   </>
-) : 
-      forgotPasswordStep === 'request' ? (
+) : forgotPasswordStep === 'validatingRecovery' ? (
         <>
-    <LoginBrandPanel portal={displayPortal} />
+          <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
-            <div className="login-form-container">
-              <h1>Forgot your password?</h1>
-            <p className="login-description">
-              Enter your email address and we'll send you a verification code to reset your password.
-            </p>
-            <form onSubmit={handleRequestReset} className="login-form">
-              <div className="form-group">
-                <label htmlFor="reset-email">Email Address</label>
-                <input
-                  type="email"
-                  id="reset-email"
-                  placeholder=" "
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
-                  required
-                />
+            <div className="login-form-container recovery-card recovery-card--status" aria-live="polite">
+              <RecoveryHeader
+                icon={FaShieldAlt}
+                kicker="Secure recovery"
+                title="Verifying recovery link"
+                description="Confirming that this recovery session belongs to an authorized website account."
+                tone="loading"
+              />
+              <div className="recovery-loading-track" aria-hidden="true">
+                <span />
               </div>
-              {error && <p className="error-message">{error}</p>}
-              <button type="submit" className="login-button">Send Reset Code</button>
-              <button type="button" onClick={handleBackToLogin} className="back-button">Back to Login</button>
-            </form>
+            </div>
           </div>
-        </div>
-      </>
+        </>
+      ) : forgotPasswordStep === 'request' ? (
+        <>
+          <LoginBrandPanel portal={displayPortal} />
+          <div className="login-right">
+            <div className="login-form-container recovery-card">
+              <RecoveryHeader
+                icon={FaEnvelope}
+                kicker="Account recovery"
+                title="Forgot your password?"
+                description="Enter the email connected to your authorized Admin or Personnel account."
+              />
+              <form onSubmit={handleRequestReset} className="login-form recovery-form">
+                <div className="form-group">
+                  <label htmlFor="reset-email">Email address</label>
+                  <input
+                    type="email"
+                    id="reset-email"
+                    placeholder="name@example.com"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+                <div className="recovery-security-note">
+                  <FaShieldAlt aria-hidden="true" />
+                  <span>Only authorized website accounts can receive a reset code here.</span>
+                </div>
+                {error && <p className="error-message recovery-alert" role="alert">{error}</p>}
+                <button type="submit" className="login-button recovery-primary" disabled={loading}>
+                  {loading ? 'Checking account...' : 'Send reset code'}
+                </button>
+                <button type="button" onClick={handleBackToLogin} className="back-button recovery-secondary" disabled={loading}>
+                  <FaArrowLeft aria-hidden="true" />
+                  Back to login
+                </button>
+              </form>
+            </div>
+          </div>
+        </>
       ) : forgotPasswordStep === 'setPassword' ? (
         <>
-    <LoginBrandPanel portal={displayPortal} />
+          <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
-            <div className="login-form-container">
-              <h1>Set a password</h1>
-            <p className="login-description">
-              Create a new password for your account
-            </p>
-            <form onSubmit={handleSetPassword} className="login-form">
+            <div className="login-form-container recovery-card">
+              <RecoveryHeader
+                icon={FaKey}
+                kicker="Final step"
+                title="Create a new password"
+                description="Choose a strong password that you have not used for this account before."
+              />
+              <form onSubmit={handleSetPassword} className="login-form recovery-form">
               <div className="form-group">
-                <label htmlFor="new-password">New Password</label>
+                <label htmlFor="new-password">New password</label>
                 <div className="password-input-wrapper">
                   <input
                     type={showNewPassword ? 'text' : 'password'}
@@ -713,7 +841,7 @@ useEffect(() => {
                 </div>
               </div>
               <div className="form-group">
-                <label htmlFor="confirm-password">Confirm Password</label>
+                <label htmlFor="confirm-password">Confirm password</label>
                 <div className="password-input-wrapper">
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
@@ -735,85 +863,113 @@ useEffect(() => {
                   </button>
                 </div>
               </div>
-              {error && <p className="error-message">{error}</p>}
-              <button type="submit" className="login-button" disabled={loading}>
-                {loading ? 'Updating...' : 'Set Password'}
+              <p className="recovery-password-hint">
+                Use 8 or more characters with uppercase, lowercase, a number, and a symbol.
+              </p>
+              {error && <p className="error-message recovery-alert" role="alert">{error}</p>}
+              <button type="submit" className="login-button recovery-primary" disabled={loading}>
+                {loading ? 'Updating password...' : 'Update password'}
               </button>
-              <button type="button" onClick={handleBackToLogin} className="back-button">Back to Login</button>
+              <button type="button" onClick={handleBackToLogin} className="back-button recovery-secondary" disabled={loading}>
+                <FaArrowLeft aria-hidden="true" />
+                Back to login
+              </button>
             </form>
+            </div>
           </div>
-        </div>
-      </>
+        </>
       ) : forgotPasswordStep === 'verifyCode' ? (
         <>
-    <LoginBrandPanel portal={displayPortal} />
+          <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
-            <div className="login-form-container">
-              <h1>Verify reset code</h1>
-              <p className="login-description">
-                Enter the code sent to your email before setting a new password.
-              </p>
-              <form onSubmit={handleVerifyResetCode} className="login-form">
+            <div className="login-form-container recovery-card">
+              <RecoveryHeader
+                icon={FaKey}
+                kicker="Email verification"
+                title="Enter your reset code"
+                description="Use the one-time code from the password recovery email."
+              />
+              <form onSubmit={handleVerifyResetCode} className="login-form recovery-form">
                 <div className="form-group">
-                  <label htmlFor="reset-email-verify">Email Address</label>
+                  <label htmlFor="reset-email-verify">Email address</label>
                   <input
                     type="email"
                     id="reset-email-verify"
-                    placeholder=" "
                     value={resetEmail}
-                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="recovery-readonly-input"
+                    readOnly
                     required
                   />
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="reset-code-verify">Reset Code</label>
+                  <label htmlFor="reset-code-verify">Reset code</label>
                   <input
                     type="text"
                     id="reset-code-verify"
-                    placeholder=" "
+                    placeholder="Enter the code"
                     value={resetCode}
                     onChange={(e) => setResetCode(e.target.value)}
                     autoComplete="one-time-code"
+                    inputMode="numeric"
                     required
                   />
                 </div>
 
-                {error && <p className="error-message">{error}</p>}
-                <button type="submit" className="verify-button" disabled={loading}>
-                  {loading ? 'Verifying...' : 'Verify Code'}
+                {error && <p className="error-message recovery-alert" role="alert">{error}</p>}
+                <button type="submit" className="verify-button recovery-primary" disabled={loading}>
+                  {loading ? 'Verifying code...' : 'Verify code'}
                 </button>
-                <button type="button" onClick={handleBackToLogin} className="back-button">Back to Login</button>
+                <button type="button" onClick={handleBackToLogin} className="back-button recovery-secondary" disabled={loading}>
+                  <FaArrowLeft aria-hidden="true" />
+                  Back to login
+                </button>
               </form>
             </div>
           </div>
         </>
       ) : forgotPasswordStep === 'emailSent' ? (
         <>
-    <LoginBrandPanel portal={displayPortal} />
+          <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
-            <div className="login-form-container confirmation-container">
-              <div className="confirmation-icon">✓</div>
-              <h1>EMAIL SENT</h1>
-              <p className="login-description">
-                We sent a reset code to {resetEmail}. Enter the code to set a new password.
-              </p>
-              <button onClick={() => setForgotPasswordStep('verifyCode')} className="login-button">Enter Reset Code</button>
-              <button onClick={handleBackToLogin} className="login-button">Back to Login</button>
+            <div className="login-form-container recovery-card recovery-card--status" aria-live="polite">
+              <RecoveryHeader
+                icon={FaCheck}
+                kicker="Email sent"
+                title="Check your inbox"
+                description="Your reset code is ready. It expires after a limited time for your security."
+                tone="success"
+              />
+              <div className="recovery-destination">
+                <span>Reset code sent to</span>
+                <strong>{resetEmail}</strong>
+              </div>
+              <div className="recovery-status-actions">
+                <button onClick={() => setForgotPasswordStep('verifyCode')} className="login-button recovery-primary">
+                  Enter reset code
+                </button>
+                <button onClick={handleBackToLogin} className="back-button recovery-secondary">
+                  Back to login
+                </button>
+              </div>
             </div>
           </div>
         </>
       ) : forgotPasswordStep === 'resetDone' ? (
         <>
-    <LoginBrandPanel portal={displayPortal} />
+          <LoginBrandPanel portal={displayPortal} />
           <div className="login-right">
-            <div className="login-form-container confirmation-container">
-              <div className="confirmation-icon">✓</div>
-              <h1>PASSWORD UPDATED</h1>
-              <p className="login-description">
-                Your password has been updated successfully.
-              </p>
-              <button onClick={handleBackToLogin} className="login-button">Back to Login</button>
+            <div className="login-form-container recovery-card recovery-card--status" aria-live="polite">
+              <RecoveryHeader
+                icon={FaCheck}
+                kicker="Recovery complete"
+                title="Password updated"
+                description="Your new password is active. You can now return to the secure sign-in page."
+                tone="success"
+              />
+              <button onClick={handleBackToLogin} className="login-button recovery-primary">
+                Return to login
+              </button>
             </div>
           </div>
         </>

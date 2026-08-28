@@ -260,19 +260,19 @@
 .verify-security-icon {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
-  margin-bottom: 0.6rem;
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0.4rem;
   border-radius: 12px;
   background: #fef2f2;
   color: #b91c1c;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 800;
   box-shadow: inset 0 0 0 1px #fecaca;
 }
 
 .verify-kicker {
-  margin: 0 0 0.3rem;
+  margin: 0 0 0.15rem;
   color: #b91c1c;
   font-size: 0.75rem;
   font-weight: 800;
@@ -281,17 +281,17 @@
 }
 
 .login-form-container-verify h1 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 0.35rem;
   color: #111827;
-  font-size: clamp(1.55rem, 4vw, 1.95rem);
+  font-size: clamp(1.35rem, 3.4vw, 1.6rem);
   line-height: 1.12;
 }
 
 .login-description-verify {
-  margin: 0 0 1rem;
+  margin: 0 0 0.6rem;
   color: #64748b;
-  font-size: 0.92rem;
-  line-height: 1.5;
+  font-size: 0.88rem;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
@@ -303,7 +303,7 @@
 .verify-login-form {
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
+  gap: 0.5rem;
 }
 
 .verify-input-label {
@@ -316,13 +316,13 @@
 
 .verify-input {
   width: 100%;
-  height: 54px;
+  height: 46px;
   padding: 0 1rem;
   border: 1.5px solid #cbd5e1;
   border-radius: 12px;
   background: #fff;
   color: #111827;
-  font-size: clamp(1.3rem, 6vw, 1.6rem);
+  font-size: clamp(1.15rem, 5vw, 1.4rem);
   font-weight: 750;
   letter-spacing: 0.42em;
   text-align: center;
@@ -347,9 +347,9 @@
 .verify-remember-summary {
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 0.7rem;
+  gap: 0.65rem;
   align-items: start;
-  padding: 0.7rem 0.85rem;
+  padding: 0.55rem 0.8rem;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   background: #f8fafc;
@@ -377,28 +377,28 @@
 .verify-remember-summary strong {
   display: block;
   color: #334155;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .verify-remember-summary p {
-  margin: 0.2rem 0 0;
+  margin: 0.12rem 0 0;
   color: #64748b;
-  font-size: 0.78rem;
-  line-height: 1.4;
+  font-size: 0.75rem;
+  line-height: 1.3;
 }
 
 .verify-message {
   margin: 0;
-  padding: 0.6rem 0.85rem;
+  padding: 0.5rem 0.8rem;
   border-radius: 10px;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   background: #fef2f2;
 }
 
 .login-button-verify,
 .back-button-verify {
   width: 100%;
-  min-height: 46px;
+  min-height: 42px;
   border-radius: 10px;
   font-size: 0.95rem;
   font-weight: 750;
@@ -1454,6 +1454,17 @@
   padding: clamp(1.25rem, 2.4vw, 1.75rem);
 }
 
+/* Keep the OTP verification step fully visible inside the panel without
+   the safety-net inner scroll: give its card a little more of the panel
+   and a tighter card padding than the password form. */
+.login-right:has(.login-form-container-verify) {
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.login-page .login-form-container-verify {
+  padding: clamp(1rem, 2.2vw, 1.4rem);
+}
+
 @media (min-width: 901px) and (min-height: 701px) {
   .login-left {
     --login-brand-gap: clamp(1.15rem, 2.2vh, 1.55rem);
@@ -1540,15 +1551,15 @@
   }
 
   .login-description-verify {
-    margin-bottom: 0.7rem;
+    margin-bottom: 0.5rem;
   }
 
   .verify-login-form {
-    gap: 0.55rem;
+    gap: 0.45rem;
   }
 
   .verify-input {
-    height: 48px;
+    height: 44px;
   }
 
   .login-button-verify,

@@ -402,7 +402,7 @@
   flex: 1;
   margin-left: var(--sidebar-width);
   padding: 2rem 3rem;
-  padding-top: calc(var(--profile-header-height, 96px) + 2rem);
+  padding-top: calc(var(--profile-header-height, 96px) + 3.5rem);
   height: 100vh;
   overflow-y: auto;
   position: relative;
@@ -1055,7 +1055,7 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
 @media (max-width: 1024px) {
   .personnel-profile-content {
     padding: 1.5rem;
-    padding-top: calc(var(--profile-header-height, 96px) + 1.5rem);
+    padding-top: calc(var(--profile-header-height, 96px) + 2.75rem);
   }
 
   .profile-layout {
@@ -1067,7 +1067,7 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
   .personnel-profile-content {
     margin-left: 0;
     padding: 1.25rem;
-    padding-top: calc(var(--profile-header-height, 72px) + 1.25rem);
+    padding-top: calc(var(--profile-header-height, 72px) + 2.5rem);
     height: auto;
   }
 
@@ -1092,7 +1092,7 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
 @media (max-width: 768px) {
   .personnel-profile-content {
     padding: 1.25rem;
-    padding-top: calc(var(--profile-header-height, 72px) + 1.25rem);
+    padding-top: calc(var(--profile-header-height, 72px) + 2.5rem);
   }
 
   .security-grid {
@@ -1126,7 +1126,7 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
 @media (max-width: 480px) {
   .personnel-profile-content {
     padding: 1rem;
-    padding-top: calc(var(--profile-header-height, 64px) + 1rem);
+    padding-top: calc(var(--profile-header-height, 64px) + 2rem);
   }
 
   .profile-summary-card {

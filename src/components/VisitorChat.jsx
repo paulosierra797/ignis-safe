@@ -35,9 +35,16 @@ const CHAT_COPY = {
     continueTitle: 'Continue a conversation', continueHelp: 'Enter the private recovery code shown when your first message was sent.',
     recoveryCode: 'Recovery code', checking: 'Checking...', continueConversation: 'Continue conversation', startTitle: 'Start a conversation',
     startHelp: 'Send your question directly to the BFP Dasmariñas team. Your replies will appear here.', name: 'Name', fullName: 'Your full name',
-    email: 'Gmail / Email', message: 'Message', helpPlaceholder: 'How can we help you?', sending: 'Sending...',
+    email: 'Gmail / Email (optional)', message: 'Message', helpPlaceholder: 'How can we help you?', sending: 'Sending...',
     privacy: 'Your name, email, and messages are used only to manage this conversation. Do not send passwords or sensitive records.',
-    restoreLink: 'Already have a conversation? Use recovery code', close: 'Close message box'
+    restoreLink: 'Already have a conversation? Use recovery code', close: 'Close message box',
+    errors: {
+      nameRequired: 'Please enter your name.',
+      nameInvalid: 'Name can only contain letters and spaces.',
+      emailInvalid: 'Enter a valid email that ends in @gmail.com.',
+      messageRequired: 'Please enter a message.',
+      messageTooLong: `Message cannot be longer than ${VISITOR_CHAT_MAX_LENGTH} characters.`,
+    },
   },
   tagalog: {
     messageUs: 'Mag-message', team: 'BFP Dasmariñas Team', visitor: 'Bisita', you: 'Ikaw', conversation: 'Pag-uusap',
@@ -49,13 +56,45 @@ const CHAT_COPY = {
     continueTitle: 'Ipagpatuloy ang pag-uusap', continueHelp: 'Ilagay ang pribadong recovery code na ipinakita noong naipadala ang una mong mensahe.',
     recoveryCode: 'Recovery code', checking: 'Sinusuri...', continueConversation: 'Ipagpatuloy ang pag-uusap', startTitle: 'Magsimula ng pag-uusap',
     startHelp: 'Direktang ipadala ang iyong tanong sa BFP Dasmariñas team. Lalabas dito ang kanilang sagot.', name: 'Pangalan', fullName: 'Buong pangalan',
-    email: 'Gmail / Email', message: 'Mensahe', helpPlaceholder: 'Paano ka namin matutulungan?', sending: 'Ipinapadala...',
+    email: 'Gmail / Email (opsyonal)', message: 'Mensahe', helpPlaceholder: 'Paano ka namin matutulungan?', sending: 'Ipinapadala...',
     privacy: 'Ginagamit lamang ang iyong pangalan, email, at mga mensahe upang pamahalaan ang pag-uusap na ito. Huwag magpadala ng password o sensitibong rekord.',
-    restoreLink: 'May dati ka nang pag-uusap? Gamitin ang recovery code', close: 'Isara ang message box'
+    restoreLink: 'May dati ka nang pag-uusap? Gamitin ang recovery code', close: 'Isara ang message box',
+    errors: {
+      nameRequired: 'Pakilagay ang iyong pangalan.',
+      nameInvalid: 'Titik at espasyo lamang ang maaaring gamitin sa pangalan.',
+      emailInvalid: 'Maglagay ng wastong email na nagtatapos sa @gmail.com.',
+      messageRequired: 'Pakilagay ang iyong mensahe.',
+      messageTooLong: `Hindi maaaring lumagpas sa ${VISITOR_CHAT_MAX_LENGTH} na character ang mensahe.`,
+    },
   }
 };
 
 const INITIAL_DETAILS = { name: '', email: '', message: '', website: '' };
+const INITIAL_FIELD_ERRORS = { name: '', email: '', message: '' };
+
+const NAME_PATTERN = /^\p{L}+(?:\s+\p{L}+)*$/u;
+const GMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@gmail\.com$/i;
+
+const validateVisitorName = (value, copy) => {
+  const trimmed = value.trim();
+  if (!trimmed) return copy.errors.nameRequired;
+  if (!NAME_PATTERN.test(trimmed)) return copy.errors.nameInvalid;
+  return '';
+};
+
+const validateVisitorEmail = (value, copy) => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (!GMAIL_PATTERN.test(trimmed)) return copy.errors.emailInvalid;
+  return '';
+};
+
+const validateVisitorMessage = (value, copy) => {
+  const trimmed = value.trim();
+  if (!trimmed) return copy.errors.messageRequired;
+  if (trimmed.length > VISITOR_CHAT_MAX_LENGTH) return copy.errors.messageTooLong;
+  return '';
+};
 
 const formatMessageTime = (value) => {
   if (!value) return '';
@@ -92,6 +131,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
       message: String(draft.message || '').slice(0, VISITOR_CHAT_MAX_LENGTH),
     };
   });
+  const [fieldErrors, setFieldErrors] = useState(INITIAL_FIELD_ERRORS);
   const [composer, setComposer] = useState('');
   const [restoreMode, setRestoreMode] = useState(false);
   const [recoveryInput, setRecoveryInput] = useState('');
@@ -132,14 +172,40 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
       : event.target.value;
     setDetails((current) => ({ ...current, [field]: value }));
     if (error) setError('');
+    if (fieldErrors[field]) setFieldErrors((current) => ({ ...current, [field]: '' }));
+  };
+
+  const validators = {
+    name: validateVisitorName,
+    email: validateVisitorEmail,
+    message: validateVisitorMessage,
+  };
+
+  const handleFieldBlur = (field) => () => {
+    setFieldErrors((current) => ({ ...current, [field]: validators[field](details[field], copy) }));
   };
 
   const handleStart = async (event) => {
     event.preventDefault();
-    const result = await startConversation(details);
+    const trimmedDetails = {
+      name: details.name.trim(),
+      email: details.email.trim(),
+      message: details.message.trim(),
+      website: details.website,
+    };
+    const nextFieldErrors = {
+      name: validateVisitorName(trimmedDetails.name, copy),
+      email: validateVisitorEmail(trimmedDetails.email, copy),
+      message: validateVisitorMessage(trimmedDetails.message, copy),
+    };
+    setFieldErrors(nextFieldErrors);
+    if (nextFieldErrors.name || nextFieldErrors.email || nextFieldErrors.message) return;
+
+    const result = await startConversation(trimmedDetails);
     if (!result.error) {
       clearVisitorChatDraft();
       setDetails(INITIAL_DETAILS);
+      setFieldErrors(INITIAL_FIELD_ERRORS);
       setShowRecoveryCode(true);
     }
   };
@@ -359,12 +425,19 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                   type="text"
                   value={details.name}
                   onChange={updateDetail('name')}
+                  onBlur={handleFieldBlur('name')}
                   placeholder={copy.fullName}
-                  minLength={2}
                   maxLength={80}
                   autoComplete="name"
+                  aria-invalid={Boolean(fieldErrors.name)}
+                  aria-describedby={fieldErrors.name ? `visitor-name-error-${variant}` : undefined}
                   required
                 />
+                {fieldErrors.name && (
+                  <p className="visitor-chat-field-error" id={`visitor-name-error-${variant}`} role="alert">
+                    {fieldErrors.name}
+                  </p>
+                )}
               </div>
 
               <div className="visitor-chat-field">
@@ -374,11 +447,18 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                   type="email"
                   value={details.email}
                   onChange={updateDetail('email')}
+                  onBlur={handleFieldBlur('email')}
                   placeholder="you@gmail.com"
                   maxLength={254}
                   autoComplete="email"
-                  required
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? `visitor-email-error-${variant}` : undefined}
                 />
+                {fieldErrors.email && (
+                  <p className="visitor-chat-field-error" id={`visitor-email-error-${variant}`} role="alert">
+                    {fieldErrors.email}
+                  </p>
+                )}
               </div>
 
               <div className="visitor-chat-field">
@@ -391,10 +471,18 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                   rows={isCompact ? 3 : 5}
                   value={details.message}
                   onChange={updateDetail('message')}
+                  onBlur={handleFieldBlur('message')}
                   placeholder={copy.helpPlaceholder}
                   maxLength={VISITOR_CHAT_MAX_LENGTH}
+                  aria-invalid={Boolean(fieldErrors.message)}
+                  aria-describedby={fieldErrors.message ? `visitor-message-error-${variant}` : undefined}
                   required
                 />
+                {fieldErrors.message && (
+                  <p className="visitor-chat-field-error" id={`visitor-message-error-${variant}`} role="alert">
+                    {fieldErrors.message}
+                  </p>
+                )}
               </div>
 
               <div className="visitor-chat-honeypot" aria-hidden="true">
@@ -417,7 +505,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
               <button
                 type="submit"
                 className="visitor-chat-primary"
-                disabled={sending || !details.name.trim() || !details.email.trim() || !details.message.trim()}
+                disabled={sending || !details.name.trim() || !details.message.trim()}
               >
                 <FiSend aria-hidden="true" />
                 {sending ? copy.sending : copy.sendMessage}

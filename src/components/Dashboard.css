@@ -660,6 +660,17 @@
   color: rgba(255, 255, 255, 0.75);
 }
 
+/* The personnel sidebar has fewer items and no "App Management" group, so the
+   default space-evenly distribution left a large empty gap above the first
+   nav item. Anchor the list to the top instead, just below the header. */
+.sidebar--personnel .sidebar-nav {
+  justify-content: flex-start;
+}
+
+.sidebar--personnel .nav-list {
+  row-gap: clamp(3px, 0.7dvh, 8px);
+}
+
 .sidebar-header {
   display: flex;
   align-items: center;

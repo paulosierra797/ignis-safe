@@ -1,7 +1,8 @@
 import { Component } from 'react';
-import { FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
-import { isChunkLoadError, reloadOnceForStaleChunk } from '../utils/lazyWithRetry';
-import { hardReloadToLatest, returnToRoleHome } from '../utils/appRecovery';
+import { FiAlertCircle } from 'react-icons/fi';
+import { isChunkLoadError } from '../utils/lazyWithRetry';
+import { returnToRoleHome } from '../utils/appRecovery';
+import ChunkErrorFallback from './ChunkErrorFallback';
 
 const wrapStyle = {
   minHeight: '60vh',
@@ -46,9 +47,11 @@ const buttonStyle = {
 // failing page (a crashed widget, a component that assumed data an API did
 // not return) shows a local, recoverable message instead of unmounting the
 // whole app - providers, session and all - into the router's top-level error
-// screen. A stale-chunk failure from a deploy is healed with one reload.
-// `resetKey` (the current pathname) clears the error when the user navigates
-// away, so a transient failure on one page does not strand the whole session.
+// screen. A stale-chunk failure from a deploy is delegated to
+// ChunkErrorFallback, which verifies a newer deployment exists before
+// reloading. `resetKey` (the current pathname) clears the error when the user
+// navigates away, so a transient failure on one page does not strand the whole
+// session.
 export default class AppErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -60,13 +63,9 @@ export default class AppErrorBoundary extends Component {
   }
 
   componentDidCatch(error) {
-    if (isChunkLoadError(error)) {
-      // Returns false if we already reloaded once for this - fall through to
-      // the manual retry UI rather than looping.
-      reloadOnceForStaleChunk();
-      return;
+    if (!isChunkLoadError(error)) {
+      console.error('AppErrorBoundary caught an error:', error);
     }
-    console.error('AppErrorBoundary caught an error:', error);
   }
 
   componentDidUpdate(prevProps) {
@@ -83,28 +82,24 @@ export default class AppErrorBoundary extends Component {
     const { error } = this.state;
     if (!error) return this.props.children;
 
-    const chunkError = isChunkLoadError(error);
+    if (isChunkLoadError(error)) {
+      return <ChunkErrorFallback onRetryInPlace={this.handleRetry} />;
+    }
 
     return (
       <div style={wrapStyle} role="alert">
         <div style={iconStyle} aria-hidden="true">
-          {chunkError ? <FiRefreshCw /> : <FiAlertCircle />}
+          <FiAlertCircle />
         </div>
         <h1 style={{ margin: 0, fontSize: '1.5rem', color: '#1f2937' }}>
-          {chunkError ? 'Update available' : 'This page ran into a problem'}
+          This page ran into a problem
         </h1>
         <p style={{ margin: 0, color: '#4b5563', maxWidth: '28rem' }}>
-          {chunkError
-            ? 'A newer version of the app was just released. Refresh to load the latest version.'
-            : 'Something went wrong while displaying this page. Your session is still active - try again, or head back to a page that works.'}
+          Something went wrong while displaying this page. Your session is still active - try again, or head back to a page that works.
         </p>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-          <button
-            type="button"
-            onClick={chunkError ? () => { void hardReloadToLatest(); } : this.handleRetry}
-            style={buttonStyle}
-          >
-            {chunkError ? 'Refresh page' : 'Try again'}
+          <button type="button" onClick={this.handleRetry} style={buttonStyle}>
+            Try again
           </button>
           <button
             type="button"

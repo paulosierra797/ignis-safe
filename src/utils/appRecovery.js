@@ -46,10 +46,16 @@ async function clearStaleClientCaches() {
   }
 }
 
-// "Refresh page" - reload the app so the latest deployed version loads. The
-// only thing that can be stale after a deploy is the HTML document (hashed
-// JS/CSS chunks are immutable), so we bust its HTTP cache with a throwaway
-// query param and replace the current entry so it doesn't pile up in history.
+// Throwaway query param used only to force the browser past any cached copy of
+// the HTML document on the recovery reload. Stripped from the address bar on
+// the next startup by clearReloadMarker().
+const RELOAD_MARKER_PARAM = '_v';
+
+// "Refresh page" - reload the app so the latest deployed version loads,
+// staying on the current route. The only thing that can be stale after a
+// deploy is the HTML document (hashed JS/CSS chunks are immutable), so we bust
+// its HTTP cache with a throwaway query param and replace the current entry so
+// it doesn't pile up in history.
 export async function hardReloadToLatest() {
   await clearStaleClientCaches();
   // Any verification flow that armed the reload guard is gone once an error
@@ -60,10 +66,29 @@ export async function hardReloadToLatest() {
 
   try {
     const url = new URL(window.location.href);
-    url.searchParams.set('_v', Date.now().toString(36));
+    // `set` (not `append`) so repeated recoveries never stack the param, and
+    // pathname/hash are untouched so the user lands back on the same route.
+    url.searchParams.set(RELOAD_MARKER_PARAM, Date.now().toString(36));
     window.location.replace(url.href);
   } catch {
     window.location.reload();
+  }
+}
+
+// Remove the cache-busting marker from the address bar once the fresh document
+// has loaded, without adding a history entry. Call once on startup.
+export function clearReloadMarker() {
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(RELOAD_MARKER_PARAM)) return;
+    url.searchParams.delete(RELOAD_MARKER_PARAM);
+    window.history.replaceState(
+      window.history.state,
+      '',
+      `${url.pathname}${url.search}${url.hash}`
+    );
+  } catch {
+    // A malformed/restricted URL must never block app startup.
   }
 }
 

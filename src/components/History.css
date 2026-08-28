@@ -9,19 +9,15 @@
   flex: 1;
   min-width: 0;
   margin-left: var(--sidebar-width);
-  padding: 0 3rem 2rem;
-  height: 100vh;
-  overflow-y: auto;
-  box-sizing: border-box;
+  padding: 2rem 3rem;
 }
 
-/* Keep the shared header flush with the top of the desktop content area.
-   The scroll container has no top padding so position: sticky does not leave
-   a gray strip above the header. */
+/* Match Announcements/Attendance page header sizing (desktop only; mobile
+   uses the shared PageHeader.css layout like every other Personnel page) */
 @media (min-width: 901px) {
   .history-content .page-header {
-    margin: 0 -3rem 2rem;
     padding: 1.5rem 2rem;
+    margin: -2rem -3rem 2rem -3rem;
   }
 
   .history-content .page-title {
@@ -415,7 +411,6 @@
   .history-content {
     margin-left: 0;
     padding: 1rem;
-    height: auto;
   }
 
   .history-main {

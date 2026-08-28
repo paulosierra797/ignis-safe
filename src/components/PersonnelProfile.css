@@ -1017,9 +1017,32 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
 .request-modal-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
   border-top: 1px solid #e5e7eb;
+}
+
+.request-modal-footer .cancel-btn {
+  padding: 0.75rem 2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #ffffff;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.request-modal-footer .cancel-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.request-modal-footer .cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .request-modal-message {

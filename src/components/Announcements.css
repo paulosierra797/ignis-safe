@@ -776,6 +776,26 @@
   line-height: 1.5;
 }
 
+.announcement-confirm-modal-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0 0 1.2rem;
+  color: #334155;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.announcement-confirm-modal-checkbox input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 0.1rem;
+  accent-color: #b91c1c;
+  cursor: pointer;
+}
+
 .announcement-confirm-modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -800,6 +820,10 @@
   padding: 0.5rem 1rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.announcement-confirm-modal-confirm--ack {
+  background: #166534;
 }
 
 .announcement-confirm-modal-cancel:disabled,

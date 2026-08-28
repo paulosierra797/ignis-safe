@@ -120,6 +120,8 @@ export default function Announcements() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [acknowledgingId, setAcknowledgingId] = useState('');
+  const [ackConfirmId, setAckConfirmId] = useState('');
+  const [ackConfirmChecked, setAckConfirmChecked] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -608,7 +610,7 @@ export default function Announcements() {
   };
 
   const handleAcknowledgeAnnouncement = async (announcementId) => {
-    if (!announcementId) return;
+    if (!announcementId) return false;
 
     setAcknowledgingId(announcementId);
     setMessage({ type: '', text: '' });
@@ -617,7 +619,7 @@ export default function Announcements() {
     if (error) {
       setMessage({ type: 'error', text: `Failed to acknowledge announcement: ${error}` });
       setAcknowledgingId('');
-      return;
+      return false;
     }
 
     setAnnouncements((prev) =>
@@ -634,6 +636,26 @@ export default function Announcements() {
 
     setMessage({ type: 'success', text: 'Announcement acknowledged.' });
     setAcknowledgingId('');
+    return true;
+  };
+
+  const openAckConfirm = (announcementId) => {
+    if (!announcementId) return;
+    setAckConfirmChecked(false);
+    setAckConfirmId(announcementId);
+  };
+
+  const closeAckConfirm = () => {
+    setAckConfirmId('');
+    setAckConfirmChecked(false);
+  };
+
+  const handleConfirmAcknowledge = async () => {
+    if (!ackConfirmId || !ackConfirmChecked) return;
+    const succeeded = await handleAcknowledgeAnnouncement(ackConfirmId);
+    if (succeeded) {
+      closeAckConfirm();
+    }
   };
 
   const handleArchiveAnnouncement = async () => {
@@ -1181,7 +1203,7 @@ export default function Announcements() {
                         <button
                           type="button"
                           className="announcement-ack-button"
-                          onClick={() => handleAcknowledgeAnnouncement(announcement.announcement_id)}
+                          onClick={() => openAckConfirm(announcement.announcement_id)}
                           disabled={acknowledgingId === announcement.announcement_id}
                         >
                           {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}
@@ -1357,6 +1379,54 @@ export default function Announcements() {
                 disabled={archiving}
               >
                 {archiving ? 'Archiving...' : 'Archive'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {ackConfirmId && (
+        <div
+          className="announcement-confirm-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && acknowledgingId !== ackConfirmId) {
+              closeAckConfirm();
+            }
+          }}
+        >
+          <div
+            className="announcement-confirm-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="acknowledgeConfirmTitle"
+          >
+            <h3 id="acknowledgeConfirmTitle">Acknowledge this announcement?</h3>
+            <p>Please confirm that you have read this announcement before acknowledging it.</p>
+            <label className="announcement-confirm-modal-checkbox">
+              <input
+                type="checkbox"
+                checked={ackConfirmChecked}
+                onChange={(event) => setAckConfirmChecked(event.target.checked)}
+                disabled={acknowledgingId === ackConfirmId}
+              />
+              <span>I&rsquo;m sure that I read the announcement.</span>
+            </label>
+            <div className="announcement-confirm-modal-actions">
+              <button
+                type="button"
+                className="announcement-confirm-modal-cancel"
+                onClick={closeAckConfirm}
+                disabled={acknowledgingId === ackConfirmId}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="announcement-confirm-modal-confirm announcement-confirm-modal-confirm--ack"
+                onClick={handleConfirmAcknowledge}
+                disabled={!ackConfirmChecked || acknowledgingId === ackConfirmId}
+              >
+                {acknowledgingId === ackConfirmId ? 'Acknowledging...' : 'Acknowledge'}
               </button>
             </div>
           </div>

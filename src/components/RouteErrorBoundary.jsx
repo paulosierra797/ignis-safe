@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useRouteError, isRouteErrorResponse } from 'react-router-dom';
 import { FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
 import { isChunkLoadError, reloadOnceForStaleChunk } from '../utils/lazyWithRetry';
+import { hardReloadToLatest, returnToRoleHome } from '../utils/appRecovery';
 
 // Last-resort net for errors that reach the router itself (e.g. a failure
 // during initial route resolution) rather than being handled by the in-app
@@ -60,7 +61,7 @@ export default function RouteErrorBoundary() {
       </p>
       <button
         type="button"
-        onClick={() => (chunkError ? window.location.reload() : window.location.replace('/'))}
+        onClick={() => { void (chunkError ? hardReloadToLatest() : returnToRoleHome()); }}
         style={{
           padding: '0.65rem 1.5rem',
           borderRadius: '8px',
@@ -71,6 +72,9 @@ export default function RouteErrorBoundary() {
           fontFamily: 'inherit',
           fontSize: '0.9rem',
           cursor: 'pointer',
+          position: 'relative',
+          zIndex: 1,
+          touchAction: 'manipulation',
           boxShadow: '0 10px 22px rgba(153, 27, 27, 0.3)'
         }}
       >

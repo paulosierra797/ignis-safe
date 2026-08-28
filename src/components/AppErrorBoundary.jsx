@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
 import { isChunkLoadError, reloadOnceForStaleChunk } from '../utils/lazyWithRetry';
+import { hardReloadToLatest, returnToRoleHome } from '../utils/appRecovery';
 
 const wrapStyle = {
   minHeight: '60vh',
@@ -35,6 +36,9 @@ const buttonStyle = {
   fontFamily: 'inherit',
   fontSize: '0.9rem',
   cursor: 'pointer',
+  position: 'relative',
+  zIndex: 1,
+  touchAction: 'manipulation',
   boxShadow: '0 10px 22px rgba(153, 27, 27, 0.3)'
 };
 
@@ -97,14 +101,14 @@ export default class AppErrorBoundary extends Component {
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
           <button
             type="button"
-            onClick={chunkError ? () => window.location.reload() : this.handleRetry}
+            onClick={chunkError ? () => { void hardReloadToLatest(); } : this.handleRetry}
             style={buttonStyle}
           >
             {chunkError ? 'Refresh page' : 'Try again'}
           </button>
           <button
             type="button"
-            onClick={() => { window.location.href = '/'; }}
+            onClick={() => { void returnToRoleHome(); }}
             style={{ ...buttonStyle, background: '#fff', color: '#991b1b', border: '1px solid #f3c9c9', boxShadow: 'none' }}
           >
             Return to home

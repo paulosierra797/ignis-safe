@@ -250,12 +250,14 @@ export const signIn = async (email, password) => {
 
 export const sendLoginOtp = async (email) => {
   const { data, error } = await supabase.auth.signInWithOtp({
-    email,
+    email: normalizeEmail(email),
     options: {
       shouldCreateUser: false
     }
   });
 
+  // Preserve the Supabase AuthError as-is (callers read `status`/`code` to
+  // distinguish a genuine send failure from a transient email rate limit).
   return { data, error };
 };
 

@@ -76,6 +76,35 @@ const RecoveryHeader = ({ icon, kicker, title, description, tone = 'default' }) 
 const REMEMBER_ME_KEY = 'remember_me';
 const REMEMBERED_EMAIL_KEY = 'remembered_email';
 const OTP_LENGTH = 6;
+const OTP_RESEND_COOLDOWN_SECONDS = 60;
+
+// Supabase throttles auth emails per address (default ~60s). A throttled
+// *resend* is not a real failure: a valid code was just delivered and stays
+// usable for the full OTP lifetime, so the login must still advance to the
+// verification screen instead of dead-ending on the password form.
+const OTP_RATE_LIMIT_CODES = new Set([
+  'over_email_send_rate_limit',
+  'over_request_rate_limit',
+  'over_sms_send_rate_limit'
+]);
+
+const isOtpRateLimitError = (error) =>
+  Boolean(error) && (error.status === 429 || OTP_RATE_LIMIT_CODES.has(error.code));
+
+// Supabase puts the wait time in the message: "... after 42 seconds."
+const parseRetryAfterSeconds = (error) => {
+  const match = /after (\d+) seconds/i.exec(error?.message || '');
+  const seconds = match ? Number(match[1]) : OTP_RESEND_COOLDOWN_SECONDS;
+  return Number.isFinite(seconds) && seconds > 0 ? seconds : OTP_RESEND_COOLDOWN_SECONDS;
+};
+
+const describeOtpSendError = (error) => {
+  if (!error) return 'Could not send the login OTP. Please try again.';
+  if (isOtpRateLimitError(error)) {
+    return `Too many code requests. Please wait ${parseRetryAfterSeconds(error)} seconds and try again.`;
+  }
+  return error.message || 'Could not send the login OTP. Please try again.';
+};
 
 // Only ever follow a post-login redirect back into the Attendance QR flow -
 // never an arbitrary/external URL - to keep this an internal return path
@@ -140,6 +169,9 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const isResetFlowActiveRef = useRef(false);
   const [authStep, setAuthStep] = useState("login");
+  const [otpNotice, setOtpNotice] = useState("");
+  const [otpResendIn, setOtpResendIn] = useState(0);
+  const [otpResending, setOtpResending] = useState(false);
   
 
   const togglePasswordVisibility = () => {
@@ -274,6 +306,14 @@ const logLoginIfPersonnel = (user) => {
   }, [forgotPasswordStep]);
 
   useEffect(() => {
+    if (otpResendIn <= 0) return undefined;
+    const timer = window.setInterval(() => {
+      setOtpResendIn((seconds) => (seconds <= 1 ? 0 : seconds - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [otpResendIn]);
+
+  useEffect(() => {
     return () => {
       if (isResetFlowActiveRef.current) {
         setAuthFlowGated(false);
@@ -395,12 +435,23 @@ const handleLogin = async (e) => {
     setCurrentUser(null);
 
     const { error: otpError } = await sendLoginOtp(normalizedEmail);
-    if (otpError) {
-      throw new Error('Could not send the login OTP. Please try again.');
+
+    // A hard send failure keeps the user on the password form with the real
+    // reason. A rate-limited *resend* still means a usable code was just
+    // emailed, so continue to the verification screen (never bypass it) and
+    // let the user verify that code or resend once the cooldown clears.
+    if (otpError && !isOtpRateLimitError(otpError)) {
+      throw new Error(describeOtpSendError(otpError));
     }
 
     setResetEmail(normalizedEmail);
     setResetCode('');
+    setOtpNotice(
+      otpError
+        ? 'A login code was emailed to you moments ago. Enter it below, or request a new one once the timer ends.'
+        : `We emailed a ${OTP_LENGTH}-digit login code to ${normalizedEmail}. It can take a minute to arrive - check spam too.`
+    );
+    setOtpResendIn(otpError ? parseRetryAfterSeconds(otpError) : OTP_RESEND_COOLDOWN_SECONDS);
     setAuthStep('otp');
   } catch (loginError) {
     setAuthFlowGated(false);
@@ -545,8 +596,40 @@ const handleLogin = async (e) => {
     setError("");
     setShowNewPassword(false);
     setShowConfirmPassword(false);
+    setOtpNotice("");
+    setOtpResendIn(0);
+    setOtpResending(false);
     window.history.replaceState({}, document.title, '/login');
   };
+
+const handleResendOtp = async () => {
+  if (otpResendIn > 0 || otpResending) return;
+
+  setOtpResending(true);
+  setError('');
+  setOtpNotice('');
+
+  try {
+    const { error: resendError } = await sendLoginOtp(resetEmail.trim());
+
+    if (resendError && !isOtpRateLimitError(resendError)) {
+      setError(describeOtpSendError(resendError));
+      return;
+    }
+
+    setOtpResendIn(resendError ? parseRetryAfterSeconds(resendError) : OTP_RESEND_COOLDOWN_SECONDS);
+    setOtpNotice(
+      resendError
+        ? 'A code was already sent recently. Please use it, or resend once the timer ends.'
+        : 'A new login code is on its way to your email.'
+    );
+  } catch (resendError) {
+    setError(resendError?.message || 'Could not resend the login OTP. Please try again.');
+  } finally {
+    setOtpResending(false);
+  }
+};
+
 const handleVerify = async (e) => {
   e.preventDefault();
 
@@ -730,6 +813,10 @@ useEffect(() => {
             </div>
           </div>
 
+          {otpNotice && !error && (
+            <p className="verify-message" role="status">{otpNotice}</p>
+          )}
+
           {error && <p className="error-message verify-message" role="alert">{error}</p>}
 
           <button
@@ -738,6 +825,19 @@ useEffect(() => {
             disabled={loading || resetCode.length !== OTP_LENGTH}
           >
             {loading ? 'Verifying...' : 'Verify & Login'}
+          </button>
+
+          <button
+            type="button"
+            onClick={handleResendOtp}
+            className="back-button-verify"
+            disabled={loading || otpResending || otpResendIn > 0}
+          >
+            {otpResending
+              ? 'Sending new code...'
+              : otpResendIn > 0
+                ? `Resend code in ${otpResendIn}s`
+                : 'Resend code'}
           </button>
 
           <button type="button" onClick={handleBackToLogin} className="back-button-verify" disabled={loading}>

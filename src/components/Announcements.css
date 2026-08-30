@@ -776,6 +776,26 @@
   line-height: 1.5;
 }
 
+.announcement-confirm-modal-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  margin: 0 0 1.2rem;
+  color: #334155;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.announcement-confirm-modal-checkbox input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 0.1rem;
+  accent-color: #b91c1c;
+  cursor: pointer;
+}
+
 .announcement-confirm-modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -800,6 +820,10 @@
   padding: 0.5rem 1rem;
   font-weight: 700;
   cursor: pointer;
+}
+
+.announcement-confirm-modal-confirm--ack {
+  background: #166534;
 }
 
 .announcement-confirm-modal-cancel:disabled,
@@ -1044,12 +1068,36 @@
 .archived-item {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 1rem;
+  padding: 1.1rem 1.2rem;
   background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.archived-item .announcement-item-header {
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.archived-item .announcement-content {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.archived-item .announcement-meta {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 0.4rem 0.9rem;
 }
 
 .archived-restore-action {
-  margin-top: 0.65rem;
+  margin-top: 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .archived-restore-button {
@@ -1065,6 +1113,118 @@
 .archived-restore-button:disabled {
   opacity: 0.65;
   cursor: not-allowed;
+}
+
+.archived-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.9rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid #f3d7d7;
+  background: #fffdfd;
+}
+
+.archived-search {
+  position: relative;
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+}
+
+.archived-search-icon {
+  position: absolute;
+  left: 0.7rem;
+  width: 1rem;
+  height: 1rem;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.archived-search input {
+  width: 100%;
+  padding: 0.5rem 0.7rem 0.5rem 2.1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.88rem;
+  color: #1f2937;
+}
+
+.archived-search input:focus-visible {
+  outline: none;
+  border-color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.12);
+}
+
+.archived-sort {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.archived-sort label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.archived-sort select {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.85rem;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+.archived-sort-dir {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.archived-sort select:focus-visible,
+.archived-sort-dir:hover,
+.archived-sort-dir:focus-visible {
+  outline: none;
+  border-color: #b91c1c;
+  color: #991b1b;
+}
+
+.archived-item .announcement-toggle-button {
+  align-self: flex-start;
+  margin: -0.25rem 0 0;
+}
+
+.archived-show-more {
+  align-self: center;
+  margin-top: 0.25rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #b91c1c;
+  cursor: pointer;
+}
+
+.archived-show-more:hover,
+.archived-show-more:focus-visible {
+  outline: none;
+  border-color: #b91c1c;
+  background: #fef2f2;
 }
 
 .announcement-empty {
@@ -1213,6 +1373,15 @@
     word-break: break-word;
   }
 
+  .archived-item .announcement-item-header {
+    flex-direction: column;
+  }
+
+  .archived-item .announcement-meta {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
   .announcement-attachments {
     flex-direction: column;
     align-items: stretch;
@@ -1281,6 +1450,23 @@
 
   .archived-panel-header {
     align-items: flex-start;
+  }
+
+  .archived-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .archived-sort {
+    justify-content: space-between;
+  }
+
+  .archived-sort label {
+    flex: 1 1 auto;
+  }
+
+  .archived-sort select {
+    flex: 1 1 auto;
   }
 
   .archive-list-modal-overlay {

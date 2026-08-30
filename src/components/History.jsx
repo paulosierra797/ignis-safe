@@ -126,8 +126,6 @@ export default function History() {
         />
 
         <div className="history-main">
-          <h1 className="history-title">Audit Logs</h1>
-
           <div className="history-filters">
             <div className="search-section">
               <label>Search Activity</label>

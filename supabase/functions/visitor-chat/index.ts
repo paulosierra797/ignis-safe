@@ -41,7 +41,8 @@ const normalizeRecoveryCode = (value: unknown) =>
   String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 const normalizeText = (value: unknown) => String(value || '').replace(/\r\n/g, '\n').trim();
-const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const isValidName = (value: string) => /^\p{L}+(?:\s+\p{L}+)*$/u.test(value);
+const isValidGmailAddress = (value: string) => /^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(value);
 const isValidClientId = (value: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 
@@ -229,30 +230,32 @@ Deno.serve(async (request) => {
       const message = maskOffensiveLanguage(rawMessage);
       const clientMessageId = String(body?.clientMessageId || '');
 
-      if (visitorName.length < 2 || visitorName.length > 80) {
-        return jsonResponse({ error: 'Please enter a valid name between 2 and 80 characters.' }, 400);
+      if (visitorName.length < 2 || visitorName.length > 80 || !isValidName(visitorName)) {
+        return jsonResponse({ error: 'Please enter a valid name using letters and spaces only.' }, 400);
       }
-      if (!isValidEmail(visitorEmail) || visitorEmail.length > 254) {
-        return jsonResponse({ error: 'Please enter a valid email address.' }, 400);
+      if (visitorEmail && (visitorEmail.length > 254 || !isValidGmailAddress(visitorEmail))) {
+        return jsonResponse({ error: 'Please enter a valid email address ending in @gmail.com.' }, 400);
       }
       if (validationError) return jsonResponse({ error: validationError }, 400);
       if (!isValidClientId(clientMessageId)) {
         return jsonResponse({ error: 'Unable to safely identify this message. Please try again.' }, 400);
       }
 
-      const emailHash = await sha256(visitorEmail);
+      const emailRateRule = visitorEmail
+        ? [{
+            subject: 'email-' + (await sha256(visitorEmail)),
+            windowMs: 24 * 60 * 60 * 1000,
+            limit: 2,
+            includeRequestSource: false,
+          }]
+        : [];
       const allowed = await enforceRateLimits({
         request,
         action: 'start',
         rules: [
           { subject: 'connection-short', windowMs: 30 * 60 * 1000, limit: 1 },
           { subject: 'connection-day', windowMs: 24 * 60 * 60 * 1000, limit: 3 },
-          {
-            subject: 'email-' + emailHash,
-            windowMs: 24 * 60 * 60 * 1000,
-            limit: 2,
-            includeRequestSource: false,
-          },
+          ...emailRateRule,
         ],
       });
       if (!allowed) {

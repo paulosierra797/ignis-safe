@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import './App.css'
 import './components/WorkspaceDensity.css'
 import Header from './components/Header'
@@ -7,6 +7,8 @@ import Footer from './components/Footer'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { UserProvider, useUser } from './context/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AppErrorBoundary from './components/AppErrorBoundary';
+import { lazyWithRetry as lazy } from './utils/lazyWithRetry';
 import { LandingContentProvider } from './context/LandingContentContext';
 import { LayoutProvider } from './context/LayoutContext';
 import AppSessionTracker from './components/AppSessionTracker';
@@ -228,23 +230,19 @@ function LandingPage() {
   );
 }
 
-function App() {
+function AppRoutes() {
+  const { pathname } = useLocation();
+
   return (
-    <UserProvider>
-      <RoutePreloader />
-      <AppSessionTracker />
-      <LayoutProvider>
-        <LandingContentProvider>
-          <div className="app">
-            <ScrollToTop />
-            <Suspense
-              fallback={(
-                <div className="app-route-loader" role="status" aria-label="Loading page">
-                  <span aria-hidden="true" />
-                </div>
-              )}
-            >
-              <Routes>
+    <AppErrorBoundary resetKey={pathname}>
+      <Suspense
+        fallback={(
+          <div className="app-route-loader" role="status" aria-label="Loading page">
+            <span aria-hidden="true" />
+          </div>
+        )}
+      >
+        <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/confirm-signup" element={<ConfirmSignupPage />} />
@@ -278,8 +276,22 @@ function App() {
               <Route path="/send-message" element={<SendMessagePage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
-              </Routes>
-            </Suspense>
+        </Routes>
+      </Suspense>
+    </AppErrorBoundary>
+  );
+}
+
+function App() {
+  return (
+    <UserProvider>
+      <RoutePreloader />
+      <AppSessionTracker />
+      <LayoutProvider>
+        <LandingContentProvider>
+          <div className="app">
+            <ScrollToTop />
+            <AppRoutes />
           </div>
         </LandingContentProvider>
       </LayoutProvider>

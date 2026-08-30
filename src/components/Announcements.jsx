@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
-import { FiArchive, FiBell, FiUsers, FiFileText, FiCheckCircle, FiClock } from 'react-icons/fi';
+import { FiArchive, FiBell, FiUsers, FiFileText, FiCheckCircle, FiClock, FiSearch } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
@@ -120,6 +120,8 @@ export default function Announcements() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [acknowledgingId, setAcknowledgingId] = useState('');
+  const [ackConfirmId, setAckConfirmId] = useState('');
+  const [ackConfirmChecked, setAckConfirmChecked] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -135,12 +137,19 @@ export default function Announcements() {
   const [archivedAnnouncements, setArchivedAnnouncements] = useState([]);
   const [archivedLoading, setArchivedLoading] = useState(false);
   const [restoringId, setRestoringId] = useState('');
+  const [archivedSearch, setArchivedSearch] = useState('');
+  const [archivedSortField, setArchivedSortField] = useState('date'); // 'date' | 'title'
+  const [archivedSortDir, setArchivedSortDir] = useState('desc'); // 'asc' | 'desc'
+  const [archivedListExpanded, setArchivedListExpanded] = useState(false);
+  const [archivedExpandedMsgIds, setArchivedExpandedMsgIds] = useState(() => new Set());
   const [acknowledgementModalId, setAcknowledgementModalId] = useState('');
   const [nudgingIds, setNudgingIds] = useState(() => new Set());
   const [nudgeCooldownUntilById, setNudgeCooldownUntilById] = useState(() => new Map());
   const lastViewedAnnouncementsAtRef = useRef(null);
   const [unreadTrackingReady, setUnreadTrackingReady] = useState(false);
   const ITEMS_PER_PAGE = 3;
+  const ARCHIVED_VISIBLE_LIMIT = 5;
+  const ARCHIVED_PREVIEW_LENGTH = 260;
   const [formData, setFormData] = useState(() => {
     const draft = readAnnouncementDraft();
     return {
@@ -448,6 +457,69 @@ export default function Announcements() {
     };
   }, [archivedOpen]);
 
+  useEffect(() => {
+    if (archivedOpen) return;
+    setArchivedSearch('');
+    setArchivedListExpanded(false);
+    setArchivedExpandedMsgIds(new Set());
+  }, [archivedOpen]);
+
+  useEffect(() => {
+    setArchivedListExpanded(false);
+  }, [archivedSearch, archivedSortField, archivedSortDir]);
+
+  const sortedArchivedAnnouncements = useMemo(() => {
+    const normalizedQuery = archivedSearch.trim().toLowerCase();
+    const filtered = normalizedQuery
+      ? archivedAnnouncements.filter((announcement) => {
+          const haystack = [
+            announcement.title,
+            announcement.content,
+            getAudienceLabel(announcement),
+            announcement.created_by_name
+          ]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+
+          return haystack.includes(normalizedQuery);
+        })
+      : archivedAnnouncements.slice();
+
+    const getArchivedTime = (announcement) => {
+      const raw = isAdmin ? announcement.archived_at : announcement.personnel_archived_at;
+      const time = raw ? new Date(raw).getTime() : NaN;
+      return Number.isNaN(time) ? 0 : time;
+    };
+
+    const direction = archivedSortDir === 'asc' ? 1 : -1;
+    filtered.sort((a, b) => {
+      if (archivedSortField === 'title') {
+        return direction * (a.title || '').localeCompare(b.title || '', 'en', { sensitivity: 'base' });
+      }
+      return direction * (getArchivedTime(a) - getArchivedTime(b));
+    });
+
+    return filtered;
+  }, [archivedAnnouncements, archivedSearch, archivedSortField, archivedSortDir, isAdmin]);
+
+  const visibleArchivedAnnouncements =
+    archivedListExpanded || sortedArchivedAnnouncements.length <= ARCHIVED_VISIBLE_LIMIT
+      ? sortedArchivedAnnouncements
+      : sortedArchivedAnnouncements.slice(0, ARCHIVED_VISIBLE_LIMIT);
+
+  const toggleArchivedMessage = (announcementId) => {
+    setArchivedExpandedMsgIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(announcementId)) {
+        next.delete(announcementId);
+      } else {
+        next.add(announcementId);
+      }
+      return next;
+    });
+  };
+
   const filteredAnnouncements = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     if (!normalizedQuery) {
@@ -608,7 +680,7 @@ export default function Announcements() {
   };
 
   const handleAcknowledgeAnnouncement = async (announcementId) => {
-    if (!announcementId) return;
+    if (!announcementId) return false;
 
     setAcknowledgingId(announcementId);
     setMessage({ type: '', text: '' });
@@ -617,7 +689,7 @@ export default function Announcements() {
     if (error) {
       setMessage({ type: 'error', text: `Failed to acknowledge announcement: ${error}` });
       setAcknowledgingId('');
-      return;
+      return false;
     }
 
     setAnnouncements((prev) =>
@@ -634,6 +706,26 @@ export default function Announcements() {
 
     setMessage({ type: 'success', text: 'Announcement acknowledged.' });
     setAcknowledgingId('');
+    return true;
+  };
+
+  const openAckConfirm = (announcementId) => {
+    if (!announcementId) return;
+    setAckConfirmChecked(false);
+    setAckConfirmId(announcementId);
+  };
+
+  const closeAckConfirm = () => {
+    setAckConfirmId('');
+    setAckConfirmChecked(false);
+  };
+
+  const handleConfirmAcknowledge = async () => {
+    if (!ackConfirmId || !ackConfirmChecked) return;
+    const succeeded = await handleAcknowledgeAnnouncement(ackConfirmId);
+    if (succeeded) {
+      closeAckConfirm();
+    }
   };
 
   const handleArchiveAnnouncement = async () => {
@@ -1181,7 +1273,7 @@ export default function Announcements() {
                         <button
                           type="button"
                           className="announcement-ack-button"
-                          onClick={() => handleAcknowledgeAnnouncement(announcement.announcement_id)}
+                          onClick={() => openAckConfirm(announcement.announcement_id)}
                           disabled={acknowledgingId === announcement.announcement_id}
                         >
                           {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}
@@ -1262,19 +1354,77 @@ export default function Announcements() {
               />
             </div>
 
+            {!archivedLoading && archivedAnnouncements.length > 0 && (
+              <div className="archived-toolbar">
+                <label className="archived-search">
+                  <FiSearch className="archived-search-icon" aria-hidden="true" />
+                  <input
+                    type="search"
+                    value={archivedSearch}
+                    onChange={(event) => setArchivedSearch(event.target.value)}
+                    placeholder="Search archived announcements"
+                    aria-label="Search archived announcements"
+                  />
+                </label>
+                <div className="archived-sort">
+                  <label>
+                    <span>Sort by</span>
+                    <select
+                      value={archivedSortField}
+                      onChange={(event) => setArchivedSortField(event.target.value)}
+                      aria-label="Sort archived announcements by"
+                    >
+                      <option value="date">Date archived</option>
+                      <option value="title">Title</option>
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="archived-sort-dir"
+                    onClick={() => setArchivedSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                    aria-label={`Sort direction: ${archivedSortDir === 'asc' ? 'ascending' : 'descending'}`}
+                    title={archivedSortDir === 'asc' ? 'Ascending' : 'Descending'}
+                  >
+                    {archivedSortField === 'title'
+                      ? (archivedSortDir === 'asc' ? 'A → Z' : 'Z → A')
+                      : (archivedSortDir === 'asc' ? 'Oldest first' : 'Newest first')}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="archived-panel">
                 {archivedLoading ? (
                   <div className="announcement-empty">Loading archived announcements...</div>
                 ) : archivedAnnouncements.length === 0 ? (
                   <div className="announcement-empty">No archived announcements.</div>
+                ) : sortedArchivedAnnouncements.length === 0 ? (
+                  <div className="announcement-empty">No archived announcements match your search.</div>
                 ) : (
-                  archivedAnnouncements.map((announcement) => (
+                  <>
+                  {visibleArchivedAnnouncements.map((announcement) => {
+                    const messageText = announcement.content || '';
+                    const isLongMessage = messageText.length > ARCHIVED_PREVIEW_LENGTH;
+                    const isMessageExpanded = archivedExpandedMsgIds.has(announcement.announcement_id);
+                    const displayedMessage = isLongMessage && !isMessageExpanded
+                      ? `${messageText.slice(0, ARCHIVED_PREVIEW_LENGTH).trimEnd()}…`
+                      : messageText;
+                    return (
                     <article key={announcement.announcement_id} className="archived-item">
                       <div className="announcement-item-header">
                         <h3>{announcement.title}</h3>
                         <span className="announcement-audience">{getAudienceLabel(announcement)}</span>
                       </div>
-                      <p className="announcement-content">{announcement.content}</p>
+                      <p className="announcement-content">{displayedMessage}</p>
+                      {isLongMessage && (
+                        <button
+                          type="button"
+                          className="announcement-toggle-button"
+                          onClick={() => toggleArchivedMessage(announcement.announcement_id)}
+                        >
+                          {isMessageExpanded ? 'See less' : 'See more'}
+                        </button>
+                      )}
                       {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
                         <div className="announcement-attachments">
                           {announcement.attachments.map((attachment, index) => (
@@ -1329,7 +1479,20 @@ export default function Announcements() {
                         </button>
                       </div>
                     </article>
-                  ))
+                    );
+                  })}
+                  {sortedArchivedAnnouncements.length > ARCHIVED_VISIBLE_LIMIT && (
+                    <button
+                      type="button"
+                      className="archived-show-more"
+                      onClick={() => setArchivedListExpanded((prev) => !prev)}
+                    >
+                      {archivedListExpanded
+                        ? 'Show less'
+                        : `Show ${sortedArchivedAnnouncements.length - ARCHIVED_VISIBLE_LIMIT} more`}
+                    </button>
+                  )}
+                  </>
                 )}
             </div>
           </section>
@@ -1357,6 +1520,54 @@ export default function Announcements() {
                 disabled={archiving}
               >
                 {archiving ? 'Archiving...' : 'Archive'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {ackConfirmId && (
+        <div
+          className="announcement-confirm-modal-overlay"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && acknowledgingId !== ackConfirmId) {
+              closeAckConfirm();
+            }
+          }}
+        >
+          <div
+            className="announcement-confirm-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="acknowledgeConfirmTitle"
+          >
+            <h3 id="acknowledgeConfirmTitle">Acknowledge this announcement?</h3>
+            <p>Please confirm that you have read this announcement before acknowledging it.</p>
+            <label className="announcement-confirm-modal-checkbox">
+              <input
+                type="checkbox"
+                checked={ackConfirmChecked}
+                onChange={(event) => setAckConfirmChecked(event.target.checked)}
+                disabled={acknowledgingId === ackConfirmId}
+              />
+              <span>I&rsquo;m sure that I read the announcement.</span>
+            </label>
+            <div className="announcement-confirm-modal-actions">
+              <button
+                type="button"
+                className="announcement-confirm-modal-cancel"
+                onClick={closeAckConfirm}
+                disabled={acknowledgingId === ackConfirmId}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="announcement-confirm-modal-confirm announcement-confirm-modal-confirm--ack"
+                onClick={handleConfirmAcknowledge}
+                disabled={!ackConfirmChecked || acknowledgingId === ackConfirmId}
+              >
+                {acknowledgingId === ackConfirmId ? 'Acknowledging...' : 'Acknowledge'}
               </button>
             </div>
           </div>

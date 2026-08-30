@@ -1,9 +1,36 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+// Vercel sets VERCEL_GIT_COMMIT_SHA for every build, so each deployment gets a
+// distinct id that is (a) baked into this bundle via `define` below and
+// (b) mirrored into dist/version.json by the plugin below, served live at
+// /version.json. A tab that fails to load a lazy chunk can then ask
+// version.json whether a genuinely newer deployment exists before deciding to
+// show the "Update available" screen - see src/utils/deployVersion.js. Falls
+// back to a build timestamp for local `vite build`.
+const buildId = process.env.VERCEL_GIT_COMMIT_SHA || `local-${Date.now()}`
+
+// Emits dist/version.json alongside the rest of the build output so the
+// deployed site serves the current build id at /version.json.
+function buildVersionFile() {
+  return {
+    name: 'ignis-safe-build-version',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({ buildId })
+      })
+    }
+  }
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), buildVersionFile()],
+  define: {
+    __APP_BUILD_ID__: JSON.stringify(buildId)
+  },
   build: {
     rollupOptions: {
       output: {

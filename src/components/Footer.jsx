@@ -48,7 +48,11 @@ export default function Footer() {
             <FiPhone aria-hidden="true" />
             <span><small>{copy.emergencyHotline}</small><strong>911</strong></span>
           </a>
-          <a href={`mailto:${content.contact.email}`}>
+          <a
+            href={`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(content.contact.email || '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <FiMail aria-hidden="true" />
             <span>{content.contact.email}</span>
           </a>

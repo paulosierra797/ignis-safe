@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   FiAlertTriangle,
+  FiArrowRight,
   FiBarChart2,
   FiCheckCircle,
   FiChevronDown,
@@ -87,11 +90,40 @@ const getSignal = (attemptCount) => {
   };
 };
 
+const getFinding = (recommendation) => {
+  const affected = Number(recommendation.affectedLearnerCount) || 0;
+  const learners = Number(recommendation.learnerCount) || 0;
+  const weakQuestion = recommendation.weakQuestions?.[0];
+
+  if (affected > 0 && learners > 0) {
+    return `${affected} of ${learners} ${learners === 1 ? 'learner is' : 'learners are'} currently below the 70% target.`;
+  }
+
+  if (weakQuestion) {
+    return `Question ${weakQuestion.questionNo || ''} has the highest miss rate at ${formatPercent(weakQuestion.missRate)}.`;
+  }
+
+  return 'No urgent learner issue is visible in the available results.';
+};
+
+const getNextStep = (recommendation, level) => {
+  const weakQuestion = recommendation.weakQuestions?.[0];
+
+  if (weakQuestion) {
+    return `Review Question ${weakQuestion.questionNo || ''} first, then use the existing AI draft tool only if the wording or coverage needs revision.`;
+  }
+
+  return level.focus;
+};
+
 export default function ModuleRecommendations() {
+  const navigate = useNavigate();
   const [recommendations, setRecommendations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [expandedModule, setExpandedModule] = useState(null);
+  const [viewMode, setViewMode] = useState('priority');
+  const [pendingReview, setPendingReview] = useState(null);
 
   useEffect(() => {
     const loadRecommendations = async () => {
@@ -118,6 +150,29 @@ export default function ModuleRecommendations() {
 
   const toggleExpanded = (moduleId) => {
     setExpandedModule((current) => (current === moduleId ? null : moduleId));
+  };
+
+  const priorityRecommendations = useMemo(
+    () => recommendations.filter((recommendation) => ['low', 'moderate'].includes(recommendation.level)),
+    [recommendations]
+  );
+  const visibleRecommendations = viewMode === 'priority' && priorityRecommendations.length > 0
+    ? priorityRecommendations
+    : recommendations;
+
+  const openGuidedReview = () => {
+    const weakQuestion = pendingReview?.weakQuestions?.[0];
+    if (!pendingReview || !weakQuestion) return;
+
+    const params = new URLSearchParams({
+      moduleId: String(pendingReview.moduleId),
+      assessmentId: String(weakQuestion.assessmentId),
+      questionId: String(weakQuestion.questionId),
+      source: 'recommendations',
+    });
+
+    setPendingReview(null);
+    navigate(`/dashboard/assessment-questions?${params.toString()}`);
   };
 
   if (loading) {
@@ -165,11 +220,35 @@ export default function ModuleRecommendations() {
     <div className="module-recommendations">
       <div className="module-recommendations-header">
         <h2><FiZap aria-hidden="true" />AI Module Recommendations</h2>
-        <p>Prioritized guidance based on scores, pass rates, and recorded attempts.</p>
+        <p>Review the most important learning issues first. Details stay hidden until you need them.</p>
+      </div>
+
+      <div className="recommendation-view-toolbar">
+        <div className="recommendation-view-summary" aria-live="polite">
+          <strong>{priorityRecommendations.length}</strong>
+          <span>{priorityRecommendations.length === 1 ? 'module needs attention' : 'modules need attention'}</span>
+        </div>
+        <div className="recommendation-view-toggle" aria-label="Recommendation view">
+          <button
+            type="button"
+            className={viewMode === 'priority' ? 'is-active' : ''}
+            onClick={() => setViewMode('priority')}
+            disabled={priorityRecommendations.length === 0}
+          >
+            Needs attention
+          </button>
+          <button
+            type="button"
+            className={viewMode === 'all' || priorityRecommendations.length === 0 ? 'is-active' : ''}
+            onClick={() => setViewMode('all')}
+          >
+            All modules
+          </button>
+        </div>
       </div>
 
       <div className="module-recommendations-container">
-        {recommendations.map((rec) => {
+        {visibleRecommendations.map((rec) => {
           const level = LEVEL_CONFIG[rec.level] || LEVEL_CONFIG.moderate;
           const LevelIcon = level.icon;
           const isExpanded = expandedModule === rec.moduleId;
@@ -189,7 +268,7 @@ export default function ModuleRecommendations() {
                   </span>
                   <div className="recommendation-module-info">
                     <h3>{rec.moduleName}</h3>
-                    <p>{level.summary}</p>
+                    <p>{getFinding(rec)}</p>
                   </div>
                 </div>
                 <span className="recommendation-level-badge">{level.label}</span>
@@ -206,11 +285,6 @@ export default function ModuleRecommendations() {
                   <strong>{formatPercent(rec.passRate)}</strong>
                   <small>Learners who passed</small>
                 </div>
-                <div className="stat">
-                  <span>Evidence</span>
-                  <strong>{attemptCount}</strong>
-                  <small>{attemptCount === 1 ? 'Recorded attempt' : 'Recorded attempts'}</small>
-                </div>
               </div>
 
               {isExpanded && (
@@ -218,21 +292,32 @@ export default function ModuleRecommendations() {
                   <div className="recommendation-focus">
                     <FiTarget aria-hidden="true" />
                     <div>
-                      <span>Primary Focus</span>
-                      <strong>{level.focus}</strong>
-                      <p>
-                        This module was flagged from a {formatPercent(rec.averageScore)} average score
-                        {' '}and a {formatPercent(rec.passRate)} pass rate across {attemptCount}
-                        {attemptCount === 1 ? ' attempt' : ' attempts'}.
-                      </p>
+                      <span>Recommended Next Step</span>
+                      <strong>{getNextStep(rec, level)}</strong>
+                      <p>{level.summary}</p>
                     </div>
                   </div>
 
+                  {rec.weakQuestions?.length > 0 && (
+                    <div className="recommendation-weak-areas">
+                      <h4>Weakest Recorded Questions</h4>
+                      <div className="recommendation-weak-list">
+                        {rec.weakQuestions.map((question) => (
+                          <div className="recommendation-weak-item" key={question.questionId}>
+                            <span>Q{question.questionNo || '?'}</span>
+                            <p>{question.prompt}</p>
+                            <strong>{formatPercent(question.missRate)} missed</strong>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="recommendation-actions">
-                    <h4>Recommended Actions</h4>
+                    <h4>Supporting Actions</h4>
                     {actions.length ? (
                       <ol>
-                        {actions.map((action, index) => (
+                        {actions.slice(0, 2).map((action, index) => (
                           <li key={`${rec.moduleId}-${action}`}>
                             <span aria-hidden="true">{index + 1}</span>
                             <p>{action}</p>
@@ -248,8 +333,25 @@ export default function ModuleRecommendations() {
 
                   <div className="recommendation-signal">
                     <FiInfo aria-hidden="true" />
-                    <p><strong>{signal.label}.</strong> {signal.detail}</p>
+                    <p>
+                      <strong>{signal.label}.</strong> {signal.detail}
+                      {' '}{rec.dataScope || 'Completed results'} from {attemptCount}
+                      {attemptCount === 1 ? ' attempt was' : ' attempts were'} used.
+                    </p>
                   </div>
+
+                  {rec.weakQuestions?.length > 0 && (
+                    <div className="recommendation-guided-action">
+                      <div>
+                        <span>Admin-approved automation</span>
+                        <p>Open the exact weak question in the editor. Nothing is changed or published automatically.</p>
+                      </div>
+                      <button type="button" onClick={() => setPendingReview(rec)}>
+                        Open guided review
+                        <FiArrowRight aria-hidden="true" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -275,6 +377,31 @@ export default function ModuleRecommendations() {
           Start with high-priority modules, apply one change at a time, and compare the next set of learner results.
         </p>
       </div>
+
+      {pendingReview && createPortal((
+        <div className="recommendation-confirm-overlay" role="presentation">
+          <section
+            className="recommendation-confirm-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="recommendation-confirm-title"
+          >
+            <span className="recommendation-confirm-eyebrow">Guided review</span>
+            <h3 id="recommendation-confirm-title">Review the weakest question?</h3>
+            <p>
+              Question {pendingReview.weakQuestions?.[0]?.questionNo || ''} will open in Assessment Questions.
+              The system will not edit, replace, or publish anything until you review and save it.
+            </p>
+            <div className="recommendation-confirm-actions">
+              <button type="button" className="secondary" onClick={() => setPendingReview(null)}>Cancel</button>
+              <button type="button" className="primary" onClick={openGuidedReview}>
+                Open review
+                <FiArrowRight aria-hidden="true" />
+              </button>
+            </div>
+          </section>
+        </div>
+      ), document.body)}
     </div>
   );
 }

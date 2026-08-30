@@ -447,7 +447,7 @@ const fetchAnalyticsBaseData = async () => dedupeRequest('loadAnalyticsBaseData'
       .select('id, user_id, assessment_id, started_at, submitted_at, created_at, status, score'),
     supabase
       .from('assessment_attempt_answers')
-      .select('attempt_id, created_at, selected_option_id, answer_text'),
+      .select('attempt_id, question_id, is_correct, created_at, selected_option_id, answer_text'),
     supabase.from('assessments').select('id, module_id, type, title'),
     supabase.from('modules').select('id, module_no, title'),
     supabase
@@ -1361,7 +1361,13 @@ export const getModuleRecommendations = async () => {
   }
 
   try {
-    const { attempts, assessments, modules } = await loadAnalyticsBaseData();
+    const { attempts, answers, assessments, modules } = await loadAnalyticsBaseData();
+    const { data: questions, error: questionsError } = await supabase
+      .from('assessment_questions')
+      .select('id, assessment_id, question_no, prompt')
+      .eq('is_active', true);
+
+    if (questionsError) throw questionsError;
 
     const assessmentsById = assessments.reduce((acc, row) => {
       acc[row.id] = row;
@@ -1373,9 +1379,39 @@ export const getModuleRecommendations = async () => {
       return acc;
     }, {});
 
+    const questionsById = (questions || []).reduce((acc, row) => {
+      acc[row.id] = row;
+      return acc;
+    }, {});
+
+    const completedAttempts = (attempts || []).filter((attempt) => (
+      String(attempt.status || '').toLowerCase() === 'submitted'
+      && Number.isFinite(Number(attempt.score))
+    ));
+    const postTestModuleIds = new Set();
+
+    completedAttempts.forEach((attempt) => {
+      const assessment = assessmentsById[attempt.assessment_id];
+      if (!assessment) return;
+
+      const assessmentType = String(assessment.type || '').toLowerCase();
+      if (assessmentType.includes('post') || assessmentType.includes('final')) {
+        postTestModuleIds.add(assessment.module_id);
+      }
+    });
+
+    const relevantAttempts = completedAttempts.filter((attempt) => {
+      const assessment = assessmentsById[attempt.assessment_id];
+      if (!assessment) return false;
+
+      if (!postTestModuleIds.has(assessment.module_id)) return true;
+      const assessmentType = String(assessment.type || '').toLowerCase();
+      return assessmentType.includes('post') || assessmentType.includes('final');
+    });
+    const relevantAttemptIds = new Set(relevantAttempts.map((attempt) => attempt.id));
     const moduleStats = {};
 
-    attempts.forEach((attempt) => {
+    relevantAttempts.forEach((attempt) => {
       const assessment = assessmentsById[attempt.assessment_id];
       if (!assessment) return;
 
@@ -1390,14 +1426,55 @@ export const getModuleRecommendations = async () => {
           scores: [],
           attemptsCount: 0,
           completionCount: 0,
+          learnerIds: new Set(),
+          latestAttemptByLearner: new Map(),
+          questionStats: {},
+          usesPostTest: postTestModuleIds.has(moduleId),
         };
       }
 
       const score = toNumber(attempt.score, 0);
       moduleStats[moduleId].scores.push(score);
       moduleStats[moduleId].attemptsCount += 1;
+      moduleStats[moduleId].learnerIds.add(attempt.user_id);
       if (score >= 70) {
         moduleStats[moduleId].completionCount += 1;
+      }
+
+      const timestamp = new Date(
+        attempt.submitted_at || attempt.started_at || attempt.created_at || 0
+      ).getTime();
+      const previous = moduleStats[moduleId].latestAttemptByLearner.get(attempt.user_id);
+      if (!previous || timestamp >= previous.timestamp) {
+        moduleStats[moduleId].latestAttemptByLearner.set(attempt.user_id, { score, timestamp });
+      }
+    });
+
+    (answers || []).forEach((answer) => {
+      if (!relevantAttemptIds.has(answer.attempt_id) || !answer.question_id) return;
+
+      const question = questionsById[answer.question_id];
+      if (!question) return;
+
+      const assessment = assessmentsById[question.assessment_id];
+      const moduleId = assessment?.module_id;
+      const stats = moduleStats[moduleId];
+      if (!stats) return;
+
+      if (!stats.questionStats[answer.question_id]) {
+        stats.questionStats[answer.question_id] = {
+          questionId: answer.question_id,
+          assessmentId: question.assessment_id,
+          questionNo: question.question_no,
+          prompt: question.prompt || `Question ${question.question_no || ''}`.trim(),
+          answerCount: 0,
+          incorrectCount: 0,
+        };
+      }
+
+      stats.questionStats[answer.question_id].answerCount += 1;
+      if (answer.is_correct !== true) {
+        stats.questionStats[answer.question_id].incorrectCount += 1;
       }
     });
 
@@ -1414,6 +1491,22 @@ export const getModuleRecommendations = async () => {
           stats.attemptsCount > 0 ? (stats.completionCount / stats.attemptsCount) * 100 : 0,
           2
         );
+        const learnerCount = stats.learnerIds.size;
+        const affectedLearnerCount = Array.from(stats.latestAttemptByLearner.values())
+          .filter((attempt) => attempt.score < 70).length;
+        const weakQuestions = Object.values(stats.questionStats)
+          .filter((question) => question.answerCount > 0)
+          .map((question) => ({
+            ...question,
+            missRate: round((question.incorrectCount / question.answerCount) * 100, 1),
+          }))
+          .filter((question) => question.missRate > 0)
+          .sort((left, right) => (
+            right.missRate - left.missRate
+            || right.answerCount - left.answerCount
+            || Number(left.questionNo || 0) - Number(right.questionNo || 0)
+          ))
+          .slice(0, 2);
 
         let level = 'excellent';
         let color = 'green';
@@ -1464,6 +1557,10 @@ export const getModuleRecommendations = async () => {
           averageScore: avgScore,
           passRate,
           attemptCount: stats.attemptsCount,
+          learnerCount,
+          affectedLearnerCount,
+          dataScope: stats.usesPostTest ? 'Post-test results' : 'Completed assessment results',
+          weakQuestions,
           level,
           color,
           recommendations: recommendationsText,

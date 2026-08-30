@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useBlocker } from 'react-router-dom';
+import { useBlocker, useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import './AssessmentQuestions.css';
@@ -349,6 +349,10 @@ const buildGeneratedQuestionDraft = ({
 
 export default function AssessmentQuestions() {
   const { currentUser } = useUser();
+  const [searchParams] = useSearchParams();
+  const requestedAssessmentId = searchParams.get('assessmentId') || '';
+  const requestedModuleId = searchParams.get('moduleId') || '';
+  const requestedQuestionId = searchParams.get('questionId') || '';
   const [searchQuery, setSearchQuery] = useState('');
   const [assessments, setAssessments] = useState([]);
   const [moduleTitles, setModuleTitles] = useState(MODULE_TITLE_FALLBACKS);
@@ -368,6 +372,7 @@ export default function AssessmentQuestions() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const bypassNavigationRef = useRef(false);
   const questionHighlightTimeoutRef = useRef(null);
+  const handledRecommendationTargetRef = useRef('');
   const moduleContextCacheRef = useRef(new Map());
   const [generationProgress, setGenerationProgress] = useState(null);
   const [generatingRowProgress, setGeneratingRowProgress] = useState({});
@@ -439,7 +444,13 @@ export default function AssessmentQuestions() {
         const loadedAssessments = sortAssessments(data || []);
         setAssessments(loadedAssessments);
         if (loadedAssessments.length > 0) {
-          const preferred = loadedAssessments.find((row) => isPreferredAssessment(row));
+          const requestedAssessment = loadedAssessments.find((row) => row.id === requestedAssessmentId);
+          const requestedModuleAssessment = loadedAssessments.find((row) => (
+            row.module_id === requestedModuleId && isPreferredAssessment(row)
+          ));
+          const preferred = requestedAssessment
+            || requestedModuleAssessment
+            || loadedAssessments.find((row) => isPreferredAssessment(row));
           setSelectedAssessmentId(preferred?.id || loadedAssessments[0].id);
         }
       }
@@ -448,7 +459,7 @@ export default function AssessmentQuestions() {
     };
 
     loadAssessments();
-  }, []);
+  }, [requestedAssessmentId, requestedModuleId]);
 
   useEffect(() => {
     const loadQuestions = async () => {
@@ -486,6 +497,39 @@ export default function AssessmentQuestions() {
   useEffect(() => {
     setFocusedQuestionId('');
   }, [selectedAssessmentId]);
+
+  useEffect(() => {
+    if (
+      isLoadingQuestions
+      || !requestedQuestionId
+      || handledRecommendationTargetRef.current === requestedQuestionId
+      || !questions.some((question) => question.id === requestedQuestionId)
+    ) {
+      return undefined;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      const questionElement = document.getElementById(`assessment-question-${requestedQuestionId}`);
+      if (!questionElement) return;
+
+      handledRecommendationTargetRef.current = requestedQuestionId;
+      setFocusedQuestionId(requestedQuestionId);
+      questionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setMessage({
+        type: 'success',
+        text: 'Guided review opened the weakest recorded question. Review it first; no content has been changed.',
+      });
+
+      if (questionHighlightTimeoutRef.current) {
+        window.clearTimeout(questionHighlightTimeoutRef.current);
+      }
+      questionHighlightTimeoutRef.current = window.setTimeout(() => {
+        setFocusedQuestionId('');
+      }, 2400);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [isLoadingQuestions, questions, requestedQuestionId]);
 
   useEffect(() => () => {
     if (questionHighlightTimeoutRef.current) {

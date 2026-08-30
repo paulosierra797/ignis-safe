@@ -312,7 +312,7 @@ def load_analytics_base_data() -> Dict[str, Any]:
     print("Loading answers...", flush=True)
     answers = fetch_all_rows(
         "assessment_attempt_answers",
-        "attempt_id,created_at,selected_option_id,answer_text",
+        "attempt_id,question_id,is_correct,created_at,selected_option_id,answer_text",
     )
 
     print("Loading assessments...", flush=True)
@@ -1306,23 +1306,47 @@ def build_ai_insights(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
 
 
 def build_module_recommendations(data: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """Analyze module performance and generate AI-driven recommendations."""
+    """Build focused module guidance from completed learner outcomes."""
     assessments_by_id = {row.get("id"): row for row in data["assessments"]}
     modules_by_id = {row.get("id"): row for row in data["modules"]}
-    
-    module_stats: Dict[str, Dict[str, Any]] = {}
-    
-    # Aggregate scores by module
-    for attempt in data["attempts"]:
+    questions_by_id = {row.get("id"): row for row in data.get("questions", [])}
+
+    completed_attempts = [
+        attempt
+        for attempt in data["attempts"]
+        if str(attempt.get("status") or "").lower() == "submitted"
+        and attempt.get("score") is not None
+    ]
+    post_test_module_ids = {
+        assessment.get("module_id")
+        for attempt in completed_attempts
+        if (assessment := assessments_by_id.get(attempt.get("assessment_id")))
+        and is_post_test(assessment.get("type"))
+    }
+    relevant_attempts = []
+
+    for attempt in completed_attempts:
         assessment = assessments_by_id.get(attempt.get("assessment_id"))
         if not assessment:
             continue
-            
+        module_id = assessment.get("module_id")
+        if module_id in post_test_module_ids and not is_post_test(assessment.get("type")):
+            continue
+        relevant_attempts.append(attempt)
+
+    module_stats: Dict[str, Dict[str, Any]] = {}
+    attempt_module_ids: Dict[str, str] = {}
+
+    for attempt in relevant_attempts:
+        assessment = assessments_by_id.get(attempt.get("assessment_id"))
+        if not assessment:
+            continue
+
         module_id = assessment.get("module_id")
         module_data = modules_by_id.get(module_id)
         if not module_data:
             continue
-            
+
         if module_id not in module_stats:
             module_stats[module_id] = {
                 "module_id": module_id,
@@ -1330,25 +1354,90 @@ def build_module_recommendations(data: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "scores": [],
                 "attempts_count": 0,
                 "completion_count": 0,
+                "learner_ids": set(),
+                "latest_attempt_by_learner": {},
+                "question_stats": {},
+                "uses_post_test": module_id in post_test_module_ids,
             }
-        
+
         score = to_number(attempt.get("score"), 0)
         module_stats[module_id]["scores"].append(score)
         module_stats[module_id]["attempts_count"] += 1
+        user_id = attempt.get("user_id")
+        if user_id:
+            module_stats[module_id]["learner_ids"].add(user_id)
         if score >= 70:
             module_stats[module_id]["completion_count"] += 1
-    
-    # Calculate averages and generate recommendations
+
+        attempt_id = attempt.get("id")
+        if attempt_id:
+            attempt_module_ids[attempt_id] = module_id
+
+        timestamp = parse_iso_date(get_attempt_timestamp(attempt))
+        previous = module_stats[module_id]["latest_attempt_by_learner"].get(user_id)
+        if user_id and (not previous or (timestamp and (not previous["timestamp"] or timestamp >= previous["timestamp"]))):
+            module_stats[module_id]["latest_attempt_by_learner"][user_id] = {
+                "score": score,
+                "timestamp": timestamp,
+            }
+
+    for answer in data.get("answers", []):
+        module_id = attempt_module_ids.get(answer.get("attempt_id"))
+        question = questions_by_id.get(answer.get("question_id"))
+        if not module_id or not question or module_id not in module_stats:
+            continue
+
+        question_id = question.get("id")
+        question_stats = module_stats[module_id]["question_stats"]
+        if question_id not in question_stats:
+            question_stats[question_id] = {
+                "questionId": question_id,
+                "assessmentId": question.get("assessment_id"),
+                "questionNo": question.get("question_no"),
+                "prompt": question.get("prompt") or f"Question {question.get('question_no') or ''}".strip(),
+                "answerCount": 0,
+                "incorrectCount": 0,
+            }
+
+        question_stats[question_id]["answerCount"] += 1
+        if answer.get("is_correct") is not True:
+            question_stats[question_id]["incorrectCount"] += 1
+
     recommendations: List[Dict[str, Any]] = []
-    
+
     for module_id, stats in sorted(module_stats.items(), key=lambda x: x[1]["module_name"]):
         if not stats["scores"]:
             continue
-            
+
         avg_score = round_value(float(np.mean(stats["scores"])), 2)
         pass_rate = round_value((stats["completion_count"] / stats["attempts_count"] * 100) if stats["attempts_count"] > 0 else 0, 2)
-        
-        # Classify performance level
+        learner_count = len(stats["learner_ids"])
+        affected_learner_count = sum(
+            1
+            for attempt in stats["latest_attempt_by_learner"].values()
+            if attempt["score"] < 70
+        )
+        weak_questions = []
+        for question in stats["question_stats"].values():
+            if question["answerCount"] <= 0:
+                continue
+            miss_rate = round_value(
+                question["incorrectCount"] / question["answerCount"] * 100,
+                1,
+            )
+            if miss_rate <= 0:
+                continue
+            weak_questions.append({**question, "missRate": miss_rate})
+
+        weak_questions.sort(
+            key=lambda question: (
+                -question["missRate"],
+                -question["answerCount"],
+                question.get("questionNo") or 0,
+            )
+        )
+        weak_questions = weak_questions[:2]
+
         if avg_score >= 80:
             level = "excellent"
             color = "green"
@@ -1362,9 +1451,8 @@ def build_module_recommendations(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             level = "low"
             color = "red"
         
-        # Generate AI recommendations based on performance
         recommendations_text = []
-        
+
         if avg_score >= 80:
             recommendations_text.append("Keep the current lesson structure and reuse its strongest approach in weaker modules")
             if pass_rate < 100:
@@ -1392,6 +1480,10 @@ def build_module_recommendations(data: Dict[str, Any]) -> List[Dict[str, Any]]:
             "averageScore": avg_score,
             "passRate": pass_rate,
             "attemptCount": stats["attempts_count"],
+            "learnerCount": learner_count,
+            "affectedLearnerCount": affected_learner_count,
+            "dataScope": "Post-test results" if stats["uses_post_test"] else "Completed assessment results",
+            "weakQuestions": weak_questions,
             "level": level,
             "color": color,
             "recommendations": recommendations_text,
@@ -1502,20 +1594,12 @@ def get_dashboard_bundle(filters: Filters) -> Dict[str, Any]:
 
 @app.get("/api/knowledge-analytics/module-recommendations", dependencies=[Depends(require_admin)])
 def get_module_recommendations() -> Dict[str, Any]:
-    data = {
-        "attempts": fetch_all_rows(
-            "assessment_attempts",
-            "id,user_id,assessment_id,started_at,submitted_at,created_at,status,score",
-        ),
-        "assessments": fetch_all_rows(
-            "assessments",
-            "id,module_id,type,title",
-        ),
-        "modules": fetch_all_rows(
-            "modules",
-            "id,module_no,title",
-        ),
-    }
+    data = load_analytics_base_data()
+    data["questions"] = fetch_all_rows(
+        "assessment_questions",
+        "id,assessment_id,question_no,prompt,is_active",
+    )
+    data["questions"] = [row for row in data["questions"] if row.get("is_active") is not False]
 
     return {
         "data": build_module_recommendations(data),

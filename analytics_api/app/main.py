@@ -179,11 +179,23 @@ class DeleteUserRequest(BaseModel):
 
 app = FastAPI(title="Ignis Safe Analytics API", version="1.0.0")
 
-frontend_origins = [
-    origin.strip()
-    for origin in os.getenv("FRONTEND_ORIGINS", "http://localhost:5173").split(",")
+# Keep the production web origin in the backend defaults so a deployment with
+# no FRONTEND_ORIGINS setting cannot silently fall back to localhost-only CORS.
+# Additional origins remain configurable for local development and previews.
+DEFAULT_FRONTEND_ORIGINS = (
+    "https://ignis-safe.com",
+    "http://localhost:5173",
+)
+
+configured_frontend_origins = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("FRONTEND_ORIGINS", "").split(",")
     if origin.strip()
 ]
+frontend_origins = list(dict.fromkeys([
+    *configured_frontend_origins,
+    *DEFAULT_FRONTEND_ORIGINS,
+]))
 print("FRONTEND_ORIGINS =", frontend_origins)
 
 app.add_middleware(

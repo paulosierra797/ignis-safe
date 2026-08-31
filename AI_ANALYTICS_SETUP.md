@@ -25,7 +25,7 @@ Copy `analytics_api/.env.example` to `analytics_api/.env` and set:
 ```env
 SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-FRONTEND_ORIGINS=http://localhost:5173
+FRONTEND_ORIGINS=https://ignis-safe.com,http://localhost:5173
 ```
 
 Use the Supabase Service Role key only on backend. Never put it in frontend env.

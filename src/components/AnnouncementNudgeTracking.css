@@ -308,6 +308,10 @@
 }
 
 .nudge-tracking-actions-cell {
+  display: table-cell;
+}
+
+.nudge-tracking-actions {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -329,7 +333,7 @@
   font-weight: 800;
   line-height: 1.2;
   text-align: center;
-  white-space: normal;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -440,13 +444,6 @@
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-  }
-
-  .nudge-tracking-actions-cell {
-    display: flex !important;
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
   }
 }
 

@@ -224,29 +224,31 @@ export default function AnnouncementNudgeTracking({
                       <td data-label="Deadline">{formatDeadline(getDeadline(person, announcement))}</td>
                       <td data-label="Nudge Count">{person.nudge_count}</td>
                       <td data-label="Action" className="nudge-tracking-actions-cell">
-                        {isPending && (
-                          <button
-                            type="button"
-                            className="nudge-tracking-nudge-button"
-                            onClick={() => onNudge?.([person.personnel_id])}
-                            disabled={isNudging || remainingCooldown > 0}
-                          >
-                            <FiBell aria-hidden="true" />
-                            {isNudging ? 'Sending...' : remainingCooldown > 0 ? `Wait ${remainingCooldown}s` : 'Nudge'}
-                          </button>
-                        )}
-                        {history.length > 0 && (
-                          <button
-                            type="button"
-                            className="nudge-tracking-history-toggle"
-                            onClick={() => setOpenHistoryId(person.personnel_id)}
-                          >
-                            View {history.length} Nudges
-                          </button>
-                        )}
-                        {!isPending && history.length === 0 && (
-                          <span className="nudge-tracking-no-action">—</span>
-                        )}
+                        <div className="nudge-tracking-actions">
+                          {isPending && (
+                            <button
+                              type="button"
+                              className="nudge-tracking-nudge-button"
+                              onClick={() => onNudge?.([person.personnel_id])}
+                              disabled={isNudging || remainingCooldown > 0}
+                            >
+                              <FiBell aria-hidden="true" />
+                              {isNudging ? 'Sending...' : remainingCooldown > 0 ? `Wait ${remainingCooldown}s` : 'Nudge'}
+                            </button>
+                          )}
+                          {history.length > 0 && (
+                            <button
+                              type="button"
+                              className="nudge-tracking-history-toggle"
+                              onClick={() => setOpenHistoryId(person.personnel_id)}
+                            >
+                              View {history.length} Nudges
+                            </button>
+                          )}
+                          {!isPending && history.length === 0 && (
+                            <span className="nudge-tracking-no-action">—</span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

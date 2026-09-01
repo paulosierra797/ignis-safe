@@ -24,8 +24,8 @@
   }
 }
 
-/* Filters bar: Total Users sits inside the same card as the filter controls
-   so it reads as one deliberate row instead of a floating card. */
+/* Filters bar sits at the top of the content area as one clean row of
+   aligned, equal-height controls. */
 .progress-controls {
   display: flex;
   align-items: stretch;
@@ -36,24 +36,6 @@
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-}
-
-.progress-total-users {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.3rem;
-  min-width: 140px;
-  padding-right: 1.25rem;
-  border-right: 1px solid #e2e8f0;
-}
-
-.progress-total-users p {
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #6b7280;
 }
 
 .progress-stat-card {
@@ -92,7 +74,7 @@
   flex: 1;
   min-width: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
   gap: 1rem;
   align-items: end;
 }
@@ -109,7 +91,8 @@
   color: #6b7280;
 }
 
-.progress-filter select {
+.progress-filter select,
+.progress-filter input {
   width: 100%;
   height: var(--progress-control-height, 42px);
   border: 1px solid #e2e8f0;
@@ -119,9 +102,11 @@
   background: white;
   color: #4b5563;
   outline: none;
+  box-sizing: border-box;
 }
 
 .progress-filter select:focus,
+.progress-filter input:focus,
 .progress-searchable-input:focus {
   border-color: #fca5a5;
   box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.08);
@@ -211,7 +196,7 @@
   color: #b91c1c;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1300px) {
   .progress-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -227,16 +212,6 @@
   .progress-controls {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .progress-total-users {
-    min-width: 0;
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: space-between;
-    padding: 0 0 0.9rem;
-    border-right: none;
-    border-bottom: 1px solid #e2e8f0;
   }
 
   .progress-filters {
@@ -1118,16 +1093,6 @@
     width: 100%;
   }
 
-  .progress-total-users {
-    min-width: 0;
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: space-between;
-    padding: 0 0 0.9rem;
-    border-right: none;
-    border-bottom: 1px solid #e2e8f0;
-  }
-
   .progress-filters {
     width: 100%;
     display: flex;
@@ -1140,7 +1105,8 @@
     width: 100%;
   }
 
-  .progress-filter select {
+  .progress-filter select,
+  .progress-filter input {
     width: 100%;
   }
 

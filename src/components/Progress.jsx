@@ -295,76 +295,9 @@ export default function Progress() {
       <Sidebar />
 
       <div className="progress-main">
-        <PageHeader
-          title="Users"
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-        />
-
-        <section className="progress-barangay-panel">
-          <div className="progress-barangay-panel-header">
-            <div>
-              <h2>
-                <FiMapPin aria-hidden="true" />
-                Barangay Participation
-              </h2>
-              <p>
-                {barangayFilter === 'All'
-                  ? `Training participation across all ${barangayBreakdown.length} recorded ${barangayBreakdown.length === 1 ? 'barangay' : 'barangays'}.`
-                  : `Showing IGNIS SAFE participation for ${barangayFilter}.`}
-              </p>
-            </div>
-            <span className="progress-barangay-scope">
-              {barangayFilter === 'All' ? 'All Barangays' : barangayFilter}
-            </span>
-          </div>
-
-          <div className="progress-barangay-stats">
-            <div className="progress-stat-card">
-              <p>Total Registered Users</p>
-              <div className="progress-stat-value">
-                <span className="progress-main-value">{barangaySummary.registered}</span>
-              </div>
-            </div>
-            <div className="progress-stat-card completed">
-              <p>Completed</p>
-              <div className="progress-stat-value">
-                <span className="progress-main-value">{barangaySummary.completed}</span>
-              </div>
-            </div>
-            <div className="progress-stat-card in-progress">
-              <p>In Progress</p>
-              <div className="progress-stat-value">
-                <span className="progress-main-value">{barangaySummary.inProgress}</span>
-              </div>
-            </div>
-            <div className="progress-stat-card not-started">
-              <p>Not Started</p>
-              <div className="progress-stat-value">
-                <span className="progress-main-value">{barangaySummary.notStarted}</span>
-              </div>
-            </div>
-            <div className="progress-stat-card rate">
-              <p>Completion Rate</p>
-              <div className="progress-stat-value">
-                <span className="progress-main-value">{barangaySummary.completionRate}%</span>
-              </div>
-              <div className="progress-rate-bar">
-                <div
-                  className="progress-rate-bar-fill"
-                  style={{ width: `${Math.min(100, barangaySummary.completionRate)}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </section>
+        <PageHeader title="Users" />
 
         <div className="progress-controls">
-          <div className="progress-total-users">
-            <p>Total Users</p>
-            <span className="progress-main-value">{totalUsers}</span>
-          </div>
-
           <div className="progress-filters">
             <div className="progress-filter">
               <label>Filter by Barangay</label>
@@ -427,11 +360,80 @@ export default function Progress() {
               </div>
             </div>
 
+            <div className="progress-filter">
+              <label>Search</label>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search name, email, or barangay..."
+                autoComplete="off"
+              />
+            </div>
+
             <button className="progress-clear" onClick={handleClearFilters}>
               CLEAR FILTERS
             </button>
           </div>
         </div>
+
+        <section className="progress-barangay-panel">
+          <div className="progress-barangay-panel-header">
+            <div>
+              <h2>
+                <FiMapPin aria-hidden="true" />
+                Barangay Participation
+              </h2>
+              <p>
+                {barangayFilter === 'All'
+                  ? `Training participation across all ${barangayBreakdown.length} recorded ${barangayBreakdown.length === 1 ? 'barangay' : 'barangays'}.`
+                  : `Showing IGNIS SAFE participation for ${barangayFilter}.`}
+              </p>
+            </div>
+            <span className="progress-barangay-scope">
+              {barangayFilter === 'All' ? 'All Barangays' : barangayFilter}
+            </span>
+          </div>
+
+          <div className="progress-barangay-stats">
+            <div className="progress-stat-card">
+              <p>Total Registered Users</p>
+              <div className="progress-stat-value">
+                <span className="progress-main-value">{barangaySummary.registered}</span>
+              </div>
+            </div>
+            <div className="progress-stat-card completed">
+              <p>Completed</p>
+              <div className="progress-stat-value">
+                <span className="progress-main-value">{barangaySummary.completed}</span>
+              </div>
+            </div>
+            <div className="progress-stat-card in-progress">
+              <p>In Progress</p>
+              <div className="progress-stat-value">
+                <span className="progress-main-value">{barangaySummary.inProgress}</span>
+              </div>
+            </div>
+            <div className="progress-stat-card not-started">
+              <p>Not Started</p>
+              <div className="progress-stat-value">
+                <span className="progress-main-value">{barangaySummary.notStarted}</span>
+              </div>
+            </div>
+            <div className="progress-stat-card rate">
+              <p>Completion Rate</p>
+              <div className="progress-stat-value">
+                <span className="progress-main-value">{barangaySummary.completionRate}%</span>
+              </div>
+              <div className="progress-rate-bar">
+                <div
+                  className="progress-rate-bar-fill"
+                  style={{ width: `${Math.min(100, barangaySummary.completionRate)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
 
         <div className="progress-table-card progress-barangay-breakdown">
           <div className="progress-breakdown-header">

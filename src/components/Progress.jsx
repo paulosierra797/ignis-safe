@@ -359,11 +359,9 @@ export default function Progress() {
         </section>
 
         <div className="progress-controls">
-          <div className="progress-stat-card">
+          <div className="progress-total-users">
             <p>Total Users</p>
-            <div className="progress-stat-value">
-              <span className="progress-main-value">{totalUsers}</span>
-            </div>
+            <span className="progress-main-value">{totalUsers}</span>
           </div>
 
           <div className="progress-filters">
@@ -440,10 +438,12 @@ export default function Progress() {
               <FiPieChart aria-hidden="true" />
               Barangay Completion Summary
             </h3>
-            <span>Completion Rate = Completed Users ÷ Total Registered Users × 100</span>
+            <span className="progress-breakdown-formula">
+              Completion Rate = Completed Users ÷ Total Registered Users × 100
+            </span>
           </div>
           <div className="progress-desktop-table">
-            <table className="progress-table">
+            <table className="progress-table progress-table--breakdown">
               <thead>
                 <tr>
                   <th>Barangay</th>
@@ -529,14 +529,23 @@ export default function Progress() {
           </div>
         </div>
 
-        <div className="progress-table-card">
+        <div className="progress-table-card progress-users-table">
+          <div className="progress-breakdown-header">
+            <h3>
+              <FiBarChart2 aria-hidden="true" />
+              User Progress
+            </h3>
+            <span className="progress-breakdown-formula">
+              Showing {filteredRows.length} of {totalUsers} users
+            </span>
+          </div>
           {errorMessage && (
             <div style={{ padding: '0.8rem 1rem', color: '#991b1b', fontWeight: 600 }}>
               {errorMessage}
             </div>
           )}
          <div className="progress-desktop-table">
-  <table className="progress-table">
+  <table className="progress-table progress-table--users">
             <thead>
               <tr>
                 <th>No.</th>

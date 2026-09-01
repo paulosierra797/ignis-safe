@@ -7,8 +7,11 @@
 
 .progress-main {
   flex: 1;
+  min-width: 0;
   margin-left: var(--sidebar-width);
   padding: 2rem;
+  --progress-control-height: 42px;
+  --progress-section-gap: 1.5rem;
 }
 
 @media (max-width: 900px) {
@@ -16,22 +19,41 @@
     padding: 1rem;
   }
 
-  .progress-controls,
-  .progress-filters {
-    grid-template-columns: 1fr;
-  }
-
   .progress-table-card {
     overflow-x: auto;
   }
 }
 
+/* Filters bar: Total Users sits inside the same card as the filter controls
+   so it reads as one deliberate row instead of a floating card. */
 .progress-controls {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
-  align-items: center;
+  display: flex;
+  align-items: stretch;
+  gap: 1.25rem;
+  margin-bottom: var(--progress-section-gap, 1.5rem);
+  padding: 1rem 1.25rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.progress-total-users {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 140px;
+  padding-right: 1.25rem;
+  border-right: 1px solid #e2e8f0;
+}
+
+.progress-total-users p {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
 }
 
 .progress-stat-card {
@@ -67,13 +89,11 @@
 }
 
 .progress-filters {
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   gap: 1rem;
-  background: white;
-  border-radius: 12px;
-  padding: 1rem 1.25rem;
-  border: 1px solid #e2e8f0;
   align-items: end;
 }
 
@@ -90,13 +110,21 @@
 }
 
 .progress-filter select {
+  width: 100%;
+  height: var(--progress-control-height, 42px);
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 0.7rem 0.9rem;
+  padding: 0 0.9rem;
   font-size: 0.9rem;
   background: white;
   color: #4b5563;
   outline: none;
+}
+
+.progress-filter select:focus,
+.progress-searchable-input:focus {
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.08);
 }
 
 .progress-filter-searchable {
@@ -109,9 +137,10 @@
 
 .progress-searchable-input {
   width: 100%;
+  height: var(--progress-control-height, 42px);
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 0.7rem 0.9rem;
+  padding: 0 0.9rem;
   font-size: 0.9rem;
   background: white;
   color: #4b5563;
@@ -160,22 +189,75 @@
 }
 
 .progress-clear {
-  border: none;
-  background: #e2e8f0;
+  align-self: end;
+  height: var(--progress-control-height, 42px);
+  min-width: 140px;
+  border: 1px solid #e2e8f0;
+  background: #f1f5f9;
   color: #475569;
   font-weight: 700;
   border-radius: 8px;
-  padding: 0.7rem 1.1rem;
+  padding: 0 1.1rem;
   font-size: 0.8rem;
   letter-spacing: 0.3px;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.progress-clear:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+@media (max-width: 1100px) {
+  .progress-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .progress-clear {
+    grid-column: 2;
+    justify-self: end;
+    width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
+  .progress-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .progress-total-users {
+    min-width: 0;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0 0 0.9rem;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .progress-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-clear {
+    grid-column: auto;
+  }
 }
 
 .progress-table-card {
   background: white;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
   overflow: hidden;
+}
+
+.progress-users-table {
+  margin-bottom: var(--progress-section-gap, 1.5rem);
 }
 
 .progress-desktop-table {
@@ -193,27 +275,74 @@
 }
 
 .progress-table thead tr th {
-  padding: 1rem 0.85rem;
+  padding: 0.95rem 1.15rem;
   text-align: left;
   color: white;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
 .progress-table tbody tr {
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #eef2f7;
   transition: background-color 0.2s;
 }
 
-.progress-table tbody tr:hover {
-  background-color: #fafafa;
+.progress-table tbody tr:last-child {
+  border-bottom: none;
 }
 
 .progress-table tbody td {
-  padding: 1rem;
+  padding: 0.95rem 1.15rem;
   color: #4b5563;
   font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+/* Subtle banding keeps long lists easy to track across columns. */
+.progress-table tbody tr:nth-child(even) {
+  background-color: #fbfcfe;
+}
+
+.progress-table tbody tr:hover {
+  background-color: #f5f7fa;
+}
+
+/* Barangay Completion Summary: label left, counts centred. */
+.progress-table--breakdown {
+  min-width: 720px;
+}
+
+.progress-table--breakdown th:not(:first-child),
+.progress-table--breakdown td:not(:first-child) {
+  text-align: center;
+}
+
+.progress-table--breakdown tbody td:first-child {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Users table: counters and actions centred, text columns left. */
+.progress-table--users th:first-child,
+.progress-table--users td:first-child,
+.progress-table--users th:nth-child(5),
+.progress-table--users td:nth-child(5),
+.progress-table--users th:nth-child(6),
+.progress-table--users td:nth-child(6),
+.progress-table--users th:last-child,
+.progress-table--users td:last-child {
+  text-align: center;
+}
+
+.progress-table--users tbody td:nth-child(2) {
+  font-weight: 600;
+  color: #111827;
+}
+
+.progress-table--users td:nth-child(7) {
+  white-space: nowrap;
 }
 
 .progress-view-btn {
@@ -980,11 +1109,23 @@
   .progress-controls {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: 1rem;
+    padding: 1rem;
   }
 
   .progress-stat-card {
     width: 100%;
+  }
+
+  .progress-total-users {
+    min-width: 0;
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 0 0 0.9rem;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
   }
 
   .progress-filters {
@@ -992,7 +1133,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
-    padding: 1rem;
+    padding: 0;
   }
 
   .progress-filter {
@@ -1016,16 +1157,18 @@
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-  padding: 1.25rem 1.4rem 1.4rem;
-  margin-bottom: 1.5rem;
+  padding: 1.35rem 1.5rem 1.5rem;
+  margin-bottom: var(--progress-section-gap, 1.5rem);
 }
 
 .progress-barangay-panel-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eef2f7;
 }
 
 .progress-barangay-panel-header h2 {
@@ -1063,11 +1206,30 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 1rem;
+  align-items: stretch;
 }
 
 .progress-barangay-stats .progress-stat-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.1rem 1.25rem;
   border: 2px solid #cbd5e1;
   box-shadow: none;
+}
+
+/* Reserve two label lines so every card's number sits on the same baseline. */
+.progress-barangay-stats .progress-stat-card p {
+  min-height: 2.2em;
+  line-height: 1.1;
+}
+
+.progress-barangay-stats .progress-stat-card .progress-stat-value {
+  margin-top: 0.5rem;
+}
+
+.progress-barangay-stats .progress-stat-card .progress-rate-bar {
+  margin-top: auto;
 }
 
 .progress-barangay-stats .progress-stat-card.completed {
@@ -1120,7 +1282,7 @@
 /* Barangay completion summary table ------------------------------------ */
 
 .progress-barangay-breakdown {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--progress-section-gap, 1.5rem);
 }
 
 .progress-breakdown-header {
@@ -1129,7 +1291,7 @@
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  padding: 1rem 1.25rem;
+  padding: 1.1rem 1.5rem;
   border-bottom: 1px solid #e2e8f0;
 }
 
@@ -1147,16 +1309,25 @@
   color: #b91c1c;
 }
 
-.progress-breakdown-header span {
+.progress-breakdown-formula {
+  flex-shrink: 0;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
   font-size: 0.78rem;
+  font-weight: 600;
   color: #6b7280;
+  white-space: nowrap;
 }
 
 .progress-rate-cell {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.2rem;
   min-width: 110px;
+  max-width: 150px;
+  margin: 0 auto;
 }
 
 .progress-rate-cell span {
@@ -1179,24 +1350,77 @@
   font-style: normal;
 }
 
-@media (max-width: 1200px) {
-  .progress-barangay-stats {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+@media (max-width: 1400px) {
+  .progress-barangay-stats .progress-stat-card {
+    padding: 1rem;
+  }
+
+  .progress-barangay-stats .progress-main-value {
+    font-size: 1.45rem;
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
+  .progress-barangay-stats {
+    gap: 0.75rem;
+  }
+
+  .progress-barangay-stats .progress-stat-card {
+    padding: 0.9rem 1rem;
+  }
+
+  .progress-barangay-stats .progress-stat-card p {
+    font-size: 0.74rem;
+  }
+
+  .progress-barangay-stats .progress-main-value {
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 1024px) {
   .progress-barangay-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .progress-barangay-stats .progress-stat-card.rate {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .progress-breakdown-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .progress-breakdown-formula {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 768px) {
+  .progress-barangay-panel {
+    padding: 1.1rem 1.1rem 1.2rem;
+  }
+
   .progress-barangay-panel-header {
     flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .progress-barangay-stats .progress-stat-card p {
+    min-height: 0;
   }
 }
 
 @media (max-width: 480px) {
   .progress-barangay-stats {
     grid-template-columns: 1fr;
+  }
+
+  .progress-barangay-stats .progress-stat-card.rate {
+    grid-column: auto;
   }
 }

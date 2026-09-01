@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import AnnouncementAcknowledgementModal from './AnnouncementAcknowledgementModal';
+import AnnouncementNudgeTracking from './AnnouncementNudgeTracking';
 import LandingContentEditor from './LandingContentEditor';
 import PersonnelPicker from './PersonnelPicker';
 import { useUser } from '../context/UserContext';
@@ -144,6 +145,7 @@ export default function Announcements() {
   const [archivedExpandedMsgIds, setArchivedExpandedMsgIds] = useState(() => new Set());
   const [acknowledgementModalId, setAcknowledgementModalId] = useState('');
   const [nudgingIds, setNudgingIds] = useState(() => new Set());
+  const [trackingOpenIds, setTrackingOpenIds] = useState(() => new Set());
   const [nudgeCooldownUntilById, setNudgeCooldownUntilById] = useState(() => new Map());
   const lastViewedAnnouncementsAtRef = useRef(null);
   const [unreadTrackingReady, setUnreadTrackingReady] = useState(false);
@@ -156,7 +158,9 @@ export default function Announcements() {
       title: draft?.title || '',
       content: draft?.content || '',
       audience_type: draft?.audience_type || 'public',
-      target_personnel_ids: Array.isArray(draft?.target_personnel_ids) ? draft.target_personnel_ids : []
+      target_personnel_ids: Array.isArray(draft?.target_personnel_ids) ? draft.target_personnel_ids : [],
+      acknowledgement_deadline_date: draft?.acknowledgement_deadline_date || '',
+      acknowledgement_deadline_time: draft?.acknowledgement_deadline_time || ''
     };
   });
   const [personnelSelectionError, setPersonnelSelectionError] = useState('');
@@ -201,9 +205,14 @@ export default function Announcements() {
     formData.content.trim() ||
     formData.audience_type !== 'public' ||
     formData.target_personnel_ids.length > 0 ||
+    formData.acknowledgement_deadline_date ||
+    formData.acknowledgement_deadline_time ||
     attachmentFiles.length > 0 ||
     draftAttachmentMeta.length > 0
   );
+
+  const showAcknowledgementDeadline = formData.audience_type === 'all_personnel'
+    || formData.audience_type === 'specific_personnel';
 
   const isAnyFormDirty = isAnnouncementFormDirty || isLandingDirty;
 
@@ -237,6 +246,8 @@ export default function Announcements() {
       content: formData.content,
       audience_type: formData.audience_type,
       target_personnel_ids: formData.target_personnel_ids,
+      acknowledgement_deadline_date: formData.acknowledgement_deadline_date,
+      acknowledgement_deadline_time: formData.acknowledgement_deadline_time,
       attachments: attachmentFiles.length > 0
         ? attachmentFiles.map((file) => ({ name: file.name, size: file.size, type: file.type }))
         : draftAttachmentMeta
@@ -260,7 +271,9 @@ export default function Announcements() {
       title: '',
       content: '',
       audience_type: 'public',
-      target_personnel_ids: []
+      target_personnel_ids: [],
+      acknowledgement_deadline_date: '',
+      acknowledgement_deadline_time: ''
     });
     setAttachmentFiles([]);
     setDraftAttachmentMeta([]);
@@ -579,6 +592,33 @@ export default function Announcements() {
       return;
     }
 
+    let acknowledgementDeadline = null;
+    if (showAcknowledgementDeadline) {
+      const deadlineDate = formData.acknowledgement_deadline_date;
+      const deadlineTime = formData.acknowledgement_deadline_time;
+
+      if ((deadlineDate && !deadlineTime) || (!deadlineDate && deadlineTime)) {
+        setMessage({
+          type: 'error',
+          text: 'Please set both a date and a time for the acknowledgement deadline, or clear both.'
+        });
+        return;
+      }
+
+      if (deadlineDate && deadlineTime) {
+        const parsedDeadline = new Date(`${deadlineDate}T${deadlineTime}`);
+        if (Number.isNaN(parsedDeadline.getTime())) {
+          setMessage({ type: 'error', text: 'The acknowledgement deadline is not a valid date and time.' });
+          return;
+        }
+        if (parsedDeadline.getTime() <= Date.now()) {
+          setMessage({ type: 'error', text: 'The acknowledgement deadline must be in the future.' });
+          return;
+        }
+        acknowledgementDeadline = parsedDeadline.toISOString();
+      }
+    }
+
     setSubmitting(true);
     setMessage({ type: '', text: '' });
 
@@ -588,6 +628,7 @@ export default function Announcements() {
         content: formData.content,
         audience_type: formData.audience_type,
         target_personnel_ids: formData.target_personnel_ids,
+        acknowledgement_deadline: acknowledgementDeadline,
         attachments: attachmentFiles
       };
 
@@ -824,6 +865,18 @@ export default function Announcements() {
     });
   };
 
+  const toggleTrackingOpen = (announcementId) => {
+    setTrackingOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(announcementId)) {
+        next.delete(announcementId);
+      } else {
+        next.add(announcementId);
+      }
+      return next;
+    });
+  };
+
   const toggleAnnouncementExpanded = (announcementId) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -981,10 +1034,13 @@ export default function Announcements() {
                     value={formData.audience_type}
                     onChange={(event) => {
                       const nextAudience = event.target.value;
+                      const keepsDeadline = nextAudience === 'all_personnel' || nextAudience === 'specific_personnel';
                       setFormData((prev) => ({
                         ...prev,
                         audience_type: nextAudience,
-                        target_personnel_ids: nextAudience === 'specific_personnel' ? prev.target_personnel_ids : []
+                        target_personnel_ids: nextAudience === 'specific_personnel' ? prev.target_personnel_ids : [],
+                        acknowledgement_deadline_date: keepsDeadline ? prev.acknowledgement_deadline_date : '',
+                        acknowledgement_deadline_time: keepsDeadline ? prev.acknowledgement_deadline_time : ''
                       }));
                       if (nextAudience !== 'specific_personnel') {
                         setPersonnelSelectionError('');
@@ -1028,6 +1084,52 @@ export default function Announcements() {
                         No active personnel available. Refresh page or contact admin.
                       </small>
                     )}
+                  </div>
+                )}
+
+                {showAcknowledgementDeadline && (
+                  <div className="form-field announcement-deadline-field">
+                    <label htmlFor="announcementDeadlineDate">Acknowledgement Deadline (optional)</label>
+                    <p className="form-help-text">
+                      If set, personnel who have not acknowledged by this date and time are
+                      automatically reminded once a day until they do. Leave both blank for
+                      a normal announcement.
+                    </p>
+                    <div className="announcement-deadline-inputs">
+                      <input
+                        id="announcementDeadlineDate"
+                        type="date"
+                        value={formData.acknowledgement_deadline_date}
+                        onChange={(event) =>
+                          setFormData((prev) => ({ ...prev, acknowledgement_deadline_date: event.target.value }))
+                        }
+                        aria-label="Acknowledgement deadline date"
+                      />
+                      <input
+                        id="announcementDeadlineTime"
+                        type="time"
+                        value={formData.acknowledgement_deadline_time}
+                        onChange={(event) =>
+                          setFormData((prev) => ({ ...prev, acknowledgement_deadline_time: event.target.value }))
+                        }
+                        aria-label="Acknowledgement deadline time"
+                      />
+                      {(formData.acknowledgement_deadline_date || formData.acknowledgement_deadline_time) && (
+                        <button
+                          type="button"
+                          className="announcement-deadline-clear"
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              acknowledgement_deadline_date: '',
+                              acknowledgement_deadline_time: ''
+                            }))
+                          }
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1261,6 +1363,12 @@ export default function Announcements() {
                         {announcement.acknowledgement_summary.totalRecipients}
                       </button>
                     )}
+                    {isAdmin && announcement.acknowledgement_deadline && (
+                      <span className="announcement-deadline-chip">
+                        <FiClock aria-hidden="true" />
+                        Ack. deadline: {formatDate(announcement.acknowledgement_deadline)}
+                      </span>
+                    )}
                     {!isAdmin && (
                       <span className={`announcement-ack-status ${announcement.acknowledged_by_current_user ? 'acknowledged' : 'pending'}`}>
                         {announcement.acknowledged_by_current_user ? <FiCheckCircle aria-hidden="true" /> : <FiClock aria-hidden="true" />}
@@ -1294,6 +1402,26 @@ export default function Announcements() {
                       </button>
                     </div>
                   </div>
+
+                  {isAdmin &&
+                    announcement.acknowledgement_tracking?.length > 0 &&
+                    (announcement.acknowledgement_deadline ||
+                      announcement.acknowledgement_tracking_summary?.totalNudges > 0) && (
+                    <div className="announcement-tracking-wrap">
+                      <button
+                        type="button"
+                        className="announcement-tracking-toggle"
+                        onClick={() => toggleTrackingOpen(announcement.announcement_id)}
+                        aria-expanded={trackingOpenIds.has(announcement.announcement_id)}
+                      >
+                        <FiBell aria-hidden="true" />
+                        {trackingOpenIds.has(announcement.announcement_id) ? 'Hide' : 'Show'} Acknowledgement / Nudge Tracking
+                      </button>
+                      {trackingOpenIds.has(announcement.announcement_id) && (
+                        <AnnouncementNudgeTracking announcement={announcement} />
+                      )}
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

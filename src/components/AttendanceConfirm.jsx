@@ -5,6 +5,7 @@ import { getFaceByAdminId } from '../utils/attendanceService';
 import * as faceapi from '@vladmandic/face-api';
 import { validateQRSession } from '../utils/attendanceService';
 import LivenessCheck from './LivenessCheck';
+import StationHouseRulesModal from './StationHouseRulesModal';
 import ReloadGuardDialog from './ReloadGuardDialog';
 import { setReloadGuardActive } from '../utils/reloadGuard';
 import './AttendanceConfirm.css';
@@ -44,8 +45,9 @@ const AttendanceConfirm = () => {
   const [faceDebug, setFaceDebug] = useState([]);
   const [verificationPhotoBlob, setVerificationPhotoBlob] = useState(null);
   const [verifiedStationId, setVerifiedStationId] = useState(null);
-  const [showAttendanceConfirmation, setShowAttendanceConfirmation] = useState(false);
+  const [showHouseRules, setShowHouseRules] = useState(false);
   const [timeInSuccess, setTimeInSuccess] = useState(null);
+  const [timeOutSuccess, setTimeOutSuccess] = useState(null);
   const [showLiveness, setShowLiveness] = useState(false);
   const [livenessAttemptKey, setLivenessAttemptKey] = useState(0);
   const [livenessPhase, setLivenessPhase] = useState('idle');
@@ -71,7 +73,7 @@ const AttendanceConfirm = () => {
     ? `${stationGeo.name} (${stationGeo.stationId})`
     : stationGeo.name;
   const hasPendingVerification = Boolean(mode || geoLocation || verificationPhotoBlob) &&
-    confirmStatus?.type !== 'success' && !timeInSuccess;
+    confirmStatus?.type !== 'success' && !timeInSuccess && !timeOutSuccess;
   const navigationBlocker = useBlocker(hasPendingVerification && !isProcessing);
   const timeInDisabled = isAttendanceStatusLoading || !attendanceStatus?.canTimeIn;
   const timeOutDisabled = isAttendanceStatusLoading || !attendanceStatus?.canTimeOut;
@@ -472,11 +474,23 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
       return;
     }
 
-    setShowAttendanceConfirmation(true);
+    // Both Time In and Time Out require reading + acknowledging the Station
+    // House Rules first; nothing is recorded until "Acknowledge & Time In" /
+    // "Acknowledge & Time Out" is clicked inside the modal.
+    setShowHouseRules(true);
   };
 
-  const saveConfirmedAttendance = async () => {
+  const saveConfirmedAttendance = async ({ houseRulesAck } = {}) => {
     const proximity = validateProximity(geoLocation, stationGeo, stationGeo.radius || 100);
+
+    if (!houseRulesAck?.acknowledged) {
+      setConfirmStatus({
+        type: 'error',
+        message: `You must acknowledge the Station House Rules and Personnel Guidelines before recording Time ${mode === 'in' ? 'In' : 'Out'}.`
+      });
+      setShowHouseRules(false);
+      return;
+    }
 
     setIsProcessing(true);
     setConfirmStatus(null);
@@ -495,6 +509,7 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
   mode,
   location: geoLocation,
   qrSessionId,
+  houseRulesAck,
   verification: {
     photoBlob: verificationPhotoBlob,
     faceMatchScore: faceScore ?? authenticatedOfficer.faceMatchScore,
@@ -512,10 +527,10 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
     locationAddress: stationGeo.address || stationLabel
   }
 });
-      setShowAttendanceConfirmation(false);
+      setShowHouseRules(false);
 
       if (mode === 'in' && action !== 'updated') {
-        setTimeInSuccess({ time: record.timeIn });
+        setTimeInSuccess({ time: record.timeIn, houseRulesAcknowledged: true });
       } else {
         setConfirmStatus({
           type: 'success',
@@ -527,6 +542,10 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
             ? `Time Out recorded at ${record.timeOut}.`
             : `Confirmed Time Out at ${record.timeOut}.`
         );
+
+        if (mode === 'out') {
+          setTimeOutSuccess({ time: record.timeOut, houseRulesAcknowledged: true });
+        }
       }
 
       await refreshAttendanceStatus();
@@ -546,6 +565,8 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
         message
       });
       setStatus(message);
+      // Surface the failure on the confirm screen rather than behind a modal.
+      setShowHouseRules(false);
     } finally {
       setIsProcessing(false);
     }
@@ -749,40 +770,20 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
               </>
             )}
 
-            {showAttendanceConfirmation && (
-              <div className="attendance-confirm-overlay" role="presentation">
-                <div
-                  className="attendance-confirm-dialog"
-                  role="dialog"
-                  aria-modal="true"
-                  aria-labelledby="attendanceConfirmTitle"
-                >
-                  <div className="attendance-confirm-dialog-icon" aria-hidden="true">?</div>
-                  <h2 id="attendanceConfirmTitle">Are you sure?</h2>
-                  <p>
-                    Record <strong>{mode === 'in' ? 'Time In' : 'Time Out'}</strong> for{' '}
-                    <strong>{authenticatedOfficer.name}</strong> using the completed Face ID and location verification?
-                  </p>
-                  <div className="attendance-confirm-dialog-actions">
-                    <button
-                      type="button"
-                      className="attendance-confirm-cancel"
-                      onClick={() => setShowAttendanceConfirmation(false)}
-                      disabled={isProcessing}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      className="attendance-confirm-approve"
-                      onClick={saveConfirmedAttendance}
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? 'Saving...' : `Yes, Record ${mode === 'in' ? 'Time In' : 'Time Out'}`}
-                    </button>
-                  </div>
-                </div>
-              </div>
+            {showHouseRules && (
+              <StationHouseRulesModal
+                mode={mode === 'out' ? 'out' : 'in'}
+                isProcessing={isProcessing}
+                onCancel={() => {
+                  if (isProcessing) return;
+                  setShowHouseRules(false);
+                }}
+                onAcknowledge={({ acknowledgedAt }) =>
+                  saveConfirmedAttendance({
+                    houseRulesAck: { acknowledged: true, acknowledgedAt }
+                  })
+                }
+              />
             )}
 
             {timeInSuccess && (
@@ -794,9 +795,37 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
                   aria-labelledby="timeInSuccessTitle"
                 >
                   <div className="attendance-confirm-dialog-icon success" aria-hidden="true">✓</div>
-                  <h2 id="timeInSuccessTitle">Time In Recorded Successfully!</h2>
+                  <h2 id="timeInSuccessTitle">Time In Successful</h2>
                   <p>
-                    Your Time In was recorded at <strong>{timeInSuccess.time}</strong>. You may record your Time Out after your shift.
+                    Your attendance has been recorded{timeInSuccess.time ? <> at <strong>{timeInSuccess.time}</strong></> : null}. You have also
+                    acknowledged the Station House Rules and Personnel Guidelines for this shift.
+                  </p>
+                  <div className="attendance-confirm-dialog-actions">
+                    <button
+                      type="button"
+                      className="attendance-confirm-approve"
+                      onClick={() => navigate('/personnel/operations')}
+                    >
+                      Back to Personnel Account
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {timeOutSuccess && (
+              <div className="attendance-confirm-overlay" role="presentation">
+                <div
+                  className="attendance-confirm-dialog attendance-success-dialog"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="timeOutSuccessTitle"
+                >
+                  <div className="attendance-confirm-dialog-icon success" aria-hidden="true">✓</div>
+                  <h2 id="timeOutSuccessTitle">Time Out Successful</h2>
+                  <p>
+                    Your Time Out has been recorded{timeOutSuccess.time ? <> at <strong>{timeOutSuccess.time}</strong></> : null} and your
+                    acknowledgement of the Station House Rules has been saved.
                   </p>
                   <div className="attendance-confirm-dialog-actions">
                     <button

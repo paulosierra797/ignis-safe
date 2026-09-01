@@ -60,6 +60,14 @@ alter table public.announcements
   add column if not exists archived_at timestamptz null,
   add column if not exists archived_by uuid null references public.admin(admin_id) on delete set null;
 
+-- Optional acknowledgement deadline (all_personnel / specific_personnel only).
+-- When set, unacknowledged recipients are auto-nudged once a day until they
+-- acknowledge. See migration
+-- 20260901130000_add_announcement_acknowledgement_deadline.sql for the
+-- private.generate_announcement_ack_nudges() generator and its pg_cron job.
+alter table public.announcements
+  add column if not exists acknowledgement_deadline timestamptz null;
+
 create index if not exists idx_announcements_is_archived
   on public.announcements (is_archived);
 

@@ -169,6 +169,7 @@ const mapAnnouncement = (row = {}) => ({
   content: row.content || '',
   attachments: normalizeAttachments(row.attachments),
   audience_type: row.audience_type || 'public',
+  acknowledgement_deadline: row.acknowledgement_deadline || null,
   // target_personnel_id is legacy (single-recipient rows written before
   // multi-select support). Current specific_personnel rows carry their
   // recipients in announcement_recipients and are attached below as
@@ -307,6 +308,7 @@ export const getAnnouncementsForUser = async (currentUser) => {
         content,
         attachments,
         audience_type,
+        acknowledgement_deadline,
         target_personnel_id,
         created_by,
         created_at,
@@ -431,16 +433,36 @@ export const getAnnouncementsForUser = async (currentUser) => {
     }
 
     if (role === 'admin') {
-      const [personnelResult, ackResult] = await Promise.all([
+      const [personnelResult, ackResult, nudgeResult] = await Promise.all([
         getAllUsers({ includePersonnelWorkspaceProfiles: true }),
         supabase
           .from(ANNOUNCEMENT_ACK_TABLE)
           .select('announcement_id, personnel_id, acknowledged_at')
+          .in('announcement_id', announcementIds),
+        supabase
+          .from(PERSONNEL_ACTIVITY_LOGS_TABLE)
+          .select('announcement_id, personnel_id, performed_at, action, metadata')
+          .eq('activity_type', ANNOUNCEMENT_NUDGE_ACTIVITY_TYPE)
           .in('announcement_id', announcementIds)
+          .order('performed_at', { ascending: true })
       ]);
 
       if (personnelResult.error) throw personnelResult.error;
       if (ackResult.error) throw ackResult.error;
+      if (nudgeResult.error) throw nudgeResult.error;
+
+      // announcement_id -> personnel_id -> [{ at, auto }] ordered oldest first
+      const nudgeMap = new Map();
+      (nudgeResult.data || []).forEach((nudgeRow) => {
+        const byPersonnel = nudgeMap.get(nudgeRow.announcement_id) || new Map();
+        const history = byPersonnel.get(nudgeRow.personnel_id) || [];
+        history.push({
+          at: nudgeRow.performed_at,
+          auto: Boolean(nudgeRow.metadata?.auto)
+        });
+        byPersonnel.set(nudgeRow.personnel_id, history);
+        nudgeMap.set(nudgeRow.announcement_id, byPersonnel);
+      });
 
       const allPersonnel = (personnelResult.data || [])
         .filter((row) => String(row.role || '').toLowerCase() === 'personnel');
@@ -459,6 +481,7 @@ export const getAnnouncementsForUser = async (currentUser) => {
       return {
         data: announcements.map((row) => {
           const acknowledgements = ackMap.get(row.announcement_id) || new Map();
+          const nudgesByPersonnel = nudgeMap.get(row.announcement_id) || new Map();
           const recipientIds = row.audience_type === 'all_personnel'
             ? Array.from(activePersonnelIds)
             : row.audience_type === 'specific_personnel'
@@ -467,6 +490,7 @@ export const getAnnouncementsForUser = async (currentUser) => {
           const recipientDetails = recipientIds.map((personnelId, index) => {
             const personnel = personnelById.get(personnelId);
             const fallbackName = row.target_personnel_names[index] || 'Personnel';
+            const nudgeHistory = nudgesByPersonnel.get(personnelId) || [];
 
             return {
               personnel_id: personnelId,
@@ -476,11 +500,15 @@ export const getAnnouncementsForUser = async (currentUser) => {
               rank: personnel?.rank || '',
               email: personnel?.email || '',
               status: personnel?.status || '',
-              acknowledged_at: acknowledgements.get(personnelId) || null
+              acknowledged_at: acknowledgements.get(personnelId) || null,
+              acknowledgement_deadline: row.acknowledgement_deadline || null,
+              nudge_count: nudgeHistory.length,
+              nudge_history: nudgeHistory
             };
           });
           const acknowledgedPersonnel = recipientDetails.filter((person) => person.acknowledged_at);
           const pendingPersonnelDetails = recipientDetails.filter((person) => !person.acknowledged_at);
+          const totalNudges = recipientDetails.reduce((sum, person) => sum + person.nudge_count, 0);
 
           return {
             ...row,
@@ -491,6 +519,16 @@ export const getAnnouncementsForUser = async (currentUser) => {
             acknowledgement_personnel: {
               acknowledged: acknowledgedPersonnel,
               pending: pendingPersonnelDetails
+            },
+            // Full per-recipient tracking (acknowledged first is not implied —
+            // ordered the same as recipientIds) for the admin Nudge Tracking
+            // panel: Name | Acknowledged/Pending | Deadline | Nudge Count | History.
+            acknowledgement_tracking: recipientDetails,
+            acknowledgement_tracking_summary: {
+              totalRecipients: recipientDetails.length,
+              acknowledgedCount: acknowledgedPersonnel.length,
+              pendingCount: pendingPersonnelDetails.length,
+              totalNudges
             },
             pending_personnel: pendingPersonnelDetails.map((person) => person.name)
           };
@@ -560,7 +598,8 @@ export const nudgeAnnouncementPersonnel = async (
         metadata: {
           announcement_id: announcementId,
           announcement_title: safeTitle,
-          nudged_by: currentUser.admin_id
+          nudged_by: currentUser.admin_id,
+          auto: false
         }
       })))
       .select('personnel_id, performed_at');
@@ -749,6 +788,20 @@ export const createAnnouncement = async (currentUser, payload) => {
       throw new Error('Please select at least one personnel recipient.');
     }
 
+    // Acknowledgement deadline is optional and only meaningful for the two
+    // personnel-targeted audiences. It is silently ignored for Public.
+    let acknowledgementDeadline = null;
+    if (audienceType !== 'public' && payload?.acknowledgement_deadline) {
+      const deadlineDate = new Date(payload.acknowledgement_deadline);
+      if (Number.isNaN(deadlineDate.getTime())) {
+        throw new Error('The acknowledgement deadline is not a valid date and time.');
+      }
+      if (deadlineDate.getTime() <= Date.now()) {
+        throw new Error('The acknowledgement deadline must be in the future.');
+      }
+      acknowledgementDeadline = deadlineDate.toISOString();
+    }
+
     const uploadedAttachments = await uploadAnnouncementAttachments(currentUser, payload?.attachments || []);
     if (uploadedAttachments.error) {
       throw new Error(uploadedAttachments.error);
@@ -761,6 +814,7 @@ export const createAnnouncement = async (currentUser, payload) => {
         content: payload.content.trim(),
         attachments: uploadedAttachments.data,
         audience_type: audienceType,
+        acknowledgement_deadline: acknowledgementDeadline,
         target_personnel_id: null,
         created_by: currentUser.admin_id
       })
@@ -791,7 +845,8 @@ export const createAnnouncement = async (currentUser, payload) => {
         announcementId: data?.announcement_id || null,
         audienceType,
         targetPersonnelIds,
-        attachmentCount: uploadedAttachments.data.length
+        attachmentCount: uploadedAttachments.data.length,
+        acknowledgementDeadline
       }
     });
 
@@ -896,6 +951,7 @@ export const getArchivedAnnouncements = async (currentUser) => {
         content,
         attachments,
         audience_type,
+        acknowledgement_deadline,
         target_personnel_id,
         created_by,
         created_at,

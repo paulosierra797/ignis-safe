@@ -1622,3 +1622,78 @@
     height: min(320px, 38vh) !important;
   }
 }
+
+/* =========================================================
+   ACKNOWLEDGEMENT DEADLINE + NUDGE TRACKING
+   ========================================================= */
+
+.composer-card .announcement-recipient-grid > .announcement-deadline-field {
+  grid-column: 1 / -1 !important;
+}
+
+.announcement-deadline-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+}
+
+.announcement-deadline-inputs input[type='date'],
+.announcement-deadline-inputs input[type='time'] {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font: inherit;
+  color: #0f172a;
+  background: #fff;
+}
+
+.announcement-deadline-clear {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.announcement-deadline-clear:hover {
+  background: #fef2f2;
+}
+
+.announcement-deadline-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.announcement-tracking-wrap {
+  margin-top: 0.6rem;
+}
+
+.announcement-tracking-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #b91c1c;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.announcement-tracking-toggle:hover {
+  background: #fef2f2;
+}

@@ -1,0 +1,194 @@
+.nudge-tracking {
+  margin-top: 0.85rem;
+  padding: 0.95rem 1rem 1.1rem;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #b91c1c;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.nudge-tracking-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.nudge-tracking-header h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.nudge-tracking-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  color: #475569;
+}
+
+.nudge-tracking-stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.nudge-tracking-stats .is-acknowledged {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.nudge-tracking-stats .is-pending {
+  color: #b45309;
+  font-weight: 700;
+}
+
+.nudge-tracking-search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #fff;
+  color: #94a3b8;
+}
+
+.nudge-tracking-search input {
+  flex: 1;
+  border: 0;
+  outline: none;
+  font-size: 0.85rem;
+  color: #0f172a;
+  background: transparent;
+}
+
+.nudge-tracking-table-wrap {
+  margin-top: 0.75rem;
+  overflow-x: auto;
+}
+
+.nudge-tracking-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.nudge-tracking-table th,
+.nudge-tracking-table td {
+  padding: 0.55rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.nudge-tracking-table th {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.nudge-tracking-table td strong {
+  color: #0f172a;
+}
+
+.nudge-tracking-subtext {
+  display: block;
+  margin-top: 0.15rem;
+  color: #94a3b8;
+  font-size: 0.72rem;
+}
+
+.nudge-tracking-badge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.nudge-tracking-badge.is-acknowledged {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.nudge-tracking-badge.is-pending {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.nudge-tracking-empty {
+  color: #94a3b8;
+  text-align: center;
+}
+
+.nudge-tracking-history-toggle {
+  padding: 0.2rem 0.55rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #b91c1c;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nudge-tracking-history-toggle:hover {
+  background: #fef2f2;
+}
+
+.nudge-tracking-history {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  color: #475569;
+  font-size: 0.76rem;
+}
+
+.nudge-tracking-history li {
+  margin: 0.15rem 0;
+}
+
+@media (max-width: 640px) {
+  .nudge-tracking-table thead {
+    display: none;
+  }
+
+  .nudge-tracking-table,
+  .nudge-tracking-table tbody,
+  .nudge-tracking-table tr,
+  .nudge-tracking-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .nudge-tracking-table tr {
+    margin-bottom: 0.65rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+  }
+
+  .nudge-tracking-table td {
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .nudge-tracking-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.15rem;
+    color: #64748b;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+}

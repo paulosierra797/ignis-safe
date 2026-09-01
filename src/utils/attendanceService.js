@@ -318,7 +318,9 @@ const KNOWN_ATTENDANCE_RPC_MESSAGES = [
   'Invalid QR session',
   'QR already used',
   'QR expired',
-  'Time Out cannot be recorded without an existing Time In.'
+  'Time Out cannot be recorded without an existing Time In.',
+  'You must acknowledge the Station House Rules and Personnel Guidelines before recording Time In.',
+  'You must acknowledge the Station House Rules and Personnel Guidelines before recording Time Out.'
 ];
 
 const toFiniteNumber = (value) => {
@@ -532,7 +534,7 @@ export const getMyAttendanceHistory = async (limit = 20) => {
   return attachSignedPhotoUrls(records);
 };
 
-export const recordAttendance = async ({ officer, mode, location, qrSessionId, verification }) => {
+export const recordAttendance = async ({ officer, mode, location, qrSessionId, verification, houseRulesAck }) => {
   const now = new Date();
   const dateIso = getManilaToday();
   let uploadedPhotoPath = null;
@@ -571,7 +573,14 @@ export const recordAttendance = async ({ officer, mode, location, qrSessionId, v
       ...verificationFields,
       recorded_at: now.toISOString()
     },
-    p_photo_path: uploadedPhotoPath
+    p_photo_path: uploadedPhotoPath,
+    // Both Time In and Time Out require a Station House Rules acknowledgement.
+    // It is persisted in the same transaction as the attendance write, so an
+    // unacknowledged action is rolled back (see the 20260901120000 migration).
+    p_house_rules_ack: {
+      acknowledged: Boolean(houseRulesAck?.acknowledged),
+      acknowledged_at: houseRulesAck?.acknowledgedAt || now.toISOString()
+    }
   });
 
   if (error) {

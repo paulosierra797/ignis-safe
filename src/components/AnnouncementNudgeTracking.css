@@ -308,7 +308,10 @@
 }
 
 .nudge-tracking-actions-cell {
-  display: table-cell;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
 }
 
 .nudge-tracking-nudge-button,
@@ -348,10 +351,6 @@
 
 .nudge-tracking-history-toggle:hover {
   background: #fef2f2;
-}
-
-.nudge-tracking-actions-cell > * + * {
-  margin-left: 0.35rem;
 }
 
 .nudge-tracking-no-action {
@@ -445,12 +444,9 @@
 
   .nudge-tracking-actions-cell {
     display: flex !important;
-    flex-wrap: wrap;
-    gap: 0.45rem;
-  }
-
-  .nudge-tracking-actions-cell > * + * {
-    margin-left: 0;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
   }
 }
 

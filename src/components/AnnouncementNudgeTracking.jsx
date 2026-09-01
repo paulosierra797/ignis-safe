@@ -126,31 +126,30 @@ export default function AnnouncementNudgeTracking({
             <div className="nudge-tracking-summary" aria-label="Announcement acknowledgement summary">
               <button
                 type="button"
-                className="nudge-tracking-ack-summary"
+                className="nudge-tracking-stat nudge-tracking-ack-summary"
                 onClick={onOpenAcknowledgements}
                 aria-label={`View acknowledgement details: ${summary.acknowledgedCount} of ${summary.totalRecipients} acknowledged`}
               >
                 <FiCheckCircle aria-hidden="true" />
-                <span>
-                  <strong>Acknowledged</strong>
-                  <b>{summary.acknowledgedCount}/{summary.totalRecipients}</b>
-                </span>
+                <span className="nudge-tracking-stat-label">Acknowledged</span>
+                <b className="nudge-tracking-stat-value">{summary.acknowledgedCount}/{summary.totalRecipients}</b>
                 <FiChevronRight aria-hidden="true" />
               </button>
-              <span className="nudge-tracking-pending-summary">
+              <span className="nudge-tracking-stat nudge-tracking-pending-summary">
                 <FiClock aria-hidden="true" />
-                <strong>{summary.pendingCount} Pending</strong>
+                <span className="nudge-tracking-stat-label">Pending</span>
+                <b className="nudge-tracking-stat-value">{summary.pendingCount}</b>
               </span>
-              <span className={`nudge-tracking-deadline${isAnnouncementOverdue ? ' is-overdue' : ''}`}>
+              <span className={`nudge-tracking-stat nudge-tracking-deadline${isAnnouncementOverdue ? ' is-overdue' : ''}`}>
                 <FiClock aria-hidden="true" />
-                <span>
-                  <small>Deadline</small>
-                  <strong>{deadlineLabel}</strong>
-                </span>
+                <span className="nudge-tracking-stat-label">Deadline</span>
+                <b className="nudge-tracking-stat-value">{deadlineLabel}</b>
                 {isAnnouncementOverdue && <em>Overdue</em>}
               </span>
-              <span className="nudge-tracking-total-nudges">
-                {summary.totalNudges} nudge(s) sent
+              <span className="nudge-tracking-stat nudge-tracking-total-nudges">
+                <FiSend aria-hidden="true" />
+                <span className="nudge-tracking-stat-label">Nudges Sent</span>
+                <b className="nudge-tracking-stat-value">{summary.totalNudges}</b>
               </span>
             </div>
           </div>

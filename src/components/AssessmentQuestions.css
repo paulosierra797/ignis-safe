@@ -9,12 +9,8 @@
   flex: 1;
   min-width: 0;
   margin-left: var(--sidebar-width);
-  padding: 0 2rem 2rem;
+  padding: 2rem;
   overflow-x: hidden;
-}
-
-.assessment-questions-main .page-header {
-  margin: 0 -2rem 1.5rem;
 }
 
 .assessment-module-context {
@@ -905,11 +901,7 @@
 @media (max-width: 900px) {
   .assessment-questions-main {
     margin-left: 0;
-    padding: 0 1rem 1rem;
-  }
-
-  .assessment-questions-main .page-header {
-    margin: 0 -1rem 1.25rem;
+    padding: 1rem;
   }
 
   .assessment-language-grid {

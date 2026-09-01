@@ -26,7 +26,7 @@ const options = {
         boxWidth: 8,
         boxHeight: 8,
         color: '#667085',
-        font: { size: 11 }
+        font: { family: 'Poppins', size: 11 }
       }
     },
     title: {

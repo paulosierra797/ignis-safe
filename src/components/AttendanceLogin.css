@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Fira+Sans:wght@400;500;600&display=swap');
-
 :root {
   --ink: #0c0f12;
   --heat: #d6453d;
@@ -19,7 +17,7 @@
   background: radial-gradient(circle at 10% 10%, rgba(214, 69, 61, 0.18), transparent 40%),
     radial-gradient(circle at 90% 0%, rgba(245, 181, 68, 0.25), transparent 35%),
     linear-gradient(160deg, #f9f6f1, #eef0f2);
-  font-family: 'Fira Sans', 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
   color: var(--ink);
 }
 
@@ -66,7 +64,7 @@
 }
 
 .login-badge {
-  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 12px;
   letter-spacing: 2px;
   font-weight: 700;
@@ -76,7 +74,7 @@
 .login-header h1 {
   margin: 0;
   font-size: 26px;
-  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-weight: 700;
 }
 

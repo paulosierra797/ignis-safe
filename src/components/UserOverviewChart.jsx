@@ -80,6 +80,7 @@ export default function UserOverviewChart({ chartData, isLoading = false }) {
         ticks: {
           color: '#718096',
           font: {
+            family: 'Poppins',
             size: 11
           }
         }
@@ -95,6 +96,7 @@ export default function UserOverviewChart({ chartData, isLoading = false }) {
           precision: 0,
           color: '#667085',
           font: {
+            family: 'Poppins',
             size: 10
           }
         }

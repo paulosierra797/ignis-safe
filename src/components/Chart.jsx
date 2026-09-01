@@ -24,7 +24,7 @@ const buildAvatarPlaceholder = (name = '') => {
       <rect width="112" height="112" rx="56" fill="#e2e8f0" />
       <circle cx="56" cy="42" r="20" fill="#94a3b8" />
       <path d="M20 96c6-18 20-28 36-28s30 10 36 28" fill="#94a3b8" />
-      <text x="56" y="102" text-anchor="middle" font-size="18" font-family="Arial, sans-serif" font-weight="700" fill="#334155">${initial}</text>
+      <text x="56" y="102" text-anchor="middle" font-size="18" font-family="Poppins, sans-serif" font-weight="700" fill="#334155">${initial}</text>
     </svg>
   `;
 

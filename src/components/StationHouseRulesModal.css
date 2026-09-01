@@ -20,7 +20,7 @@
   border-radius: 20px;
   box-shadow: 0 24px 55px rgba(12, 15, 18, 0.28);
   overflow: hidden;
-  font-family: 'Fira Sans', 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
   color: var(--ink, #0c0f12);
 }
 
@@ -32,7 +32,7 @@
 }
 
 .house-rules-eyebrow {
-  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
@@ -42,7 +42,7 @@
 
 .house-rules-header h2 {
   margin: 6px 0 0;
-  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 20px;
   line-height: 1.25;
 }
@@ -69,7 +69,7 @@
 
 .house-rules-content h3 {
   margin: 18px 0 8px;
-  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
+  font-family: 'Poppins', sans-serif;
   font-size: 15px;
   color: var(--steel, #2f3339);
 }

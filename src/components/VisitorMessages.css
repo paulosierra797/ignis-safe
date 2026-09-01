@@ -23,7 +23,7 @@
   margin-left: var(--sidebar-width);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: clip;
   padding: 2rem;
   color: #172033;
 }

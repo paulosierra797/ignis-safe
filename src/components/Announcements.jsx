@@ -54,6 +54,8 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
 ]);
 
 const ANNOUNCEMENT_DRAFT_STORAGE_KEY = 'ignis-safe:announcement-draft';
+const ASIA_MANILA_TIME_ZONE = 'Asia/Manila';
+const ASIA_MANILA_OFFSET = '+08:00';
 
 const truncateAnnouncementWords = (value) => {
   const text = String(value || '');
@@ -107,7 +109,8 @@ const formatDate = (isoDate) => {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: ASIA_MANILA_TIME_ZONE
   });
 };
 
@@ -606,7 +609,9 @@ export default function Announcements() {
       }
 
       if (deadlineDate && deadlineTime) {
-        const parsedDeadline = new Date(`${deadlineDate}T${deadlineTime}`);
+        const parsedDeadline = new Date(
+          `${deadlineDate}T${deadlineTime}${deadlineTime.length === 5 ? ':00' : ''}${ASIA_MANILA_OFFSET}`
+        );
         if (Number.isNaN(parsedDeadline.getTime())) {
           setMessage({ type: 'error', text: 'The acknowledgement deadline is not a valid date and time.' });
           return;
@@ -1092,8 +1097,9 @@ export default function Announcements() {
                     <label htmlFor="announcementDeadlineDate">Acknowledgement Deadline (optional)</label>
                     <p className="form-help-text">
                       If set, personnel who have not acknowledged by this date and time are
-                      automatically reminded once a day until they do. Leave both blank for
-                      a normal announcement.
+                      automatically reminded every 30 minutes until they do. All deadline and
+                      reminder times use Asia/Manila (PHT). Leave both blank for a normal
+                      announcement.
                     </p>
                     <div className="announcement-deadline-inputs">
                       <input

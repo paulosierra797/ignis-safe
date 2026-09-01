@@ -61,10 +61,11 @@ alter table public.announcements
   add column if not exists archived_by uuid null references public.admin(admin_id) on delete set null;
 
 -- Optional acknowledgement deadline (all_personnel / specific_personnel only).
--- When set, unacknowledged recipients are auto-nudged once a day until they
--- acknowledge. See migration
--- 20260901130000_add_announcement_acknowledgement_deadline.sql for the
--- private.generate_announcement_ack_nudges() generator and its pg_cron job.
+-- When set, unacknowledged recipients are auto-nudged every 30 minutes after
+-- the deadline until they acknowledge. See migrations
+-- 20260901130000_add_announcement_acknowledgement_deadline.sql and
+-- 20260901160000_speed_up_announcement_ack_nudges.sql for the generator and
+-- its pg_cron job.
 alter table public.announcements
   add column if not exists acknowledgement_deadline timestamptz null;
 

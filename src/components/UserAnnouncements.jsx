@@ -9,6 +9,8 @@ import {
 } from '../utils/announcementsService';
 import './UserAnnouncements.css';
 
+const ASIA_MANILA_TIME_ZONE = 'Asia/Manila';
+
 const formatDate = (isoDate) => {
   if (!isoDate) return '-';
   const date = new Date(isoDate);
@@ -18,7 +20,8 @@ const formatDate = (isoDate) => {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: ASIA_MANILA_TIME_ZONE
   });
 };
 

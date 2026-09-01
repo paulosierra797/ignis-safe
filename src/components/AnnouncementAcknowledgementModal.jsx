@@ -4,6 +4,7 @@ import CloseButton from './CloseButton';
 import './AnnouncementAcknowledgementModal.css';
 
 const EMPTY_PERSONNEL = [];
+const ASIA_MANILA_TIME_ZONE = 'Asia/Manila';
 
 const formatDate = (isoDate) => {
   if (!isoDate) return '';
@@ -14,7 +15,8 @@ const formatDate = (isoDate) => {
     day: 'numeric',
     year: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: ASIA_MANILA_TIME_ZONE
   });
 };
 

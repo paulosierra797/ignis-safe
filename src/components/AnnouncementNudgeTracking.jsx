@@ -2,6 +2,8 @@ import React, { useMemo, useState } from 'react';
 import { FiBell, FiCheckCircle, FiClock, FiSearch } from 'react-icons/fi';
 import './AnnouncementNudgeTracking.css';
 
+const ASIA_MANILA_TIME_ZONE = 'Asia/Manila';
+
 const formatDeadline = (isoDate) => {
   if (!isoDate) return 'No deadline';
   const date = new Date(isoDate);
@@ -11,7 +13,8 @@ const formatDeadline = (isoDate) => {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: ASIA_MANILA_TIME_ZONE
   });
 };
 
@@ -24,7 +27,8 @@ const formatNudgeStamp = (isoDate) => {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
-    minute: '2-digit'
+    minute: '2-digit',
+    timeZone: ASIA_MANILA_TIME_ZONE
   });
 };
 

@@ -741,7 +741,14 @@ export const getPendingAcknowledgementCount = async (currentUser) => {
               announcementId: pendingNudges[0].announcement_id,
               title: pendingNudges[0].title,
               message: pendingNudges[0].acknowledgement_nudge_message,
-              sentAt: pendingNudges[0].latest_acknowledgement_nudge_at
+              sentAt: pendingNudges[0].latest_acknowledgement_nudge_at,
+              deadline: pendingNudges[0].acknowledgement_deadline || null,
+              // Urgent once the acknowledgement deadline has passed — mirrors the
+              // "Overdue" signal used by the admin Nudge Tracking panel.
+              isUrgent: Boolean(
+                pendingNudges[0].acknowledgement_deadline &&
+                  new Date(pendingNudges[0].acknowledgement_deadline).getTime() <= Date.now()
+              )
             }
           : null
       },

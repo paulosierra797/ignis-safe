@@ -796,11 +796,43 @@
   gap: 0.8rem;
   padding: 1rem;
   border: 1px solid #fbbf24;
-  border-left: 5px solid #d97706;
   border-radius: 8px;
   background: #fff;
   color: #422006;
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.24);
+}
+
+/* Urgent = the announcement's acknowledgement deadline has passed. */
+.personnel-nudge-notification.is-urgent {
+  border-color: #f87171;
+  background: #fef2f2;
+}
+
+.personnel-nudge-notification.is-urgent .personnel-nudge-notification-icon {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.personnel-nudge-notification.is-urgent .personnel-nudge-notification-content > span {
+  color: #b91c1c;
+}
+
+.personnel-nudge-notification.is-urgent .personnel-nudge-notification-content button {
+  border-color: #b91c1c;
+  background: #dc2626;
+  color: #fff;
+}
+
+.personnel-nudge-notification.is-urgent .personnel-nudge-notification-close {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.personnel-nudge-notification.is-urgent .personnel-nudge-notification-close:hover {
+  color: #7f1d1d;
+  background: #fee2e2;
+  border-color: #fca5a5;
 }
 
 .personnel-nudge-notification-icon {

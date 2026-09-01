@@ -630,9 +630,15 @@
   gap: 0.55rem;
   margin-top: 0.65rem;
   padding: 0.5rem 0.65rem;
-  border: 1px solid #fecaca;
-  border-left: 3px solid #b91c1c;
+  border: 1px solid #fcd34d;
   border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+/* Urgent = the announcement's acknowledgement deadline has passed. */
+.announcement-nudge-notice.is-urgent {
+  border-color: #fca5a5;
   background: #fef2f2;
   color: #991b1b;
 }
@@ -661,8 +667,12 @@
 }
 
 .announcement-nudge-notice small {
-  color: #b91c1c;
+  color: #b45309;
   font-size: 0.66rem;
+}
+
+.announcement-nudge-notice.is-urgent small {
+  color: #b91c1c;
 }
 
 .announcement-card-footer {

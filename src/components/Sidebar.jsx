@@ -322,7 +322,11 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
       {variant === 'personnel' &&
         latestAnnouncementNudge &&
         dismissedNudgeKey !== `${latestAnnouncementNudge.announcementId}:${latestAnnouncementNudge.sentAt}` && (
-        <aside className="personnel-nudge-notification" role="status" aria-live="polite">
+        <aside
+          className={`personnel-nudge-notification${latestAnnouncementNudge.isUrgent ? ' is-urgent' : ''}`}
+          role="status"
+          aria-live="polite"
+        >
           <div className="personnel-nudge-notification-icon" aria-hidden="true">
             <FaBell />
           </div>

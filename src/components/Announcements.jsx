@@ -114,6 +114,14 @@ const formatDate = (isoDate) => {
   });
 };
 
+// A reminder is "urgent" once the announcement's acknowledgement deadline has
+// passed — the same overdue signal the admin Nudge Tracking panel uses.
+const isAcknowledgementOverdue = (isoDeadline) => {
+  if (!isoDeadline) return false;
+  const deadline = new Date(isoDeadline).getTime();
+  return Number.isFinite(deadline) && deadline <= Date.now();
+};
+
 export default function Announcements() {
   const { currentUser } = useUser();
   const location = useLocation();
@@ -1326,7 +1334,12 @@ export default function Announcements() {
                   {!isAdmin &&
                     !announcement.acknowledged_by_current_user &&
                     announcement.latest_acknowledgement_nudge_at && (
-                    <div className="announcement-nudge-notice" role="status">
+                    <div
+                      className={`announcement-nudge-notice${
+                        isAcknowledgementOverdue(announcement.acknowledgement_deadline) ? ' is-urgent' : ''
+                      }`}
+                      role="status"
+                    >
                       <FiBell aria-hidden="true" />
                       <div>
                         <strong>Reminder from Admin</strong>

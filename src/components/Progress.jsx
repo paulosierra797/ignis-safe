@@ -140,8 +140,9 @@ export default function Progress() {
           nextModuleOptions.includes(current) ? current : 'All'
         ));
 
-        // Barangay options come straight from the saved profile records, so a
-        // barangay that no longer has users drops out of the filter by itself.
+        // Barangay options are the active dasmarinas_barangays rows in
+        // display_order, with "All" kept as the default. Selecting one matches
+        // against the barangay resolved from each user's own profile record.
         const nextBarangayOptions = ['All', ...(data?.barangays || [])];
         setBarangayOptions(nextBarangayOptions);
         setBarangayFilter((current) => (

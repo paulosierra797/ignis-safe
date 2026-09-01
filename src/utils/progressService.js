@@ -47,12 +47,25 @@ const getMostRecentDate = (dates = []) => {
     .sort((a, b) => b.getTime() - a.getTime())[0] || null;
 };
 
-// Mobile-app users save their barangay on their own profile record. The web
-// admin only reads that value - it never keeps a second copy of the location.
+// Mobile-app users save their barangay as free text on their own profiles row
+// (profiles.barangay). There is no barangay_id anywhere - dasmarinas_barangays
+// is keyed by `name` - so the web admin resolves the stored text against that
+// master list instead of keeping a second copy of the location.
 export const UNSPECIFIED_BARANGAY_LABEL = 'Not Specified';
 
-// "Brgy. salawag", "Barangay Salawag" and "SALAWAG" are the same barangay, so
-// fold the stored text into one label instead of listing it three times.
+// Matching key for a barangay string: case, accents, punctuation and the
+// "Brgy./Bgy./Barangay" prefix are all ignored, so "Brgy. salawag",
+// "Barangay Salawag" and "SALAWAG" resolve to the master row "Salawag".
+export const barangayMatchKey = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/^(barangay|brgy\.?|bgy\.?)\s+/, '')
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim();
+
+// Display fallback for a stored value with no match in the master list, so real
+// user data is still shown instead of being flattened to "Not Specified".
 export const normalizeBarangay = (value) => {
   const trimmed = String(value || '').replace(/\s+/g, ' ').trim();
   if (!trimmed) return UNSPECIFIED_BARANGAY_LABEL;
@@ -63,6 +76,52 @@ export const normalizeBarangay = (value) => {
   return base.replace(/\S+/g, (word) => (
     word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
   ));
+};
+
+// Looser key that also ignores spacing, so a user who typed "h2" still lands on
+// the official "H-2". Only consulted after the exact keys miss.
+const barangayCompactKey = (value) => barangayMatchKey(value).replace(/ /g, '');
+
+// Names on the master list that carry an alias in parentheses - "San Dionisio
+// (Barangay 1)", "San Juan (San Juan I)" - are indexed under the full name, the
+// part before the parenthesis and the alias on its own.
+const getBarangayAliases = (name) => {
+  const aliasMatch = name.match(/^([^(]+?)\s*\(([^)]+)\)\s*$/);
+  return aliasMatch ? [name, aliasMatch[1], aliasMatch[2]] : [name];
+};
+
+// Lookup built from dasmarinas_barangays. Every exact key is claimed before any
+// loose key, and a key already taken is never overwritten, so a later row's
+// alias or spacing variant can never shadow an earlier row's real name.
+export const buildBarangayLookup = (barangayRows = []) => {
+  const lookup = new Map();
+
+  const names = barangayRows
+    .map((row) => String(row?.name || '').trim())
+    .filter(Boolean);
+
+  [barangayMatchKey, barangayCompactKey].forEach((buildKey) => {
+    names.forEach((name) => {
+      getBarangayAliases(name).forEach((alias) => {
+        const key = buildKey(alias);
+        if (key && !lookup.has(key)) lookup.set(key, name);
+      });
+    });
+  });
+
+  return lookup;
+};
+
+// The single place a stored profile value becomes a label: the official name
+// when it matches the master list, the cleaned-up stored text when it does not,
+// and "Not Specified" only when the user truly has nothing saved.
+export const resolveBarangayLabel = (value, lookup) => {
+  const key = barangayMatchKey(value);
+  if (!key) return UNSPECIFIED_BARANGAY_LABEL;
+
+  return lookup?.get(key)
+    || lookup?.get(barangayCompactKey(value))
+    || normalizeBarangay(value);
 };
 
 export const getCompletionStatus = (overallPercent) => {
@@ -202,6 +261,7 @@ export const getProgressPageData = async () => {
       { data: attempts, error: attemptsError },
       { data: assessments, error: assessmentsError },
       { data: adminRows, error: adminError },
+      { data: barangayRows, error: barangayError },
     ] = await Promise.all([
       supabase
         .from('profiles')
@@ -223,6 +283,13 @@ export const getProgressPageData = async () => {
       supabase
         .from('admin')
         .select('admin_id'),
+      // Official barangay list for Dasmarinas. This is the master list only -
+      // which barangay a user belongs to still comes from profiles.barangay.
+      supabase
+        .from('dasmarinas_barangays')
+        .select('name, display_order')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true, nullsFirst: false }),
     ]);
 
     if (profilesError) throw profilesError;
@@ -231,6 +298,7 @@ export const getProgressPageData = async () => {
     if (attemptsError) throw attemptsError;
     if (assessmentsError) throw assessmentsError;
     if (adminError) throw adminError;
+    if (barangayError) throw barangayError;
 
     const safeProfiles = profiles || [];
     const safeModules = modules || [];
@@ -238,6 +306,8 @@ export const getProgressPageData = async () => {
     const safeAttempts = attempts || [];
     const safeAssessments = assessments || [];
     const safeAdminRows = adminRows || [];
+    const safeBarangayRows = barangayRows || [];
+    const barangayLookup = buildBarangayLookup(safeBarangayRows);
     // Internal admin and personnel accounts can also have a profiles row, but
     // the Users page is the public mobile-app user directory. Keep back-office
     // accounts in their dedicated account-management views.
@@ -294,7 +364,7 @@ export const getProgressPageData = async () => {
       ]);
       const normalizedLastActivityAt = lastActivityAt ? lastActivityAt.toISOString() : null;
 
-      const barangayLabel = normalizeBarangay(profile.barangay);
+      const barangayLabel = resolveBarangayLabel(profile.barangay, barangayLookup);
 
       return {
         id: profile.id,
@@ -329,14 +399,26 @@ export const getProgressPageData = async () => {
       };
     });
 
-    // Only barangays that actually appear on a user record become options, so
-    // the filter can never drift out of sync with the mobile app data.
-    const barangays = Array.from(new Set(rows.map((row) => row.barangay)))
-      .sort((a, b) => {
-        if (a === UNSPECIFIED_BARANGAY_LABEL) return 1;
-        if (b === UNSPECIFIED_BARANGAY_LABEL) return -1;
-        return a.localeCompare(b);
-      });
+    // Filter options are the official barangays in display_order. Labels the
+    // users actually carry are appended when they are not on the master list
+    // (renamed or misspelled entries stay selectable instead of disappearing),
+    // and "Not Specified" is offered only while someone really has no barangay.
+    const officialBarangays = safeBarangayRows
+      .map((row) => String(row?.name || '').trim())
+      .filter(Boolean);
+
+    const officialSet = new Set(officialBarangays);
+    const extraBarangays = Array.from(new Set(rows.map((row) => row.barangay)))
+      .filter((label) => label !== UNSPECIFIED_BARANGAY_LABEL && !officialSet.has(label))
+      .sort((a, b) => a.localeCompare(b));
+
+    const hasUnspecified = rows.some((row) => row.barangay === UNSPECIFIED_BARANGAY_LABEL);
+
+    const barangays = [
+      ...officialBarangays,
+      ...extraBarangays,
+      ...(hasUnspecified ? [UNSPECIFIED_BARANGAY_LABEL] : []),
+    ];
 
     return {
       data: {

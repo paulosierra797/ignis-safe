@@ -2664,14 +2664,6 @@
   overflow-wrap: anywhere;
 }
 
-.shift-selection-summary-a {
-  border-left: 4px solid #ea580c !important;
-}
-
-.shift-selection-summary-b {
-  border-left: 4px solid #2563eb !important;
-}
-
 .shift-selection-legend {
   margin-top: 0.75rem;
   padding-top: 0.75rem;

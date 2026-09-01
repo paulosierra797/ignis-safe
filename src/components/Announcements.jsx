@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
-import { FiArchive, FiBell, FiUsers, FiFileText, FiCheckCircle, FiClock, FiSearch } from 'react-icons/fi';
+import { FiArchive, FiBell, FiFileText, FiCheckCircle, FiClock, FiSearch } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
@@ -148,7 +148,6 @@ export default function Announcements() {
   const [archivedExpandedMsgIds, setArchivedExpandedMsgIds] = useState(() => new Set());
   const [acknowledgementModalId, setAcknowledgementModalId] = useState('');
   const [nudgingIds, setNudgingIds] = useState(() => new Set());
-  const [trackingOpenIds, setTrackingOpenIds] = useState(() => new Set());
   const [nudgeCooldownUntilById, setNudgeCooldownUntilById] = useState(() => new Map());
   const lastViewedAnnouncementsAtRef = useRef(null);
   const [unreadTrackingReady, setUnreadTrackingReady] = useState(false);
@@ -822,9 +821,9 @@ export default function Announcements() {
     await loadAnnouncements();
   };
 
-  const handleNudgePersonnel = async (personnelIds) => {
+  const handleNudgePersonnel = async (personnelIds, targetAnnouncementId = acknowledgementModalId) => {
     const announcement = announcements.find(
-      (row) => row.announcement_id === acknowledgementModalId
+      (row) => row.announcement_id === targetAnnouncementId
     );
     const currentTime = Date.now();
     const requestedIds = Array.from(new Set(personnelIds || []))
@@ -867,18 +866,6 @@ export default function Announcements() {
     setMessage({
       type: 'success',
       text: `Reminder sent to ${sentIds.length} personnel.`
-    });
-  };
-
-  const toggleTrackingOpen = (announcementId) => {
-    setTrackingOpenIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(announcementId)) {
-        next.delete(announcementId);
-      } else {
-        next.add(announcementId);
-      }
-      return next;
     });
   };
 
@@ -1355,26 +1342,6 @@ export default function Announcements() {
                   )}
 
                   <div className="announcement-card-footer">
-                    {isAdmin && announcement.acknowledgement_summary?.totalRecipients > 0 && (
-                      <button
-                        type="button"
-                        className="announcement-acknowledgement-link"
-                        onClick={() => {
-                          setAcknowledgementModalId(announcement.announcement_id);
-                        }}
-                        aria-label={`View acknowledgement list for ${announcement.title}`}
-                      >
-                        <FiUsers aria-hidden="true" />
-                        Acknowledged: {announcement.acknowledgement_summary.acknowledgedCount}/
-                        {announcement.acknowledgement_summary.totalRecipients}
-                      </button>
-                    )}
-                    {isAdmin && announcement.acknowledgement_deadline && (
-                      <span className="announcement-deadline-chip">
-                        <FiClock aria-hidden="true" />
-                        Ack. deadline: {formatDate(announcement.acknowledgement_deadline)}
-                      </span>
-                    )}
                     {!isAdmin && (
                       <span className={`announcement-ack-status ${announcement.acknowledged_by_current_user ? 'acknowledged' : 'pending'}`}>
                         {announcement.acknowledged_by_current_user ? <FiCheckCircle aria-hidden="true" /> : <FiClock aria-hidden="true" />}
@@ -1410,22 +1377,17 @@ export default function Announcements() {
                   </div>
 
                   {isAdmin &&
-                    announcement.acknowledgement_tracking?.length > 0 &&
-                    (announcement.acknowledgement_deadline ||
-                      announcement.acknowledgement_tracking_summary?.totalNudges > 0) && (
+                    announcement.acknowledgement_tracking?.length > 0 && (
                     <div className="announcement-tracking-wrap">
-                      <button
-                        type="button"
-                        className="announcement-tracking-toggle"
-                        onClick={() => toggleTrackingOpen(announcement.announcement_id)}
-                        aria-expanded={trackingOpenIds.has(announcement.announcement_id)}
-                      >
-                        <FiBell aria-hidden="true" />
-                        {trackingOpenIds.has(announcement.announcement_id) ? 'Hide' : 'Show'} Acknowledgement / Nudge Tracking
-                      </button>
-                      {trackingOpenIds.has(announcement.announcement_id) && (
-                        <AnnouncementNudgeTracking announcement={announcement} />
-                      )}
+                      <AnnouncementNudgeTracking
+                        announcement={announcement}
+                        onOpenAcknowledgements={() => setAcknowledgementModalId(announcement.announcement_id)}
+                        onNudge={(personnelIds) =>
+                          handleNudgePersonnel(personnelIds, announcement.announcement_id)
+                        }
+                        nudgingIds={nudgingIds}
+                        cooldownUntilById={nudgeCooldownUntilById}
+                      />
                     </div>
                   )}
                 </article>

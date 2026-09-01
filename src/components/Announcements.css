@@ -404,14 +404,14 @@
 
 .announcement-list {
   display: grid;
-  gap: 0.8rem;
+  gap: 1rem;
 }
 
 .announcement-item {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 230px;
+  min-height: 0;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 1.1rem 1.2rem;
@@ -695,7 +695,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.6rem;
-  margin-top: auto;
+  margin-top: 0.85rem;
   padding-top: 0.75rem;
 }
 

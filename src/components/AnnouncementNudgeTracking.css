@@ -1,8 +1,7 @@
 .nudge-tracking {
-  margin-top: 0.85rem;
-  padding: 0.95rem 1rem 1.1rem;
+  margin-top: 0.75rem;
+  padding: 1rem 1.1rem 1.15rem;
   border: 1px solid #e2e8f0;
-  border-left: 3px solid #b91c1c;
   border-radius: 8px;
   background: #f8fafc;
 }
@@ -10,9 +9,9 @@
 .nudge-tracking-header {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 0.6rem;
+  gap: 0.75rem 1rem;
 }
 
 .nudge-tracking-header h4 {
@@ -26,9 +25,12 @@
 }
 
 .nudge-tracking-stats {
+  flex: 1 1 32rem;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 0.75rem;
+  justify-content: flex-end;
+  gap: 0.45rem 0.9rem;
   font-size: 0.78rem;
   color: #475569;
 }
@@ -37,7 +39,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .nudge-tracking-stats .is-acknowledged {
@@ -79,15 +81,49 @@
 .nudge-tracking-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 0.82rem;
 }
 
 .nudge-tracking-table th,
 .nudge-tracking-table td {
-  padding: 0.55rem 0.6rem;
+  padding: 0.65rem 0.7rem;
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
   border-bottom: 1px solid #e2e8f0;
+  overflow-wrap: anywhere;
+}
+
+.nudge-tracking-table th {
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+.nudge-tracking-table th:nth-child(1),
+.nudge-tracking-table td:nth-child(1) {
+  width: 26%;
+}
+
+.nudge-tracking-table th:nth-child(2),
+.nudge-tracking-table td:nth-child(2) {
+  width: 16%;
+}
+
+.nudge-tracking-table th:nth-child(3),
+.nudge-tracking-table td:nth-child(3) {
+  width: 23%;
+}
+
+.nudge-tracking-table th:nth-child(4),
+.nudge-tracking-table td:nth-child(4) {
+  width: 14%;
+}
+
+.nudge-tracking-table th:nth-child(5),
+.nudge-tracking-table td:nth-child(5) {
+  width: 21%;
 }
 
 .nudge-tracking-table th {
@@ -133,6 +169,10 @@
 }
 
 .nudge-tracking-history-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
   padding: 0.2rem 0.55rem;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
@@ -140,6 +180,9 @@
   color: #b91c1c;
   font-size: 0.75rem;
   font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  white-space: normal;
   cursor: pointer;
 }
 
@@ -158,6 +201,10 @@
   margin: 0.15rem 0;
 }
 
+.nudge-tracking-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 @media (max-width: 640px) {
   .nudge-tracking-table thead {
     display: none;
@@ -171,6 +218,18 @@
     width: 100%;
   }
 
+  .nudge-tracking-table {
+    table-layout: auto;
+  }
+
+  .nudge-tracking-table td:nth-child(1),
+  .nudge-tracking-table td:nth-child(2),
+  .nudge-tracking-table td:nth-child(3),
+  .nudge-tracking-table td:nth-child(4),
+  .nudge-tracking-table td:nth-child(5) {
+    width: 100%;
+  }
+
   .nudge-tracking-table tr {
     margin-bottom: 0.65rem;
     border: 1px solid #e2e8f0;
@@ -179,6 +238,7 @@
   }
 
   .nudge-tracking-table td {
+    padding: 0.7rem 0.75rem;
     border-bottom: 1px solid #f1f5f9;
   }
 

@@ -1395,11 +1395,6 @@ export default function Announcements() {
                       <AnnouncementNudgeTracking
                         announcement={announcement}
                         onOpenAcknowledgements={() => setAcknowledgementModalId(announcement.announcement_id)}
-                        onNudge={(personnelIds) =>
-                          handleNudgePersonnel(personnelIds, announcement.announcement_id)
-                        }
-                        nudgingIds={nudgingIds}
-                        cooldownUntilById={nudgeCooldownUntilById}
                       />
                     </div>
                   )}

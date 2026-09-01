@@ -284,6 +284,32 @@
   overflow-wrap: anywhere;
 }
 
+.acknowledgement-nudge-history-link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.15rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #b45309;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.acknowledgement-nudge-history-link:hover {
+  color: #92400e;
+  text-decoration: underline;
+}
+
+.acknowledgement-nudge-history-link svg {
+  width: 12px;
+  height: 12px;
+}
+
 .acknowledgement-row-status {
   display: inline-flex;
   align-items: center;

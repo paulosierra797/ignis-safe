@@ -88,8 +88,6 @@
 }
 
 .nudge-tracking-ack-summary:focus-visible,
-.nudge-tracking-history-toggle:focus-visible,
-.nudge-tracking-nudge-button:focus-visible,
 .nudge-tracking-primary-action:focus-visible {
   outline: 3px solid rgba(185, 28, 28, 0.2);
   outline-offset: 2px;
@@ -158,10 +156,9 @@
   background: #991b1b;
 }
 
-.nudge-tracking-primary-action:disabled,
-.nudge-tracking-nudge-button:disabled {
+.nudge-tracking-primary-action:disabled {
   opacity: 0.62;
-  cursor: wait;
+  cursor: not-allowed;
 }
 
 .nudge-tracking-search {
@@ -230,32 +227,27 @@
 
 .nudge-tracking-table th:nth-child(1),
 .nudge-tracking-table td:nth-child(1) {
-  width: 24%;
+  width: 30%;
 }
 
 .nudge-tracking-table th:nth-child(2),
 .nudge-tracking-table td:nth-child(2) {
-  width: 10%;
+  width: 12%;
 }
 
 .nudge-tracking-table th:nth-child(3),
 .nudge-tracking-table td:nth-child(3) {
-  width: 15%;
+  width: 16%;
 }
 
 .nudge-tracking-table th:nth-child(4),
 .nudge-tracking-table td:nth-child(4) {
-  width: 20%;
+  width: 27%;
 }
 
 .nudge-tracking-table th:nth-child(5),
 .nudge-tracking-table td:nth-child(5) {
-  width: 13%;
-}
-
-.nudge-tracking-table th:nth-child(6),
-.nudge-tracking-table td:nth-child(6) {
-  width: 18%;
+  width: 15%;
 }
 
 .nudge-tracking-table tbody tr:last-child td {
@@ -305,60 +297,6 @@
   min-height: 100px;
   color: #94a3b8;
   text-align: center;
-}
-
-.nudge-tracking-actions-cell {
-  display: table-cell;
-}
-
-.nudge-tracking-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-start;
-}
-
-.nudge-tracking-nudge-button,
-.nudge-tracking-history-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.3rem;
-  max-width: 100%;
-  min-height: 30px;
-  padding: 0.28rem 0.55rem;
-  border-radius: 6px;
-  font: inherit;
-  font-size: 0.71rem;
-  font-weight: 800;
-  line-height: 1.2;
-  text-align: center;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.nudge-tracking-nudge-button {
-  border: 1px solid #d97706;
-  background: #f59e0b;
-  color: #422006;
-}
-
-.nudge-tracking-nudge-button:hover:not(:disabled) {
-  background: #fbbf24;
-}
-
-.nudge-tracking-history-toggle {
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  color: #b91c1c;
-}
-
-.nudge-tracking-history-toggle:hover {
-  background: #fef2f2;
-}
-
-.nudge-tracking-no-action {
-  color: #94a3b8;
 }
 
 @media (max-width: 980px) {

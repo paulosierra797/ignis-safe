@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiBell, FiCheckCircle, FiClock, FiSearch, FiSend, FiUsers } from 'react-icons/fi';
 import CloseButton from './CloseButton';
+import AnnouncementNudgeHistoryModal from './AnnouncementNudgeHistoryModal';
 import './AnnouncementAcknowledgementModal.css';
 
 const EMPTY_PERSONNEL = [];
@@ -38,11 +39,14 @@ export default function AnnouncementAcknowledgementModal({
   const [activeTab, setActiveTab] = useState(pending.length > 0 ? 'pending' : 'acknowledged');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [historyPerson, setHistoryPerson] = useState(null);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
+    // While the nested nudge-history modal is open, let it own Escape so a
+    // single press closes only the history view, not this modal too.
     const handleEscape = (event) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape' && !historyPerson) onClose();
     };
 
     document.body.style.overflow = 'hidden';
@@ -52,7 +56,7 @@ export default function AnnouncementAcknowledgementModal({
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', handleEscape);
     };
-  }, [onClose]);
+  }, [onClose, historyPerson]);
 
   useEffect(() => {
     const hasActiveCooldown = Array.from(cooldownUntilById.values())
@@ -214,6 +218,16 @@ export default function AnnouncementAcknowledgementModal({
                     <span>
                       {[person.rank, person.email].filter(Boolean).join(' | ') || 'Personnel account'}
                     </span>
+                    {person.nudge_count > 0 && (
+                      <button
+                        type="button"
+                        className="acknowledgement-nudge-history-link"
+                        onClick={() => setHistoryPerson(person)}
+                      >
+                        <FiBell aria-hidden="true" />
+                        {person.nudge_count} {person.nudge_count === 1 ? 'nudge' : 'nudges'} sent
+                      </button>
+                    )}
                   </div>
                   {activeTab === 'acknowledged' ? (
                     <span className="acknowledgement-row-status is-acknowledged">
@@ -244,6 +258,13 @@ export default function AnnouncementAcknowledgementModal({
           )}
         </div>
       </section>
+
+      {historyPerson && (
+        <AnnouncementNudgeHistoryModal
+          person={historyPerson}
+          onClose={() => setHistoryPerson(null)}
+        />
+      )}
     </div>
   );
 }

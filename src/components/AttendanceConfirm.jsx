@@ -75,12 +75,50 @@ const AttendanceConfirm = () => {
   const hasPendingVerification = Boolean(mode || geoLocation || verificationPhotoBlob) &&
     confirmStatus?.type !== 'success' && !timeInSuccess && !timeOutSuccess;
   const navigationBlocker = useBlocker(hasPendingVerification && !isProcessing);
-  const timeInDisabled = isAttendanceStatusLoading || !attendanceStatus?.canTimeIn;
-  const timeOutDisabled = isAttendanceStatusLoading || !attendanceStatus?.canTimeOut;
+  // "Already recorded" is ONLY true when the server reports a real time_in /
+  // time_out timestamp on today's Manila record for this shift. Everything else
+  // that disables the buttons (status still loading, status failed to load, a
+  // rotated/expired QR, an incomplete attempt that left a row without a
+  // time_in) is a different problem and must report itself, not the duplicate
+  // message.
+  const alreadyTimedIn = Boolean(attendanceStatus?.hasTimeIn);
+  const alreadyTimedOut = Boolean(attendanceStatus?.hasTimeOut);
+  const isAttendanceStatusKnown = Boolean(attendanceStatus) && !isAttendanceStatusLoading;
+  const timeInDisabled = !isAttendanceStatusKnown || !attendanceStatus?.canTimeIn;
+  const timeOutDisabled = !isAttendanceStatusKnown || !attendanceStatus?.canTimeOut;
   const attendanceCompleted = attendanceStatus?.state === 'completed';
 
+  // Explains why an action is blocked, in priority order. Returns '' when the
+  // action is actually allowed.
+  const getBlockedReason = (targetMode) => {
+    if (isAttendanceStatusLoading) return 'Checking your attendance status. Please wait a moment.';
+    if (!attendanceStatus) {
+      return attendanceStatusError
+        || 'Unable to load your attendance status. Please refresh and try again.';
+    }
+    if (targetMode === 'in') {
+      if (alreadyTimedIn) return attendanceStatus.message || 'Your Time In for this shift has already been recorded.';
+      if (attendanceStatus.canTimeIn) return '';
+    }
+    if (targetMode === 'out') {
+      if (alreadyTimedOut) return attendanceStatus.message || 'Your Time Out for this shift has already been recorded.';
+      if (!alreadyTimedIn) return 'Time Out cannot be recorded without an existing Time In.';
+      if (attendanceStatus.canTimeOut) return '';
+    }
+    if (attendanceStatus.qrValid === false) {
+      return `${attendanceStatus.qrError || 'This QR session is no longer valid'}. Please rescan the station QR code.`;
+    }
+    return attendanceStatus.message || 'This action is not available right now.';
+  };
+
   const refreshAttendanceStatus = useCallback(async ({ officer = authenticatedOfficer, stationId = verifiedStationId } = {}) => {
-    if (!officer?.admin_id || !stationId) return null;
+    if (!officer?.admin_id || !stationId) {
+      // Nothing to query yet. Clear the loading flag so the UI reports "status
+      // not loaded" instead of silently sitting in a state the Time In gate
+      // used to read as "already recorded".
+      setIsAttendanceStatusLoading(false);
+      return null;
+    }
 
     setIsAttendanceStatusLoading(true);
     setAttendanceStatusError('');
@@ -449,11 +487,11 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
       return;
     }
     if (mode === 'in' && timeInDisabled) {
-      setStatus('Your attendance for this action has already been recorded.');
+      setStatus(getBlockedReason('in') || 'Time In is not available right now.');
       return;
     }
     if (mode === 'out' && timeOutDisabled) {
-      setStatus(attendanceStatus?.message || 'Time Out is not available yet.');
+      setStatus(getBlockedReason('out') || 'Time Out is not available yet.');
       return;
     }
     if (!geoLocation) {
@@ -496,12 +534,22 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
     setConfirmStatus(null);
 
     try {
+      // Re-check against the server right before writing. Only a real
+      // timestamp counts as a duplicate; a status that simply failed to load
+      // must not be reported as "already recorded" (the server enforces the
+      // duplicate rule regardless, so proceeding here is safe).
       const latestStatus = await refreshAttendanceStatus();
-      if (mode === 'in' && !latestStatus?.canTimeIn) {
-        throw new Error('Your attendance for this action has already been recorded.');
+
+      if (mode === 'in' && latestStatus?.hasTimeIn) {
+        throw new Error(latestStatus.message || 'Your Time In for this shift has already been recorded.');
       }
-      if (mode === 'out' && !latestStatus?.canTimeOut) {
-        throw new Error(latestStatus?.message || 'Time Out is not available yet.');
+      if (mode === 'out') {
+        if (latestStatus?.hasTimeOut) {
+          throw new Error(latestStatus.message || 'Your Time Out for this shift has already been recorded.');
+        }
+        if (latestStatus && !latestStatus.hasTimeIn) {
+          throw new Error('Time Out cannot be recorded without an existing Time In.');
+        }
       }
 
      const { record, action } = await recordAttendance({
@@ -627,6 +675,11 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
                 <div className="attendance-status-times">
                   <span>Time In: {attendanceStatus.record.timeIn || '--'}</span>
                   <span>Time Out: {attendanceStatus.record.timeOut || '--'}</span>
+                </div>
+              )}
+              {attendanceStatus?.qrValid === false && (
+                <div className="attendance-status-error">
+                  {attendanceStatus.qrError || 'This QR session is no longer valid'}. Please rescan the station QR code.
                 </div>
               )}
               {attendanceStatusError && (

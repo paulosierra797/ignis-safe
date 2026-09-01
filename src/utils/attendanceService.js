@@ -303,7 +303,12 @@ export const isAuthValid = () => {
 
 const ATTENDANCE_VERIFICATION_BUCKET = 'attendance_verifications';
 const SIGNED_PHOTO_URL_TTL_SECONDS = 10 * 60;
+// Kept for callers/older deployments that still emit the combined wording.
 const DUPLICATE_ATTENDANCE_MESSAGE = 'Your attendance for this action has already been recorded.';
+// record_attendance_action() now says which action was the duplicate, because
+// the generic wording was being shown for non-duplicate failures too.
+const DUPLICATE_TIME_IN_MESSAGE = 'Your Time In for this shift has already been recorded.';
+const DUPLICATE_TIME_OUT_MESSAGE = 'Your Time Out for this shift has already been recorded.';
 const GENERIC_ATTENDANCE_FAILURE_MESSAGE = 'Failed to save attendance. Please try again.';
 
 // Messages record_attendance_action() raises intentionally via `raise exception` -
@@ -311,6 +316,8 @@ const GENERIC_ATTENDANCE_FAILURE_MESSAGE = 'Failed to save attendance. Please tr
 // "column account.name does not exist") is an internal failure and must not leak
 // to the UI - see recordAttendance() below.
 const KNOWN_ATTENDANCE_RPC_MESSAGES = [
+  DUPLICATE_TIME_IN_MESSAGE,
+  DUPLICATE_TIME_OUT_MESSAGE,
   DUPLICATE_ATTENDANCE_MESSAGE,
   'Authentication is required.',
   'Only active personnel accounts may record attendance.',
@@ -503,6 +510,16 @@ export const getAttendanceStatus = async ({ shiftId = 'DEFAULT', qrSessionId } =
     shiftId: data?.shift_id || normalizeShiftId(shiftId),
     canTimeIn: Boolean(data?.can_time_in),
     canTimeOut: Boolean(data?.can_time_out),
+    // The only trustworthy duplicate signals: a real time_in / time_out
+    // timestamp on today's Manila row for this shift. can_time_in/can_time_out
+    // also go false for reasons that are NOT duplicates, so callers must not
+    // infer "already recorded" from them - see AttendanceConfirm.jsx.
+    hasTimeIn: Boolean(data?.has_time_in ?? Boolean(data?.record?.time_in)),
+    hasTimeOut: Boolean(data?.has_time_out ?? Boolean(data?.record?.time_out)),
+    // QR problems are reported rather than thrown so a rotated/expired QR
+    // surfaces as itself instead of collapsing into the duplicate message.
+    qrValid: data?.qr_valid !== false,
+    qrError: data?.qr_error || '',
     message: data?.message || '',
     record
   };

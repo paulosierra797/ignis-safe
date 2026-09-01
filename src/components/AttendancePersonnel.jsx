@@ -218,8 +218,11 @@ const AttendancePersonnel = () => {
               </div>
 
               <div className="qr-important">
-                <strong>Important:</strong> The QR code refreshes every five minutes for
-                security. If scanning fails, use the Copy Link button below the QR code.
+                <strong>Important:</strong> The QR code refreshes every 60 seconds for
+                security. Once you have successfully scanned it, your attendance session
+                stays valid for about 5 minutes so you can finish face and location
+                verification even if the QR refreshes. If scanning fails, use the Copy
+                Link button below the QR code.
               </div>
             </div>
 

@@ -3,7 +3,7 @@ import { useBlocker, useSearchParams, useNavigate } from 'react-router-dom';
 import { loadFaceModels } from '../utils/loadFaceModels';
 import { getFaceByAdminId } from '../utils/attendanceService';
 import * as faceapi from '@vladmandic/face-api';
-import { validateQRSession } from '../utils/attendanceService';
+import { claimQRSession } from '../utils/attendanceService';
 import LivenessCheck from './LivenessCheck';
 import StationHouseRulesModal from './StationHouseRulesModal';
 import ReloadGuardDialog from './ReloadGuardDialog';
@@ -197,7 +197,11 @@ useEffect(() => {
       return;
     }
 
-    const result = await validateQRSession(qrSessionId);
+    // Re-assert (or, on a direct navigation, establish) this personnel's lock on
+    // the scanned QR. claim_attendance_qr_session is idempotent for the same
+    // personnel and never pushes the ~5 minute deadline out, so a reload here
+    // keeps counting from the original scan.
+    const result = await claimQRSession(qrSessionId);
 
     if (!result.valid) {
       setAuthError(result.reason);

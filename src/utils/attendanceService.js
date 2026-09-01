@@ -179,6 +179,24 @@ export const validateQRSession = async (sessionId) => {
   return data;
 };
 
+// Locks a successfully scanned QR to the signed-in personnel and opens a
+// ~5 minute attendance session that survives the 60s QR rotation while they
+// finish liveness, face match, location, House Rules and submission. Idempotent
+// for the same personnel (a reload / re-entry keeps the original deadline), so
+// it is safe to call again on the confirm screen. Returns the same shape as
+// validateQRSession: { valid, session? , reason? }.
+export const claimQRSession = async (sessionId) => {
+  const { data, error } = await supabase.rpc('claim_attendance_qr_session', {
+    p_session_id: sessionId
+  });
+
+  if (error || !data) {
+    return { valid: false, reason: error?.message || 'Invalid QR session' };
+  }
+
+  return data;
+};
+
 export const consumeQRSession = async (sessionId) => {
   if (!sessionId) return false;
 
@@ -325,6 +343,8 @@ const KNOWN_ATTENDANCE_RPC_MESSAGES = [
   'Invalid QR session',
   'QR already used',
   'QR expired',
+  'QR session was not scanned. Please rescan the station QR code.',
+  'This QR code was scanned by another account.',
   'Time Out cannot be recorded without an existing Time In.',
   'You must acknowledge the Station House Rules and Personnel Guidelines before recording Time In.',
   'You must acknowledge the Station House Rules and Personnel Guidelines before recording Time Out.'

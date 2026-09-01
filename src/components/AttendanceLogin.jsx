@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { validateQRSession, getActivePersonnelSession, saveAuthToken } from '../utils/attendanceService';
+import { validateQRSession, claimQRSession, getActivePersonnelSession, saveAuthToken } from '../utils/attendanceService';
 import { supabase } from '../utils/supabaseClient';
 import ignisSafeLogo from '../assets/Logo1.png';
 
@@ -57,6 +57,19 @@ const AttendanceLogin = () => {
         if (isCancelled) return;
 
         if (officer) {
+          // Lock this scanned QR to the personnel now. The QR keeps rotating
+          // every 60s for security, but this claim gives them ~5 minutes to
+          // finish face + location + House Rules + submission without the
+          // rotation invalidating the session they scanned.
+          const claim = await claimQRSession(sessionId);
+          if (isCancelled) return;
+
+          if (!claim.valid) {
+            setError(claim.reason);
+            setIsCheckingSession(false);
+            return;
+          }
+
           const token = saveAuthToken(officer);
           navigate(buildConfirmUrl(token.sessionId), { replace: true });
           return;

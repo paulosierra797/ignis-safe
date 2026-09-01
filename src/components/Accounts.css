@@ -1545,6 +1545,34 @@
   gap: 0.35rem;
 }
 
+.account-status-view-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #b91c1c;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #991b1b;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.account-status-view-button:hover,
+.account-status-view-button:focus-visible {
+  border-color: #991b1b;
+  background: #fff7ed;
+  color: #7f1d1d;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.14);
+}
+
 .account-directory-leave-dates {
   color: #5b21b6;
   font-size: 0.78rem;
@@ -4717,6 +4745,102 @@
   color: #ffffff;
 }
 
+.accounts-status-overlay {
+  z-index: 1800;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(2px);
+}
+
+.accounts-status-modal {
+  width: min(500px, 100%);
+  max-height: calc(100vh - 3rem);
+  gap: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.accounts-status-modal-header {
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.accounts-status-modal-header > div {
+  min-width: 0;
+}
+
+.accounts-status-modal-header > div > span {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: #b91c1c;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.accounts-status-modal-header h3 {
+  overflow-wrap: anywhere;
+}
+
+.accounts-status-modal-header p {
+  margin: 0.2rem 0 0;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.accounts-status-modal-body {
+  padding: 1.25rem;
+  background: #f8fafc;
+}
+
+.account-status-details {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.account-status-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.account-status-detail-label {
+  min-width: 0;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.account-status-detail-row .status-pill {
+  flex: 0 0 auto;
+}
+
+.status-pill.account-status-badge--pending {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.status-pill.account-status-badge--activated,
+.status-pill.account-status-badge--active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-pill.account-status-badge--deactivated {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 @media (max-width: 640px) {
   .personnel-profile-modal {
     max-height: calc(100dvh - 1rem);
@@ -4743,6 +4867,26 @@
 
   .personnel-profile-footer button {
     flex: 1 1 0;
+  }
+
+  .accounts-status-modal {
+    max-height: calc(100dvh - 1rem);
+  }
+
+  .accounts-status-modal-header,
+  .accounts-status-modal-body {
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+  }
+
+  .account-status-detail-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .account-status-detail-row .status-pill {
+    align-self: flex-start;
   }
 }
 .account-card-header {

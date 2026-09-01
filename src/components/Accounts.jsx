@@ -113,6 +113,27 @@ const getPersonnelAccountType = (account) =>
     ? 'Personnel workspace profile'
     : 'Personnel account';
 
+const getAccountStatusDetails = (status) => {
+  const normalizedStatus = String(status || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ');
+  const isPending = ['pending activation', 'pending verification'].includes(normalizedStatus);
+  const isDeactivated = ['inactive', 'suspended'].includes(normalizedStatus);
+
+  return {
+    account: {
+      label: isPending ? 'Pending Account' : 'Activated Account',
+      className: isPending ? 'account-status-badge--pending' : 'account-status-badge--activated'
+    },
+    accountStatus: {
+      label: isDeactivated ? 'Deactivated' : 'Active',
+      className: isDeactivated ? 'account-status-badge--deactivated' : 'account-status-badge--active'
+    }
+  };
+};
+
 function PersonnelAvatar({ account, className = '' }) {
   if (account?.avatar_url) {
     return (
@@ -128,6 +149,82 @@ function PersonnelAvatar({ account, className = '' }) {
     <span className={`shift-personnel-avatar-fallback ${className}`.trim()} aria-hidden="true">
       {getPersonnelInitials(account)}
     </span>
+  );
+}
+
+function AccountStatusModal({ account, onClose }) {
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim()
+    || account.email
+    || (isPersonnelAccount(account) ? 'Personnel' : 'Admin');
+  const statusDetails = getAccountStatusDetails(account.status);
+  const normalizedServiceStatus = String(account.service_status || 'Active').toLowerCase().replace(/\s+/g, '-');
+
+  return (
+    <div
+      className="accounts-modal-overlay accounts-status-overlay"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <section
+        className="accounts-modal accounts-status-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="account-status-title"
+      >
+        <div className="accounts-modal-header accounts-status-modal-header">
+          <div>
+            <span>Account Status</span>
+            <h3 id="account-status-title">{accountName}</h3>
+            <p>Current account and personnel status details.</p>
+          </div>
+          <CloseButton
+            className="accounts-modal-close"
+            onClick={onClose}
+            label={`Close status details for ${accountName}`}
+          />
+        </div>
+
+        <div className="accounts-modal-body accounts-status-modal-body">
+          <div className="account-status-details" role="list">
+            <div className="account-status-detail-row" role="listitem">
+              <span className="account-status-detail-label">Account</span>
+              <span className={`status-pill ${statusDetails.account.className}`}>
+                {statusDetails.account.label}
+              </span>
+            </div>
+            <div className="account-status-detail-row" role="listitem">
+              <span className="account-status-detail-label">Account Status</span>
+              <span className={`status-pill ${statusDetails.accountStatus.className}`}>
+                {statusDetails.accountStatus.label}
+              </span>
+            </div>
+            {isPersonnelAccount(account) && (
+              <div className="account-status-detail-row" role="listitem">
+                <span className="account-status-detail-label">Personnel Status</span>
+                <span className={`status-pill service-status-pill ${normalizedServiceStatus}`}>
+                  {formatStatusLabel(account.service_status, 'Active')}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -751,6 +848,7 @@ function AccountDirectoryGroup({
   page,
   totalPages,
   onPageChange,
+  onViewStatus,
 }) {
   const rangeEnd = accounts.length > 0 ? startIndex + accounts.length - 1 : 0;
 
@@ -785,8 +883,6 @@ function AccountDirectoryGroup({
               {accounts.map((account) => {
                 const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim()
                   || (variant === 'admin' ? 'Admin' : 'Personnel');
-                const normalizedStatus = String(account.status || 'inactive').toLowerCase().replace(/\s+/g, '-');
-                const normalizedServiceStatus = String(account.service_status || 'Active').toLowerCase().replace(/\s+/g, '-');
                 const onLeave = isOnLeave(account);
 
                 return (
@@ -807,16 +903,14 @@ function AccountDirectoryGroup({
                       </div>
                     </td>
                     <td className="col-status" data-label="Status">
-                      <div className="account-directory-status-group">
-                        <span className={`status-pill ${normalizedStatus}`}>
-                          {formatStatusLabel(account.status, 'Inactive')}
-                        </span>
-                        {variant === 'personnel' && (
-                          <span className={`status-pill service-status-pill ${normalizedServiceStatus}`}>
-                            {formatStatusLabel(account.service_status, 'Active')}
-                          </span>
-                        )}
-                      </div>
+                      <button
+                        type="button"
+                        className="account-status-view-button"
+                        aria-label={`View status for ${accountName}`}
+                        onClick={() => onViewStatus(account)}
+                      >
+                        View Status
+                      </button>
                     </td>
                     <td className="col-leave" data-label="Leave Status">
                       {onLeave ? (
@@ -969,6 +1063,7 @@ export default function Accounts() {
   const [leaveMessage, setLeaveMessage] = useState({ type: '', text: '' });
   const [shiftMessage, setShiftMessage] = useState({ type: '', text: '' });
   const [selectedAccount, setSelectedAccount] = useState(null);
+  const [selectedStatusAccount, setSelectedStatusAccount] = useState(null);
   const [shiftSchedule, setShiftSchedule] = useState({ shift_a_dates: [], shift_b_dates: [] });
   const [shiftSummaryMonth, setShiftSummaryMonth] = useState(() => {
     const now = new Date();
@@ -2034,6 +2129,14 @@ const openProfileModal = (account) => {
 const closeProfileModal = () => {
   setIsProfileModalOpen(false);
   setSelectedProfileAccount(null);
+};
+
+const openStatusModal = (account) => {
+  setSelectedStatusAccount(account);
+};
+
+const closeStatusModal = () => {
+  setSelectedStatusAccount(null);
 };
 
 const openEditModal = (account) => {
@@ -4269,6 +4372,7 @@ const permissions = getDefaultPermissions(formData.role);
               page={safeAdminPage}
               totalPages={adminTotalPages}
               onPageChange={setAdminPage}
+              onViewStatus={openStatusModal}
             />
             <AccountDirectoryGroup
               title="Personnel Accounts"
@@ -4284,6 +4388,7 @@ const permissions = getDefaultPermissions(formData.role);
               page={safePersonnelPage}
               totalPages={personnelTotalPages}
               onPageChange={setPersonnelPage}
+              onViewStatus={openStatusModal}
             />
           </div>
         )}
@@ -4384,6 +4489,13 @@ const permissions = getDefaultPermissions(formData.role);
             }}
             isOnLeave={isOnLeave}
             formatLeaveDate={formatLeaveDate}
+          />
+        )}
+
+        {selectedStatusAccount && (
+          <AccountStatusModal
+            account={selectedStatusAccount}
+            onClose={closeStatusModal}
           />
         )}
 

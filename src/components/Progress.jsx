@@ -11,6 +11,7 @@ import {
   FiGlobe,
   FiMail,
   FiMapPin,
+  FiPieChart,
   FiPlayCircle,
   FiStar,
   FiUser,
@@ -19,7 +20,13 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import './Progress.css';
-import { getProgressPageData, getUserFeedback } from '../utils/progressService';
+import {
+  UNSPECIFIED_BARANGAY_LABEL,
+  buildBarangaySummary,
+  getProgressPageData,
+  getUserFeedback,
+  summarizeUsers,
+} from '../utils/progressService';
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -94,10 +101,12 @@ const matchesCompletionFilter = (overallPercent, filterValue) => {
 export default function Progress() {
   const [progressRows, setProgressRows] = useState([]);
   const [moduleOptions, setModuleOptions] = useState(['All']);
+  const [barangayOptions, setBarangayOptions] = useState(['All']);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [moduleFilter, setModuleFilter] = useState('All');
+  const [barangayFilter, setBarangayFilter] = useState('All');
   const [completionFilter, setCompletionFilter] = useState('All');
   const [completionSearchText, setCompletionSearchText] = useState('All');
   const [isCompletionDropdownOpen, setIsCompletionDropdownOpen] = useState(false);
@@ -122,12 +131,21 @@ export default function Progress() {
         setErrorMessage(`Failed to load progress: ${error}`);
         setProgressRows([]);
         setModuleOptions(['All']);
+        setBarangayOptions(['All']);
       } else {
         setProgressRows(data?.users || []);
         const nextModuleOptions = ['All', ...(data?.modules || [])];
         setModuleOptions(nextModuleOptions);
         setModuleFilter((current) => (
           nextModuleOptions.includes(current) ? current : 'All'
+        ));
+
+        // Barangay options come straight from the saved profile records, so a
+        // barangay that no longer has users drops out of the filter by itself.
+        const nextBarangayOptions = ['All', ...(data?.barangays || [])];
+        setBarangayOptions(nextBarangayOptions);
+        setBarangayFilter((current) => (
+          nextBarangayOptions.includes(current) ? current : 'All'
         ));
       }
 
@@ -143,6 +161,7 @@ export default function Progress() {
 
   const handleClearFilters = () => {
     setModuleFilter('All');
+    setBarangayFilter('All');
     setCompletionFilter('All');
     setCompletionSearchText('All');
     setSearchQuery('');
@@ -235,17 +254,38 @@ export default function Progress() {
       const matchesSearch =
         !normalizedQuery ||
         String(item.name || '').toLowerCase().includes(normalizedQuery) ||
-        String(item.email || '').toLowerCase().includes(normalizedQuery);
+        String(item.email || '').toLowerCase().includes(normalizedQuery) ||
+        String(item.barangay || '').toLowerCase().includes(normalizedQuery);
 
       const matchesModule =
         moduleFilter === 'All' ||
         item.modules.some((module) => module.name === moduleFilter && module.progress > 0);
 
+      const matchesBarangay = barangayFilter === 'All' || item.barangay === barangayFilter;
+
       const matchesCompletion = matchesCompletionFilter(item.overallPercent, completionFilter);
 
-      return matchesSearch && matchesModule && matchesCompletion;
+      return matchesSearch && matchesModule && matchesBarangay && matchesCompletion;
     });
-  }, [completionFilter, moduleFilter, progressRows, searchQuery]);
+  }, [barangayFilter, completionFilter, moduleFilter, progressRows, searchQuery]);
+
+  // Barangay-scoped users only: the summary cards must follow the selection
+  // without also narrowing on search text or module/completion filters.
+  const barangayScopedRows = useMemo(() => (
+    barangayFilter === 'All'
+      ? progressRows
+      : progressRows.filter((item) => item.barangay === barangayFilter)
+  ), [barangayFilter, progressRows]);
+
+  const barangaySummary = useMemo(() => summarizeUsers(barangayScopedRows), [barangayScopedRows]);
+
+  const barangayBreakdown = useMemo(() => buildBarangaySummary(progressRows), [progressRows]);
+
+  const visibleBreakdown = useMemo(() => (
+    barangayFilter === 'All'
+      ? barangayBreakdown
+      : barangayBreakdown.filter((row) => row.barangay === barangayFilter)
+  ), [barangayBreakdown, barangayFilter]);
 
   const totalUsers = progressRows.length;
 
@@ -260,6 +300,64 @@ export default function Progress() {
           onSearchChange={setSearchQuery}
         />
 
+        <section className="progress-barangay-panel">
+          <div className="progress-barangay-panel-header">
+            <div>
+              <h2>
+                <FiMapPin aria-hidden="true" />
+                Barangay Participation
+              </h2>
+              <p>
+                {barangayFilter === 'All'
+                  ? `Training participation across all ${barangayBreakdown.length} recorded ${barangayBreakdown.length === 1 ? 'barangay' : 'barangays'}.`
+                  : `Showing IGNIS SAFE participation for ${barangayFilter}.`}
+              </p>
+            </div>
+            <span className="progress-barangay-scope">
+              {barangayFilter === 'All' ? 'All Barangays' : barangayFilter}
+            </span>
+          </div>
+
+          <div className="progress-barangay-stats">
+            <div className="progress-stat-card">
+              <p>Total Registered Users</p>
+              <div className="progress-stat-value">
+                <span className="progress-main-value">{barangaySummary.registered}</span>
+              </div>
+            </div>
+            <div className="progress-stat-card completed">
+              <p>Completed</p>
+              <div className="progress-stat-value">
+                <span className="progress-main-value">{barangaySummary.completed}</span>
+              </div>
+            </div>
+            <div className="progress-stat-card in-progress">
+              <p>In Progress</p>
+              <div className="progress-stat-value">
+                <span className="progress-main-value">{barangaySummary.inProgress}</span>
+              </div>
+            </div>
+            <div className="progress-stat-card not-started">
+              <p>Not Started</p>
+              <div className="progress-stat-value">
+                <span className="progress-main-value">{barangaySummary.notStarted}</span>
+              </div>
+            </div>
+            <div className="progress-stat-card rate">
+              <p>Completion Rate</p>
+              <div className="progress-stat-value">
+                <span className="progress-main-value">{barangaySummary.completionRate}%</span>
+              </div>
+              <div className="progress-rate-bar">
+                <div
+                  className="progress-rate-bar-fill"
+                  style={{ width: `${Math.min(100, barangaySummary.completionRate)}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
         <div className="progress-controls">
           <div className="progress-stat-card">
             <p>Total Users</p>
@@ -269,6 +367,20 @@ export default function Progress() {
           </div>
 
           <div className="progress-filters">
+            <div className="progress-filter">
+              <label>Filter by Barangay</label>
+              <select
+                value={barangayFilter}
+                onChange={(event) => setBarangayFilter(event.target.value)}
+              >
+                {barangayOptions.map((barangayOption) => (
+                  <option key={barangayOption} value={barangayOption}>
+                    {barangayOption}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="progress-filter">
               <label>Filter by Module</label>
               <select
@@ -322,6 +434,101 @@ export default function Progress() {
           </div>
         </div>
 
+        <div className="progress-table-card progress-barangay-breakdown">
+          <div className="progress-breakdown-header">
+            <h3>
+              <FiPieChart aria-hidden="true" />
+              Barangay Completion Summary
+            </h3>
+            <span>Completion Rate = Completed Users ÷ Total Registered Users × 100</span>
+          </div>
+          <div className="progress-desktop-table">
+            <table className="progress-table">
+              <thead>
+                <tr>
+                  <th>Barangay</th>
+                  <th>Total Registered Users</th>
+                  <th>Completed</th>
+                  <th>In Progress</th>
+                  <th>Not Started</th>
+                  <th>Completion Rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
+                      Loading barangay statistics...
+                    </td>
+                  </tr>
+                ) : visibleBreakdown.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
+                      No barangay records found.
+                    </td>
+                  </tr>
+                ) : (
+                  visibleBreakdown.map((row) => (
+                    <tr
+                      key={row.barangay}
+                      className={row.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'progress-row-muted' : ''}
+                    >
+                      <td>{row.barangay}</td>
+                      <td>{row.registered}</td>
+                      <td>{row.completed}</td>
+                      <td>{row.inProgress}</td>
+                      <td>{row.notStarted}</td>
+                      <td>
+                        <div className="progress-rate-cell">
+                          <span>{row.completionRate}%</span>
+                          <div className="progress-rate-bar">
+                            <div
+                              className="progress-rate-bar-fill"
+                              style={{ width: `${Math.min(100, row.completionRate)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="progress-mobile-cards">
+            {isLoading ? (
+              <div className="progress-card-empty">Loading barangay statistics...</div>
+            ) : visibleBreakdown.length === 0 ? (
+              <div className="progress-card-empty">No barangay records found.</div>
+            ) : (
+              visibleBreakdown.map((row) => (
+                <div className="progress-user-card" key={row.barangay}>
+                  <div className="progress-card-header">
+                    <div>
+                      <h3>{row.barangay}</h3>
+                      <p>{row.registered} registered {row.registered === 1 ? 'user' : 'users'}</p>
+                    </div>
+                    <span className="progress-percent">{row.completionRate}%</span>
+                  </div>
+                  <div className="progress-card-row">
+                    <span>Completed</span>
+                    <strong>{row.completed}</strong>
+                  </div>
+                  <div className="progress-card-row">
+                    <span>In Progress</span>
+                    <strong>{row.inProgress}</strong>
+                  </div>
+                  <div className="progress-card-row">
+                    <span>Not Started</span>
+                    <strong>{row.notStarted}</strong>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         <div className="progress-table-card">
           {errorMessage && (
             <div style={{ padding: '0.8rem 1rem', color: '#991b1b', fontWeight: 600 }}>
@@ -334,6 +541,7 @@ export default function Progress() {
               <tr>
                 <th>No.</th>
                 <th>Name</th>
+                <th>Barangay</th>
                 <th>Account Type</th>
                 <th>Module Progress</th>
                 <th>Overall %</th>
@@ -345,13 +553,13 @@ export default function Progress() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
+                  <td colSpan="9" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
                     Loading progress...
                   </td>
                 </tr>
               ) : filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
+                  <td colSpan="9" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
                     No progress records found.
                   </td>
                 </tr>
@@ -360,6 +568,9 @@ export default function Progress() {
                   <tr key={item.id}>
                     <td>{index + 1}</td>
                     <td>{item.name}</td>
+                    <td className={item.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'progress-cell-muted' : ''}>
+                      {item.barangay}
+                    </td>
                     <td>
                       <span className={`progress-account-type-badge ${item.accountType.toLowerCase().replace(/\s+/g, '-')}`}>
                         {item.accountType}
@@ -409,6 +620,12 @@ export default function Progress() {
           <span className="progress-percent">
             {item.overallPercent}%
           </span>
+        </div>
+
+
+        <div className="progress-card-row">
+          <span>Barangay</span>
+          <strong>{item.barangay}</strong>
         </div>
 
 
@@ -522,6 +739,20 @@ export default function Progress() {
                           <span className="progress-modal-label">REGISTRATION</span>
                           <span className="progress-modal-value">
                             {formatProfileLabel(selectedUser.registrationStatus)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="progress-modal-info-item">
+                        <span className="progress-modal-info-icon"><FiMapPin aria-hidden="true" /></span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">BARANGAY</span>
+                          <span className="progress-modal-value">
+                            {selectedUser.barangay}
+                            {[selectedUser.city, selectedUser.province].filter(Boolean).length > 0 && (
+                              <small className="progress-modal-value-note">
+                                {[selectedUser.city, selectedUser.province].filter(Boolean).join(', ')}
+                              </small>
+                            )}
                           </span>
                         </div>
                       </div>

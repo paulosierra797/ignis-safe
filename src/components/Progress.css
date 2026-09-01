@@ -1008,3 +1008,196 @@
   }
 
 }
+
+/* Barangay participation dashboard ------------------------------------- */
+
+.progress-barangay-panel {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  padding: 1.25rem 1.4rem 1.4rem;
+  margin-bottom: 1.5rem;
+}
+
+.progress-barangay-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.progress-barangay-panel-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.progress-barangay-panel-header h2 svg {
+  color: #b91c1c;
+}
+
+.progress-barangay-panel-header p {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: #6b7280;
+}
+
+.progress-barangay-scope {
+  flex-shrink: 0;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.progress-barangay-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.progress-barangay-stats .progress-stat-card {
+  border: 1px solid #e2e8f0;
+  border-top: 3px solid #cbd5e1;
+  box-shadow: none;
+}
+
+.progress-barangay-stats .progress-stat-card.completed {
+  border-top-color: #16a34a;
+}
+
+.progress-barangay-stats .progress-stat-card.completed .progress-main-value {
+  color: #15803d;
+}
+
+.progress-barangay-stats .progress-stat-card.in-progress {
+  border-top-color: #f59e0b;
+}
+
+.progress-barangay-stats .progress-stat-card.in-progress .progress-main-value {
+  color: #b45309;
+}
+
+.progress-barangay-stats .progress-stat-card.not-started {
+  border-top-color: #94a3b8;
+}
+
+.progress-barangay-stats .progress-stat-card.not-started .progress-main-value {
+  color: #475569;
+}
+
+.progress-barangay-stats .progress-stat-card.rate {
+  border-top-color: #b91c1c;
+}
+
+.progress-barangay-stats .progress-stat-card.rate .progress-main-value {
+  color: #b91c1c;
+}
+
+.progress-rate-bar {
+  margin-top: 0.6rem;
+  height: 6px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  overflow: hidden;
+}
+
+.progress-rate-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #dc2626, #f97316);
+  transition: width 0.25s ease;
+}
+
+/* Barangay completion summary table ------------------------------------ */
+
+.progress-barangay-breakdown {
+  margin-bottom: 1.5rem;
+}
+
+.progress-breakdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.progress-breakdown-header h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.progress-breakdown-header h3 svg {
+  color: #b91c1c;
+}
+
+.progress-breakdown-header span {
+  font-size: 0.78rem;
+  color: #6b7280;
+}
+
+.progress-rate-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 110px;
+}
+
+.progress-rate-cell span {
+  font-weight: 700;
+  color: #111827;
+}
+
+.progress-row-muted td,
+.progress-cell-muted {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.progress-modal-value-note {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #6b7280;
+  font-style: normal;
+}
+
+@media (max-width: 1200px) {
+  .progress-barangay-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .progress-barangay-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .progress-barangay-panel-header {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-barangay-stats {
+    grid-template-columns: 1fr;
+  }
+}

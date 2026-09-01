@@ -60,8 +60,7 @@ using (
 
 -- Acknowledgement writes must go through public.record_attendance_action(),
 -- exactly like attendance_records writes.
-revoke insert, update, delete, truncate, references, trigger
-  on table public.station_house_rule_acknowledgements from anon, authenticated;
+revoke all on table public.station_house_rule_acknowledgements from anon, authenticated;
 grant select on table public.station_house_rule_acknowledgements to authenticated;
 
 -- Replace the 6-argument function with a 7-argument version that also takes the

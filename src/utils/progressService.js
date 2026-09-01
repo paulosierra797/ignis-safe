@@ -47,6 +47,69 @@ const getMostRecentDate = (dates = []) => {
     .sort((a, b) => b.getTime() - a.getTime())[0] || null;
 };
 
+// Mobile-app users save their barangay on their own profile record. The web
+// admin only reads that value - it never keeps a second copy of the location.
+export const UNSPECIFIED_BARANGAY_LABEL = 'Not Specified';
+
+// "Brgy. salawag", "Barangay Salawag" and "SALAWAG" are the same barangay, so
+// fold the stored text into one label instead of listing it three times.
+export const normalizeBarangay = (value) => {
+  const trimmed = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!trimmed) return UNSPECIFIED_BARANGAY_LABEL;
+
+  const withoutPrefix = trimmed.replace(/^(barangay|brgy\.?|bgy\.?)\s+/i, '').trim();
+  const base = withoutPrefix || trimmed;
+
+  return base.replace(/\S+/g, (word) => (
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  ));
+};
+
+export const getCompletionStatus = (overallPercent) => {
+  const percent = toNumber(overallPercent, 0);
+  if (percent >= 100) return 'Completed';
+  if (percent > 0) return 'In Progress';
+  return 'Not Started';
+};
+
+// Totals for whatever set of users is currently in view, so the summary cards
+// follow the active barangay filter without needing a second query.
+export const summarizeUsers = (rows = []) => {
+  const registered = rows.length;
+  const completed = rows.filter((row) => row.completionStatus === 'Completed').length;
+  const inProgress = rows.filter((row) => row.completionStatus === 'In Progress').length;
+  const notStarted = registered - completed - inProgress;
+
+  return {
+    registered,
+    completed,
+    inProgress,
+    notStarted,
+    completionRate: registered > 0 ? round((completed / registered) * 100, 0) : 0,
+  };
+};
+
+// Barangay-level monitoring view: which barangays have taken the IGNIS SAFE
+// training and how far they got. Derived from the same rows the table renders.
+export const buildBarangaySummary = (rows = []) => {
+  const groups = new Map();
+
+  rows.forEach((row) => {
+    const label = row.barangay || UNSPECIFIED_BARANGAY_LABEL;
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(row);
+  });
+
+  return Array.from(groups.entries())
+    .map(([label, groupRows]) => ({ barangay: label, ...summarizeUsers(groupRows) }))
+    .sort((a, b) => {
+      if (a.barangay === UNSPECIFIED_BARANGAY_LABEL) return 1;
+      if (b.barangay === UNSPECIFIED_BARANGAY_LABEL) return -1;
+      if (b.registered !== a.registered) return b.registered - a.registered;
+      return a.barangay.localeCompare(b.barangay);
+    });
+};
+
 export const getAccountStatus = (lastActivityAt) => {
   if (!lastActivityAt) return 'Inactive';
 
@@ -142,7 +205,7 @@ export const getProgressPageData = async () => {
     ] = await Promise.all([
       supabase
         .from('profiles')
-        .select('id, first_name, last_name, email, username, avatar_url, completed_simulations, last_simulation, registration_status, app_language_code, terms_accepted, terms_accepted_at, created_at, updated_at')
+        .select('id, first_name, last_name, email, username, avatar_url, completed_simulations, last_simulation, registration_status, app_language_code, terms_accepted, terms_accepted_at, barangay, city, province, created_at, updated_at')
         .order('created_at', { ascending: false }),
       supabase
         .from('modules')
@@ -231,9 +294,15 @@ export const getProgressPageData = async () => {
       ]);
       const normalizedLastActivityAt = lastActivityAt ? lastActivityAt.toISOString() : null;
 
+      const barangayLabel = normalizeBarangay(profile.barangay);
+
       return {
         id: profile.id,
         accountType: 'Mobile User',
+        barangay: barangayLabel,
+        barangayRaw: profile.barangay || null,
+        city: profile.city || '',
+        province: profile.province || '',
         name:
           `${profile.first_name || ''} ${profile.last_name || ''}`.trim() ||
           profile.username ||
@@ -253,23 +322,34 @@ export const getProgressPageData = async () => {
         lastActivityAt: normalizedLastActivityAt,
         lastAccessedModule: latestModule?.name || 'N/A',
         accessStatus: getAccountStatus(normalizedLastActivityAt),
+        completionStatus: getCompletionStatus(overallPercent),
         dateCreated: profile.created_at || null,
         modulesCompleted: completedModules,
         modules: userModules,
       };
     });
 
+    // Only barangays that actually appear on a user record become options, so
+    // the filter can never drift out of sync with the mobile app data.
+    const barangays = Array.from(new Set(rows.map((row) => row.barangay)))
+      .sort((a, b) => {
+        if (a === UNSPECIFIED_BARANGAY_LABEL) return 1;
+        if (b === UNSPECIFIED_BARANGAY_LABEL) return -1;
+        return a.localeCompare(b);
+      });
+
     return {
       data: {
         users: rows,
         modules: safeModules.map((module) => getModuleDisplayTitle(module)),
+        barangays,
       },
       error: null,
     };
   } catch (error) {
     console.error('Error building progress page data:', error);
     return {
-      data: { users: [], modules: [] },
+      data: { users: [], modules: [], barangays: [] },
       error: error.message,
     };
   }

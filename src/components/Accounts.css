@@ -1365,14 +1365,6 @@
   border-radius: 12px 12px 0 0;
 }
 
-.account-directory-group-personnel {
-  border-top: 4px solid #ea7a21;
-}
-
-.account-directory-group-admin {
-  border-top: 4px solid #b91c1c;
-}
-
 .account-directory-group-header {
   display: flex;
   align-items: flex-start;

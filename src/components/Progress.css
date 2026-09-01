@@ -1066,13 +1066,12 @@
 }
 
 .progress-barangay-stats .progress-stat-card {
-  border: 1px solid #e2e8f0;
-  border-top: 3px solid #cbd5e1;
+  border: 2px solid #cbd5e1;
   box-shadow: none;
 }
 
 .progress-barangay-stats .progress-stat-card.completed {
-  border-top-color: #16a34a;
+  border-color: #16a34a;
 }
 
 .progress-barangay-stats .progress-stat-card.completed .progress-main-value {
@@ -1080,7 +1079,7 @@
 }
 
 .progress-barangay-stats .progress-stat-card.in-progress {
-  border-top-color: #f59e0b;
+  border-color: #f59e0b;
 }
 
 .progress-barangay-stats .progress-stat-card.in-progress .progress-main-value {
@@ -1088,7 +1087,7 @@
 }
 
 .progress-barangay-stats .progress-stat-card.not-started {
-  border-top-color: #94a3b8;
+  border-color: #94a3b8;
 }
 
 .progress-barangay-stats .progress-stat-card.not-started .progress-main-value {
@@ -1096,7 +1095,7 @@
 }
 
 .progress-barangay-stats .progress-stat-card.rate {
-  border-top-color: #b91c1c;
+  border-color: #b91c1c;
 }
 
 .progress-barangay-stats .progress-stat-card.rate .progress-main-value {

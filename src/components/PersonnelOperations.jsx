@@ -750,7 +750,10 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                 ))}
               </div>
 
-              <div className="shift-calendar-grid shift-calendar-days">
+              <div
+                className="shift-calendar-grid shift-calendar-days"
+                style={{ minHeight: `${(calendarCells.length / 7) * 152 - 4}px` }}
+              >
                 {scheduleLoading && (
                   <div className="shift-calendar-loading">Loading shift schedule...</div>
                 )}

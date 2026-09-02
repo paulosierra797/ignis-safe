@@ -218,12 +218,14 @@ function LandingPage() {
       <Header />
       <main id="main-content">
         <HeroSection />
-        <Suspense fallback={null}><TrustAccessibilitySection /></Suspense>
-        <Suspense fallback={null}><LandingAnnouncements /></Suspense>
-        <Suspense fallback={null}><ProcessSection /></Suspense>
-        <Suspense fallback={null}><AboutSection /></Suspense>
-        <Suspense fallback={null}><ContactSection /></Suspense>
-        <Suspense fallback={null}><FAQSection /></Suspense>
+        {/* Reserve approximate section heights so the lazy chunks loading in
+            don't shove the footer down (CLS). */}
+        <Suspense fallback={<div style={{ minHeight: 320 }} aria-hidden="true" />}><TrustAccessibilitySection /></Suspense>
+        <Suspense fallback={<div style={{ minHeight: 420 }} aria-hidden="true" />}><LandingAnnouncements /></Suspense>
+        <Suspense fallback={<div style={{ minHeight: 640 }} aria-hidden="true" />}><ProcessSection /></Suspense>
+        <Suspense fallback={<div style={{ minHeight: 520 }} aria-hidden="true" />}><AboutSection /></Suspense>
+        <Suspense fallback={<div style={{ minHeight: 520 }} aria-hidden="true" />}><ContactSection /></Suspense>
+        <Suspense fallback={<div style={{ minHeight: 420 }} aria-hidden="true" />}><FAQSection /></Suspense>
       </main>
       <Footer />
       <Suspense fallback={null}><FloatingContactButton /></Suspense>

@@ -1407,8 +1407,9 @@ export default function AssessmentQuestions() {
 
         <div className="assessment-questions-toolbar">
           <div className="assessment-filter">
-            <label>Select Assessment</label>
+            <label htmlFor="assessment-filter-select">Select Assessment</label>
             <select
+              id="assessment-filter-select"
               value={selectedAssessmentId}
               onChange={handleAssessmentChange}
               disabled={isLoadingAssessments || displayAssessments.length === 0}

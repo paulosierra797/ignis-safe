@@ -17,7 +17,7 @@ import lighthouse from 'lighthouse';
 import desktopConfig from 'lighthouse/core/config/desktop-config.js';
 
 const args = process.argv.slice(2);
-const opts = { runs: 3, profile: null, out: 'docs/superpowers/lighthouse/raw', label: 'run', base: 'http://localhost:4174', urls: [] };
+const opts = { runs: 3, profile: null, out: 'docs/superpowers/lighthouse/raw', label: 'run', base: 'http://localhost:4173', urls: [] };
 for (let i = 0; i < args.length; i += 1) {
   const a = args[i];
   if (a === '--runs') opts.runs = Number(args[++i]);

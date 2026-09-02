@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { launch } from 'chrome-launcher';
 import lighthouse from 'lighthouse';
+import desktopConfig from 'lighthouse/core/config/desktop-config.js';
 
 const args = process.argv.slice(2);
 const opts = { runs: 3, profile: null, out: 'docs/superpowers/lighthouse/raw', label: 'run', base: 'http://localhost:4173', urls: [] };
@@ -53,9 +54,11 @@ const lhFlags = {
   disableStorageReset: true,
 };
 
-// Lighthouse default config already emulates a mid-tier mobile device with
-// 4x CPU throttling and simulated slow 4G — the standard "mobile preset".
-const lhConfig = { extends: 'lighthouse:default', settings: { formFactor: 'mobile', throttlingMethod: 'simulate' } };
+// User-directed 2026-09-03: use the Desktop Lighthouse preset for every run so
+// numbers stay comparable with the existing (desktop) results. desktop-config
+// sets formFactor:desktop, 1350x940 screen emulation, 1x CPU, and DevTools
+// network throttling tuned for desktop.
+const lhConfig = desktopConfig;
 
 const num = (v) => (typeof v === 'number' ? Math.round(v * 100) / 100 : null);
 
@@ -77,10 +80,9 @@ function pick(lhr) {
 
 const results = [];
 
-for (const target of opts.urls) {
-  const url = opts.base + target.path;
-  const runs = [];
-  for (let r = 1; r <= opts.runs; r += 1) {
+async function oneRun(url, target, r) {
+  let lastErr;
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
     const chrome = await launch({
       chromeFlags,
       userDataDir: opts.profile || undefined,
@@ -89,15 +91,31 @@ for (const target of opts.urls) {
     try {
       const runnerResult = await lighthouse(url, { ...lhFlags, port: chrome.port }, lhConfig);
       const metrics = pick(runnerResult.lhr);
-      runs.push(metrics);
       const safe = target.name.replace(/[^a-z0-9]+/gi, '_');
       fs.writeFileSync(
         path.join(opts.out, `${opts.label}__${safe}__run${r}.json`),
         runnerResult.report[0],
       );
-      console.log(`[${target.name}] run ${r}:`, JSON.stringify(metrics));
+      return metrics;
+    } catch (err) {
+      lastErr = err;
+      console.log(`[${target.name}] run ${r} attempt ${attempt} FAILED: ${err.code || err.message}`);
     } finally {
       await chrome.kill();
+    }
+  }
+  console.log(`[${target.name}] run ${r} GIVING UP: ${lastErr?.message}`);
+  return null;
+}
+
+for (const target of opts.urls) {
+  const url = opts.base + target.path;
+  const runs = [];
+  for (let r = 1; r <= opts.runs; r += 1) {
+    const metrics = await oneRun(url, target, r);
+    if (metrics) {
+      runs.push(metrics);
+      console.log(`[${target.name}] run ${r}:`, JSON.stringify(metrics));
     }
   }
   const keys = ['performance', 'accessibility', 'best-practices', 'seo', 'LCP_ms', 'TBT_ms', 'CLS', 'FCP_ms', 'SI_ms'];

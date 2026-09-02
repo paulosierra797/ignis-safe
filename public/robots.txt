@@ -1,0 +1,18 @@
+User-agent: *
+Allow: /$
+Allow: /organizational-chart
+Allow: /terms
+Allow: /privacy
+Allow: /send-message
+Allow: /attendance-login
+Disallow: /login
+Disallow: /confirm-signup
+Disallow: /dashboard
+Disallow: /personnel
+Disallow: /reports
+Disallow: /attendance-admin
+Disallow: /attendance-personnel
+Disallow: /attendance-scan
+Disallow: /attendance-confirm
+
+Sitemap: https://ignis-safe.vercel.app/sitemap.xml

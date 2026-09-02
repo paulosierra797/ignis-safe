@@ -35,7 +35,7 @@ const CHAT_COPY = {
     continueTitle: 'Continue a conversation', continueHelp: 'Enter the private recovery code shown when your first message was sent.',
     recoveryCode: 'Recovery code', checking: 'Checking...', continueConversation: 'Continue conversation', startTitle: 'Start a conversation',
     startHelp: 'Send your question directly to the BFP Dasmariñas team. Your replies will appear here.', name: 'Name', fullName: 'Your full name',
-    email: 'Gmail / Email (optional)', message: 'Message', helpPlaceholder: 'How can we help you?', sending: 'Sending...',
+    email: 'Gmail / Email', emailHelp: 'Optional. Leave this blank if you prefer not to provide an email.', message: 'Message', helpPlaceholder: 'How can we help you?', sending: 'Sending...',
     privacy: 'Your name, email, and messages are used only to manage this conversation. Do not send passwords or sensitive records.',
     restoreLink: 'Already have a conversation? Use recovery code', close: 'Close message box',
     errors: {
@@ -56,7 +56,7 @@ const CHAT_COPY = {
     continueTitle: 'Ipagpatuloy ang pag-uusap', continueHelp: 'Ilagay ang pribadong recovery code na ipinakita noong naipadala ang una mong mensahe.',
     recoveryCode: 'Recovery code', checking: 'Sinusuri...', continueConversation: 'Ipagpatuloy ang pag-uusap', startTitle: 'Magsimula ng pag-uusap',
     startHelp: 'Direktang ipadala ang iyong tanong sa BFP Dasmariñas team. Lalabas dito ang kanilang sagot.', name: 'Pangalan', fullName: 'Buong pangalan',
-    email: 'Gmail / Email (opsyonal)', message: 'Mensahe', helpPlaceholder: 'Paano ka namin matutulungan?', sending: 'Ipinapadala...',
+    email: 'Gmail / Email', emailHelp: 'Opsyonal. Maaaring iwanang blangko kung ayaw mong magbigay ng email.', message: 'Mensahe', helpPlaceholder: 'Paano ka namin matutulungan?', sending: 'Ipinapadala...',
     privacy: 'Ginagamit lamang ang iyong pangalan, email, at mga mensahe upang pamahalaan ang pag-uusap na ito. Huwag magpadala ng password o sensitibong rekord.',
     restoreLink: 'May dati ka nang pag-uusap? Gamitin ang recovery code', close: 'Isara ang message box',
     errors: {
@@ -454,6 +454,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                   aria-invalid={Boolean(fieldErrors.email)}
                   aria-describedby={fieldErrors.email ? `visitor-email-error-${variant}` : undefined}
                 />
+                {!fieldErrors.email && <p className="visitor-chat-field-help">{copy.emailHelp}</p>}
                 {fieldErrors.email && (
                   <p className="visitor-chat-field-error" id={`visitor-email-error-${variant}`} role="alert">
                     {fieldErrors.email}

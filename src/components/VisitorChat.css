@@ -252,6 +252,13 @@
   line-height: 1.4;
 }
 
+.visitor-chat-field-help {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
 .visitor-chat-honeypot {
   position: absolute;
   left: -10000px;

@@ -165,6 +165,19 @@ function SingleField({ label, value, onChange, multiline, rows = 2, type = 'text
   );
 }
 
+function SelectField({ label, value, onChange, options }) {
+  return (
+    <label className="aboutus-field aboutus-field-single">
+      <span>{label}</span>
+      <select value={value || ''} onChange={(event) => onChange(event.target.value)}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>{option.label}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function ActiveCheckbox({ checked, onChange }) {
   return (
     <label className="aboutus-checkbox">
@@ -507,11 +520,11 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
   const numbers = useEditableList({
     load: aboutUsService.listEmergencyNumbers,
     create: (form, rows) => aboutUsService.createEmergencyNumber({
-      label_en: form.label_en, label_tl: form.label_tl, icon_key: form.icon_key,
+      label_en: form.label_en, label_tl: form.label_tl, contact_type: form.contact_type,
       display_value: form.display_value, dial_value: form.dial_value
     }, rows),
     update: (form) => aboutUsService.updateEmergencyNumber(form.id, {
-      label_en: form.label_en, label_tl: form.label_tl, icon_key: form.icon_key,
+      label_en: form.label_en, label_tl: form.label_tl, contact_type: form.contact_type,
       is_active: form.is_active, display_order: form.display_order,
       contact_key: form.contact_key, display_value: form.display_value, dial_value: form.dial_value
     }),
@@ -560,12 +573,12 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
       <div className="aboutus-subsection">
         <div className="aboutus-list-header">
           <h3>Emergency numbers</h3>
-          <button type="button" className="aboutus-btn aboutus-btn-outline" onClick={() => numbers.startAdd({ label_en: '', label_tl: '', icon_key: '', display_value: '', dial_value: '', is_active: true })}>
+          <button type="button" className="aboutus-btn aboutus-btn-outline" onClick={() => numbers.startAdd({ label_en: '', label_tl: '', contact_type: 'mobile', display_value: '', dial_value: '', is_active: true })}>
             <FiPlus aria-hidden="true" /> Add number
           </button>
         </div>
         <p className="aboutus-hint">
-          This number also appears on the BFP Dasmariñas card if it is reused there — editing the value updates both places.
+          Add only the public label and phone number shown to visitors. The dial number is the digits used when they tap to call.
         </p>
 
         {numbers.editingId === 'new' && (
@@ -582,6 +595,7 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
                   <>
                     <div className="aboutus-item-summary">
                       <strong>{row.label_en}</strong>
+                      <span className="aboutus-contact-type">{row.contact_type === 'mobile' ? 'Mobile' : 'Landline'}</span>
                       <span className="aboutus-item-sub">{row.display_value}</span>
                       <StatusBadge active={row.is_active} />
                     </div>
@@ -613,14 +627,32 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
 
 function EmergencyNumberEditRow({ form, setField, onSave, onCancel, busy }) {
   return (
-    <div className="aboutus-edit-row">
-      <FieldPair label="Label" valueEn={form.label_en} valueTl={form.label_tl}
-        onChangeEn={(v) => setField('label_en', v)} onChangeTl={(v) => setField('label_tl', v)} />
-      <SingleField label="Icon key" value={form.icon_key} onChange={(v) => setField('icon_key', v)} placeholder="local_phone" />
-      <div className="aboutus-language-grid">
-        <SingleField label="Display value" value={form.display_value} onChange={(v) => setField('display_value', v)} />
-        <SingleField label="Dial value" value={form.dial_value} onChange={(v) => setField('dial_value', v)} />
+    <div className="aboutus-edit-row aboutus-emergency-edit-row">
+      <div className="aboutus-emergency-editor-grid">
+        <SelectField
+          label="Phone type"
+          value={form.contact_type || 'mobile'}
+          onChange={(v) => setField('contact_type', v)}
+          options={[
+            { value: 'mobile', label: 'Mobile phone' },
+            { value: 'landline', label: 'Landline' },
+          ]}
+        />
+        <SingleField
+          label="Number shown to visitors"
+          value={form.display_value}
+          onChange={(v) => setField('display_value', v)}
+          placeholder="0995-336-9534"
+        />
+        <SingleField
+          label="Dial number"
+          value={form.dial_value}
+          onChange={(v) => setField('dial_value', v)}
+          placeholder="09953369534"
+        />
       </div>
+      <FieldPair label="Public label" valueEn={form.label_en} valueTl={form.label_tl}
+        onChangeEn={(v) => setField('label_en', v)} onChangeTl={(v) => setField('label_tl', v)} />
       <ActiveCheckbox checked={form.is_active} onChange={(v) => setField('is_active', v)} />
       <div className="aboutus-edit-row-actions">
         <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>

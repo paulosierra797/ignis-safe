@@ -391,7 +391,11 @@ export default function VisitorMessages() {
                   <span className="visitor-thread-avatar"><FiUser /></span>
                   <div className="visitor-thread-person">
                     <h3>{thread.conversation.visitor_name}</h3>
-                    <a href={`mailto:${thread.conversation.visitor_email}`}><FiMail /> {thread.conversation.visitor_email}</a>
+                    {thread.conversation.visitor_email ? (
+                      <a href={`mailto:${thread.conversation.visitor_email}`}><FiMail /> {thread.conversation.visitor_email}</a>
+                    ) : (
+                      <span><FiMail /> No email provided</span>
+                    )}
                     <span>{thread.conversation.visitor_label}</span>
                   </div>
                   <div className="visitor-thread-actions">
@@ -530,7 +534,7 @@ export default function VisitorMessages() {
             </p>
             <div className="visitor-delete-modal-preview">
               <span>{pendingDeletion.visitor_name}</span>
-              <small>{pendingDeletion.visitor_email}</small>
+              <small>{pendingDeletion.visitor_email || 'No email provided'}</small>
             </div>
             <div className="visitor-delete-modal-actions">
               <button type="button" onClick={() => setPendingDeletion(null)} disabled={updatingArchive}>Cancel</button>

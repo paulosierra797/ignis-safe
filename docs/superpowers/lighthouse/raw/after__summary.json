@@ -1,0 +1,52 @@
+[
+  {
+    "name": "About Us",
+    "path": "/dashboard/about-us",
+    "runs": [
+      {
+        "performance": 94,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 1380.85,
+        "TBT_ms": 0,
+        "CLS": 0.06,
+        "FCP_ms": 456.12,
+        "SI_ms": 1292.96
+      },
+      {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 1120.94,
+        "TBT_ms": 0,
+        "CLS": 0.06,
+        "FCP_ms": 293.89,
+        "SI_ms": 745.75
+      },
+      {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 1165.99,
+        "TBT_ms": 0,
+        "CLS": 0.06,
+        "FCP_ms": 291.48,
+        "SI_ms": 646.24
+      }
+    ],
+    "mean": {
+      "performance": 96,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 66,
+      "LCP_ms": 1222.59,
+      "TBT_ms": 0,
+      "CLS": 0.06,
+      "FCP_ms": 347.16,
+      "SI_ms": 894.98
+    }
+  }
+]

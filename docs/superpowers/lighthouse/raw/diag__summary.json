@@ -1,0 +1,30 @@
+[
+  {
+    "name": "About Us",
+    "path": "/dashboard/about-us",
+    "runs": [
+      {
+        "performance": 88,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 1744.04,
+        "TBT_ms": 0,
+        "CLS": 0.06,
+        "FCP_ms": 613.29,
+        "SI_ms": 1969.02
+      }
+    ],
+    "mean": {
+      "performance": 88,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 66,
+      "LCP_ms": 1744.04,
+      "TBT_ms": 0,
+      "CLS": 0.06,
+      "FCP_ms": 613.29,
+      "SI_ms": 1969.02
+    }
+  }
+]

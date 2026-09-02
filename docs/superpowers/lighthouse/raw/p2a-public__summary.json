@@ -1,0 +1,52 @@
+[
+  {
+    "name": "Landing Page",
+    "path": "/",
+    "runs": [
+      {
+        "performance": 98,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 100,
+        "LCP_ms": 1014.18,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 761.91,
+        "SI_ms": 761.91
+      },
+      {
+        "performance": 98,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 100,
+        "LCP_ms": 1001.43,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 748.57,
+        "SI_ms": 748.57
+      },
+      {
+        "performance": 98,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 100,
+        "LCP_ms": 996.81,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 742.41,
+        "SI_ms": 742.41
+      }
+    ],
+    "mean": {
+      "performance": 98,
+      "accessibility": 96,
+      "best-practices": 100,
+      "seo": 100,
+      "LCP_ms": 1004.14,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 750.96,
+      "SI_ms": 750.96
+    }
+  }
+]

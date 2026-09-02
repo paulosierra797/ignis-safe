@@ -1,0 +1,152 @@
+[
+  {
+    "name": "Personnel - Shift Schedule",
+    "path": "/personnel/operations",
+    "runs": [
+      {
+        "performance": 86,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 1377.19,
+        "TBT_ms": 0,
+        "CLS": 0.16,
+        "FCP_ms": 584.59,
+        "SI_ms": 1817.12
+      },
+      {
+        "performance": 92,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 693.98,
+        "TBT_ms": 0,
+        "CLS": 0.16,
+        "FCP_ms": 300.11,
+        "SI_ms": 1145
+      },
+      {
+        "performance": 87,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 1341.44,
+        "TBT_ms": 2.5,
+        "CLS": 0.16,
+        "FCP_ms": 641.22,
+        "SI_ms": 1649.05
+      }
+    ],
+    "mean": {
+      "performance": 88.33,
+      "accessibility": 96,
+      "best-practices": 100,
+      "seo": 66,
+      "LCP_ms": 1137.54,
+      "TBT_ms": 0.83,
+      "CLS": 0.16,
+      "FCP_ms": 508.64,
+      "SI_ms": 1537.06
+    }
+  },
+  {
+    "name": "Personnel - Profile",
+    "path": "/personnel/profile",
+    "runs": [
+      {
+        "performance": 97,
+        "accessibility": 90,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 1224.09,
+        "TBT_ms": 16,
+        "CLS": 0,
+        "FCP_ms": 312.66,
+        "SI_ms": 1076.41
+      },
+      {
+        "performance": 99,
+        "accessibility": 90,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 679.99,
+        "TBT_ms": 8.11,
+        "CLS": 0,
+        "FCP_ms": 257.78,
+        "SI_ms": 1029.4
+      },
+      {
+        "performance": 98,
+        "accessibility": 90,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 906.86,
+        "TBT_ms": 27,
+        "CLS": 0,
+        "FCP_ms": 292.01,
+        "SI_ms": 1185.57
+      }
+    ],
+    "mean": {
+      "performance": 98,
+      "accessibility": 90,
+      "best-practices": 100,
+      "seo": 66,
+      "LCP_ms": 936.98,
+      "TBT_ms": 17.04,
+      "CLS": 0,
+      "FCP_ms": 287.48,
+      "SI_ms": 1097.13
+    }
+  },
+  {
+    "name": "Personnel - Audit Logs",
+    "path": "/personnel/history",
+    "runs": [
+      {
+        "performance": 99,
+        "accessibility": 92,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 833,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 292.53,
+        "SI_ms": 953.68
+      },
+      {
+        "performance": 99,
+        "accessibility": 92,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 880.26,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 289.41,
+        "SI_ms": 961.47
+      },
+      {
+        "performance": 99,
+        "accessibility": 92,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 835.93,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 289.68,
+        "SI_ms": 1135.87
+      }
+    ],
+    "mean": {
+      "performance": 99,
+      "accessibility": 92,
+      "best-practices": 100,
+      "seo": 66,
+      "LCP_ms": 849.73,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 290.54,
+      "SI_ms": 1017.01
+    }
+  }
+]

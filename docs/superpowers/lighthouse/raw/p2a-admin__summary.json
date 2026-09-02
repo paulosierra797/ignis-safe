@@ -1,0 +1,152 @@
+[
+  {
+    "name": "Admin About Us Content",
+    "path": "/dashboard/about-us",
+    "runs": [
+      {
+        "performance": 91,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 1672.63,
+        "TBT_ms": 0,
+        "CLS": 0.06,
+        "FCP_ms": 613.44,
+        "SI_ms": 1348.04
+      },
+      {
+        "performance": 95,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 1443.53,
+        "TBT_ms": 0,
+        "CLS": 0.06,
+        "FCP_ms": 293.79,
+        "SI_ms": 869.28
+      },
+      {
+        "performance": 97,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 1147.34,
+        "TBT_ms": 0,
+        "CLS": 0.06,
+        "FCP_ms": 263.3,
+        "SI_ms": 935.6
+      }
+    ],
+    "mean": {
+      "performance": 94.33,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 66,
+      "LCP_ms": 1421.17,
+      "TBT_ms": 0,
+      "CLS": 0.06,
+      "FCP_ms": 390.18,
+      "SI_ms": 1050.97
+    }
+  },
+  {
+    "name": "Admin Users",
+    "path": "/dashboard/users",
+    "runs": [
+      {
+        "performance": 98,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 900.14,
+        "TBT_ms": 0,
+        "CLS": 0.04,
+        "FCP_ms": 257.61,
+        "SI_ms": 1349.45
+      },
+      {
+        "performance": 99,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 781.91,
+        "TBT_ms": 0,
+        "CLS": 0.04,
+        "FCP_ms": 293.45,
+        "SI_ms": 846.25
+      },
+      {
+        "performance": 99,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 66,
+        "LCP_ms": 779.78,
+        "TBT_ms": 0,
+        "CLS": 0.04,
+        "FCP_ms": 296.96,
+        "SI_ms": 835.79
+      }
+    ],
+    "mean": {
+      "performance": 98.67,
+      "accessibility": 96,
+      "best-practices": 100,
+      "seo": 66,
+      "LCP_ms": 820.61,
+      "TBT_ms": 0,
+      "CLS": 0.04,
+      "FCP_ms": 282.67,
+      "SI_ms": 1010.5
+    }
+  },
+  {
+    "name": "Admin Dashboard",
+    "path": "/dashboard",
+    "runs": [
+      {
+        "performance": 100,
+        "accessibility": 95,
+        "best-practices": 96,
+        "seo": 66,
+        "LCP_ms": 672.37,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 289.95,
+        "SI_ms": 787.03
+      },
+      {
+        "performance": 99,
+        "accessibility": 95,
+        "best-practices": 96,
+        "seo": 66,
+        "LCP_ms": 758.49,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 296.85,
+        "SI_ms": 1136.33
+      },
+      {
+        "performance": 99,
+        "accessibility": 95,
+        "best-practices": 96,
+        "seo": 66,
+        "LCP_ms": 764.92,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 294.74,
+        "SI_ms": 1055.13
+      }
+    ],
+    "mean": {
+      "performance": 99.33,
+      "accessibility": 95,
+      "best-practices": 96,
+      "seo": 66,
+      "LCP_ms": 731.93,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 293.85,
+      "SI_ms": 992.83
+    }
+  }
+]

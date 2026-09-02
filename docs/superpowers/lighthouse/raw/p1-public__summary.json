@@ -1,0 +1,102 @@
+[
+  {
+    "name": "Landing Page",
+    "path": "/",
+    "runs": [
+      {
+        "performance": 92,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 100,
+        "LCP_ms": 1028.7,
+        "TBT_ms": 0,
+        "CLS": 0.14,
+        "FCP_ms": 781.59,
+        "SI_ms": 781.59
+      },
+      {
+        "performance": 87,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 100,
+        "LCP_ms": 1227.79,
+        "TBT_ms": 0,
+        "CLS": 0.2,
+        "FCP_ms": 823.72,
+        "SI_ms": 823.72
+      },
+      {
+        "performance": 91,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 100,
+        "LCP_ms": 1126.9,
+        "TBT_ms": 0,
+        "CLS": 0.14,
+        "FCP_ms": 792.53,
+        "SI_ms": 792.53
+      }
+    ],
+    "mean": {
+      "performance": 90,
+      "accessibility": 96,
+      "best-practices": 100,
+      "seo": 100,
+      "LCP_ms": 1127.8,
+      "TBT_ms": 0,
+      "CLS": 0.16,
+      "FCP_ms": 799.28,
+      "SI_ms": 799.28
+    }
+  },
+  {
+    "name": "Send Message",
+    "path": "/send-message",
+    "runs": [
+      {
+        "performance": 100,
+        "accessibility": 95,
+        "best-practices": 100,
+        "seo": 100,
+        "LCP_ms": 717.93,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 685.94,
+        "SI_ms": 685.94
+      },
+      {
+        "performance": 100,
+        "accessibility": 95,
+        "best-practices": 100,
+        "seo": 100,
+        "LCP_ms": 724.92,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 690.77,
+        "SI_ms": 690.77
+      },
+      {
+        "performance": 100,
+        "accessibility": 95,
+        "best-practices": 100,
+        "seo": 100,
+        "LCP_ms": 718.06,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 685.71,
+        "SI_ms": 685.71
+      }
+    ],
+    "mean": {
+      "performance": 100,
+      "accessibility": 95,
+      "best-practices": 100,
+      "seo": 100,
+      "LCP_ms": 720.3,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 687.47,
+      "SI_ms": 687.47
+    }
+  }
+]

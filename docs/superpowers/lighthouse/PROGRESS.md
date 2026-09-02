@@ -1,5 +1,25 @@
 # Lighthouse optimization — working state
 
+## SESSION 5 (2026-09-03) — About Us Perf follow-up
+
+Branch was never merged; user re-reported About Us Perf 78 / CLS 0.475 (those are
+`main`'s numbers). On this branch CLS was already 0.06 (520px `.aboutus-loading`
+reservation holds). Real gap was Perf ~88: LCP ~1.7s + SI ~2.0s.
+
+Commit `e7591e3`:
+- `vite.config.js` — pin Vite's `preload-helper` virtual module to `vendor-react`.
+  It had been bundled into `vendor-documents` (jspdf), so every route statically
+  imported ~134 KB of PDF code. Now `vendor-documents` only loads on PDF routes.
+- `src/main.jsx` — Poppins imports: drop the 6 `latin-ext-*` files (no
+  unicode-range → browser was fetching 12 woff2 up front). Latin-only now.
+- `index.html` — `<link rel=preconnect>` for the Supabase origin.
+
+Local Desktop LH, prod build, `/dashboard/about-us`, 3 runs: Perf 88 → 94/97/97;
+LCP 1744 → ~1223 ms; SI 1969 → ~895 ms; CLS 0.06 (unchanged, all runs); A11y 100;
+BP 100; TBT 0. User runs the official 3× verification themselves.
+
+---
+
 Branch: `perf/lighthouse-optimization` (off `main`).
 Spec: `docs/superpowers/specs/2026-09-03-lighthouse-optimization-design.md`.
 Baseline scoreboard + failing-audit digest: `docs/superpowers/lighthouse/baseline-scoreboard.md`.

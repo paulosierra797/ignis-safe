@@ -72,9 +72,9 @@ SEO focus: public pages scoring 82-83.
 - Images: manually optimized and committed. No `vite-imagetools`, no online
   image services. `sharp` used only as a one-time local dev tool
   (`npm i -D sharp`, optimize, `npm un sharp`) or global install.
-- Fonts: remove the render-blocking Google Fonts request; self-host Poppins,
-  loading only the weights actually used. Prefer vendored `woff2` files over a
-  new dependency; use `@fontsource/poppins` only if vendoring proves impractical.
+- Fonts: remove the render-blocking Google Fonts request; self-host Poppins via
+  `@fontsource/poppins` (user-directed 2026-09-03), importing only the weights
+  actually used.
 
 ## Approach - shared-first, measurement-driven, phased
 
@@ -98,9 +98,10 @@ per module. Confirm routes.
 2. **Fonts**
    - Remove the `<link rel="stylesheet">` to `fonts.googleapis.com` and the two
      `preconnect`s from `index.html`.
-   - Self-host Poppins latin `woff2` for the weights in use: 400, 500, 600, 700,
-     800, 900 (non-standard 450/650/750/850 in CSS snap to the nearest loaded
-     weight, matching current behaviour with `font-synthesis: none`).
+   - Self-host Poppins via `@fontsource/poppins` for the weights in use: 400,
+     500, 600, 700, 800, 900 (non-standard 450/650/750/850 in CSS snap to the
+     nearest loaded weight, matching current behaviour with
+     `font-synthesis: none`).
    - `@font-face` with `font-display: swap` + a fallback `@font-face`
      (`size-adjust` / `ascent-override` / `descent-override`) for a metrics-
      matched system fallback so text swap does not shift layout.

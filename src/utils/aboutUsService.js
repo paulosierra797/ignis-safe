@@ -538,12 +538,14 @@ export const listEmergencyNumbers = async () => {
   }
 };
 
-export const createEmergencyNumber = async ({ label_en, label_tl, icon_key, display_value, dial_value }, existingRows = []) => {
+export const createEmergencyNumber = async ({ label_en, label_tl, contact_type, display_value, dial_value }, existingRows = []) => {
   try {
+    const contactType = contact_type === 'landline' ? 'landline' : 'mobile';
+    const iconKey = contactType === 'landline' ? 'local_phone' : 'phone_iphone';
     const contactKey = generateKey(label_en, 'contact');
     const { error: pointError } = await supabase.from('about_us_contact_points').insert({
       contact_key: contactKey,
-      contact_type: label_en,
+      contact_type: contactType,
       display_value,
       dial_value,
       is_active: true,
@@ -554,7 +556,7 @@ export const createEmergencyNumber = async ({ label_en, label_tl, icon_key, disp
       section_key: EMERGENCY_SECTION_KEY,
       label_en,
       label_tl,
-      icon_key,
+      icon_key: iconKey,
       contact_key: contactKey,
       display_order: nextDisplayOrder(existingRows),
       is_active: true,
@@ -568,17 +570,19 @@ export const createEmergencyNumber = async ({ label_en, label_tl, icon_key, disp
   }
 };
 
-export const updateEmergencyNumber = async (id, { label_en, label_tl, icon_key, is_active, display_order, contact_key, display_value, dial_value }) => {
+export const updateEmergencyNumber = async (id, { label_en, label_tl, contact_type, is_active, display_order, contact_key, display_value, dial_value }) => {
   try {
+    const contactType = contact_type === 'landline' ? 'landline' : 'mobile';
+    const iconKey = contactType === 'landline' ? 'local_phone' : 'phone_iphone';
     const { error: numberError } = await supabase
       .from('about_us_emergency_numbers')
-      .update({ label_en, label_tl, icon_key, is_active, display_order })
+      .update({ label_en, label_tl, icon_key: iconKey, is_active, display_order })
       .eq('id', id);
     if (numberError) throw numberError;
 
     const { error: pointError } = await supabase
       .from('about_us_contact_points')
-      .update({ display_value, dial_value })
+      .update({ contact_type: contactType, display_value, dial_value })
       .eq('contact_key', contact_key);
     if (pointError) throw pointError;
 

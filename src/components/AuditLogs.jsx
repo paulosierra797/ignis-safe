@@ -3,7 +3,7 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { FaSearch } from 'react-icons/fa';
+import { FaDownload, FaSearch, FaTimes } from 'react-icons/fa';
 import './AuditLogs.css';
 import { getAdminAuditLogs } from '../utils/usersService';
 import { formatStatusLabel } from '../utils/statusUtils';
@@ -254,10 +254,10 @@ export default function AuditLogs() {
               <span className="audit-logs-filter-label audit-logs-filter-actions-label">&nbsp;</span>
               <div className="audit-logs-filter-actions-buttons">
                 <button type="button" className="audit-logs-clear" onClick={handleClearFilters}>
-                  Clear Filters
+                  <FaTimes aria-hidden="true" /> Clear Filters
                 </button>
                 <button type="button" className="audit-logs-export" onClick={handleExportCsv} disabled={filteredLogs.length === 0}>
-                  Export CSV
+                  <FaDownload aria-hidden="true" /> Export CSV
                 </button>
               </div>
             </div>

@@ -218,11 +218,9 @@ const AttendancePersonnel = () => {
               </div>
 
               <div className="qr-important">
-                <strong>Important:</strong> The QR code refreshes every 60 seconds for
-                security. Once you have successfully scanned it, your attendance session
-                stays valid for about 5 minutes so you can finish face and location
-                verification even if the QR refreshes. If scanning fails, use the Copy
-                Link button below the QR code.
+                <strong>Important:</strong> Each QR code and copied link is valid for 5 minutes only.
+                Finish face, location, and attendance verification before it expires. After
+                expiry, wait for the new QR code or copy the new link shown below.
               </div>
             </div>
 
@@ -235,7 +233,7 @@ const AttendancePersonnel = () => {
                 <div className="qr-expiry">
                   {expiryInfo && expiryInfo.remaining > 0 ? (
                     <span className="qr-expiry-text">
-                      Expires in {expiryInfo.hours}h {expiryInfo.minutes}m {expiryInfo.seconds}s
+                      Expires in {expiryInfo.minutes}m {expiryInfo.seconds}s
                     </span>
                   ) : (
                     <span>QR expired</span>

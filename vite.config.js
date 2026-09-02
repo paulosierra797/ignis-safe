@@ -36,6 +36,18 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           const normalizedId = id.replaceAll('\\', '/')
+          // Vite's dynamic-import preload helper is a virtual module imported by
+          // every lazy route chunk. Left unassigned, Rollup co-locates it with a
+          // heavy vendor chunk (jspdf/jspdf-autotable), which then gets pulled
+          // onto every route - ~134 KB of unused JS on pages that never export a
+          // PDF. Pin the helpers to vendor-react, which already loads everywhere.
+          if (
+            normalizedId.includes('vite/preload-helper')
+            || normalizedId.includes('vite/modulepreload-polyfill')
+            || normalizedId.includes('vite/dynamic-import-helper')
+          ) {
+            return 'vendor-react'
+          }
           if (!normalizedId.includes('/node_modules/')) return undefined
           if (/node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) {
             return 'vendor-react'

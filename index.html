@@ -4,6 +4,9 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/src/assets/inLOGO.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Warm the connection to Supabase so the first data fetch on any route
+         doesn't pay DNS + TLS setup on the critical path. -->
+    <link rel="preconnect" href="https://mvgpeiejwstrxjmfslke.supabase.co" crossorigin />
     <meta
       name="description"
       content="IGNIS SAFE is the Bureau of Fire Protection Dasmariñas City Fire Station portal for fire safety inspection services, public advisories, and station contact information."

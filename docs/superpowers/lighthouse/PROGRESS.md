@@ -58,6 +58,18 @@ and `sitemap.xml`. Confirm the real domain before finalising SEO.
 | Admin Attendance `/attendance-admin` | 100 | 94 | 96 | 83 | 0 | contrast(export-csv-btn), BP(logo) |
 | Admin Dashboard `/dashboard` | 99 | 95 | 94 | 83 | 0 | heading-order, label-content-name-mismatch(metric-card), contrast, BP(logo) |
 
+## SESSION 2 STATUS (mid Phase 1 -> Phase 2)
+
+- Preview server: run `node node_modules/vite/bin/vite.js preview --port 4173 --strictPort`
+  as a Bash background task (NOT nohup — it dies). MUST be port 4173: the logged-in
+  Chrome profile sessions are bound to origin `localhost:4173`. Rebuild = `npm run build`
+  (preview serves fresh dist on next request, no restart needed).
+- `lighthouse`, `puppeteer-core`, `sharp` are now IN devDependencies (committed) because
+  `git checkout package*.json` + a later `npm i` kept pruning them. Remove all 3 in the
+  final cleanup commit + `npm i` to regen lock.
+- p1 checkpoint audit (label `p1-*`) running in background to validate Phase 1 shared
+  fixes. Monitor task was `bpqg1sh6k`.
+
 ## DONE (committed)
 
 - Spec + harness + scoreboard tooling.

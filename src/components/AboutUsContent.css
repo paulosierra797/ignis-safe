@@ -144,16 +144,27 @@
 
 .aboutus-hint {
   margin: -0.4rem 0 0.9rem;
-  color: #94a3b8;
+  /* #94a3b8 failed WCAG AA on white (~2.6:1); #64748b clears 4.5:1. */
+  color: #64748b;
   font-size: 0.78rem;
 }
 
 .aboutus-loading,
 .aboutus-empty {
   padding: 0.9rem;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.85rem;
   text-align: center;
+}
+
+/* Each card fetches independently and swapped a one-line "Loading…" for a
+   tall form, shifting every card below it (CLS ~0.48). Reserve a realistic
+   height so the load-in barely moves the layout. */
+.aboutus-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 440px;
 }
 
 .aboutus-field-pair {

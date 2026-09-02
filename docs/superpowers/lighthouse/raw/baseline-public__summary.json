@@ -1,0 +1,302 @@
+[
+  {
+    "name": "Landing Page",
+    "path": "/",
+    "runs": [
+      {
+        "performance": 89,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 1398.3,
+        "TBT_ms": 18,
+        "CLS": 0.14,
+        "FCP_ms": 860.11,
+        "SI_ms": 917.09
+      },
+      {
+        "performance": 88,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 1463.96,
+        "TBT_ms": 0,
+        "CLS": 0.14,
+        "FCP_ms": 902.44,
+        "SI_ms": 1072.38
+      },
+      {
+        "performance": 87,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 1573.54,
+        "TBT_ms": 0,
+        "CLS": 0.14,
+        "FCP_ms": 949.66,
+        "SI_ms": 949.66
+      }
+    ],
+    "mean": {
+      "performance": 88,
+      "accessibility": 96,
+      "best-practices": 100,
+      "seo": 83,
+      "LCP_ms": 1478.6,
+      "TBT_ms": 6,
+      "CLS": 0.14,
+      "FCP_ms": 904.07,
+      "SI_ms": 979.71
+    }
+  },
+  {
+    "name": "Organizational Chart public",
+    "path": "/organizational-chart",
+    "runs": [
+      {
+        "performance": 96,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 1256.09,
+        "TBT_ms": 0,
+        "CLS": 0.01,
+        "FCP_ms": 898.18,
+        "SI_ms": 1064.38
+      },
+      {
+        "performance": 96,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 1160.34,
+        "TBT_ms": 0,
+        "CLS": 0.01,
+        "FCP_ms": 889.79,
+        "SI_ms": 1088.56
+      },
+      {
+        "performance": 96,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 1153.85,
+        "TBT_ms": 0,
+        "CLS": 0.01,
+        "FCP_ms": 969.23,
+        "SI_ms": 1104.18
+      }
+    ],
+    "mean": {
+      "performance": 96,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 83,
+      "LCP_ms": 1190.09,
+      "TBT_ms": 0,
+      "CLS": 0.01,
+      "FCP_ms": 919.07,
+      "SI_ms": 1085.71
+    }
+  },
+  {
+    "name": "Terms",
+    "path": "/terms",
+    "runs": [
+      {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 82,
+        "LCP_ms": 884.76,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 884.76,
+        "SI_ms": 967.13
+      },
+      {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 82,
+        "LCP_ms": 863.15,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 823.15,
+        "SI_ms": 932.03
+      },
+      {
+        "performance": 95,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 82,
+        "LCP_ms": 1149.08,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 1149.08,
+        "SI_ms": 1296.47
+      }
+    ],
+    "mean": {
+      "performance": 97,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 82,
+      "LCP_ms": 965.66,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 952.33,
+      "SI_ms": 1065.21
+    }
+  },
+  {
+    "name": "Privacy",
+    "path": "/privacy",
+    "runs": [
+      {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 82,
+        "LCP_ms": 893.66,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 893.66,
+        "SI_ms": 1168.39
+      },
+      {
+        "performance": 96,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 82,
+        "LCP_ms": 1076.48,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 1076.48,
+        "SI_ms": 1183.6
+      },
+      {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 82,
+        "LCP_ms": 874.84,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 834.84,
+        "SI_ms": 929.58
+      }
+    ],
+    "mean": {
+      "performance": 97.33,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 82,
+      "LCP_ms": 948.33,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 934.99,
+      "SI_ms": 1093.86
+    }
+  },
+  {
+    "name": "Send Message",
+    "path": "/send-message",
+    "runs": [
+      {
+        "performance": 98,
+        "accessibility": 95,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 867.63,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 852.35,
+        "SI_ms": 865.72
+      },
+      {
+        "performance": 97,
+        "accessibility": 95,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 960.65,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 960.65,
+        "SI_ms": 960.65
+      },
+      {
+        "performance": 98,
+        "accessibility": 95,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 860.28,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 860.28,
+        "SI_ms": 988.57
+      }
+    ],
+    "mean": {
+      "performance": 97.67,
+      "accessibility": 95,
+      "best-practices": 100,
+      "seo": 83,
+      "LCP_ms": 896.19,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 891.09,
+      "SI_ms": 938.31
+    }
+  },
+  {
+    "name": "Attendance Login public",
+    "path": "/attendance-login",
+    "runs": [
+      {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 739.42,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 717.72,
+        "SI_ms": 817.13
+      },
+      {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 885.56,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 738.59,
+        "SI_ms": 870.98
+      },
+      {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 83,
+        "LCP_ms": 836.36,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 836.36,
+        "SI_ms": 862.85
+      }
+    ],
+    "mean": {
+      "performance": 99,
+      "accessibility": 100,
+      "best-practices": 100,
+      "seo": 83,
+      "LCP_ms": 820.45,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 764.22,
+      "SI_ms": 850.32
+    }
+  }
+]

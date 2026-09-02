@@ -1,0 +1,402 @@
+[
+  {
+    "name": "Admin Organization Chart",
+    "path": "/dashboard/chart",
+    "runs": [
+      {
+        "performance": 100,
+        "accessibility": 95,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 448.16,
+        "TBT_ms": 0,
+        "CLS": 0.01,
+        "FCP_ms": 248.74,
+        "SI_ms": 759
+      },
+      {
+        "performance": 100,
+        "accessibility": 95,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 476.87,
+        "TBT_ms": 0,
+        "CLS": 0.01,
+        "FCP_ms": 254.91,
+        "SI_ms": 984.25
+      },
+      {
+        "performance": 100,
+        "accessibility": 95,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 485.97,
+        "TBT_ms": 0,
+        "CLS": 0.01,
+        "FCP_ms": 275.88,
+        "SI_ms": 828.3
+      }
+    ],
+    "mean": {
+      "performance": 100,
+      "accessibility": 95,
+      "best-practices": 96,
+      "seo": 83,
+      "LCP_ms": 470.33,
+      "TBT_ms": 0,
+      "CLS": 0.01,
+      "FCP_ms": 259.84,
+      "SI_ms": 857.18
+    }
+  },
+  {
+    "name": "Admin Assessment Questions",
+    "path": "/dashboard/assessment-questions",
+    "runs": [
+      {
+        "performance": 97,
+        "accessibility": 92,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 1174.91,
+        "TBT_ms": 14,
+        "CLS": 0.01,
+        "FCP_ms": 262.94,
+        "SI_ms": 1003.68
+      },
+      {
+        "performance": 96,
+        "accessibility": 92,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 1239.99,
+        "TBT_ms": 82,
+        "CLS": 0.01,
+        "FCP_ms": 263.85,
+        "SI_ms": 1052.77
+      },
+      {
+        "performance": 98,
+        "accessibility": 92,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 1034.09,
+        "TBT_ms": 25,
+        "CLS": 0.01,
+        "FCP_ms": 272.03,
+        "SI_ms": 972.51
+      }
+    ],
+    "mean": {
+      "performance": 97,
+      "accessibility": 92,
+      "best-practices": 96,
+      "seo": 83,
+      "LCP_ms": 1149.66,
+      "TBT_ms": 40.33,
+      "CLS": 0.01,
+      "FCP_ms": 266.27,
+      "SI_ms": 1009.65
+    }
+  },
+  {
+    "name": "Admin Messages",
+    "path": "/dashboard/visitor-messages",
+    "runs": [
+      {
+        "performance": 98,
+        "accessibility": 96,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 779.86,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 266.32,
+        "SI_ms": 1552.16
+      },
+      {
+        "performance": 98,
+        "accessibility": 96,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 814.17,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 293.67,
+        "SI_ms": 1422.91
+      },
+      {
+        "performance": 99,
+        "accessibility": 96,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 736.89,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 260.22,
+        "SI_ms": 1272.85
+      }
+    ],
+    "mean": {
+      "performance": 98.33,
+      "accessibility": 96,
+      "best-practices": 96,
+      "seo": 83,
+      "LCP_ms": 776.97,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 273.4,
+      "SI_ms": 1415.97
+    }
+  },
+  {
+    "name": "Admin About Us Content",
+    "path": "/dashboard/about-us",
+    "runs": [
+      {
+        "performance": 78,
+        "accessibility": 96,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 1102.45,
+        "TBT_ms": 0,
+        "CLS": 0.44,
+        "FCP_ms": 278.55,
+        "SI_ms": 916.32
+      },
+      {
+        "performance": 74,
+        "accessibility": 96,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 1334.02,
+        "TBT_ms": 0,
+        "CLS": 0.56,
+        "FCP_ms": 257.27,
+        "SI_ms": 918.73
+      },
+      {
+        "performance": 78,
+        "accessibility": 96,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 1075.06,
+        "TBT_ms": 0,
+        "CLS": 0.44,
+        "FCP_ms": 269.07,
+        "SI_ms": 848.51
+      }
+    ],
+    "mean": {
+      "performance": 76.67,
+      "accessibility": 96,
+      "best-practices": 96,
+      "seo": 83,
+      "LCP_ms": 1170.51,
+      "TBT_ms": 0,
+      "CLS": 0.48,
+      "FCP_ms": 268.3,
+      "SI_ms": 894.52
+    }
+  },
+  {
+    "name": "Admin Personnel Mgmt",
+    "path": "/dashboard/accounts",
+    "runs": [
+      {
+        "performance": 100,
+        "accessibility": 97,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 571.26,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 253.36,
+        "SI_ms": 999.78
+      },
+      {
+        "performance": 100,
+        "accessibility": 97,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 704.9,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 251.1,
+        "SI_ms": 955.57
+      },
+      {
+        "performance": 99,
+        "accessibility": 97,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 674.75,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 253.91,
+        "SI_ms": 1116.52
+      }
+    ],
+    "mean": {
+      "performance": 99.67,
+      "accessibility": 97,
+      "best-practices": 96,
+      "seo": 83,
+      "LCP_ms": 650.3,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 252.79,
+      "SI_ms": 1023.96
+    }
+  },
+  {
+    "name": "Admin Users",
+    "path": "/dashboard/users",
+    "runs": [
+      {
+        "performance": 99,
+        "accessibility": 89,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 693.33,
+        "TBT_ms": 0,
+        "CLS": 0.04,
+        "FCP_ms": 258.47,
+        "SI_ms": 740.73
+      },
+      {
+        "performance": 98,
+        "accessibility": 89,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 992.28,
+        "TBT_ms": 0,
+        "CLS": 0.04,
+        "FCP_ms": 267.79,
+        "SI_ms": 795.07
+      },
+      {
+        "performance": 99,
+        "accessibility": 89,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 727.9,
+        "TBT_ms": 0,
+        "CLS": 0.04,
+        "FCP_ms": 273.21,
+        "SI_ms": 926.67
+      }
+    ],
+    "mean": {
+      "performance": 98.67,
+      "accessibility": 89,
+      "best-practices": 96,
+      "seo": 83,
+      "LCP_ms": 804.5,
+      "TBT_ms": 0,
+      "CLS": 0.04,
+      "FCP_ms": 266.49,
+      "SI_ms": 820.82
+    }
+  },
+  {
+    "name": "Admin Attendance",
+    "path": "/attendance-admin",
+    "runs": [
+      {
+        "performance": 100,
+        "accessibility": 94,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 704.1,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 275.81,
+        "SI_ms": 924.26
+      },
+      {
+        "performance": 100,
+        "accessibility": 94,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 717,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 280.76,
+        "SI_ms": 950.23
+      },
+      {
+        "performance": 100,
+        "accessibility": 94,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 680.8,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 263.28,
+        "SI_ms": 858.82
+      }
+    ],
+    "mean": {
+      "performance": 100,
+      "accessibility": 94,
+      "best-practices": 96,
+      "seo": 83,
+      "LCP_ms": 700.63,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 273.28,
+      "SI_ms": 911.1
+    }
+  },
+  {
+    "name": "Admin Dashboard",
+    "path": "/dashboard",
+    "runs": [
+      {
+        "performance": 99,
+        "accessibility": 95,
+        "best-practices": 96,
+        "seo": 83,
+        "LCP_ms": 773.18,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 267.17,
+        "SI_ms": 985.28
+      },
+      {
+        "performance": 99,
+        "accessibility": 95,
+        "best-practices": 93,
+        "seo": 83,
+        "LCP_ms": 696.28,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 270.66,
+        "SI_ms": 1017.77
+      },
+      {
+        "performance": 99,
+        "accessibility": 95,
+        "best-practices": 93,
+        "seo": 83,
+        "LCP_ms": 738.79,
+        "TBT_ms": 0,
+        "CLS": 0,
+        "FCP_ms": 272.11,
+        "SI_ms": 975.78
+      }
+    ],
+    "mean": {
+      "performance": 99,
+      "accessibility": 95,
+      "best-practices": 94,
+      "seo": 83,
+      "LCP_ms": 736.08,
+      "TBT_ms": 0,
+      "CLS": 0,
+      "FCP_ms": 269.98,
+      "SI_ms": 992.94
+    }
+  }
+]

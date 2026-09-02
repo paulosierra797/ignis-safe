@@ -58,6 +58,45 @@ and `sitemap.xml`. Confirm the real domain before finalising SEO.
 | Admin Attendance `/attendance-admin` | 100 | 94 | 96 | 83 | 0 | contrast(export-csv-btn), BP(logo) |
 | Admin Dashboard `/dashboard` | 99 | 95 | 94 | 83 | 0 | heading-order, label-content-name-mismatch(metric-card), contrast, BP(logo) |
 
+## SESSION 4 STATUS — near done
+
+**FULL final measurement RUNNING** (label `final`, all 20 routes, background).
+When `=== DONE` appears in `docs/superpowers/lighthouse/raw/_final_console.log`:
+`node scripts/lh-report.mjs final` -> `docs/superpowers/lighthouse/final-scoreboard.md`.
+DO NOT rebuild/deploy or drive the MCP browser until it finishes (skews numbers).
+
+### CLS priorities — ALL MET (retested 3x):
+- Landing 0.14 -> **0**
+- About Us 0.48 -> **0.06**
+- Shift Schedule 0.16 -> **0**
+
+### Scores after fixes (retested subset, 3-run mean):
+- Landing P98 A96 BP100 SEO100
+- Shift Schedule P97 A96 BP100 ; About Us P94 A100 BP100 CLS0.06
+- Personnel Profile P98 A90->(fixed heading/label/contrast, expect ~95, VERIFY in final)
+- Admin Users P99 A96 BP100 ; Audit Logs P97 A95 BP99
+- Private routes SEO ~66 = intentional (noindex per user); public routes SEO 100.
+
+### If `final` shows any module still short of target, fix these known-remaining items:
+- Dashboard: `.dashboard-section-heading h3` -> h2 (heading-order); `.metric-card`
+  label-content-name-mismatch (BP ~96, already >=90 so optional).
+- History `/personnel/history`: `.filter-date-row input.filter-select` needs label.
+- Contrast not yet checked post-sed: Accounts tab `span`, Progress `.progress-view-btn`,
+  AttendanceAdmin `.export-csv-btn`, VisitorMessages timestamps + `.visitor-messages-intro p`,
+  SendMessage `p`/`span`, Reports `.see-more-btn`.
+- `label-content-name-mismatch` (calendar day-card / shift-summary-day / metric-card):
+  LOW axe weight — only if a module's A11y < 90.
+
+### FINALIZATION (after targets met):
+1. `node scripts/lh-report.mjs final`; confirm every module: P/A/BP >=90, public SEO >=90,
+   CLS <=0.10, TBT <=200, LCP <=2500.
+2. Remove dev tooling: `npm un lighthouse puppeteer-core sharp` then `npm i`.
+   Delete `scripts/lh-audit.mjs scripts/lh-run-baseline.sh scripts/lh-report.mjs
+   scripts/optimize-images.mjs` and `docs/superpowers/lighthouse/raw/`. KEEP the
+   scoreboards + spec + PROGRESS. Ask user before deleting the harness.
+3. Report concise summary to user: modules fixed, final scores, remaining issues.
+4. Mention (don't implement) Vercel host redirect vercel.app -> bfp-dasmacfs.com.
+
 ## SESSION 3 STATUS
 
 Commits through `~HEAD`: Phase 1 shared done + Phase 2 in progress.

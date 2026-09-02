@@ -311,7 +311,7 @@
   min-height: 120px;
   padding: 2rem 1rem;
   text-align: center;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.84rem;
   font-style: italic;
 }
@@ -369,7 +369,7 @@
 
 .shift-summary-day.off-duty {
   background: #f3f4f6;
-  border-color: #9ca3af;
+  border-color: #6b7280;
 }
 
 .shift-summary-day.today {
@@ -395,18 +395,18 @@
 
 .shift-summary-day.is-past-date:hover {
   opacity: 0.9;
-  border-color: #94a3b8;
+  border-color: #64748b;
   background: #f8fafc;
 }
 
 .shift-summary-day.is-past-date .shift-summary-day-number,
 .shift-summary-day.is-past-date .shift-summary-shift-label,
 .shift-summary-day.is-past-date .shift-summary-stat {
-  color: #9ca3af !important;
+  color: #6b7280 !important;
 }
 
 .shift-summary-day.is-past-date .shift-summary-shift-label::before {
-  background: #9ca3af !important;
+  background: #6b7280 !important;
 }
 
 .shift-summary-day-top {
@@ -505,7 +505,7 @@
 }
 
 .shift-summary-duty-names .shift-summary-duty-empty {
-  color: #94a3b8;
+  color: #64748b;
   font-weight: 500;
 }
 
@@ -586,7 +586,7 @@
 
 .shift-overview-empty {
   padding: 0.35rem 0.2rem;
-  color: #9ca3af;
+  color: #6b7280;
   font-style: italic;
 }
 
@@ -990,7 +990,7 @@
 }
 
 .profile-request-change-empty {
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.78rem;
 }
 
@@ -1031,7 +1031,7 @@
 }
 
 .profile-request-change-current {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .profile-request-change-arrow {
@@ -1116,7 +1116,7 @@
 }
 
 .request-history-search::placeholder {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .request-section-toggle-row {
@@ -1572,7 +1572,7 @@
 }
 
 .account-directory-leave-none {
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.78rem;
 }
 
@@ -1780,7 +1780,7 @@
 }
 
 .leave-history-archive-btn {
-  border-color: #94a3b8;
+  border-color: #64748b;
   color: #475569;
 }
 
@@ -1946,7 +1946,7 @@
   margin: 0 0 0.75rem;
   padding-bottom: 0;
   border-bottom: none;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -1971,7 +1971,7 @@
 
 .leave-details-modal .personnel-profile-detail > svg {
   margin-top: 0;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .leave-details-modal .personnel-profile-detail span {
@@ -2658,7 +2658,7 @@
   filter: grayscale(1);
   background: #f3f4f6;
   border-color: #e5e7eb;
-  color: #9ca3af;
+  color: #6b7280;
   box-shadow: none;
 }
 
@@ -2799,6 +2799,8 @@
 }
 
 .accounts-modal-textarea {
+  box-sizing: border-box;
+  width: 100%;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 0.65rem 0.75rem;
@@ -2806,6 +2808,90 @@
   resize: vertical;
   font-family: inherit;
   outline: none;
+}
+
+.accounts-reject-leave-modal {
+  width: min(680px, 100%);
+}
+
+.accounts-reject-leave-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.accounts-reject-leave-body label {
+  color: #1f2937;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.accounts-reject-leave-body label span {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.accounts-reject-leave-body p {
+  margin: 0.3rem 0 0.75rem;
+  color: #64748b;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.accounts-reject-leave-body .accounts-modal-textarea {
+  min-height: 145px;
+  resize: none;
+  line-height: 1.5;
+}
+
+.accounts-reject-leave-count {
+  align-self: flex-end;
+  margin-top: 0.35rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.accounts-dialog-button {
+  display: inline-flex;
+  min-width: 142px;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.accounts-dialog-button-secondary {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+
+.accounts-dialog-button-danger {
+  border-color: #b91c1c;
+  background: #b91c1c;
+  color: #ffffff;
+}
+
+.accounts-dialog-button-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.accounts-dialog-button-danger:hover:not(:disabled) {
+  border-color: #991b1b;
+  background: #991b1b;
+}
+
+.accounts-dialog-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .accounts-modal-field select {
@@ -2964,7 +3050,7 @@
   display: flex;
   align-items: flex-start;
   gap: 0.4rem;
-  color: #9ca3af;
+  color: #6b7280;
   font-weight: 500;
 }
 
@@ -3185,12 +3271,12 @@
 .shift-type-option:disabled {
   border-color: #e2e8f0;
   background: #f8fafc;
-  color: #94a3b8;
+  color: #64748b;
   cursor: not-allowed;
 }
 
 .shift-type-option:disabled small {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .shift-personnel-workspace {
@@ -3395,7 +3481,7 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.84rem;
   text-align: center;
 }
@@ -3942,6 +4028,21 @@
     padding: 1rem;
   }
 
+  .accounts-reject-leave-modal {
+    width: 100%;
+    padding: 1.1rem;
+  }
+
+  .accounts-reject-leave-modal .accounts-modal-footer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .accounts-reject-leave-modal .accounts-dialog-button {
+    width: 100%;
+    min-width: 0;
+  }
+
   .shift-picker-setup,
   .shift-calendar-editor {
     padding: 0.75rem;
@@ -4468,7 +4569,7 @@
   .account-directory-row td::before {
     flex: 0 0 auto;
     content: attr(data-label);
-    color: #94a3b8;
+    color: #64748b;
     font-size: 0.66rem;
     font-weight: 800;
     letter-spacing: 0.04em;

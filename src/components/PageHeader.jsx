@@ -191,13 +191,20 @@ const PageHeader = ({
       <div className="page-header-right">
 
         <div className="page-user-container" ref={dropdownRef}>
-          <div
+          <button
+            type="button"
             className="page-user"
+            aria-haspopup="menu"
+            aria-expanded={isDropdownOpen}
+            aria-label={`Account menu for ${resolvedUserName}, ${resolvedUserRole}`}
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
             <img
               src={resolvedUserAvatar}
-              alt="User"
+              alt=""
+              width="32"
+              height="32"
+              decoding="async"
               className="page-user-avatar"
               onError={(e) => {
                 e.target.onerror = null;
@@ -208,8 +215,8 @@ const PageHeader = ({
               <span className="page-user-name">{resolvedUserName}</span>
               <span className="page-user-role">{resolvedUserRole}</span>
             </div>
-            <span className="page-user-arrow">▼</span>
-          </div>
+            <span className="page-user-arrow" aria-hidden="true">▼</span>
+          </button>
           {isDropdownOpen && (
             <div className="page-user-dropdown">
               {isAdminAccount && (

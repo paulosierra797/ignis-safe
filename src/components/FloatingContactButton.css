@@ -15,7 +15,59 @@
 }
 
 .floating-contact-panel {
+  overflow: hidden;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.2);
   animation: floating-contact-open 0.2s ease-out;
+}
+
+.floating-contact-panel .visitor-chat--compact {
+  box-sizing: border-box;
+  max-height: calc(100vh - 8.5rem);
+}
+
+.floating-contact-dragbar {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 34px;
+  padding: 0.35rem 0.45rem 0.35rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.floating-contact-dragbar:active {
+  cursor: grabbing;
+}
+
+.floating-contact-reset {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  margin-left: auto;
+  padding: 0;
+  place-items: center;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+}
+
+.floating-contact-reset:hover,
+.floating-contact-reset:focus-visible {
+  border-color: #b91c1c;
+  color: #b91c1c;
+  outline: none;
 }
 
 .floating-contact-button {
@@ -91,6 +143,14 @@
   .floating-contact-button-dot {
     width: 34px;
     height: 34px;
+  }
+
+  .floating-contact-dragbar {
+    min-height: 38px;
+  }
+
+  .floating-contact-panel .visitor-chat--compact {
+    max-height: calc(100dvh - 14rem);
   }
 }
 

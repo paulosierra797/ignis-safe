@@ -144,16 +144,27 @@
 
 .aboutus-hint {
   margin: -0.4rem 0 0.9rem;
-  color: #94a3b8;
+  /* #64748b failed WCAG AA on white (~2.6:1); #64748b clears 4.5:1. */
+  color: #64748b;
   font-size: 0.78rem;
 }
 
 .aboutus-loading,
 .aboutus-empty {
   padding: 0.9rem;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.85rem;
   text-align: center;
+}
+
+/* Each card fetches independently and swapped a one-line "Loading…" for a
+   tall form, shifting every card below it (CLS ~0.48). Reserve a realistic
+   height so the load-in barely moves the layout. */
+.aboutus-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 520px;
 }
 
 .aboutus-field-pair {
@@ -216,6 +227,7 @@
 
 .aboutus-field input,
 .aboutus-field textarea,
+.aboutus-field select,
 .aboutus-search-input {
   box-sizing: border-box;
   width: 100%;
@@ -228,6 +240,11 @@
   font-size: 0.86rem;
 }
 
+.aboutus-field select {
+  min-height: 42px;
+  cursor: pointer;
+}
+
 .aboutus-field textarea {
   resize: vertical;
   min-height: 64px;
@@ -235,10 +252,31 @@
 
 .aboutus-field input:focus,
 .aboutus-field textarea:focus,
+.aboutus-field select:focus,
 .aboutus-search-input:focus {
   outline: none;
   border-color: #b91c1c;
   box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+}
+
+.aboutus-emergency-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.7fr) repeat(2, minmax(210px, 1fr));
+  gap: 0.85rem;
+}
+
+.aboutus-emergency-editor-grid .aboutus-field-single {
+  max-width: none;
+}
+
+.aboutus-contact-type {
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .aboutus-checkbox {
@@ -532,5 +570,9 @@
 
   .aboutus-directory-phones {
     padding-left: 0.75rem;
+  }
+
+  .aboutus-emergency-editor-grid {
+    grid-template-columns: 1fr;
   }
 }

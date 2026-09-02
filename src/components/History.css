@@ -81,7 +81,7 @@
   position: absolute;
   left: 1rem;
   font-size: 1rem;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .search-input {
@@ -348,7 +348,7 @@
 
 .no-data {
   text-align: center;
-  color: #9ca3af;
+  color: #6b7280;
   padding: 3rem 1rem !important;
   font-style: italic;
 }

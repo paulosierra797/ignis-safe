@@ -300,8 +300,9 @@ export default function Progress() {
         <div className="progress-controls">
           <div className="progress-filters">
             <div className="progress-filter">
-              <label>Filter by Barangay</label>
+              <label htmlFor="progress-filter-barangay">Filter by Barangay</label>
               <select
+                id="progress-filter-barangay"
                 value={barangayFilter}
                 onChange={(event) => setBarangayFilter(event.target.value)}
               >
@@ -314,8 +315,9 @@ export default function Progress() {
             </div>
 
             <div className="progress-filter">
-              <label>Filter by Module</label>
+              <label htmlFor="progress-filter-module">Filter by Module</label>
               <select
+                id="progress-filter-module"
                 value={moduleFilter}
                 onChange={(event) => setModuleFilter(event.target.value)}
               >
@@ -328,9 +330,10 @@ export default function Progress() {
             </div>
 
             <div className="progress-filter progress-filter-searchable">
-              <label>Filter by Completion</label>
+              <label htmlFor="progress-filter-completion">Filter by Completion</label>
               <div className="progress-searchable-select">
                 <input
+                  id="progress-filter-completion"
                   type="text"
                   className="progress-searchable-input"
                   value={isCompletionDropdownOpen ? completionSearchText : completionFilter}

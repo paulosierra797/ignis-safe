@@ -68,7 +68,8 @@
   font-weight: 700;
   letter-spacing: 2px;
   text-transform: uppercase;
-  color: var(--ember);
+  /* --ember (#d6453d) is ~3.9:1 on white; --ember-dark clears AA for this small text. */
+  color: var(--ember-dark);
   margin: 0 0 14px;
 }
 
@@ -121,7 +122,7 @@
 }
 
 .qr-important strong {
-  color: var(--ember);
+  color: var(--ember-dark);
 }
 
 .qr-actions {
@@ -423,7 +424,7 @@
 .empty-state {
   text-align: center;
   padding: 22px 10px;
-  color: #9b9da3;
+  color: #6b7280;
   font-size: 13px;
 }
 

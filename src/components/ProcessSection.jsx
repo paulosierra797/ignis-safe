@@ -26,7 +26,7 @@ export default function ProcessSection() {
         <div className="process-grid">
           {currentContent.processSteps.map((section, idx) => (
             <article key={idx} className="process-column">
-              <span className="process-column-number">{String(idx + 1).padStart(2, '0')}</span>
+              <span className="process-column-number" aria-hidden="true">{String(idx + 1).padStart(2, '0')}</span>
               <h3>{normalizeDasmarinasText(section.title)}</h3>
               <ol className="steps-list">
                 {section.steps.map((step) => {

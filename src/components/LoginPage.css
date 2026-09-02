@@ -365,7 +365,7 @@
   height: 10px;
   margin-top: 0.3rem;
   border-radius: 999px;
-  background: #94a3b8;
+  background: #64748b;
   box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.16);
 }
 
@@ -495,7 +495,7 @@
 
 .login-page .form-group input::placeholder,
 .login-page .password-input-wrapper input::placeholder {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .login-page .login-options {

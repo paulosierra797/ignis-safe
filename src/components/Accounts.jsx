@@ -5908,7 +5908,7 @@ const permissions = getDefaultPermissions(formData.role);
 
         {isRejectModalOpen && (
           <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
-            <div className="accounts-modal accounts-confirm-modal">
+            <div className="accounts-modal accounts-confirm-modal accounts-reject-leave-modal">
               <div className="accounts-modal-header">
                 <h3>Reject Leave Request</h3>
                 <CloseButton
@@ -5919,23 +5919,27 @@ const permissions = getDefaultPermissions(formData.role);
                 />
               </div>
 
-              <div className="accounts-modal-body">
-                <p>Optional reason for rejection:</p>
+              <div className="accounts-modal-body accounts-reject-leave-body">
+                <label htmlFor="reject-leave-reason">Reason for rejection <span>(optional)</span></label>
+                <p>Add a clear note for the personnel. Leave this blank if no explanation is needed.</p>
                 <textarea
+                  id="reject-leave-reason"
                   className="accounts-modal-textarea"
-                  rows={4}
+                  rows={5}
                   value={rejectReasonInput}
                   onChange={(event) => setRejectReasonInput(event.target.value)}
-                  placeholder="Enter reason..."
+                  placeholder="Enter the reason for rejecting this leave request"
+                  maxLength={500}
                 />
+                <span className="accounts-reject-leave-count">{rejectReasonInput.length}/500</span>
               </div>
 
               <div className="accounts-modal-footer">
-                <button className="accounts-modal-draft" onClick={closeRejectModal} disabled={Boolean(processingRequestId)}>
-                  Cancel
+                <button className="accounts-dialog-button accounts-dialog-button-secondary" onClick={closeRejectModal} disabled={Boolean(processingRequestId)}>
+                  <FaTimes aria-hidden="true" /> Cancel
                 </button>
-                <button className="leave-reject-btn" onClick={confirmRejectLeaveRequest} disabled={Boolean(processingRequestId)}>
-                  {processingRequestId ? 'Rejecting...' : 'Confirm Reject'}
+                <button className="accounts-dialog-button accounts-dialog-button-danger" onClick={confirmRejectLeaveRequest} disabled={Boolean(processingRequestId)}>
+                  <FaTimesCircle aria-hidden="true" /> {processingRequestId ? 'Rejecting...' : 'Reject Request'}
                 </button>
               </div>
             </div>

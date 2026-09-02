@@ -124,7 +124,7 @@
 }
 
 .step-card:not(.active):not(.completed) .step-status {
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .investigation-card {
@@ -377,7 +377,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #94a3b8;
+  color: #64748b;
   font-weight: 600;
 }
 

@@ -179,9 +179,8 @@ export const validateQRSession = async (sessionId) => {
   return data;
 };
 
-// Locks a successfully scanned QR to the signed-in personnel and opens a
-// ~5 minute attendance session that survives the 60s QR rotation while they
-// finish liveness, face match, location, House Rules and submission. Idempotent
+// Locks a successfully scanned QR to the signed-in personnel for the remainder
+// of its hard five-minute lifetime. Idempotent
 // for the same personnel (a reload / re-entry keeps the original deadline), so
 // it is safe to call again on the confirm screen. Returns the same shape as
 // validateQRSession: { valid, session? , reason? }.
@@ -213,19 +212,15 @@ export const consumeQRSession = async (sessionId) => {
 };
 export const isSessionValid = (session) => {
   if (!session) return false;
-
- if (new Date(session.expires_at) < new Date()) {
-  return "QR expired";
-}
+  return new Date(session.expires_at).getTime() > Date.now();
 };
 
 export const getExpiryTime = (expiresAt) => {
   const now = new Date().getTime();
   const remaining = Math.max(0, expiresAt - now);
-  const hours = Math.floor(remaining / (1000 * 60 * 60));
-  const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+  const minutes = Math.floor(remaining / (1000 * 60));
   const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-  return { hours, minutes, seconds, remaining };
+  return { minutes, seconds, remaining };
 };
 
 // Personnel Database

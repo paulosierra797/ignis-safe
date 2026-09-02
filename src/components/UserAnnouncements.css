@@ -99,7 +99,7 @@
 .announcement-empty {
   padding: 2rem;
   text-align: center;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.95rem;
 }
 
@@ -200,7 +200,7 @@
 
 .announcement-file-link:hover {
   background: #f1f5f9;
-  border-color: #94a3b8;
+  border-color: #64748b;
 }
 
 .announcement-meta {

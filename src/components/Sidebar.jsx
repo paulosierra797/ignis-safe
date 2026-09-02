@@ -274,7 +274,7 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
         onScroll={handleSidebarScroll}
       >
         <div className="sidebar-header">
-          <img src={inlogo} alt="Ignis Safe" className="sidebar-logo" />
+          <img src={inlogo} alt="Ignis Safe" className="sidebar-logo" width="48" height="48" decoding="async" />
           <span className="sidebar-title">IGNIS SAFE</span>
         </div>
 
@@ -322,7 +322,7 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
       {variant === 'personnel' &&
         latestAnnouncementNudge &&
         dismissedNudgeKey !== `${latestAnnouncementNudge.announcementId}:${latestAnnouncementNudge.sentAt}` && (
-        <aside
+        <div
           className={`personnel-nudge-notification${latestAnnouncementNudge.isUrgent ? ' is-urgent' : ''}`}
           role="status"
           aria-live="polite"
@@ -343,7 +343,7 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
             onClick={handleDismissNudge}
             label="Dismiss announcement reminder"
           />
-        </aside>
+        </div>
       )}
 
       {showAckRequiredModal && (

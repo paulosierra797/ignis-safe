@@ -12,6 +12,7 @@ import { lazyWithRetry as lazy } from './utils/lazyWithRetry';
 import { LandingContentProvider } from './context/LandingContentContext';
 import { LayoutProvider } from './context/LayoutContext';
 import AppSessionTracker from './components/AppSessionTracker';
+import useDocumentMeta from './hooks/useDocumentMeta';
 
 const loadDashboard = () => import('./components/Dashboard');
 const loadAnalytics = () => import('./components/Analytics');
@@ -232,6 +233,7 @@ function LandingPage() {
 
 function AppRoutes() {
   const { pathname } = useLocation();
+  useDocumentMeta();
 
   return (
     <AppErrorBoundary resetKey={pathname}>

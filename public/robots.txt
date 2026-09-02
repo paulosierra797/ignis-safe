@@ -15,4 +15,4 @@ Disallow: /attendance-personnel
 Disallow: /attendance-scan
 Disallow: /attendance-confirm
 
-Sitemap: https://ignis-safe.vercel.app/sitemap.xml
+Sitemap: https://bfp-dasmacfs.com/sitemap.xml

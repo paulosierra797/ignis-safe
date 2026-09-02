@@ -58,6 +58,48 @@ and `sitemap.xml`. Confirm the real domain before finalising SEO.
 | Admin Attendance `/attendance-admin` | 100 | 94 | 96 | 83 | 0 | contrast(export-csv-btn), BP(logo) |
 | Admin Dashboard `/dashboard` | 99 | 95 | 94 | 83 | 0 | heading-order, label-content-name-mismatch(metric-card), contrast, BP(logo) |
 
+## SESSION 3 STATUS
+
+Commits through `~HEAD`: Phase 1 shared done + Phase 2 in progress.
+Preview MUST be on :4173 (sessions bound to that origin). Start with
+`node node_modules/vite/bin/vite.js preview --port 4173 --strictPort` as a Bash
+background task. Rebuild picked up without restart.
+
+### Re-measured (Desktop, 3-run mean) after fixes:
+- Landing: P98 A96 BP100 SEO100 **CLS 0** (was CLS 0.14) -- DONE
+- (p2a batch running: Shift Schedule, About Us, Profile, Users, Audit Logs, Dashboard)
+
+### Fixes applied this session (committed):
+- Landing CLS: `<Suspense>` fallbacks in App.jsx get min-height reservations;
+  `.process-column-number` -> aria-hidden (decorative watermark, fixes contrast too).
+- About Us CLS 0.48->0.12->(retest): `.aboutus-loading` min-height 520px.
+- Shift Schedule CLS: inline minHeight on `.shift-calendar-days` = exact loaded height.
+- a11y select labels: AssessmentQuestions filter select, Progress 3 filters (id/htmlFor).
+- Contrast: global sed in src/components/*.css: #9ca3af->#6b7280, #94a3b8->#64748b,
+  #9b9da3->#6b7280. AttendancePersonnel .qr-eyebrow/.qr-important strong -> --ember-dark.
+  (NOTE: one stale comment in AboutUsContent.css line ~147 got mangled by sed - cosmetic.)
+
+### STILL TODO (Phase 2 remainder):
+- Verify Shift Schedule + About Us CLS <= 0.10 from p2a batch; bump reserves if not.
+- `heading-order`: PersonnelProfile `.profile-card-header h3`, Dashboard
+  `.dashboard-section-heading h3` -> change to h2 (check CSS selectors: grep the class).
+- `label`: PersonnelProfile `.form-field-full input` needs a label/aria-label.
+- `label` History: `.filter-date-row input.filter-select` needs label.
+- `label-content-name-mismatch`: `.shift-calendar-day-card`, Dashboard `.metric-card`,
+  Accounts `.shift-summary-day` -- buttons whose aria-label doesn't contain visible text.
+  Likely fix: wrap visible number/tag in aria-hidden span + keep full aria-label, OR
+  make aria-label start with the visible text. LOW axe weight - do last, only if A11y<90.
+- Remaining contrast (check p2a a11y scores first): Accounts tab `span`,
+  Progress `.progress-view-btn`, AttendanceAdmin `.export-csv-btn`, VisitorMessages
+  timestamps + intro p, SendMessage p/span, Reports `.see-more-btn`/`.status-badge`.
+- `valid-source-maps` (BP, Personnel Profile only): vendor-vision chunk. Low priority;
+  only if BP<90 there. Could set build.sourcemap:'hidden' in vite.config.js.
+- FINAL: full 20-route 3-run re-measure via `bash scripts/lh-run-baseline.sh final`
+  + `node scripts/lh-report.mjs final`. Then remove lighthouse/puppeteer-core/sharp
+  devDeps + `npm i`, delete scripts/lh-*.mjs + optimize-images.mjs + raw/. Ask user
+  before deleting harness. Recommend Vercel host-redirect vercel.app->bfp-dasmacfs.com
+  (mention, don't implement without ok).
+
 ## SESSION 2 STATUS (mid Phase 1 -> Phase 2)
 
 - Preview server: run `node node_modules/vite/bin/vite.js preview --port 4173 --strictPort`

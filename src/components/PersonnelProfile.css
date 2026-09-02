@@ -561,7 +561,7 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
   margin-bottom: 1rem;
 }
 
-.profile-card-header h3 {
+.profile-card-header h2 {
   margin: 0;
   font-size: 1rem;
   font-weight: 700;
@@ -849,12 +849,14 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
 
 .my-request-status-approved {
   background: #d1fae5;
-  color: #059669;
+  /* #059669 on #d1fae5 was ~3:1; #065f46 clears AA. */
+  color: #065f46;
 }
 
 .my-request-status-rejected {
   background: #fee2e2;
-  color: #dc2626;
+  /* #dc2626 on #fee2e2 was ~3.5:1; #b91c1c clears AA. */
+  color: #b91c1c;
 }
 
 .my-request-change-list {

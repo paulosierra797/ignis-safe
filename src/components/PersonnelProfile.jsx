@@ -635,7 +635,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
               <section className="profile-info-card">
                 <div className="profile-card-header">
                   <div>
-                    <h3>General Information</h3>
+                    <h2>General Information</h2>
                     <p>Your account information is displayed below. To request an update to any profile detail, click the &quot;Request to Change Information&quot; button.</p>
                   </div>
                 </div>
@@ -663,9 +663,10 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                 </div>
 
                 <div className="form-field-full">
-  <label>Rank</label>
+  <label htmlFor="profileRank">Rank</label>
 
   <input
+    id="profileRank"
     type="text"
     value={currentUser?.rank || ''}
     disabled
@@ -679,7 +680,7 @@ const showModal = ({ type = "info", message, onConfirm }) => {
               <section className="profile-info-card profile-security-card">
                 <div className="profile-card-header">
                   <div>
-                    <h3>Security</h3>
+                    <h2>Security</h2>
                     <p>Review the account details tied to your login.</p>
                   </div>
                 </div>

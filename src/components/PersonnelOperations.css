@@ -559,7 +559,7 @@
 }
 
 .my-shift-card-value.my-shift-none {
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .shift-summary-line {
@@ -690,7 +690,7 @@
   min-height: 120px;
   padding: 2rem 1rem;
   text-align: center;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.84rem;
   font-style: italic;
 }
@@ -741,7 +741,7 @@
 
 .shift-calendar-day-card.off-duty {
   background: #f3f4f6;
-  border-color: #9ca3af;
+  border-color: #6b7280;
 }
 
 .shift-calendar-day-card.mine {
@@ -772,7 +772,7 @@
 
 .shift-calendar-day-card.is-past-date:hover {
   opacity: 0.9;
-  border-color: #94a3b8;
+  border-color: #64748b;
   background: #f8fafc;
 }
 
@@ -780,11 +780,11 @@
 .shift-calendar-day-card.is-past-date .shift-tag,
 .shift-calendar-day-card.is-past-date .calendar-stat-duty,
 .shift-calendar-day-card.is-past-date .calendar-stat-leave {
-  color: #9ca3af !important;
+  color: #6b7280 !important;
 }
 
 .shift-calendar-day-card.is-past-date .shift-tag::before {
-  background: #9ca3af !important;
+  background: #6b7280 !important;
 }
 
 .shift-calendar-day-top{
@@ -894,7 +894,7 @@
 }
 
 .shift-calendar-duty-names .shift-calendar-duty-empty {
-  color: #94a3b8;
+  color: #64748b;
   font-weight: 500;
 }
 
@@ -914,7 +914,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #9ca3af;
+  color: #6b7280;
   font-size: 0.82rem;
   font-style: italic;
 }
@@ -936,7 +936,7 @@
 }
 
 .schedule-other-shift-label {
-  color: #9ca3af;
+  color: #6b7280;
   font-size: 0.82rem;
   font-weight: 600;
 }
@@ -971,7 +971,7 @@
 
 .shift-empty {
   text-align: center;
-  color: #9ca3af;
+  color: #6b7280;
   font-style: italic;
 }
 
@@ -1012,7 +1012,7 @@
 }
 
 .schedule-empty-inline {
-  color: #9ca3af;
+  color: #6b7280;
   font-style: italic;
   font-size: 0.86rem;
 }
@@ -1121,7 +1121,7 @@
   .shift-calendar-weekdays span{
     font-size:.65rem;
     font-weight:600;
-    color:#94a3b8;
+    color:#64748b;
 }
 
   .shift-calendar-day-card{

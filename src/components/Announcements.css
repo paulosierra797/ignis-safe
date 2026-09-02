@@ -728,7 +728,7 @@
 
 .announcement-archive-button:disabled {
   border-color: #d1d5db;
-  color: #9ca3af;
+  color: #6b7280;
   cursor: not-allowed;
 }
 
@@ -1124,7 +1124,7 @@
   left: 0.7rem;
   width: 1rem;
   height: 1rem;
-  color: #94a3b8;
+  color: #64748b;
   pointer-events: none;
 }
 

@@ -67,7 +67,7 @@
 
 .progress-sub-value {
   font-size: 0.9rem;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .progress-filters {
@@ -170,7 +170,7 @@
 .progress-searchable-option-empty {
   padding: 0.55rem 0.9rem;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .progress-clear {
@@ -597,7 +597,7 @@
 .progress-modal-label {
   font-size: 0.7rem;
   font-weight: 700;
-  color: #9ca3af;
+  color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -866,7 +866,7 @@
 }
 
 .progress-modal-feedback-date {
-  color: #9ca3af;
+  color: #6b7280;
   font-size: 0.78rem;
   font-weight: 600;
 }
@@ -1215,7 +1215,7 @@
 }
 
 .progress-barangay-stats .progress-stat-card.not-started {
-  border-color: #94a3b8;
+  border-color: #64748b;
 }
 
 .progress-barangay-stats .progress-stat-card.not-started .progress-main-value {
@@ -1303,7 +1303,7 @@
 
 .progress-row-muted td,
 .progress-cell-muted {
-  color: #94a3b8;
+  color: #64748b;
   font-style: italic;
 }
 

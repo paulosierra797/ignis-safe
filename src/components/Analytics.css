@@ -130,7 +130,7 @@
 
 .sub-value {
   font-size: 0.95rem;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .sparkline {
@@ -195,7 +195,7 @@
 
 .knowledge-compare-sub {
   font-size: 0.8rem;
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .knowledge-bar-row {
@@ -309,7 +309,7 @@
   display: flex;
   justify-content: space-between;
   font-size: 0.65rem;
-  color: #9ca3af;
+  color: #6b7280;
   margin-top: 0.35rem;
 }
 
@@ -442,7 +442,7 @@
   justify-content: space-between;
   padding: 0.5rem 0;
   font-size: 0.7rem;
-  color: #9ca3af;
+  color: #6b7280;
   min-width: 35px;
   text-align: right;
 }
@@ -504,7 +504,7 @@
   background: none;
   border: none;
   font-size: 1.25rem;
-  color: #9ca3af;
+  color: #6b7280;
   cursor: pointer;
   padding: 0.25rem 0.5rem;
   transition: color 0.2s;
@@ -604,7 +604,7 @@
   justify-content: space-between;
   padding: 0.5rem 0;
   font-size: 0.7rem;
-  color: #9ca3af;
+  color: #6b7280;
   min-width: 35px;
   text-align: right;
 }
@@ -706,7 +706,7 @@
   justify-content: space-between;
   padding: 0.5rem 0;
   font-size: 0.7rem;
-  color: #9ca3af;
+  color: #6b7280;
   min-width: 35px;
   text-align: right;
 }

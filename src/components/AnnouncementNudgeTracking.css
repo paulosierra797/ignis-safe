@@ -97,7 +97,7 @@
   width: 14px;
   height: 14px;
   margin-left: 0.05rem;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .nudge-tracking-pending-summary {
@@ -170,7 +170,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 7px;
   background: #fff;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .nudge-tracking-search input {
@@ -263,7 +263,7 @@
 .nudge-tracking-subtext {
   display: block;
   margin-top: 0.1rem;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 0.71rem;
   overflow-wrap: anywhere;
 }
@@ -295,7 +295,7 @@
 
 .nudge-tracking-empty {
   min-height: 100px;
-  color: #94a3b8;
+  color: #64748b;
   text-align: center;
 }
 

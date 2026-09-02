@@ -153,13 +153,13 @@
 
 .sub-number {
   font-size: 1.2rem;
-  color: #9ca3af;
+  color: #6b7280;
   font-weight: 600;
 }
 
 .percentage-sign {
   font-size: 1.2rem;
-  color: #9ca3af;
+  color: #6b7280;
   font-weight: 600;
 }
 
@@ -201,7 +201,7 @@
 }
 
 .duty-item.off-duty .duty-count {
-  color: #9ca3af;
+  color: #6b7280;
 }
 
 .duty-text {
@@ -449,7 +449,7 @@
 }
 
 .stat-bar-fill.not-started {
-  background: linear-gradient(90deg, #6b7280 0%, #9ca3af 100%);
+  background: linear-gradient(90deg, #6b7280 0%, #6b7280 100%);
 }
 
 /* Responsive */

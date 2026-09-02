@@ -144,7 +144,7 @@
 
 .aboutus-hint {
   margin: -0.4rem 0 0.9rem;
-  /* #94a3b8 failed WCAG AA on white (~2.6:1); #64748b clears 4.5:1. */
+  /* #64748b failed WCAG AA on white (~2.6:1); #64748b clears 4.5:1. */
   color: #64748b;
   font-size: 0.78rem;
 }

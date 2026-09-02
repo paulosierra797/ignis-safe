@@ -221,7 +221,7 @@
 
 .face-modal-actions .cancel-btn:disabled {
   background: #f3f4f6;
-  color: #9ca3af;
+  color: #6b7280;
   cursor: not-allowed;
 }
 
@@ -886,7 +886,7 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
   display: flex;
   gap: 1rem;
   margin-top: 0.5rem;
-  color: #9ca3af;
+  color: #6b7280;
   font-size: 0.75rem;
 }
 
@@ -1037,7 +1037,7 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
 
 .request-modal-footer .cancel-btn:hover:not(:disabled) {
   background: #f3f4f6;
-  border-color: #9ca3af;
+  border-color: #6b7280;
 }
 
 .request-modal-footer .cancel-btn:disabled {

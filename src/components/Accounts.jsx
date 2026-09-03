@@ -982,8 +982,40 @@ export default function Accounts() {
     }
 
     const activePanel = document.getElementById(`accounts-tabpanel-${activeAccountsTab}`);
-    activePanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!activePanel) return;
+
+    // Offset the landing position by the sticky PageHeader + sticky tab bar so the
+    // panel heading clears both instead of hiding behind them.
+    const headerHeight = document.querySelector('.accounts-main .page-header')?.offsetHeight ?? 0;
+    const tabsHeight = document.querySelector('.accounts-tabs-wrap')?.offsetHeight ?? 0;
+    const top = window.scrollY + activePanel.getBoundingClientRect().top - headerHeight - tabsHeight - 16;
+    window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
   }, [activeAccountsTab]);
+
+  // The tab navigation is sticky and pins directly under the shared PageHeader.
+  // The header's rendered height changes with viewport / text size, so measure it
+  // and expose it as a CSS variable the tab bar's `top` offset reads from.
+  const accountsMainRef = useRef(null);
+  useEffect(() => {
+    const main = accountsMainRef.current;
+    const header = main?.querySelector('.page-header');
+    if (!main || !header) return undefined;
+
+    const syncHeaderHeight = () => {
+      main.style.setProperty('--accounts-header-h', `${header.offsetHeight}px`);
+    };
+
+    syncHeaderHeight();
+
+    const observer = new ResizeObserver(syncHeaderHeight);
+    observer.observe(header);
+    window.addEventListener('resize', syncHeaderHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', syncHeaderHeight);
+    };
+  }, []);
   const [accounts, setAccounts] = useState([]);
   const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -3470,7 +3502,7 @@ const permissions = getDefaultPermissions(formData.role);
     <div className="accounts-container">
       <Sidebar />
 
-      <div className="accounts-main">
+      <div className="accounts-main" ref={accountsMainRef}>
         <PageHeader
           title="Personnel"
           searchQuery={searchQuery}

@@ -38,6 +38,15 @@
 }
 
 .accounts-tabs-wrap {
+  /* Stays visible while scrolling, pinned directly under the sticky PageHeader
+     (its measured height comes from --accounts-header-h, set in Accounts.jsx).
+     z-index sits below the header's 500 so the header always wins any overlap,
+     and the opaque page-colored background keeps section content from showing
+     through as it scrolls underneath. */
+  position: sticky;
+  top: var(--accounts-header-h, 76px);
+  z-index: 450;
+  background: #f5f5f5;
   overflow-x: auto;
   margin-bottom: 1.5rem;
   -webkit-overflow-scrolling: touch;
@@ -4276,7 +4285,10 @@
 }
 
 .accounts-container {
-  overflow-x: hidden;
+  /* `clip` (not `hidden`) contains horizontal overflow without turning this
+     element into a scroll container, which would otherwise break the sticky
+     `.accounts-tabs-wrap` nested inside it. */
+  overflow-x: clip;
 }
 
 .accounts-table-card {

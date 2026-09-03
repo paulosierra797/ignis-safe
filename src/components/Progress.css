@@ -336,6 +336,78 @@
   background: #2563eb;
 }
 
+/* User Progress table pagination (5 users per page). */
+.progress-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.progress-pagination p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.progress-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.progress-pagination-controls span {
+  min-width: 92px;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.progress-pagination-controls button {
+  min-height: 36px;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid #d8a4a4;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #991b1b;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.progress-pagination-controls button:hover:not(:disabled),
+.progress-pagination-controls button:focus-visible:not(:disabled) {
+  border-color: #b91c1c;
+  background: #fef2f2;
+  outline: none;
+}
+
+.progress-pagination-controls button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .progress-pagination {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .progress-pagination-controls {
+    width: 100%;
+  }
+
+  .progress-pagination-controls button {
+    flex: 1 1 0;
+  }
+}
+
 /* Modal Styles */
 .progress-modal-overlay {
   position: fixed;

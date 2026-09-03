@@ -98,6 +98,8 @@ const matchesCompletionFilter = (overallPercent, filterValue) => {
   return overallPercent >= range.min && overallPercent <= range.max;
 };
 
+const USERS_PER_PAGE = 5;
+
 export default function Progress() {
   const [progressRows, setProgressRows] = useState([]);
   const [moduleOptions, setModuleOptions] = useState(['All']);
@@ -115,6 +117,7 @@ export default function Progress() {
   const [expandedTests, setExpandedTests] = useState({});
   const [userFeedback, setUserFeedback] = useState([]);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const completionBlurTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -269,6 +272,25 @@ export default function Progress() {
       return matchesSearch && matchesModule && matchesBarangay && matchesCompletion;
     });
   }, [barangayFilter, completionFilter, moduleFilter, progressRows, searchQuery]);
+
+  // User Progress table pagination: 5 users per page, controls shown only when
+  // the filtered list has more than one page. Changing any filter jumps back to
+  // the first page (adjusted during render, per the React "you might not need an
+  // effect" pattern).
+  const filterSignature = `${barangayFilter}|${completionFilter}|${moduleFilter}|${searchQuery}`;
+  const [lastFilterSignature, setLastFilterSignature] = useState(filterSignature);
+  if (filterSignature !== lastFilterSignature) {
+    setLastFilterSignature(filterSignature);
+    setCurrentPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / USERS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+
+  const paginatedRows = useMemo(
+    () => filteredRows.slice((safePage - 1) * USERS_PER_PAGE, safePage * USERS_PER_PAGE),
+    [filteredRows, safePage]
+  );
 
   // Barangay-scoped users only: the summary cards must follow the selection
   // without also narrowing on search text or module/completion filters.
@@ -579,9 +601,9 @@ export default function Progress() {
                   </td>
                 </tr>
               ) : (
-                filteredRows.map((item, index) => (
+                paginatedRows.map((item, index) => (
                   <tr key={item.id}>
-                    <td>{index + 1}</td>
+                    <td>{(safePage - 1) * USERS_PER_PAGE + index + 1}</td>
                     <td>{item.name}</td>
                     <td className={item.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'progress-cell-muted' : ''}>
                       {item.barangay}
@@ -620,7 +642,7 @@ export default function Progress() {
       No progress records found.
     </div>
   ) : (
-    filteredRows.map((item) => (
+    paginatedRows.map((item) => (
       <div className="progress-user-card" key={item.id}>
 
         <div className="progress-card-header">
@@ -680,6 +702,30 @@ export default function Progress() {
   )}
 
 </div>
+          {!isLoading && filteredRows.length > USERS_PER_PAGE && (
+            <div className="progress-pagination" aria-label="User progress pagination">
+              <p>
+                Showing {`${(safePage - 1) * USERS_PER_PAGE + 1}–${Math.min(safePage * USERS_PER_PAGE, filteredRows.length)}`} of {filteredRows.length} users
+              </p>
+              <div className="progress-pagination-controls">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
+                  disabled={safePage === 1}
+                >
+                  Previous
+                </button>
+                <span>Page {safePage} of {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
+                  disabled={safePage === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {showModal && selectedUser && (

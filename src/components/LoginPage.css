@@ -451,6 +451,18 @@
   width: auto;
 }
 
+/* Left action: low-emphasis navigation, kept visually distinct from Resend Code. */
+.login-page .verify-secondary-actions .verify-back-action {
+  border-color: #cbd5e1;
+  background: #fff;
+  color: #475569;
+}
+
+.login-page .verify-secondary-actions .verify-back-action:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
 
 .login-button:hover {
   background-color: #991B1B;

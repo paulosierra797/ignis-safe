@@ -830,8 +830,17 @@ useEffect(() => {
           <div className="verify-secondary-actions">
             <button
               type="button"
+              onClick={handleBackToLogin}
+              className="back-button-verify verify-back-action"
+              disabled={loading}
+            >
+              Back to Login
+            </button>
+
+            <button
+              type="button"
               onClick={handleResendOtp}
-              className="back-button-verify"
+              className="back-button-verify verify-resend-action"
               disabled={loading || otpResending || otpResendIn > 0}
             >
               {otpResending
@@ -839,10 +848,6 @@ useEffect(() => {
                 : otpResendIn > 0
                   ? `Resend code in ${otpResendIn}s`
                   : 'Resend code'}
-            </button>
-
-            <button type="button" onClick={handleBackToLogin} className="back-button-verify" disabled={loading}>
-              Back to Login
             </button>
           </div>
         </form>

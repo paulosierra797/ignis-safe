@@ -3,10 +3,17 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Supabase normally persists access and refresh tokens in localStorage. Keep
-// the session available during a tab reload, but do not leave bearer
-// credentials in durable browser storage. Remove credentials written by older
-// builds before creating the new client.
+// Persist the Supabase auth session (access + refresh tokens) in localStorage,
+// the Supabase default. localStorage is shared across every tab on the origin,
+// so a user who is already signed in stays signed in when the Attendance / QR
+// link opens in a new tab or window - the attendance guard reuses the existing
+// session instead of bouncing a logged-in user through /login again.
+// (sessionStorage is scoped to a single browsing context, so a freshly opened
+// tab would see no session and the guard would treat the user as logged out.)
+//
+// Older builds parked other sensitive values in durable storage; strip those on
+// startup - but never the Supabase auth token itself, which IS the session we
+// want to keep available.
 const clearLegacySensitiveBrowserStorage = () => {
   if (typeof window === 'undefined') return;
 
@@ -20,11 +27,6 @@ const clearLegacySensitiveBrowserStorage = () => {
       'ignis-safe:visitor-chat-draft',
       'ignis-safe:visitor-chat-pending',
     ].forEach((key) => window.localStorage.removeItem(key));
-
-    if (SUPABASE_URL) {
-      const projectRef = new URL(SUPABASE_URL).hostname.split('.')[0];
-      if (projectRef) window.localStorage.removeItem(`sb-${projectRef}-auth-token`);
-    }
   } catch {
     // Restricted/private browser contexts can deny storage access. The client
     // still falls back to its in-memory storage below.
@@ -35,7 +37,7 @@ clearLegacySensitiveBrowserStorage();
 
 const memoryStorage = new Map();
 const authStorage = typeof window !== 'undefined'
-  ? window.sessionStorage
+  ? window.localStorage
   : {
     getItem: (key) => memoryStorage.get(key) || null,
     setItem: (key, value) => memoryStorage.set(key, value),

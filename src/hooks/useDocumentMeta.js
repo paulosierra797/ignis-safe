@@ -7,8 +7,8 @@ const DEFAULT_DESCRIPTION =
   'IGNIS SAFE is the Bureau of Fire Protection Dasmariñas City Fire Station portal for '
   + 'fire safety inspection services, public advisories, and station contact information.';
 
-// Public, indexable routes only. Everything else is treated as private and
-// gets <meta name="robots" content="noindex"> plus no canonical tag.
+// Routes with dedicated, crawlable metadata. Everything else is treated as
+// private and gets <meta name="robots" content="noindex"> plus no canonical tag.
 const PUBLIC_META = {
   '/': {
     title: 'IGNIS SAFE — BFP Dasmariñas City Fire Station',
@@ -49,6 +49,96 @@ const PUBLIC_META = {
   '/attendance-login': {
     title: 'Attendance Sign In — IGNIS SAFE',
     description: DEFAULT_DESCRIPTION,
+  },
+  '/dashboard': {
+    title: 'Admin Dashboard — IGNIS SAFE',
+    description:
+      'IGNIS SAFE administrator dashboard for managing BFP Dasmariñas City Fire Station '
+      + 'operations, safety services, and portal activity.',
+  },
+  '/dashboard/profile': {
+    title: 'Administrator Profile — IGNIS SAFE',
+    description:
+      'Administrator profile and account settings for the IGNIS SAFE portal of BFP '
+      + 'Dasmariñas City Fire Station.',
+  },
+  '/attendance-admin': {
+    title: 'Attendance Management — IGNIS SAFE',
+    description:
+      'Attendance management workspace for authorized administrators of BFP Dasmariñas '
+      + 'City Fire Station.',
+  },
+  '/dashboard/analytics': {
+    title: 'Analytics — IGNIS SAFE',
+    description:
+      'Operational analytics and activity insights for the IGNIS SAFE portal of BFP '
+      + 'Dasmariñas City Fire Station.',
+  },
+  '/dashboard/assessment-questions': {
+    title: 'Assessment Questions — IGNIS SAFE',
+    description:
+      'Manage fire safety assessment questions and learning checks in the IGNIS SAFE '
+      + 'portal of BFP Dasmariñas City Fire Station.',
+  },
+  '/dashboard/about-us': {
+    title: 'About Us Content — IGNIS SAFE',
+    description:
+      'Manage public station information and About Us content for BFP Dasmariñas City '
+      + 'Fire Station in the IGNIS SAFE portal.',
+  },
+  '/dashboard/learning-materials': {
+    title: 'Learning Materials — IGNIS SAFE',
+    description:
+      'Manage fire safety learning materials and resources for the IGNIS SAFE portal of '
+      + 'BFP Dasmariñas City Fire Station.',
+  },
+  '/dashboard/chart': {
+    title: 'Organizational Chart Management — IGNIS SAFE',
+    description:
+      'Manage the organizational chart and station structure of BFP Dasmariñas City '
+      + 'Fire Station in the IGNIS SAFE portal.',
+  },
+  '/dashboard/accounts': {
+    title: 'Account Management — IGNIS SAFE',
+    description:
+      'Manage authorized portal accounts for BFP Dasmariñas City Fire Station through '
+      + 'the IGNIS SAFE administrator workspace.',
+  },
+  '/dashboard/reports': {
+    title: 'Administrator Reports — IGNIS SAFE',
+    description:
+      'Review administrator reports for fire safety inspection services and operations '
+      + 'in the IGNIS SAFE portal.',
+  },
+  '/dashboard/users': {
+    title: 'User Progress — IGNIS SAFE',
+    description:
+      'Review user learning progress and assessment activity in the IGNIS SAFE portal '
+      + 'of BFP Dasmariñas City Fire Station.',
+  },
+  '/dashboard/progress': {
+    title: 'Progress — IGNIS SAFE',
+    description:
+      'Review learning and assessment progress in the IGNIS SAFE portal of BFP '
+      + 'Dasmariñas City Fire Station.',
+  },
+  '/dashboard/audit-logs': {
+    title: 'Audit Logs — IGNIS SAFE',
+    description:
+      'Review portal audit activity for BFP Dasmariñas City Fire Station in the IGNIS '
+      + 'SAFE administrator workspace.',
+  },
+  '/dashboard/announcements': {
+    title: 'Announcements Management — IGNIS SAFE',
+    description:
+      'Manage fire safety announcements and station advisories in the IGNIS SAFE portal '
+      + 'of BFP Dasmariñas City Fire Station.',
+  },
+  '/dashboard/visitor-messages': {
+    title: 'Visitor Messages — IGNIS SAFE',
+    description:
+      'Review visitor messages and public inquiries for BFP Dasmariñas City Fire Station '
+      + 'in the IGNIS SAFE administrator workspace.',
   },
 };
 
@@ -93,7 +183,7 @@ export default function useDocumentMeta() {
       upsertLink('canonical', `${CANONICAL_ORIGIN}${pathname === '/' ? '/' : pathname}`);
       upsertMeta('name', 'robots', 'index, follow');
     } else {
-      // Private Admin/Personnel/auth routes: never index.
+      // Unlisted private/auth routes: never index.
       upsertMeta('name', 'description', DEFAULT_DESCRIPTION);
       upsertLink('canonical', null);
       upsertMeta('name', 'robots', 'noindex, nofollow');

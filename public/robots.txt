@@ -6,9 +6,7 @@ Allow: /privacy
 Allow: /send-message
 Allow: /attendance-login
 Disallow: /confirm-signup
-Disallow: /dashboard
 Disallow: /reports
-Disallow: /attendance-admin
 Disallow: /attendance-personnel
 Disallow: /attendance-scan
 Disallow: /attendance-confirm

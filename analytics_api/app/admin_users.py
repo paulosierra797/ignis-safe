@@ -1,11 +1,12 @@
 import os
+import re
 import time
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from .dependencies import SUPABASE_SERVICE_KEY, SUPABASE_URL, require_admin, supabase
 
@@ -63,7 +64,7 @@ def _invite_user_by_email(email: str, redirect_url: str, metadata: Dict[str, Any
                 detail = body.get("msg") or body.get("message") or body.get("error_description") or response.text
             except ValueError:
                 detail = response.text
-            raise RuntimeError(detail)
+            raise RuntimeError("The invitation service rejected the request.")
 
         return response.json()
 
@@ -71,13 +72,44 @@ def _invite_user_by_email(email: str, redirect_url: str, metadata: Dict[str, Any
 
 
 class CreateUserRequest(BaseModel):
-    email: str
-    first_name: str
-    last_name: str
-    role: Optional[str] = None
-    rank: Optional[str] = None
-    contact_number: Optional[str] = None
-    permissions: Optional[List[str]] = None
+    email: str = Field(min_length=3, max_length=254)
+    first_name: str = Field(min_length=1, max_length=80)
+    last_name: str = Field(min_length=1, max_length=80)
+    role: Optional[str] = Field(default=None, max_length=16)
+    rank: Optional[str] = Field(default=None, max_length=80)
+    contact_number: Optional[str] = Field(default=None, max_length=32)
+    permissions: Optional[List[str]] = Field(default=None, max_length=32)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if len(normalized) > 254 or not re.fullmatch(r"[^\s@]+@[^\s@]+\.[^\s@]+", normalized):
+            raise ValueError("Enter a valid email address.")
+        return normalized
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        normalized = value.strip()
+        if not re.fullmatch(r"[^\W\d_]+(?:[ '\-][^\W\d_]+)*", normalized, flags=re.UNICODE):
+            raise ValueError("Names may contain letters, spaces, apostrophes, and hyphens only.")
+        return normalized
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        normalized = value.strip().lower()
+        if normalized not in {"admin", "personnel"}:
+            raise ValueError("role must be admin or personnel")
+        return normalized
+
+    @field_validator("rank", "contact_number")
+    @classmethod
+    def normalize_optional_text(cls, value: Optional[str]) -> Optional[str]:
+        return value.strip() if value else None
 
 
 def get_admin_by_email(email: str) -> Optional[Dict[str, Any]]:
@@ -236,4 +268,7 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
                 supabase.auth.admin.delete_user(auth_user_id)
             except Exception:
                 pass
-        raise HTTPException(status_code=400, detail=f"Failed to invite user: {error}")
+        raise HTTPException(
+            status_code=400,
+            detail="The invitation could not be completed. Please verify the account details and try again.",
+        ) from error

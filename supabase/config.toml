@@ -1,5 +1,5 @@
 [functions.generate-assessment-questions]
-verify_jwt = false
+verify_jwt = true
 
 [functions.visitor-chat]
 verify_jwt = false

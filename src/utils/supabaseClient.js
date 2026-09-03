@@ -3,6 +3,45 @@ import { createClient } from '@supabase/supabase-js';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Supabase normally persists access and refresh tokens in localStorage. Keep
+// the session available during a tab reload, but do not leave bearer
+// credentials in durable browser storage. Remove credentials written by older
+// builds before creating the new client.
+const clearLegacySensitiveBrowserStorage = () => {
+  if (typeof window === 'undefined') return;
+
+  try {
+    [
+      'user',
+      'attendanceAuth',
+      'ignis-safe:device_id',
+      'ignis-safe:device_secret',
+      'ignis-safe:visitor-chat-access',
+      'ignis-safe:visitor-chat-draft',
+      'ignis-safe:visitor-chat-pending',
+    ].forEach((key) => window.localStorage.removeItem(key));
+
+    if (SUPABASE_URL) {
+      const projectRef = new URL(SUPABASE_URL).hostname.split('.')[0];
+      if (projectRef) window.localStorage.removeItem(`sb-${projectRef}-auth-token`);
+    }
+  } catch {
+    // Restricted/private browser contexts can deny storage access. The client
+    // still falls back to its in-memory storage below.
+  }
+};
+
+clearLegacySensitiveBrowserStorage();
+
+const memoryStorage = new Map();
+const authStorage = typeof window !== 'undefined'
+  ? window.sessionStorage
+  : {
+    getItem: (key) => memoryStorage.get(key) || null,
+    setItem: (key, value) => memoryStorage.set(key, value),
+    removeItem: (key) => memoryStorage.delete(key),
+  };
+
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error('Missing Supabase environment variables');
 }
@@ -21,6 +60,7 @@ function getSupabaseClient() {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
+        storage: authStorage,
         lock: inProcessAuthLock,
       },
     });

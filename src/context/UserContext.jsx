@@ -72,13 +72,11 @@ export const UserProvider = ({ children }) => {
         return null;
       }
       setAccountUser(user);
-      localStorage.setItem('user', JSON.stringify(user));
       return user;
     }
 
     setAccountUser(null);
     setPersonnelWorkspaceUser(null);
-    localStorage.removeItem('user');
     return null;
   };
 
@@ -91,26 +89,10 @@ export const UserProvider = ({ children }) => {
       return syncCurrentUser(data);
     }
 
-    const storedUser = localStorage.getItem("user");
-
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setAccountUser(user);
-      return user;
-    }
-
     return syncCurrentUser(null);
 
   } catch (error) {
     console.error("refreshCurrentUser error:", error);
-
-    const storedUser = localStorage.getItem("user");
-
-    if (storedUser) {
-      const user = JSON.parse(storedUser);
-      setAccountUser(user);
-      return user;
-    }
 
     return syncCurrentUser(null);
   }
@@ -121,12 +103,6 @@ export const UserProvider = ({ children }) => {
 
   const initializeAuth = async () => {
     try {
-      const storedUser = localStorage.getItem('user');
-
-      if (storedUser) {
-        setAccountUser(JSON.parse(storedUser));
-      }
-
       await refreshCurrentUser();
 
       // ONLY listen to Supabase IF session exists (optional safe sync)

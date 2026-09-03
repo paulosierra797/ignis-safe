@@ -87,49 +87,49 @@ export const scheduleVisitorConversationDeletion = (conversationId) =>
 
 export const readVisitorChatAccess = () => {
   try {
-    return JSON.parse(localStorage.getItem(VISITOR_CHAT_STORAGE_KEY) || 'null');
+    return JSON.parse(sessionStorage.getItem(VISITOR_CHAT_STORAGE_KEY) || 'null');
   } catch {
     return null;
   }
 };
 
 export const storeVisitorChatAccess = (access) => {
-  localStorage.setItem(VISITOR_CHAT_STORAGE_KEY, JSON.stringify(access));
+  sessionStorage.setItem(VISITOR_CHAT_STORAGE_KEY, JSON.stringify(access));
 };
 
 export const clearVisitorChatAccess = () => {
-  localStorage.removeItem(VISITOR_CHAT_STORAGE_KEY);
-  localStorage.removeItem(VISITOR_CHAT_PENDING_KEY);
+  sessionStorage.removeItem(VISITOR_CHAT_STORAGE_KEY);
+  sessionStorage.removeItem(VISITOR_CHAT_PENDING_KEY);
 };
 
 export const readVisitorChatDraft = () => {
   try {
-    return JSON.parse(localStorage.getItem(VISITOR_CHAT_DRAFT_KEY) || 'null');
+    return JSON.parse(sessionStorage.getItem(VISITOR_CHAT_DRAFT_KEY) || 'null');
   } catch {
     return null;
   }
 };
 
 export const storeVisitorChatDraft = (draft) => {
-  localStorage.setItem(VISITOR_CHAT_DRAFT_KEY, JSON.stringify(draft));
+  sessionStorage.setItem(VISITOR_CHAT_DRAFT_KEY, JSON.stringify(draft));
 };
 
 export const clearVisitorChatDraft = () => {
-  localStorage.removeItem(VISITOR_CHAT_DRAFT_KEY);
+  sessionStorage.removeItem(VISITOR_CHAT_DRAFT_KEY);
 };
 
 export const readPendingVisitorMessage = () => {
   try {
-    return JSON.parse(localStorage.getItem(VISITOR_CHAT_PENDING_KEY) || 'null');
+    return JSON.parse(sessionStorage.getItem(VISITOR_CHAT_PENDING_KEY) || 'null');
   } catch {
     return null;
   }
 };
 
 export const storePendingVisitorMessage = (pending) => {
-  localStorage.setItem(VISITOR_CHAT_PENDING_KEY, JSON.stringify(pending));
+  sessionStorage.setItem(VISITOR_CHAT_PENDING_KEY, JSON.stringify(pending));
 };
 
 export const clearPendingVisitorMessage = () => {
-  localStorage.removeItem(VISITOR_CHAT_PENDING_KEY);
+  sessionStorage.removeItem(VISITOR_CHAT_PENDING_KEY);
 };

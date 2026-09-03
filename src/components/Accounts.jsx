@@ -18,7 +18,6 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import ExpandableText from './ExpandableText';
-import { supabase } from "../utils/supabaseClient";
 import './Accounts.css';
 import './AppDialog.css';
 import { invitePersonnel } from '../utils/authService';
@@ -2197,11 +2196,6 @@ const handleUpdatePersonnel = async () => {
     contact_number: editFormData.contact_number,
     service_status: editFormData.service_status
   };
-  const { data: authData } = await supabase.auth.getUser();
-console.log("AUTH USER:", authData);
-
-  console.log("Updating admin_id:", selectedEditAccount.admin_id);
-
   if (!updates.first_name || !updates.last_name || !updates.email) {
     setMessage({ type: 'error', text: 'Required fields missing.' });
     return;

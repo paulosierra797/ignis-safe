@@ -1,4 +1,4 @@
-// Local, non-secret device identity used to ask the server "has this device
+// Tab-scoped device identity used to ask the server "has this device
 // already completed OTP verification and been remembered?" These values are
 // opaque markers only: presenting them merely lets an already
 // password-authenticated Supabase session (auth.uid() present) query the
@@ -15,31 +15,31 @@ const randomHex = (byteLength) => {
 };
 
 export const getOrCreateDeviceCredentials = () => {
-  let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-  let deviceSecret = localStorage.getItem(DEVICE_SECRET_KEY);
+  let deviceId = sessionStorage.getItem(DEVICE_ID_KEY);
+  let deviceSecret = sessionStorage.getItem(DEVICE_SECRET_KEY);
 
   if (!deviceId) {
     deviceId = crypto.randomUUID();
-    localStorage.setItem(DEVICE_ID_KEY, deviceId);
+    sessionStorage.setItem(DEVICE_ID_KEY, deviceId);
   }
 
   if (!deviceSecret) {
     deviceSecret = randomHex(32);
-    localStorage.setItem(DEVICE_SECRET_KEY, deviceSecret);
+    sessionStorage.setItem(DEVICE_SECRET_KEY, deviceSecret);
   }
 
   return { deviceId, deviceSecret };
 };
 
-export const getStoredDeviceId = () => localStorage.getItem(DEVICE_ID_KEY);
+export const getStoredDeviceId = () => sessionStorage.getItem(DEVICE_ID_KEY);
 
-export const getStoredDeviceSecret = () => localStorage.getItem(DEVICE_SECRET_KEY);
+export const getStoredDeviceSecret = () => sessionStorage.getItem(DEVICE_SECRET_KEY);
 
 export const clearDeviceSecret = () => {
-  localStorage.removeItem(DEVICE_SECRET_KEY);
+  sessionStorage.removeItem(DEVICE_SECRET_KEY);
 };
 
 export const clearDeviceCredentials = () => {
-  localStorage.removeItem(DEVICE_ID_KEY);
+  sessionStorage.removeItem(DEVICE_ID_KEY);
   clearDeviceSecret();
 };

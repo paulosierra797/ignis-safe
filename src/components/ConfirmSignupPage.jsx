@@ -105,7 +105,6 @@ export default function ConfirmSignupPage() {
       // Verification can create an authenticated session. Clear it so user lands on login.
       await signOut();
       setCurrentUser(null);
-      localStorage.removeItem('user');
 
       setMessage({ type: 'success', text: 'Signup confirmed successfully. You can now sign in.' });
       setTimeout(() => {
@@ -174,7 +173,6 @@ export default function ConfirmSignupPage() {
       }
 
       setCurrentUser(null);
-      localStorage.removeItem('user');
       setMessage({ type: 'success', text: 'Account activated. You can now sign in.' });
       setTimeout(() => {
         navigate(`/login?verified=1&portal=${inviteRole}`, { replace: true });

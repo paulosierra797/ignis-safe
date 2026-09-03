@@ -1,24 +1,13 @@
 // Shared recovery actions for the "Update available" / "Something went wrong"
 // error screens (RouteErrorBoundary, AppErrorBoundary). These screens can
 // render outside the Router/UserProvider tree, so everything here works off
-// `window.location` and `localStorage` rather than app context.
+// `window.location` rather than app context.
 import { bypassNextReloadGuard, setReloadGuardActive } from './reloadGuard';
 
-// Where each signed-in role belongs. Kept in sync with the post-login redirect
-// in LoginPage and the fallbacks in ProtectedRoute. A visitor with no stored
-// session goes to the public landing page. Auth is still enforced by
-// ProtectedRoute on arrival - this only picks the destination.
+// Recovery screens do not read a persisted profile to choose a privileged
+// destination. The authenticated profile is held in React memory and
+// ProtectedRoute performs the final auth check after navigation.
 export function getRoleHomePath() {
-  let role = '';
-  try {
-    const raw = localStorage.getItem('user');
-    role = raw ? String(JSON.parse(raw)?.role || '').trim().toLowerCase() : '';
-  } catch {
-    role = '';
-  }
-
-  if (role === 'admin') return '/dashboard';
-  if (role === 'personnel') return '/personnel/operations';
   return '/';
 }
 

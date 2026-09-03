@@ -24,37 +24,6 @@ const formatDateDisplay = (date) => {
   return date.toLocaleDateString();
 };
 
-const getStoredUserProfile = () => {
-  try {
-    const raw = localStorage.getItem('user');
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-};
-
-const normalizeOfficerProfile = (officer) => {
-  if (!officer) return officer;
-  if (officer.is_personnel_workspace_profile) return officer;
-
-  const storedUser = getStoredUserProfile();
-  if (!storedUser) return officer;
-
-  const officerEmail = officer.email?.toLowerCase?.();
-  const storedEmail = storedUser.email?.toLowerCase?.();
-  if (!officerEmail || !storedEmail || officerEmail !== storedEmail) {
-    return officer;
-  }
-
-  const fullName = `${storedUser.first_name || ''} ${storedUser.last_name || ''}`.trim();
-
-  return {
-    ...officer,
-    name: fullName || storedUser.name || officer.name,
-    rank: storedUser.rank || officer.rank
-  };
-};
-
 const toNumericPersonnelId = (value, fallbackSeed = '') => {
   if (Number.isInteger(value) && value > 0) return value;
 
@@ -139,7 +108,7 @@ const buildOfficerFromAuthUser = async (authUser) => {
     is_personnel_workspace_profile: Boolean(workspaceProfile)
   };
 
-  return normalizeOfficerProfile(derivedOfficer);
+  return derivedOfficer;
 };
 
 // QR Session Management
@@ -278,7 +247,7 @@ export const getActivePersonnelSession = async () => {
 };
 
 export const saveAuthToken = (officer) => {
-  const syncedOfficer = normalizeOfficerProfile(officer);
+  const syncedOfficer = officer;
   const token = {
     admin_id: syncedOfficer.admin_id,
     id: syncedOfficer.id,
@@ -292,17 +261,21 @@ export const saveAuthToken = (officer) => {
     timestamp: new Date().getTime(),
     sessionId: Math.random().toString(36).slice(2)
   };
-  localStorage.setItem('attendanceAuth', JSON.stringify(token));
+  sessionStorage.setItem('attendanceAuth', JSON.stringify(token));
   return token;
 };
 
 export const getAuthToken = () => {
-  const token = localStorage.getItem('attendanceAuth');
-  return token ? JSON.parse(token) : null;
+  try {
+    const token = sessionStorage.getItem('attendanceAuth');
+    return token ? JSON.parse(token) : null;
+  } catch {
+    return null;
+  }
 };
 
 export const clearAuthToken = () => {
-  localStorage.removeItem('attendanceAuth');
+  sessionStorage.removeItem('attendanceAuth');
 };
 
 export const isAuthValid = () => {

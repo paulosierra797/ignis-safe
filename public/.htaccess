@@ -1,8 +1,25 @@
 <IfModule mod_headers.c>
   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://fsis.e-bfp.com; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://mvgpeiejwstrxjmfslke.supabase.co https://storage.googleapis.com; font-src 'self' data:; connect-src 'self' https://mvgpeiejwstrxjmfslke.supabase.co wss://mvgpeiejwstrxjmfslke.supabase.co https://ignis-safe-analytics.onrender.com https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; frame-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+  Header always set Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://fsis.e-bfp.com; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; style-src-elem 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob: https://mvgpeiejwstrxjmfslke.supabase.co https://storage.googleapis.com; font-src 'self' data:; connect-src 'self' https://mvgpeiejwstrxjmfslke.supabase.co wss://mvgpeiejwstrxjmfslke.supabase.co https://ignis-safe-analytics.onrender.com https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; frame-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
   Header always set X-Frame-Options "DENY"
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set Permissions-Policy "camera=(self), geolocation=(self), microphone=()"
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set Cross-Origin-Embedder-Policy "credentialless"
+  Header always set Cross-Origin-Resource-Policy "same-origin"
+  Header always set Cache-Control "no-store, no-cache, must-revalidate, max-age=0, proxy-revalidate"
+  Header always set Pragma "no-cache"
+  Header always set Expires "0"
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Hashed Vite assets are immutable and contain no user data. Keep the HTML,
+  # JSON, and API-facing responses on the no-store policy above.
+  <FilesMatch "\.[A-Za-z0-9_-]{8,}\.(?:js|mjs|css|png|jpe?g|gif|svg|webp|avif|woff2?|ttf|otf)$">
+    Header always unset Cache-Control
+    Header always unset Pragma
+    Header always unset Expires
+    Header always set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
 </IfModule>

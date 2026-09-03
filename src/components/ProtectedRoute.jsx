@@ -59,7 +59,6 @@ export default function ProtectedRoute({ children, requiredPermission, allowedRo
       } catch (revokeError) {
         console.warn('Could not revoke trusted devices for deactivated account:', revokeError);
       }
-      localStorage.removeItem('user');
       await signOut();
     };
 

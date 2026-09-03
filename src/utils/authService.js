@@ -281,7 +281,7 @@ export const verifyLoginOtp = async (email, token) => {
 export const signOut = async () => {
   try {
     // Normal logout ends only this browser's current Supabase session. The
-    // stable local device marker and its server-side trust record remain in
+    // stable tab-scoped device marker and its server-side trust record remain in
     // place until expiry or an explicit revoke/forget action.
     const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) throw error;
@@ -608,14 +608,12 @@ export const verifySignupCode = async (email, token) => {
 // Signup confirmation - resend OTP code
 export const resendSignupCode = async (email) => {
   try {
-    console.log('Resending OTP for:', email);
+    console.log('Resending OTP request.');
 
     const response = await supabase.auth.resend({
       type: 'signup',
       email
     });
-
-    console.log('Supabase resend response:', response);
 
     if (response.error) throw response.error;
 

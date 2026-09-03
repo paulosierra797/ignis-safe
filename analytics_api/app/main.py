@@ -1,17 +1,21 @@
+import logging
 import os
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import numpy as np
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, field_validator
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LinearRegression
 
 from .dependencies import require_admin, supabase
 load_dotenv()
+
+logger = logging.getLogger("ignis_safe.analytics")
 
 
 def to_number(value: Any, fallback: float = 0.0) -> float:
@@ -166,15 +170,36 @@ def get_account_status(last_activity_at: Optional[str]) -> str:
 
 
 class Filters(BaseModel):
-    timeframe: str = "All-time"
-    people: str = "All"
-    topic: str = "All"
-    activityTrendsView: str = "Month"
-    userOverviewRange: str = "Month"
+    timeframe: str = Field(default="All-time", max_length=32)
+    people: str = Field(default="All", max_length=16)
+    topic: str = Field(default="All", max_length=120)
+    activityTrendsView: str = Field(default="Month", max_length=16)
+    userOverviewRange: str = Field(default="Month", max_length=16)
+
+    @field_validator("timeframe")
+    @classmethod
+    def validate_timeframe(cls, value: str) -> str:
+        if value not in {"All-time", "Last 7 days", "Last 30 days"}:
+            raise ValueError("Unsupported timeframe.")
+        return value
+
+    @field_validator("people")
+    @classmethod
+    def validate_people(cls, value: str) -> str:
+        if value not in {"All", "Active", "Inactive"}:
+            raise ValueError("Unsupported people filter.")
+        return value
+
+    @field_validator("activityTrendsView", "userOverviewRange")
+    @classmethod
+    def validate_range(cls, value: str) -> str:
+        if value not in {"Week", "Month", "Year"}:
+            raise ValueError("Unsupported analytics range.")
+        return value
 
 
 class DeleteUserRequest(BaseModel):
-    admin_id: str
+    admin_id: str = Field(min_length=36, max_length=36, pattern=r"^[0-9a-fA-F-]{36}$")
 
 
 app = FastAPI(title="Ignis Safe Analytics API", version="1.0.0")
@@ -195,16 +220,29 @@ configured_frontend_origins = [
 frontend_origins = list(dict.fromkeys([
     *configured_frontend_origins,
     *DEFAULT_FRONTEND_ORIGINS,
+    "https://bfp-dasmacfs.com",
 ]))
-print("FRONTEND_ORIGINS =", frontend_origins)
+logger.info("Analytics CORS configured for %d web origins", len(frontend_origins))
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=frontend_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "apikey", "x-client-info"],
 )
+
+
+@app.exception_handler(Exception)
+async def handle_unexpected_error(request: Request, error: Exception) -> JSONResponse:
+    logger.exception(
+        "Unhandled analytics API error",
+        extra={"method": request.method, "path": request.url.path},
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "The analytics service is temporarily unavailable."},
+    )
 
 def fetch_all_rows(table: str, columns: str, page_size: int = 1000):
     print(f"Fetching table: {table}", flush=True)
@@ -1514,9 +1552,7 @@ def health_check() -> Dict[str, str]:
 
 @app.post("/api/admin/users/delete", dependencies=[Depends(require_admin)])
 def delete_user(request: DeleteUserRequest) -> Dict[str, Any]:
-    admin_id = str(request.admin_id or "").strip()
-    if not admin_id:
-        raise HTTPException(status_code=400, detail="admin_id is required")
+    admin_id = str(request.admin_id).strip()
 
     account_response = (
         supabase.table("admin")
@@ -1538,10 +1574,13 @@ def delete_user(request: DeleteUserRequest) -> Dict[str, Any]:
       supabase.auth.admin.delete_user(admin_id)
       auth_deleted = True
     except Exception as error:
-      auth_error_message = str(error)
-      lowered_message = auth_error_message.lower()
+      lowered_message = str(error).lower()
       if "not found" not in lowered_message and "does not exist" not in lowered_message:
-          raise HTTPException(status_code=400, detail=f"Failed to delete auth user: {auth_error_message}")
+          logger.exception("Failed to delete the requested auth user")
+          raise HTTPException(
+              status_code=400,
+              detail="The account could not be deleted. Please try again.",
+          ) from error
 
     admin_response = supabase.table("admin").delete().eq("admin_id", admin_id).execute()
     deleted_count = len(admin_response.data or [])
@@ -1553,7 +1592,7 @@ def delete_user(request: DeleteUserRequest) -> Dict[str, Any]:
             "admin_id": admin_id,
             "deletedCount": deleted_count,
             "authDeleted": auth_deleted,
-            "authError": auth_error_message,
+            "authError": None,
         },
         "error": None,
     }

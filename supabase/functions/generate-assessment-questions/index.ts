@@ -1,3 +1,4 @@
+import { createClient } from 'npm:@supabase/supabase-js@2.97.0';
 import { corsHeaders } from '../_shared/cors.ts';
 
 type GeneratedOption = {
@@ -25,11 +26,44 @@ type ExistingQuestionReference = {
 };
 
 const DEFAULT_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-2.5-flash';
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const API_KEY =
   Deno.env.get('GEMINI_API_KEY') ||
   Deno.env.get('GOOGLE_AI_STUDIO_API_KEY') ||
   Deno.env.get('GOOGLE_GENERATIVE_AI_API_KEY') ||
   Deno.env.get('GOOGLE_API_KEY');
+
+const serviceClient = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+  : null;
+
+const authenticateAdmin = async (request: Request) => {
+  const authHeader = request.headers.get('Authorization') || '';
+  const tokenMatch = /^Bearer\s+(\S+)$/i.exec(authHeader);
+  if (!tokenMatch || !SUPABASE_URL || !SUPABASE_ANON_KEY || !serviceClient) {
+    return false;
+  }
+
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data: userData, error: authError } = await authClient.auth.getUser(tokenMatch[1]);
+  if (authError || !userData?.user?.id) return false;
+
+  const { data: admin, error: adminError } = await serviceClient
+    .from('admin')
+    .select('admin_id')
+    .eq('admin_id', userData.user.id)
+    .eq('role', 'admin')
+    .ilike('status', 'active')
+    .maybeSingle();
+
+  return !adminError && Boolean(admin?.admin_id);
+};
 
 const jsonResponse = (payload: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -231,8 +265,8 @@ Deno.serve(async (request) => {
   }
 
   if (!API_KEY) {
-    console.error('CRITICAL: Missing Gemini API key');
-    return jsonResponse({ error: 'Missing Gemini API key in Supabase function secrets.' }, 500);
+    console.error('Assessment generation is missing its provider configuration.');
+    return jsonResponse({ error: 'The AI question service is temporarily unavailable.' }, 503);
   }
 
   if (request.method !== 'POST') {
@@ -240,13 +274,18 @@ Deno.serve(async (request) => {
   }
 
   try {
-    console.log('Processing request...');
+    if (!(await authenticateAdmin(request))) {
+      return jsonResponse({ error: 'Administrator access is required.' }, 403);
+    }
+
     const body = await request.json();
-    console.log('Request body received:', { moduleNo: body?.moduleNo, questionCount: body?.questionCount });
     const moduleNo = Number(body?.moduleNo || 0);
     // Cap raised from 10 to 14 so the client can request a small duplicate-absorbing
     // buffer in a single call instead of looping additional sequential requests.
-    const questionCount = Math.min(Math.max(Number(body?.questionCount || 5), 1), 14);
+    const requestedQuestionCount = body?.questionCount == null
+      ? 5
+      : Number(body.questionCount);
+    const questionCount = requestedQuestionCount;
     const context = String(body?.context || '').trim();
     const assessmentTitle = String(body?.assessmentTitle || '').trim();
     const assessmentType = String(body?.assessmentType || '').trim();
@@ -264,12 +303,21 @@ Deno.serve(async (request) => {
       })
       .join('\n');
 
-    if (!moduleNo) {
+    if (!Number.isInteger(moduleNo) || moduleNo < 1 || moduleNo > 1000) {
       return jsonResponse({ error: 'moduleNo is required.' }, 400);
+    }
+
+    if (!Number.isInteger(questionCount) || questionCount < 1 || questionCount > 14) {
+      return jsonResponse({ error: 'questionCount must be between 1 and 14.' }, 400);
     }
 
     if (!context) {
       return jsonResponse({ error: 'context is required.' }, 400);
+    }
+    if (context.length > 50000 || assessmentTitle.length > 240
+      || assessmentType.length > 80 || existingPrompt.length > 5000
+      || difficultyGuidance.length > 5000) {
+      return jsonResponse({ error: 'The assessment input is too large.' }, 413);
     }
 
     const prompt = [
@@ -336,13 +384,13 @@ Deno.serve(async (request) => {
     console.log(`Gemini API response status: ${response.status}`);
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Gemini request failed with status ${response.status}: ${errorText}`);
+      console.error('Gemini request failed', { status: response.status });
       const retryAfterSeconds = response.status === 429 ? extractRetryDelaySeconds(errorText) : null;
       const isTemporaryFailure = [502, 503, 504].includes(response.status);
       return jsonResponse({
         error: isTemporaryFailure
           ? 'The AI question service is temporarily unavailable. Please try again.'
-          : `Gemini request failed: ${errorText}`,
+          : 'The AI question service rejected the request. Please try again.',
         retryAfterSeconds,
       }, response.status);
     }
@@ -361,7 +409,7 @@ Deno.serve(async (request) => {
     try {
       parsed = parseJsonPayload(text);
     } catch (parseError) {
-      console.error('Gemini returned invalid JSON:', parseError);
+      console.error('Gemini returned invalid JSON', { errorType: parseError?.constructor?.name || 'unknown' });
       return jsonResponse({ error: 'The AI returned an incomplete response. Please generate again.' }, 502);
     }
     const questions = filterUniqueQuestions(normalizeQuestions(parsed), existingQuestions, questionCount);
@@ -375,7 +423,9 @@ Deno.serve(async (request) => {
     console.log('Success: returning generated questions');
     return jsonResponse({ data: { questions }, error: null });
   } catch (error) {
-    console.error('Unhandled error:', error);
-    return jsonResponse({ error: error instanceof Error ? error.message : 'Unknown error' }, 500);
+    console.error('Unhandled assessment generation error', {
+      errorType: error instanceof Error ? error.constructor.name : 'unknown',
+    });
+    return jsonResponse({ error: 'The AI question service is temporarily unavailable.' }, 500);
   }
 });

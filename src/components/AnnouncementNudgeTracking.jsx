@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   FiBell,
   FiCheckCircle,
@@ -43,7 +43,12 @@ export default function AnnouncementNudgeTracking({
   onOpenAcknowledgements
 }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const currentTime = Date.now();
+  const [currentTime, setCurrentTime] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setCurrentTime(Date.now()), 60_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const tracking = useMemo(
     () => announcement?.acknowledgement_tracking || [],

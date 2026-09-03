@@ -46,10 +46,6 @@ export default defineConfig({
             || normalizedId.includes('/node_modules/react-chartjs-2/')
           ) return 'vendor-charts'
           if (
-            normalizedId.includes('/node_modules/jspdf/')
-            || normalizedId.includes('/node_modules/jspdf-autotable/')
-          ) return 'vendor-documents'
-          if (
             normalizedId.includes('/node_modules/@mediapipe/')
             || normalizedId.includes('/node_modules/@techstark/')
             || normalizedId.includes('/node_modules/@vladmandic/')

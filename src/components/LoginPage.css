@@ -962,7 +962,7 @@
   bottom: 1.5rem;
   width: 180px;
   aspect-ratio: 234 / 298;
-  background: url('../assets/bfp_dasma.png') center / contain no-repeat;
+  background: url('../assets/bfp_dasma-login.webp') center / contain no-repeat;
   opacity: 0.035;
   filter: grayscale(1);
   pointer-events: none;

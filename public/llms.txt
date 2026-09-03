@@ -1,0 +1,16 @@
+# IGNIS SAFE — BFP Dasmariñas City Fire Station
+
+IGNIS SAFE is the public information and secure personnel portal for the Bureau of Fire Protection Dasmariñas City Fire Station.
+
+## Public pages
+
+- [IGNIS SAFE home](https://bfp-dasmacfs.com/): Fire safety services, public advisories, and station contact information.
+- [Organizational chart](https://bfp-dasmacfs.com/organizational-chart): Station leadership and reporting structure.
+- [Send a message](https://bfp-dasmacfs.com/send-message): Contact the station about fire safety inspection, permits, and advisories.
+- [Terms of use](https://bfp-dasmacfs.com/terms): Portal terms of use.
+- [Privacy policy](https://bfp-dasmacfs.com/privacy): Portal privacy policy.
+
+## Secure portal
+
+- [Sign in](https://bfp-dasmacfs.com/login): Authorized administrator and personnel sign-in.
+- [Personnel workspace](https://bfp-dasmacfs.com/personnel/operations): Authorized personnel shift schedule and leave-request workspace.

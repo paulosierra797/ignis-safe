@@ -1,9 +1,6 @@
 import { Suspense, useEffect } from 'react'
 import './App.css'
 import './components/WorkspaceDensity.css'
-import Header from './components/Header'
-import HeroSection from './components/HeroSection'
-import Footer from './components/Footer'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { UserProvider, useUser } from './context/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -70,6 +67,9 @@ const ContactSection = lazy(() => import('./components/ContactSection'));
 const FAQSection = lazy(() => import('./components/FAQSection'));
 const FloatingContactButton = lazy(() => import('./components/FloatingContactButton'));
 const TrustAccessibilitySection = lazy(() => import('./components/TrustAccessibilitySection'));
+const Header = lazy(() => import('./components/Header'));
+const HeroSection = lazy(() => import('./components/HeroSection'));
+const Footer = lazy(() => import('./components/Footer'));
 
 const ROUTE_PRELOADERS = {
   '/login': loadLogin,

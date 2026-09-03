@@ -27,7 +27,8 @@ import { setAuthFlowGated } from '../utils/authFlowGate';
 import { logPersonnelActivity } from '../utils/activityLogService';
 
 import './LoginPage.css';
-import bfpDasmaLogo from '../assets/bfp_dasma.png';
+import bfpDasmaLogo from '../assets/bfp_dasma-login.webp';
+import bfpDasmaLogoSmall from '../assets/bfp_dasma-login-small.webp';
 
 const LoginBrandPanel = ({ portal }) => {
   const isPersonnel = portal === 'personnel';
@@ -40,6 +41,8 @@ const LoginBrandPanel = ({ portal }) => {
           src={bfpDasmaLogo}
           alt="Bureau of Fire Protection Dasmariñas City Fire Station logo"
           className="login-bfp-logo"
+          srcSet={`${bfpDasmaLogoSmall} 140w, ${bfpDasmaLogo} 220w`}
+          sizes="(max-width: 600px) 126px, 220px"
         />
       </span>
 
@@ -757,7 +760,7 @@ useEffect(() => {
   const displayPortal = pendingRole || 'admin';
 
   return (
-    <div className={`login-page login-page--${displayPortal}`}>
+    <main className={`login-page login-page--${displayPortal}`}>
       <button type="button" className="login-landing-back" onClick={() => navigate('/')}>
         <FaArrowLeft aria-hidden="true" />
         <span>Back to landing page</span>
@@ -1157,6 +1160,6 @@ useEffect(() => {
           </div>
         </>
       )}
-    </div>
+    </main>
   );
 }

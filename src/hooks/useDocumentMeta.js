@@ -34,6 +34,18 @@ const PUBLIC_META = {
     title: 'Privacy Policy — IGNIS SAFE',
     description: 'Privacy policy for the IGNIS SAFE portal of BFP Dasmariñas City Fire Station.',
   },
+  '/login': {
+    title: 'Sign In — IGNIS SAFE | BFP Dasmariñas City Fire Station',
+    description:
+      'Secure sign-in for authorized personnel and administrators of the IGNIS SAFE '
+      + 'portal of BFP Dasmariñas City Fire Station.',
+  },
+  '/personnel/operations': {
+    title: 'Personnel Shift Schedule — IGNIS SAFE',
+    description:
+      'IGNIS SAFE personnel workspace for shift schedules, leave requests, and assigned '
+      + 'BFP Dasmariñas City Fire Station services.',
+  },
   '/attendance-login': {
     title: 'Attendance Sign In — IGNIS SAFE',
     description: DEFAULT_DESCRIPTION,

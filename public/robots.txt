@@ -5,10 +5,8 @@ Allow: /terms
 Allow: /privacy
 Allow: /send-message
 Allow: /attendance-login
-Disallow: /login
 Disallow: /confirm-signup
 Disallow: /dashboard
-Disallow: /personnel
 Disallow: /reports
 Disallow: /attendance-admin
 Disallow: /attendance-personnel

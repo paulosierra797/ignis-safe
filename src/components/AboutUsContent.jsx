@@ -365,14 +365,12 @@ function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
 
   const numbers = useEditableList({
     load: aboutUsService.listPartnerContactNumbers,
-    create: (form, rows) => aboutUsService.createPartnerContactNumber(
-      { label: form.label, display_value: form.display_value, dial_value: form.dial_value },
-      rows
-    ),
+    // Edit-only section - the saved numbers can be modified but not added or removed.
+    create: async () => ({ error: 'Adding contact numbers is not supported.' }),
     update: (form) => aboutUsService.updatePartnerContactNumber(form.contact_key, {
       label: form.label, display_value: form.display_value, dial_value: form.dial_value
     }),
-    remove: (row) => aboutUsService.deletePartnerContactNumber(row.contact_key),
+    remove: async () => ({ error: 'Deleting contact numbers is not supported.' }),
     reorder: aboutUsService.reorderPartnerContactNumbers,
     getId: (row) => row.contact_key,
     mapToForm: (row) => ({ ...row, label: row.contact_type }),
@@ -437,53 +435,35 @@ function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
       )}
 
       <div className="aboutus-subsection">
-        <div className="aboutus-list-header">
-          <h3>Landline &amp; mobile numbers</h3>
-          <button type="button" className="aboutus-btn aboutus-btn-outline" onClick={() => numbers.startAdd({ label: '', display_value: '', dial_value: '' })}>
-            <FiPlus aria-hidden="true" /> Add number
-          </button>
-        </div>
-        <p className="aboutus-hint">
-          This number also appears on the Emergency Contacts card if it is reused there — editing the value updates both places.
+        <h3>Landline &amp; mobile numbers</h3>
+        <p className="aboutus-section-note">
+          These are the saved BFP Dasmariñas contact numbers. Each entry can be edited,
+          but numbers cannot be added or removed here. A number that also appears on the
+          Emergency Contacts card is updated in both places.
         </p>
 
-        {numbers.editingId === 'new' && (
-          <ContactNumberEditRow form={numbers.form} setField={numbers.setField} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
-        )}
-
         {numbers.loading ? <div className="aboutus-loading">Loading...</div> : (
-          <ul className="aboutus-item-list">
-            {numbers.rows.map((row, index) => (
-              <li key={row.contact_key} className="aboutus-item-row">
+          <ul className="aboutus-contact-list">
+            {numbers.rows.map((row) => (
+              <li key={row.contact_key} className={`aboutus-contact-card${numbers.editingId === row.contact_key ? ' is-editing' : ''}`}>
                 {numbers.editingId === row.contact_key ? (
                   <ContactNumberEditRow form={numbers.form} setField={numbers.setField} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
                 ) : (
                   <>
-                    <div className="aboutus-item-summary">
-                      <strong>{row.contact_type}</strong>
-                      <span className="aboutus-item-sub">{row.display_value}</span>
+                    <div className="aboutus-contact-card-main">
+                      <span className="aboutus-contact-card-type">{row.contact_type}</span>
+                      <span className="aboutus-contact-card-value">{row.display_value}</span>
                     </div>
-                    <div className="aboutus-item-actions">
-                      <ReorderButtons index={index} count={numbers.rows.length} busy={numbers.busy} onMoveUp={() => numbers.move(index, -1)} onMoveDown={() => numbers.move(index, 1)} />
-                      <button type="button" className="aboutus-icon-btn" onClick={() => numbers.startEdit(row)} aria-label="Edit number" title="Edit"><FiEdit2 aria-hidden="true" /></button>
-                      <button type="button" className="aboutus-icon-btn aboutus-icon-btn-danger" onClick={() => numbers.confirmDelete(row)} aria-label="Delete number" title="Delete"><FiTrash2 aria-hidden="true" /></button>
-                    </div>
+                    <button type="button" className="aboutus-btn aboutus-btn-secondary aboutus-btn-small" onClick={() => numbers.startEdit(row)}>
+                      <FiEdit2 aria-hidden="true" /> Edit
+                    </button>
                   </>
                 )}
               </li>
             ))}
-            {numbers.rows.length === 0 && <li className="aboutus-empty">No numbers yet.</li>}
+            {numbers.rows.length === 0 && <li className="aboutus-empty">No saved numbers.</li>}
           </ul>
         )}
-
-        <ConfirmDeleteModal
-          open={Boolean(numbers.pendingDelete)}
-          title="Delete contact number"
-          message={`Remove "${numbers.pendingDelete?.contact_type}" (${numbers.pendingDelete?.display_value}) from BFP Dasmariñas?`}
-          busy={numbers.busy}
-          onCancel={numbers.cancelDeleteRequest}
-          onConfirm={async () => { await numbers.doDelete(); logAboutUsActivity(currentUser, 'About Us Content Deleted', 'Removed a BFP Dasmariñas contact number.'); }}
-        />
       </div>
     </section>
   );
@@ -519,16 +499,14 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
 
   const numbers = useEditableList({
     load: aboutUsService.listEmergencyNumbers,
-    create: (form, rows) => aboutUsService.createEmergencyNumber({
-      label_en: form.label_en, label_tl: form.label_tl, contact_type: form.contact_type,
-      display_value: form.display_value, dial_value: form.dial_value
-    }, rows),
+    // Edit-only section - the saved numbers can be modified but not added or removed.
+    create: async () => ({ error: 'Adding emergency numbers is not supported.' }),
     update: (form) => aboutUsService.updateEmergencyNumber(form.id, {
       label_en: form.label_en, label_tl: form.label_tl, contact_type: form.contact_type,
       is_active: form.is_active, display_order: form.display_order,
       contact_key: form.contact_key, display_value: form.display_value, dial_value: form.dial_value
     }),
-    remove: (row) => aboutUsService.deleteEmergencyNumber(row.id, row.contact_key),
+    remove: async () => ({ error: 'Deleting emergency numbers is not supported.' }),
     reorder: aboutUsService.reorderEmergencyNumbers,
     getId: (row) => row.id,
     notify,
@@ -571,55 +549,37 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
       )}
 
       <div className="aboutus-subsection">
-        <div className="aboutus-list-header">
-          <h3>Emergency numbers</h3>
-          <button type="button" className="aboutus-btn aboutus-btn-outline" onClick={() => numbers.startAdd({ label_en: '', label_tl: '', contact_type: 'mobile', display_value: '', dial_value: '', is_active: true })}>
-            <FiPlus aria-hidden="true" /> Add number
-          </button>
-        </div>
-        <p className="aboutus-hint">
-          Add only the public label and phone number shown to visitors. The dial number is the digits used when they tap to call.
+        <h3>Emergency numbers</h3>
+        <p className="aboutus-section-note">
+          These are the saved emergency numbers shown to visitors. Each entry can be
+          edited - its label, phone type, number, and visibility - but numbers cannot be
+          added or removed here.
         </p>
 
-        {numbers.editingId === 'new' && (
-          <EmergencyNumberEditRow form={numbers.form} setField={numbers.setField} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
-        )}
-
         {numbers.loading ? <div className="aboutus-loading">Loading...</div> : (
-          <ul className="aboutus-item-list">
-            {numbers.rows.map((row, index) => (
-              <li key={row.id} className="aboutus-item-row">
+          <ul className="aboutus-contact-list">
+            {numbers.rows.map((row) => (
+              <li key={row.id} className={`aboutus-contact-card${numbers.editingId === row.id ? ' is-editing' : ''}`}>
                 {numbers.editingId === row.id ? (
                   <EmergencyNumberEditRow form={numbers.form} setField={numbers.setField} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
                 ) : (
                   <>
-                    <div className="aboutus-item-summary">
-                      <strong>{row.label_en}</strong>
-                      <span className="aboutus-contact-type">{row.contact_type === 'mobile' ? 'Mobile' : 'Landline'}</span>
-                      <span className="aboutus-item-sub">{row.display_value}</span>
+                    <div className="aboutus-contact-card-main">
+                      <span className="aboutus-contact-card-type">{row.contact_type === 'mobile' ? 'Mobile' : 'Landline'}</span>
+                      <strong className="aboutus-contact-card-label">{row.label_en}</strong>
+                      <span className="aboutus-contact-card-value">{row.display_value}</span>
                       <StatusBadge active={row.is_active} />
                     </div>
-                    <div className="aboutus-item-actions">
-                      <ReorderButtons index={index} count={numbers.rows.length} busy={numbers.busy} onMoveUp={() => numbers.move(index, -1)} onMoveDown={() => numbers.move(index, 1)} />
-                      <button type="button" className="aboutus-icon-btn" onClick={() => numbers.startEdit(row)} aria-label="Edit number" title="Edit"><FiEdit2 aria-hidden="true" /></button>
-                      <button type="button" className="aboutus-icon-btn aboutus-icon-btn-danger" onClick={() => numbers.confirmDelete(row)} aria-label="Delete number" title="Delete"><FiTrash2 aria-hidden="true" /></button>
-                    </div>
+                    <button type="button" className="aboutus-btn aboutus-btn-secondary aboutus-btn-small" onClick={() => numbers.startEdit(row)}>
+                      <FiEdit2 aria-hidden="true" /> Edit
+                    </button>
                   </>
                 )}
               </li>
             ))}
-            {numbers.rows.length === 0 && <li className="aboutus-empty">No emergency numbers yet.</li>}
+            {numbers.rows.length === 0 && <li className="aboutus-empty">No saved emergency numbers.</li>}
           </ul>
         )}
-
-        <ConfirmDeleteModal
-          open={Boolean(numbers.pendingDelete)}
-          title="Delete emergency number"
-          message={`Delete "${numbers.pendingDelete?.label_en}" (${numbers.pendingDelete?.display_value})?`}
-          busy={numbers.busy}
-          onCancel={numbers.cancelDeleteRequest}
-          onConfirm={async () => { await numbers.doDelete(); logAboutUsActivity(currentUser, 'About Us Content Deleted', 'Deleted an Emergency Contacts number.'); }}
-        />
       </div>
     </section>
   );

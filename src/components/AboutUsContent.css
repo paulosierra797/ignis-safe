@@ -467,6 +467,96 @@
   color: #b42318;
 }
 
+/* Edit-only contact entries (Landline & mobile numbers, Emergency numbers).
+   Consistent cards: a type badge, an optional label, the number, then one Edit
+   button - no add/delete/reorder controls. */
+.aboutus-section-note {
+  margin: -0.3rem 0 1rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #d7e0ee;
+  border-radius: 10px;
+  background: #f1f5fb;
+  color: #3f4c5f;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.aboutus-contact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aboutus-contact-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 0.85rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid #e7ebf1;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.aboutus-contact-card.is-editing {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.aboutus-contact-card.is-editing .aboutus-edit-row {
+  flex: 1 0 100%;
+}
+
+.aboutus-contact-card-main {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.7rem;
+}
+
+.aboutus-contact-card-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.62rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.aboutus-contact-card-label {
+  color: #172033;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.aboutus-contact-card-value {
+  color: #475467;
+  font-size: 0.83rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+  .aboutus-contact-card {
+    align-items: flex-start;
+  }
+
+  .aboutus-contact-card .aboutus-btn-small {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .aboutus-edit-row {
   padding: 0.95rem 1rem;
   border: 1px dashed #cbd5e1;

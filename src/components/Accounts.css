@@ -46,6 +46,7 @@
 
 .accounts-tabs {
   display: flex;
+  justify-content: safe center;
   gap: 0.4rem;
   border-bottom: 1px solid #e5e7eb;
   min-width: max-content;

@@ -89,7 +89,6 @@
   min-width: 0;
   padding: 0.6rem 0.7rem;
   border: 1px solid #e2e8f0;
-  border-left: 3px solid #cbd5e1;
   border-radius: 8px;
   background: #fff;
   text-align: left;
@@ -126,7 +125,7 @@
 .nudge-tracking-ack-summary {
   font: inherit;
   cursor: pointer;
-  border-left-color: #16a34a;
+  border-color: #16a34a;
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
@@ -135,8 +134,7 @@
 }
 
 .nudge-tracking-ack-summary:hover {
-  border-color: #86efac;
-  border-left-color: #15803d;
+  border-color: #15803d;
   background: #f0fdf4;
 }
 
@@ -149,7 +147,7 @@
 
 /* Pending */
 .nudge-tracking-pending-summary {
-  border-left-color: #f59e0b;
+  border-color: #f59e0b;
 }
 
 .nudge-tracking-pending-summary .nudge-tracking-stat-label,
@@ -159,7 +157,7 @@
 
 /* Nudges Sent */
 .nudge-tracking-total-nudges {
-  border-left-color: #64748b;
+  border-color: #64748b;
 }
 
 /* Deadline (+ overdue flag) */
@@ -176,8 +174,7 @@
 }
 
 .nudge-tracking-deadline.is-overdue {
-  border-color: #fecaca;
-  border-left-color: #b91c1c;
+  border-color: #b91c1c;
   background: #fff5f5;
 }
 

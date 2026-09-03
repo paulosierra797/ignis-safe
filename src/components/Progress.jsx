@@ -604,8 +604,11 @@ export default function Progress() {
                 paginatedRows.map((item, index) => (
                   <tr key={item.id}>
                     <td>{(safePage - 1) * USERS_PER_PAGE + index + 1}</td>
-                    <td>{item.name}</td>
-                    <td className={item.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'progress-cell-muted' : ''}>
+                    <td title={item.name}>{item.name}</td>
+                    <td
+                      title={item.barangay}
+                      className={item.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'progress-cell-muted' : ''}
+                    >
                       {item.barangay}
                     </td>
                     <td>
@@ -616,7 +619,7 @@ export default function Progress() {
                     <td>{item.moduleProgress}</td>
                     <td>{item.overallPercent}%</td>
                     <td>{formatDate(item.lastActivityAt)}</td>
-                    <td>{item.lastAccessedModule}</td>
+                    <td title={item.lastAccessedModule}>{item.lastAccessedModule}</td>
                     <td>
                       <button
                         className="progress-view-btn"

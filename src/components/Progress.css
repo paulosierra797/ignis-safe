@@ -320,6 +320,42 @@
   white-space: nowrap;
 }
 
+/*
+ * Users table density: long values (name, barangay, last accessed module) used
+ * to wrap and leave rows at uneven heights. Slightly smaller type, tighter
+ * padding, and single-line cells keep every row the same height; capped columns
+ * fall back to an ellipsis with the full value available via the title tooltip.
+ */
+.progress-table--users thead tr th {
+  padding: 0.8rem 0.9rem;
+  font-size: 0.8rem;
+}
+
+.progress-table--users tbody td {
+  padding: 0.72rem 0.9rem;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Name */
+.progress-table--users tbody td:nth-child(2) {
+  max-width: 170px;
+}
+
+/* Barangay */
+.progress-table--users th:nth-child(3),
+.progress-table--users tbody td:nth-child(3) {
+  max-width: 150px;
+}
+
+/* Last Accessed Module */
+.progress-table--users th:nth-child(8),
+.progress-table--users tbody td:nth-child(8) {
+  max-width: 190px;
+}
+
 .progress-view-btn {
   background: #3b82f6;
   color: white;

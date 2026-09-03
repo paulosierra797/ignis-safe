@@ -179,7 +179,10 @@ export default function VisitorMessages() {
       setError(result.error);
       return;
     }
-    setThread((current) => ({ ...current, conversation: result.data.conversation }));
+    // Resolving auto-archives the conversation and reopening returns it to the
+    // active inbox, so either way it leaves the current list. Drop the thread.
+    setThread(null);
+    setSelectedId('');
     await loadConversations({ quiet: true });
   };
 
@@ -401,6 +404,17 @@ export default function VisitorMessages() {
                   <div className="visitor-thread-actions">
                     {archivedView ? (
                       <>
+                        {thread.conversation.status === 'resolved' && (
+                          <button
+                            type="button"
+                            className="visitor-thread-status-action is-resolved"
+                            onClick={handleStatusChange}
+                            disabled={updatingStatus}
+                          >
+                            <FiClock />
+                            {updatingStatus ? 'Updating...' : 'Reopen'}
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="visitor-thread-restore-action"
@@ -498,7 +512,7 @@ export default function VisitorMessages() {
                   </button>
                 </form> : (
                   <div className="visitor-thread-archived-note">
-                    <FiArchive /> Restore this conversation before replying or changing its status.
+                    <FiArchive /> Reopen or restore this conversation before replying.
                   </div>
                 )}
               </>

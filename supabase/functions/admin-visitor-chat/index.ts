@@ -220,21 +220,39 @@ Deno.serve(async (request) => {
     if (action === 'set-status') {
       const conversation = await getConversation(body?.conversationId);
       if (!conversation) return jsonResponse({ error: 'Conversation not found.' }, 404);
-      if (conversation.is_archived) {
-        return jsonResponse({ error: 'Restore this conversation before changing its status.' }, 409);
-      }
 
       const status = body?.status === 'resolved' ? 'resolved' : 'open';
       const now = new Date().toISOString();
-      const { error } = await serviceClient
-        .from('visitor_conversations')
-        .update({
+      // Resolving a conversation archives it automatically, so admins no longer
+      // need a separate Archive step. Reopening returns it to the active inbox
+      // and cancels any pending deletion (mirrors the 'restore' action).
+      const statusUpdate = status === 'resolved'
+        ? {
           status,
-          resolved_at: status === 'resolved' ? now : null,
-          resolved_by: status === 'resolved' ? admin.admin_id : null,
+          resolved_at: now,
+          resolved_by: admin.admin_id,
+          is_archived: true,
+          archived_at: conversation.archived_at || now,
+          archived_by: conversation.archived_by || admin.admin_id,
           admin_last_read_at: now,
           updated_at: now,
-        })
+        }
+        : {
+          status,
+          resolved_at: null,
+          resolved_by: null,
+          is_archived: false,
+          archived_at: null,
+          archived_by: null,
+          deletion_requested_at: null,
+          deletion_requested_by: null,
+          delete_after: null,
+          admin_last_read_at: now,
+          updated_at: now,
+        };
+      const { error } = await serviceClient
+        .from('visitor_conversations')
+        .update(statusUpdate)
         .eq('id', conversation.id);
       if (error) throw error;
 

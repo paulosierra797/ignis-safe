@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FiPlus, FiEdit2, FiTrash2, FiArrowUp, FiArrowDown, FiSave, FiX,
   FiChevronDown, FiChevronRight
@@ -1226,15 +1226,51 @@ export default function AboutUsContent() {
     }
   };
 
+  const mainRef = useRef(null);
+
+  // The quick-nav is sticky and pins just under the shared PageHeader. The
+  // header's rendered height changes with viewport / text size, so measure it
+  // and expose it as a CSS variable the nav's `top` offset reads from.
+  useEffect(() => {
+    const main = mainRef.current;
+    const header = main?.querySelector('.page-header');
+    if (!main || !header) return undefined;
+
+    const syncHeaderHeight = () => {
+      main.style.setProperty('--aboutus-header-h', `${header.offsetHeight}px`);
+    };
+
+    syncHeaderHeight();
+
+    const observer = new ResizeObserver(syncHeaderHeight);
+    observer.observe(header);
+    window.addEventListener('resize', syncHeaderHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', syncHeaderHeight);
+    };
+  }, []);
+
   const scrollToSection = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const target = document.getElementById(id);
+    const main = mainRef.current;
+    if (!target) return;
+
+    // Offset the landing position by the sticky header + sticky quick-nav so the
+    // section heading clears both bars instead of hiding behind them.
+    const headerHeight = main?.querySelector('.page-header')?.offsetHeight ?? 0;
+    const navHeight = main?.querySelector('.aboutus-quicknav')?.offsetHeight ?? 0;
+    const top = window.scrollY + target.getBoundingClientRect().top - headerHeight - navHeight - 16;
+
+    window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
   };
 
   return (
     <div className="aboutus-container">
       <Sidebar />
 
-      <div className="aboutus-main">
+      <div className="aboutus-main" ref={mainRef}>
         <PageHeader title="About Us Content" />
 
         <MessageBanner message={message} />

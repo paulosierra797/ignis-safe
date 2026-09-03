@@ -34,6 +34,13 @@
 }
 
 .aboutus-quicknav {
+  /* Stays visible while scrolling, pinned directly under the sticky PageHeader
+     (its measured height comes from --aboutus-header-h, set in AboutUsContent.jsx).
+     z-index sits below the header's 500 so the header always wins any overlap,
+     and above the cards so section content scrolls underneath. */
+  position: sticky;
+  top: var(--aboutus-header-h, 76px);
+  z-index: 450;
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem;

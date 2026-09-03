@@ -8,7 +8,7 @@
   position: relative;
   min-height: clamp(460px, 58vw, 610px);
   overflow: hidden;
-  background: #172033;
+  background: #172033 url('../assets/firestation.webp') center 48% / cover no-repeat;
 }
 
 .hero-image-img {
@@ -171,6 +171,10 @@
 
 .hero-carousel-photo {
   animation: hero-carousel-next 0.28s ease both;
+}
+
+.hero-carousel-photo.is-initial {
+  animation: none;
 }
 
 .hero-carousel-photo.is-previous {
@@ -347,6 +351,7 @@
 @media (max-width: 720px) {
   .hero-carousel {
     min-height: 620px;
+    background-image: url('../assets/firestation-640.webp');
   }
 
   .hero-image-img {

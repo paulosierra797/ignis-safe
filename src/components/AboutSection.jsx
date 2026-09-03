@@ -1,7 +1,8 @@
 import './AboutSection.css'
 import { FiArrowRight, FiEye, FiShield } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
-import personnelPhoto from '../assets/bfp_pic.jpg';
+import personnelPhoto from '../assets/bfp_pic.webp';
+import personnelPhotoSmall from '../assets/bfp_pic-640.webp';
 import { useLandingContent } from '../context/LandingContentContext';
 import { getLandingUiCopy, getLocalizedSection, normalizeDasmarinasText } from '../utils/landingLanguage';
 
@@ -16,9 +17,14 @@ export default function AboutSection() {
         <div className="about-image-wrap">
           <img
             src={personnelPhoto}
+            srcSet={`${personnelPhotoSmall} 640w, ${personnelPhoto} 940w`}
+            sizes="(max-width: 767px) calc(100vw - 2rem), 50vw"
             alt="BFP Dasmariñas City Fire Station personnel"
             className="about-image"
             loading="lazy"
+            decoding="async"
+            width="940"
+            height="692"
           />
         </div>
 

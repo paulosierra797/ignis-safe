@@ -40,7 +40,7 @@ export default function OrganizationalChartView() {
     <>
       <Header />
 
-      <section className="org-chart-page" id="main-content">
+      <main className="org-chart-page" id="main-content">
         <div className="org-chart-page-container">
           <div className="org-chart-page-header">
             <p className="org-chart-page-eyebrow">{copy.publicInformation}</p>
@@ -81,7 +81,7 @@ export default function OrganizationalChartView() {
             </div>
           </div>
         </div>
-      </section>
+      </main>
 
       <Footer />
     </>

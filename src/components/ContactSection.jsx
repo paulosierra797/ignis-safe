@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { FiCheck, FiCopy, FiFacebook, FiMail, FiPhone, FiSmartphone } from 'react-icons/fi'
 import './ContactSection.css'
-import firestation from '../assets/firestation.jpg'
+import firestation from '../assets/firestation.webp'
+import firestationSmall from '../assets/firestation-640.webp'
 import { useLandingContent } from '../context/LandingContentContext';
 import { getLandingUiCopy, getLocalizedSection, normalizeDasmarinasText } from '../utils/landingLanguage';
 
@@ -64,7 +65,17 @@ export default function ContactSection() {
     <section className="contact" id="contact">
       <div className="contact-container">
         <div className="contact-image">
-           <img src={firestation} alt="BFP Dasmariñas City Fire Station" className="contact-station-image" />
+           <img
+             src={firestation}
+             srcSet={`${firestationSmall} 640w, ${firestation} 1360w`}
+             sizes="(max-width: 767px) calc(100vw - 2rem), 50vw"
+             alt="BFP Dasmariñas City Fire Station"
+             className="contact-station-image"
+             loading="lazy"
+             decoding="async"
+             width="1360"
+             height="765"
+           />
         </div>
         
         <div className="contact-content">

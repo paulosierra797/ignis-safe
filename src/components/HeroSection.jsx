@@ -8,7 +8,8 @@ import {
   FiPhoneCall,
 } from 'react-icons/fi';
 import './HeroSection.css'
-import firestation from '../assets/firestation.jpg'
+import firestation from '../assets/firestation.webp'
+import firestationSmall from '../assets/firestation-640.webp'
 import { useLandingContent } from '../context/LandingContentContext';
 import { getLandingUiCopy, getLocalizedSection, normalizeDasmarinasText } from '../utils/landingLanguage';
 
@@ -21,6 +22,7 @@ export default function HeroSection() {
   const touchStartXRef = useRef(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [slideDirection, setSlideDirection] = useState('next');
+  const [hasChangedPhoto, setHasChangedPhoto] = useState(false);
   const bannerPhotos = useMemo(() => {
     const uploadedPhotos = Array.isArray(content.hero.photos)
       ? content.hero.photos.filter((photo) => photo?.url)
@@ -33,7 +35,13 @@ export default function HeroSection() {
       }));
     }
 
-    return [{ id: 'default-banner-photo', url: firestation, alt: 'BFP Dasmariñas City Fire Station and fire truck' }];
+    return [{
+      id: 'default-banner-photo',
+      url: firestation,
+      srcSet: `${firestationSmall} 640w, ${firestation} 1360w`,
+      sizes: '100vw',
+      alt: 'BFP Dasmariñas City Fire Station and fire truck',
+    }];
   }, [content.hero.photos]);
 
   const hasMultiplePhotos = bannerPhotos.length > 1;
@@ -42,6 +50,7 @@ export default function HeroSection() {
 
   const goToPhoto = (nextIndex, direction = 'next') => {
     if (!hasMultiplePhotos) return;
+    setHasChangedPhoto(true);
     setSlideDirection(direction);
     setActivePhotoIndex((nextIndex + bannerPhotos.length) % bannerPhotos.length);
   };
@@ -81,8 +90,10 @@ export default function HeroSection() {
         <img
           key={activePhoto.id || activePhoto.url}
           src={activePhoto.url}
+          srcSet={activePhoto.srcSet}
+          sizes={activePhoto.sizes}
           alt={normalizeDasmarinasText(activePhoto.alt)}
-          className={`hero-image-img hero-carousel-photo is-${slideDirection}`}
+          className={`hero-image-img hero-carousel-photo is-${slideDirection}${hasChangedPhoto ? '' : ' is-initial'}`}
           loading={safeActivePhotoIndex === 0 ? 'eager' : 'lazy'}
           fetchPriority={safeActivePhotoIndex === 0 ? 'high' : 'auto'}
         />

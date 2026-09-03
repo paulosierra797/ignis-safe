@@ -1,9 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { getPublicAnnouncements } from '../utils/announcementsService';
 import CloseButton from './CloseButton';
 import './LandingAnnouncements.css';
 import { useLandingContent } from '../context/LandingContentContext';
 import { getLandingUiCopy, normalizeDasmarinasText } from '../utils/landingLanguage';
+import { getPublicAnnouncements } from '../utils/publicContentService';
 
 const formatDate = (isoDate) => {
   if (!isoDate) return '';

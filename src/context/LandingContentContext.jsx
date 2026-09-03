@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useUser } from './UserContext';
-import { getLandingContentFromDb, saveLandingContentToDb } from '../utils/landingContentService';
-import { MAX_BANNER_PHOTOS } from '../utils/bannerPhotoService';
 import { LANDING_LANGUAGE_STORAGE_KEY, normalizeDasmarinasText } from '../utils/landingLanguage';
+import { getPublicLandingContent } from '../utils/publicContentService';
 
 const STORAGE_KEY = 'ignis_landing_content_v1';
+const MAX_BANNER_PHOTOS = 5;
+const loadLandingContentService = () => import('../utils/landingContentService');
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const DEFAULT_LANDING_CONTENT = {
@@ -443,7 +444,7 @@ export const LandingContentProvider = ({ children }) => {
     let isMounted = true;
 
     const syncFromDb = async () => {
-      const { data, error } = await getLandingContentFromDb();
+      const { data, error } = await getPublicLandingContent();
 
       if (!isMounted) return;
 
@@ -484,6 +485,7 @@ export const LandingContentProvider = ({ children }) => {
       console.error('Error saving landing content to storage:', error);
     }
 
+    const { saveLandingContentToDb } = await loadLandingContentService();
     const { error } = await saveLandingContentToDb({
       content: merged,
       updatedBy: currentUser?.admin_id || null,
@@ -501,6 +503,7 @@ export const LandingContentProvider = ({ children }) => {
       console.error('Error clearing landing content cache:', error);
     }
 
+    const { saveLandingContentToDb } = await loadLandingContentService();
     const { error } = await saveLandingContentToDb({
       content: DEFAULT_LANDING_CONTENT,
       updatedBy: currentUser?.admin_id || null,

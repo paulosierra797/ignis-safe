@@ -3,13 +3,13 @@ import './App.css'
 import './components/WorkspaceDensity.css'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { UserProvider, useUser } from './context/UserContext';
-import ProtectedRoute from './components/ProtectedRoute';
 import AppErrorBoundary from './components/AppErrorBoundary';
 import { lazyWithRetry as lazy } from './utils/lazyWithRetry';
 import { LandingContentProvider } from './context/LandingContentContext';
 import { LayoutProvider } from './context/LayoutContext';
-import AppSessionTracker from './components/AppSessionTracker';
 import useDocumentMeta from './hooks/useDocumentMeta';
+import Header from './components/Header';
+import HeroSection from './components/HeroSection';
 
 const loadDashboard = () => import('./components/Dashboard');
 const loadAnalytics = () => import('./components/Analytics');
@@ -33,6 +33,7 @@ const loadAdminReports = () => import('./components/AdminReports');
 const loadVisitorMessages = () => import('./components/VisitorMessages');
 
 const Dashboard = lazy(loadDashboard);
+const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
 const LoginPage = lazy(loadLogin);
 const Reports = lazy(loadReports);
 const AttendanceAdmin = lazy(loadAttendanceAdmin);
@@ -60,6 +61,7 @@ const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
 const ConfirmSignupPage = lazy(() => import('./components/ConfirmSignupPage'));
 const SendMessagePage = lazy(() => import('./components/SendMessagePage'));
 const VisitorMessages = lazy(loadVisitorMessages);
+const AppSessionTracker = lazy(() => import('./components/AppSessionTracker'));
 const LandingAnnouncements = lazy(() => import('./components/LandingAnnouncements'));
 const AboutSection = lazy(() => import('./components/AboutSection'));
 const ProcessSection = lazy(() => import('./components/ProcessSection'));
@@ -67,8 +69,6 @@ const ContactSection = lazy(() => import('./components/ContactSection'));
 const FAQSection = lazy(() => import('./components/FAQSection'));
 const FloatingContactButton = lazy(() => import('./components/FloatingContactButton'));
 const TrustAccessibilitySection = lazy(() => import('./components/TrustAccessibilitySection'));
-const Header = lazy(() => import('./components/Header'));
-const HeroSection = lazy(() => import('./components/HeroSection'));
 const Footer = lazy(() => import('./components/Footer'));
 
 const ROUTE_PRELOADERS = {
@@ -286,11 +286,22 @@ function AppRoutes() {
   );
 }
 
+function SessionTrackerGate() {
+  const { currentUser } = useUser();
+  if (!currentUser) return null;
+
+  return (
+    <Suspense fallback={null}>
+      <AppSessionTracker />
+    </Suspense>
+  );
+}
+
 function App() {
   return (
     <UserProvider>
       <RoutePreloader />
-      <AppSessionTracker />
+      <SessionTrackerGate />
       <LayoutProvider>
         <LandingContentProvider>
           <div className="app">

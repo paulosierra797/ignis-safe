@@ -1,5 +1,3 @@
-import { supabase } from './supabaseClient';
-
 export const VISITOR_CHAT_MAX_LENGTH = 1500;
 export const VISITOR_CHAT_STORAGE_KEY = 'ignis-safe:visitor-chat-access';
 export const VISITOR_CHAT_DRAFT_KEY = 'ignis-safe:visitor-chat-draft';
@@ -18,6 +16,7 @@ const readFunctionErrorPayload = async (error) => {
 
 const invoke = async (functionName, body) => {
   try {
+    const { supabase } = await import('./supabaseClient');
     const { data, error } = await supabase.functions.invoke(functionName, { body });
     if (error) {
       const payload = await readFunctionErrorPayload(error);

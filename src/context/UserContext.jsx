@@ -1,17 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import {
-  checkCurrentDeviceTrust,
-  forgetCurrentDevice,
-  getCurrentUser,
-  onAuthStateChange,
-  signOut
-} from '../utils/authService';
 import { isAuthFlowGated } from '../utils/authFlowGate';
-import { logPersonnelActivity } from '../utils/activityLogService';
-import { getPersonnelWorkspaceProfile } from '../utils/usersService';
 
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
+const PUBLIC_PATHS = new Set(['/', '/organizational-chart', '/send-message', '/terms', '/privacy']);
+const loadAuthService = () => import('../utils/authService');
+const loadActivityLogService = () => import('../utils/activityLogService');
+const loadUsersService = () => import('../utils/usersService');
 
 const UserContext = createContext();
 const PERSONNEL_WORKSPACE_PATHS = [
@@ -40,6 +35,7 @@ export const UserProvider = ({ children }) => {
   const [accountUser, setAccountUser] = useState(null);
   const [personnelWorkspaceUser, setPersonnelWorkspaceUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const shouldInitializeAuth = !PUBLIC_PATHS.has(location.pathname);
   const isPersonnelWorkspace = isPersonnelWorkspacePath(location.pathname);
   const isAdminAccount = String(accountUser?.role || '').toLowerCase() === 'admin';
   const currentUser = isPersonnelWorkspace && isAdminAccount
@@ -83,6 +79,7 @@ export const UserProvider = ({ children }) => {
   
   const refreshCurrentUser = async (authUser = null, prefetchedProfile = null) => {
   try {
+    const { getCurrentUser } = await loadAuthService();
     const { data } = await getCurrentUser(authUser, prefetchedProfile);
 
     if (data) {
@@ -99,11 +96,18 @@ export const UserProvider = ({ children }) => {
 };
 
  useEffect(() => {
+  if (!shouldInitializeAuth) {
+    setLoading(false);
+    return undefined;
+  }
+
   let unsubscribe;
+  setLoading(true);
 
   const initializeAuth = async () => {
     try {
       await refreshCurrentUser();
+      const { onAuthStateChange } = await loadAuthService();
 
       // ONLY listen to Supabase IF session exists (optional safe sync)
       const { data: authListener } = onAuthStateChange((event, session) => {
@@ -140,9 +144,10 @@ export const UserProvider = ({ children }) => {
       unsubscribe();
     }
   };
-// Authentication initialization intentionally runs once per provider mount.
+// Public routes do not need the auth SDK; initialize it when entering an
+// authentication or protected workspace route.
 // eslint-disable-next-line react-hooks/exhaustive-deps
-}, []);
+}, [shouldInitializeAuth]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -153,6 +158,7 @@ export const UserProvider = ({ children }) => {
         return;
       }
 
+      const { getPersonnelWorkspaceProfile } = await loadUsersService();
       const { data, error } = await getPersonnelWorkspaceProfile(accountUser);
       if (!isCancelled && data && !error) {
         setPersonnelWorkspaceUser(data);
@@ -170,9 +176,11 @@ export const UserProvider = ({ children }) => {
       if (accountUser?.admin_id) {
         void refreshCurrentUser();
         if (isPersonnelWorkspace && isAdminAccount) {
-          void getPersonnelWorkspaceProfile(accountUser).then(({ data }) => {
-            if (data) setPersonnelWorkspaceUser(data);
-          });
+          void loadUsersService()
+            .then(({ getPersonnelWorkspaceProfile }) => getPersonnelWorkspaceProfile(accountUser))
+            .then(({ data }) => {
+              if (data) setPersonnelWorkspaceUser(data);
+            });
         }
       }
     };
@@ -215,6 +223,7 @@ export const UserProvider = ({ children }) => {
 
   const logout = async () => {
     if (String(currentUser?.role || '').toLowerCase() === 'personnel' && currentUser?.admin_id) {
+      const { logPersonnelActivity } = await loadActivityLogService();
       await logPersonnelActivity({
         personnelId: currentUser.admin_id,
         activityType: 'logout',
@@ -223,13 +232,20 @@ export const UserProvider = ({ children }) => {
       });
     }
 
+    const { signOut } = await loadAuthService();
     await signOut();
     setAccountUser(null);
     setPersonnelWorkspaceUser(null);
   };
 
   const forgetThisDevice = async () => {
+    const { forgetCurrentDevice } = await loadAuthService();
     return forgetCurrentDevice();
+  };
+
+  const checkCurrentDeviceTrust = async (...args) => {
+    const authService = await loadAuthService();
+    return authService.checkCurrentDeviceTrust(...args);
   };
 
   const value = {

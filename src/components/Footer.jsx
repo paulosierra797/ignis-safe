@@ -1,5 +1,5 @@
 import './Footer.css'
-import logo from '../assets/bfp_dasma.png'
+import logo from '../assets/bfp_dasma-280.webp'
 import { Link, useLocation } from 'react-router-dom'
 import { FiFacebook, FiMail, FiPhone } from 'react-icons/fi'
 import { useLandingContent } from '../context/LandingContentContext'
@@ -19,7 +19,7 @@ export default function Footer() {
         <div className="footer-brand">
           <div className="footer-logo">
             <span className="footer-logo-image-frame">
-              <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="footer-logo-image" />
+              <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="footer-logo-image" loading="lazy" decoding="async" width="280" height="234" />
             </span>
             <div>
               <span>Bureau of Fire Protection</span>

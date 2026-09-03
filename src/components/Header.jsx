@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './Header.css';
-import logo from '../assets/bfp_dasma.png';
+import logo from '../assets/bfp_dasma-280.webp';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiChevronDown, FiGlobe, FiLogIn, FiMenu, FiPhoneCall, FiX } from 'react-icons/fi';
 import { useLandingContent } from '../context/LandingContentContext';
@@ -208,32 +208,21 @@ export default function Header() {
 
   useEffect(() => {
     if (!isLandingPage) return undefined;
-
-    let animationFrameId = 0;
-
-    const updateActiveSection = () => {
-      // While a nav click is smooth-scrolling the page toward its target section,
-      // skip updates so the indicator doesn't flash through every section it
-      // scrolls past before settling on the one that was actually clicked.
+    const sections = SCROLL_SECTION_IDS
+      .map((id) => document.getElementById(id))
+      .filter(Boolean);
+    const observer = new IntersectionObserver((entries) => {
       if (suppressTrackingRef.current) return;
 
-      const marker = window.scrollY + 150;
-      let currentSection = SCROLL_SECTION_IDS[0];
-
-      SCROLL_SECTION_IDS.forEach((id) => {
-        const section = document.getElementById(id);
-        if (section && section.offsetTop <= marker) {
-          currentSection = id;
-        }
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) setActiveSection(entry.target.id);
       });
+    }, {
+      rootMargin: '-140px 0px -65% 0px',
+      threshold: 0,
+    });
 
-      setActiveSection(currentSection);
-    };
-
-    const handleScroll = () => {
-      window.cancelAnimationFrame(animationFrameId);
-      animationFrameId = window.requestAnimationFrame(updateActiveSection);
-    };
+    sections.forEach((section) => observer.observe(section));
 
     const initialHashId = initialHashRef.current ? initialHashRef.current.slice(1) : null;
     if (initialHashId && SCROLL_SECTION_IDS.includes(initialHashId)) {
@@ -242,17 +231,10 @@ export default function Header() {
       // (already seeded from the hash above) pinned instead of letting the
       // scroll-driven heuristic below race it.
       suppressTrackingUntilScrollEnd();
-    } else {
-      updateActiveSection();
     }
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleScroll);
-
     return () => {
-      window.cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
+      observer.disconnect();
     };
   }, [isLandingPage, suppressTrackingUntilScrollEnd]);
 
@@ -472,7 +454,7 @@ export default function Header() {
       <div className="header-container">
         <a className="landing-brand" href={sectionHref('home')} onClick={(event) => handleSectionClick(event, 'home')}>
           <span className="landing-brand-logo-frame">
-            <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="landing-brand-logo" />
+            <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="landing-brand-logo" width="280" height="234" />
           </span>
           <div className="landing-brand-text">
             <h4>BUREAU OF FIRE PROTECTION</h4>

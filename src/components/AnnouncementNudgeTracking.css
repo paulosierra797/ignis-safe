@@ -1,135 +1,35 @@
 .nudge-tracking {
-  margin-top: 0.6rem;
-  padding: 0.9rem 1rem;
+  margin-top: 0.85rem;
+  padding: 1rem 1.1rem 1.1rem;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #f8fafc;
 }
 
+/* ---- Header: section title + primary action ------------------------- */
 .nudge-tracking-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem 1rem;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
 }
 
-.nudge-tracking-heading {
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.nudge-tracking-header h4 {
+.nudge-tracking-title {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
   margin: 0;
   color: #0f172a;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   font-weight: 800;
 }
 
-.nudge-tracking-summary {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-top: 0.6rem;
-}
-
-.nudge-tracking-stat {
-  height: 30px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0 0.6rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 7px;
-  background: #fff;
-  color: #475569;
-  font-size: 0.75rem;
-  white-space: nowrap;
-}
-
-.nudge-tracking-stat > svg {
+.nudge-tracking-title > svg {
   flex: 0 0 auto;
-  width: 14px;
-  height: 14px;
-}
-
-.nudge-tracking-stat-label {
-  color: #64748b;
-  font-size: 0.67rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-}
-
-.nudge-tracking-stat-value {
-  color: #0f172a;
-  font-size: 0.82rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-.nudge-tracking-ack-summary {
-  border-color: #bbf7d0;
-  font: inherit;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-
-.nudge-tracking-ack-summary .nudge-tracking-stat-label {
-  color: #15803d;
-}
-
-.nudge-tracking-ack-summary:hover {
-  border-color: #86efac;
-  background: #f0fdf4;
-}
-
-.nudge-tracking-ack-summary:focus-visible,
-.nudge-tracking-primary-action:focus-visible {
-  outline: 3px solid rgba(185, 28, 28, 0.2);
-  outline-offset: 2px;
-}
-
-.nudge-tracking-ack-summary > svg:last-child {
-  width: 14px;
-  height: 14px;
-  margin-left: 0.05rem;
-  color: #64748b;
-}
-
-.nudge-tracking-pending-summary {
-  border-color: #fde68a;
-}
-
-.nudge-tracking-pending-summary > svg,
-.nudge-tracking-pending-summary .nudge-tracking-stat-label,
-.nudge-tracking-pending-summary .nudge-tracking-stat-value {
-  color: #b45309;
-}
-
-.nudge-tracking-deadline.is-overdue {
-  border-color: #fecaca;
-  background: #fff5f5;
-}
-
-.nudge-tracking-deadline.is-overdue > svg,
-.nudge-tracking-deadline.is-overdue .nudge-tracking-stat-label,
-.nudge-tracking-deadline.is-overdue .nudge-tracking-stat-value {
+  width: 15px;
+  height: 15px;
   color: #b91c1c;
-}
-
-.nudge-tracking-deadline em {
-  padding: 0.12rem 0.4rem;
-  border-radius: 999px;
-  background: #fee2e2;
-  color: #b91c1c;
-  font-size: 0.64rem;
-  font-style: normal;
-  font-weight: 800;
-  text-transform: uppercase;
 }
 
 .nudge-tracking-primary-action {
@@ -139,7 +39,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.4rem 0.85rem;
+  padding: 0.4rem 0.9rem;
   border: 1px solid #b91c1c;
   border-radius: 8px;
   background: #b91c1c;
@@ -149,6 +49,13 @@
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.nudge-tracking-primary-action > svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
 }
 
 .nudge-tracking-primary-action:hover:not(:disabled) {
@@ -161,14 +68,145 @@
   cursor: not-allowed;
 }
 
+.nudge-tracking-ack-summary:focus-visible,
+.nudge-tracking-primary-action:focus-visible {
+  outline: 3px solid rgba(185, 28, 28, 0.2);
+  outline-offset: 2px;
+}
+
+/* ---- Summary: equal-width stat tiles ------------------------------- */
+.nudge-tracking-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+}
+
+.nudge-tracking-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  text-align: left;
+}
+
+.nudge-tracking-stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nudge-tracking-stat-label > svg {
+  flex: 0 0 auto;
+  width: 13px;
+  height: 13px;
+}
+
+.nudge-tracking-stat-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #0f172a;
+  font-size: 0.98rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Acknowledged — clickable, opens the Acknowledgement Details modal */
+.nudge-tracking-ack-summary {
+  font: inherit;
+  cursor: pointer;
+  border-left-color: #16a34a;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.nudge-tracking-ack-summary .nudge-tracking-stat-label {
+  color: #15803d;
+}
+
+.nudge-tracking-ack-summary:hover {
+  border-color: #86efac;
+  border-left-color: #15803d;
+  background: #f0fdf4;
+}
+
+.nudge-tracking-stat-chevron {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  color: #64748b;
+}
+
+/* Pending */
+.nudge-tracking-pending-summary {
+  border-left-color: #f59e0b;
+}
+
+.nudge-tracking-pending-summary .nudge-tracking-stat-label,
+.nudge-tracking-pending-summary .nudge-tracking-stat-value {
+  color: #b45309;
+}
+
+/* Nudges Sent */
+.nudge-tracking-total-nudges {
+  border-left-color: #64748b;
+}
+
+/* Deadline (+ overdue flag) */
+.nudge-tracking-deadline .nudge-tracking-stat-label {
+  flex-wrap: wrap;
+  gap: 0.3rem 0.35rem;
+}
+
+.nudge-tracking-deadline .nudge-tracking-stat-value {
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.nudge-tracking-deadline.is-overdue {
+  border-color: #fecaca;
+  border-left-color: #b91c1c;
+  background: #fff5f5;
+}
+
+.nudge-tracking-deadline.is-overdue .nudge-tracking-stat-label,
+.nudge-tracking-deadline.is-overdue .nudge-tracking-stat-value {
+  color: #b91c1c;
+}
+
+.nudge-tracking-deadline em {
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #b91c1c;
+  font-size: 0.6rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* ---- Search ------------------------------------------------------- */
 .nudge-tracking-search {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  margin-top: 0.7rem;
-  padding: 0.4rem 0.6rem;
+  margin-top: 0.85rem;
+  padding: 0.45rem 0.65rem;
   border: 1px solid #e2e8f0;
-  border-radius: 7px;
+  border-radius: 8px;
   background: #fff;
   color: #64748b;
 }
@@ -184,17 +222,18 @@
   background: transparent;
 }
 
+/* ---- Personnel tracking table ------------------------------------ */
 .nudge-tracking-table-wrap {
-  margin-top: 0.7rem;
+  margin-top: 0.85rem;
   border: 1px solid #e8edf3;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #fff;
   overflow-x: auto;
 }
 
 .nudge-tracking-table {
   width: 100%;
-  min-width: 720px;
+  min-width: 680px;
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 0.78rem;
@@ -202,7 +241,7 @@
 
 .nudge-tracking-table th,
 .nudge-tracking-table td {
-  padding: 0.5rem 0.6rem;
+  padding: 0.62rem 0.85rem;
   text-align: left;
   vertical-align: middle;
   border-bottom: 1px solid #eef2f7;
@@ -212,22 +251,26 @@
 .nudge-tracking-table thead th {
   position: sticky;
   top: 0;
-  background: #f8fafc;
+  background: #f1f5f9;
   border-bottom: 1px solid #e2e8f0;
-  color: #64748b;
-  font-size: 0.68rem;
+  color: #475569;
+  font-size: 0.67rem;
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
 }
 
 .nudge-tracking-table tbody tr:nth-child(even) {
   background: #fcfdfe;
 }
 
+.nudge-tracking-table tbody tr:hover {
+  background: #f6f9fc;
+}
+
 .nudge-tracking-table th:nth-child(1),
 .nudge-tracking-table td:nth-child(1) {
-  width: 30%;
+  width: 32%;
 }
 
 .nudge-tracking-table th:nth-child(2),
@@ -237,17 +280,19 @@
 
 .nudge-tracking-table th:nth-child(3),
 .nudge-tracking-table td:nth-child(3) {
-  width: 16%;
+  width: 15%;
 }
 
 .nudge-tracking-table th:nth-child(4),
 .nudge-tracking-table td:nth-child(4) {
-  width: 27%;
+  width: 26%;
 }
 
 .nudge-tracking-table th:nth-child(5),
 .nudge-tracking-table td:nth-child(5) {
   width: 15%;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .nudge-tracking-table tbody tr:last-child td {
@@ -262,7 +307,7 @@
 
 .nudge-tracking-subtext {
   display: block;
-  margin-top: 0.1rem;
+  margin-top: 0.12rem;
   color: #64748b;
   font-size: 0.71rem;
   overflow-wrap: anywhere;
@@ -271,11 +316,21 @@
 .nudge-tracking-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.18rem 0.5rem;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  font-size: 0.69rem;
+  font-size: 0.68rem;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.nudge-tracking-badge::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .nudge-tracking-badge.is-acknowledged {
@@ -299,9 +354,11 @@
   text-align: center;
 }
 
+/* ---- Responsive ------------------------------------------------- */
 @media (max-width: 980px) {
   .nudge-tracking-header {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .nudge-tracking-primary-action {
@@ -309,22 +366,19 @@
   }
 }
 
-@media (max-width: 640px) {
-  .nudge-tracking {
-    padding: 0.85rem 0.8rem;
-  }
-
-  .nudge-tracking-stat {
-    flex: 1 1 calc(50% - 0.2rem);
-    justify-content: flex-start;
-    box-sizing: border-box;
+@media (max-width: 860px) {
+  .nudge-tracking-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .nudge-tracking-deadline {
-    flex-basis: 100%;
-    height: auto;
-    min-height: 30px;
-    white-space: normal;
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .nudge-tracking {
+    padding: 0.9rem 0.85rem;
   }
 
   .nudge-tracking-table-wrap {
@@ -367,6 +421,7 @@
     min-height: 0;
     padding: 0.65rem 0.75rem;
     border-bottom: 1px solid #f1f5f9;
+    text-align: left;
   }
 
   .nudge-tracking-table td:last-child {
@@ -386,7 +441,7 @@
 }
 
 @media (max-width: 420px) {
-  .nudge-tracking-stat {
-    flex-basis: 100%;
+  .nudge-tracking-summary {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

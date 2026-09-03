@@ -404,7 +404,7 @@
 
 .announcement-list {
   display: grid;
-  gap: 0.85rem;
+  gap: 1rem;
 }
 
 .announcement-item {
@@ -414,7 +414,7 @@
   min-height: 0;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 1rem 1.1rem;
+  padding: 1.1rem 1.2rem;
   background: #f8fafc;
 }
 
@@ -451,7 +451,9 @@
 
 .announcement-item-header h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.35;
   color: #0f172a;
   min-width: 0;
 }
@@ -470,16 +472,24 @@
 }
 
 .announcement-date {
-  display: block;
-  margin: 0.3rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.35rem 0 0;
   color: #64748b;
   font-size: 0.75rem;
 }
 
+.announcement-date svg {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+}
+
 .announcement-content {
-  margin: 0.5rem 0 0;
+  margin: 0.65rem 0 0;
   color: #334155;
-  line-height: 1.45;
+  line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;

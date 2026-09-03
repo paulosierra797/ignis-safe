@@ -1283,7 +1283,10 @@ export default function Announcements() {
                     </span>
                     <span className="announcement-audience">{getAudienceLabel(announcement)}</span>
                   </div>
-                  <span className="announcement-date">{formatDate(announcement.created_at)}</span>
+                  <span className="announcement-date">
+                    <FiClock aria-hidden="true" />
+                    {formatDate(announcement.created_at)}
+                  </span>
 
                   <p
                     className={`announcement-content ${expandedIds.has(announcement.announcement_id) ? '' : 'clamped'}`}

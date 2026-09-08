@@ -1,4 +1,3 @@
-import { StatusBadge } from './ui/Controls';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   FiArrowLeft,
@@ -365,7 +364,7 @@ export default function VisitorMessages() {
                     </span>
                     <span className="visitor-conversation-preview">{conversation.last_message_preview}</span>
                     <span className="visitor-conversation-meta">
-                      <StatusBadge className={`visitor-conversation-status is-${conversation.status}`}>{conversation.status}</StatusBadge>
+                      <span className={`visitor-conversation-status is-${conversation.status}`}>{conversation.status}</span>
                       {conversation.delete_after && (
                         <span className="visitor-conversation-delete-status">Deletes {formatListTime(conversation.delete_after)}</span>
                       )}

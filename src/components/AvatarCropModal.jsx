@@ -1,4 +1,3 @@
-import { Button } from './ui/Controls';
 import { useEffect, useRef, useState } from 'react';
 import {
   loadLocalImage,
@@ -196,22 +195,22 @@ export default function AvatarCropModal({ file, onCancel, onApply, onError, them
         </div>
 
         <div className="avatar-crop-actions">
-          <Button variant="secondary"
+          <button
             type="button"
             className="avatar-crop-btn avatar-crop-btn-cancel"
             onClick={handleCancel}
             disabled={isApplying}
           >
             Cancel
-          </Button>
-          <Button variant="primary"
+          </button>
+          <button
             type="button"
             className="avatar-crop-btn avatar-crop-btn-save"
             onClick={handleApply}
             disabled={isApplying}
           >
             {isApplying ? 'Applying...' : 'Use Photo'}
-          </Button>
+          </button>
         </div>
       </div>
     </div>

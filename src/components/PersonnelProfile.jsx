@@ -1,4 +1,3 @@
-import { Button } from './ui/Controls';
 import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
@@ -775,14 +774,14 @@ const showModal = ({ type = "info", message, onConfirm }) => {
       <div className="modal-actions">
         {modal.type === "confirm" ? (
           <>
-            <Button variant="secondary"
+            <button
               className="cancel-btn"
               onClick={() => setModal({ ...modal, open: false })}
             >
               Cancel
-            </Button>
+            </button>
 
-            <Button variant="primary"
+            <button
               className="save-btn"
               onClick={() => {
                 modal.onConfirm?.();
@@ -790,15 +789,15 @@ const showModal = ({ type = "info", message, onConfirm }) => {
               }}
             >
               Replace
-            </Button>
+            </button>
           </>
         ) : (
-          <Button variant="primary"
+          <button
             className="save-btn"
             onClick={() => setModal({ ...modal, open: false })}
           >
             OK
-          </Button>
+          </button>
         )}
       </div>
 
@@ -891,12 +890,12 @@ const showModal = ({ type = "info", message, onConfirm }) => {
               </div>
 
               <div className="request-modal-footer">
-                <Button variant="secondary" type="button" className="cancel-btn" onClick={closeRequestModal} disabled={isRequestSaving}>
+                <button type="button" className="cancel-btn" onClick={closeRequestModal} disabled={isRequestSaving}>
                   Cancel
-                </Button>
-                <Button variant="primary" type="button" className="save-btn" onClick={handleSubmitChangeRequest} disabled={isRequestSubmitDisabled}>
+                </button>
+                <button type="button" className="save-btn" onClick={handleSubmitChangeRequest} disabled={isRequestSubmitDisabled}>
                   {isRequestSaving ? 'Submitting...' : 'Submit Request'}
-                </Button>
+                </button>
               </div>
             </div>
           </div>
@@ -957,21 +956,21 @@ const showModal = ({ type = "info", message, onConfirm }) => {
 
       <div className="face-modal-actions">
         {faceRegError && !showLiveness && !faceLoading && (
-          <Button variant="primary"
+          <button
             className="save-btn"
             onClick={retryFaceLiveness}
           >
             Try Again
-          </Button>
+          </button>
         )}
 
-        <Button variant="secondary"
+        <button
           className="cancel-btn"
           onClick={() => setIsFaceModalOpen(false)}
           disabled={faceLoading}
         >
           Cancel
-        </Button>
+        </button>
       </div>
 
     </div>

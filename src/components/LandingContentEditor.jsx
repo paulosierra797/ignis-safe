@@ -1,4 +1,3 @@
-import { Button } from './ui/Controls';
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -1303,14 +1302,14 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
               ))}
             </div>
             <div className="modal-actions">
-              <Button variant="secondary"
+              <button
                 type="button"
                 className="cancel-btn"
                 onClick={() => setConfirmModal({ open: false, changes: [], onConfirm: null })}
               >
                 Cancel
-              </Button>
-              <Button variant="primary"
+              </button>
+              <button
                 type="button"
                 className="save-btn"
                 onClick={() => {
@@ -1320,7 +1319,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
                 }}
               >
                 Confirm Changes
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -1335,22 +1334,22 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
               This will replace all currently saved landing-page content with the default values. This action cannot be undone.
             </p>
             <div className="modal-actions">
-              <Button variant="secondary"
+              <button
                 type="button"
                 className="cancel-btn"
                 onClick={() => setResetModalOpen(false)}
                 disabled={saving}
               >
                 Cancel
-              </Button>
-              <Button variant="primary"
+              </button>
+              <button
                 type="button"
                 className="save-btn"
                 onClick={confirmResetDefaults}
                 disabled={saving}
               >
                 {saving ? 'Working...' : 'Reset Defaults'}
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -1365,20 +1364,20 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
               Your unsaved landing-page changes will be removed and the last saved content will be restored. This action cannot be undone.
             </p>
             <div className="modal-actions app-unsaved-actions">
-              <Button variant="secondary"
+              <button
                 type="button"
                 className="cancel-btn app-unsaved-button app-unsaved-button--cancel"
                 onClick={() => setDiscardModalOpen(false)}
               >
                 Cancel
-              </Button>
-              <Button variant="danger"
+              </button>
+              <button
                 type="button"
                 className="save-btn app-unsaved-button app-unsaved-button--discard"
                 onClick={confirmDiscard}
               >
                 Discard Changes
-              </Button>
+              </button>
             </div>
           </div>
         </div>

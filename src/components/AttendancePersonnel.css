@@ -296,7 +296,20 @@
 }
 
 .ghost-btn {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: transparent;
+  color: var(--ash);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.ghost-btn:hover {
+  border-color: rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
 }
 
 .qr-demo-link {
@@ -454,8 +467,20 @@
 }
 
 .attendance-details-btn {
+  min-height: 36px;
+  padding: 8px 13px;
+  border: 1px solid var(--ember);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--ember-dark);
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+}
+
+.attendance-details-btn:hover {
+  background: #fff1f2;
 }
 
 .attendance-details-overlay {

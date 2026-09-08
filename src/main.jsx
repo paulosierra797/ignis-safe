@@ -11,7 +11,6 @@ import '@fontsource/poppins/latin-800.css'
 import '@fontsource/poppins/latin-900.css'
 import './index.css'
 import App from './App.jsx'
-import './styles/interface.css'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import RouteErrorBoundary from './components/RouteErrorBoundary.jsx';
 import { clearReloadMarker } from './utils/appRecovery';

@@ -1,4 +1,3 @@
-import { Toolbar, StatusBadge, Button } from './ui/Controls';
 import React, { useEffect, useMemo, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -183,7 +182,7 @@ export default function AuditLogs() {
           </div>
         </div>
 
-        <Toolbar label="Audit log filters" className="audit-logs-filters">
+        <div className="audit-logs-filters">
           <div className="audit-logs-filter-row">
             <div className="audit-logs-filter-group audit-logs-filter-search">
               <label className="audit-logs-filter-label" htmlFor="audit-logs-search-input">Search User / Details</label>
@@ -263,7 +262,7 @@ export default function AuditLogs() {
               </div>
             </div>
           </div>
-        </Toolbar>
+        </div>
 
         <div className="audit-logs-table-card">
           <table className="audit-logs-table">
@@ -304,19 +303,19 @@ export default function AuditLogs() {
                     <td>
                       <div className="audit-logs-details-text">{log.details}</div>
                       {String(log.details || '').length > DETAILS_TRUNCATE_LENGTH && (
-                        <Button variant="ghost"
+                        <button
                           type="button"
                           className="audit-logs-view-details-btn"
                           onClick={() => setSelectedLog(log)}
                         >
                           View Details
-                        </Button>
+                        </button>
                       )}
                     </td>
                     <td>
-                      <StatusBadge className={`audit-logs-status-badge ${getStatusClass(log.status)}`}>
+                      <span className={`audit-logs-status-badge ${getStatusClass(log.status)}`}>
                         {formatStatusLabel(log.status)}
-                      </StatusBadge>
+                      </span>
                     </td>
                   </tr>
                 ))
@@ -381,9 +380,9 @@ export default function AuditLogs() {
               </div>
               <div className="audit-logs-modal-row">
                 <span className="audit-logs-modal-row-label">Status</span>
-                <StatusBadge className={`audit-logs-status-badge ${getStatusClass(selectedLog.status)}`}>
+                <span className={`audit-logs-status-badge ${getStatusClass(selectedLog.status)}`}>
                   {formatStatusLabel(selectedLog.status)}
-                </StatusBadge>
+                </span>
               </div>
               <div className="audit-logs-modal-details">
                 <span className="audit-logs-modal-row-label">Details</span>

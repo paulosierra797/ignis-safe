@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useBlocker } from 'react-router-dom';
 import './UnsavedChangesPrompt.css';
 import './AppDialog.css';
-import { ConfirmationDialog } from './ui/Controls';
 
 export function UnsavedChangesDialog({
   title = 'Leave without saving?',
@@ -13,8 +12,35 @@ export function UnsavedChangesDialog({
   onLeave,
 }) {
   return (
-    <ConfirmationDialog title={title} message={message} cancelLabel={stayLabel}
-      confirmLabel={leaveLabel} onCancel={onStay} onConfirm={onLeave} />
+    <div
+      className="unsaved-changes-overlay app-unsaved-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="unsavedChangesTitle"
+      aria-describedby="unsavedChangesDescription"
+    >
+      <div className="unsaved-changes-modal app-unsaved-dialog">
+        <div className="unsaved-changes-icon app-unsaved-icon" aria-hidden="true">!</div>
+        <h2 id="unsavedChangesTitle" className="app-unsaved-title">{title}</h2>
+        <p id="unsavedChangesDescription" className="app-unsaved-message">{message}</p>
+        <div className="unsaved-changes-actions app-unsaved-actions">
+          <button
+            type="button"
+            className="unsaved-changes-stay app-unsaved-button app-unsaved-button--cancel"
+            onClick={onStay}
+          >
+            {stayLabel}
+          </button>
+          <button
+            type="button"
+            className="unsaved-changes-leave app-unsaved-button app-unsaved-button--discard"
+            onClick={onLeave}
+          >
+            {leaveLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

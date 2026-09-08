@@ -1,4 +1,3 @@
-import { Button } from './ui/Controls';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -1433,7 +1432,7 @@ export default function AssessmentQuestions() {
             <label htmlFor="assessment-generate-count">AI questions generator</label>
             <div className="assessment-generator-controls">
             
-              <Button variant="primary"
+              <button
                 className="assessment-generate-button"
                 type="button"
                 onClick={handleGenerateQuestions}
@@ -1441,7 +1440,7 @@ export default function AssessmentQuestions() {
               >
                 {isGenerating && <span className="assessment-generate-spinner" aria-hidden="true" />}
                 {isGenerating ? 'Generating...' : 'Generate Questions'}
-              </Button>
+              </button>
             </div>
             {isGenerating && (
               <div className="assessment-generate-progress" role="status" aria-live="polite">
@@ -1718,30 +1717,30 @@ export default function AssessmentQuestions() {
                 You have unsaved changes in this assessment. What would you like to do before leaving this page?
               </p>
               <div className="assessment-unsaved-actions app-unsaved-actions">
-                <Button variant="primary"
+                <button
                   type="button"
                   className="assessment-unsaved-btn assessment-unsaved-btn-save app-unsaved-button app-unsaved-button--save"
                   onClick={handleSaveAndContinue}
                   disabled={isSavingAll}
                 >
                   {isSavingAll ? 'Saving...' : 'Save All and Continue'}
-                </Button>
-                <Button variant="danger"
+                </button>
+                <button
                   type="button"
                   className="assessment-unsaved-btn assessment-unsaved-btn-leave app-unsaved-button app-unsaved-button--discard"
                   onClick={handleLeaveWithoutSaving}
                   disabled={isSavingAll}
                 >
                   Leave Without Saving
-                </Button>
-                <Button variant="secondary"
+                </button>
+                <button
                   type="button"
                   className="assessment-unsaved-btn assessment-unsaved-btn-cancel app-unsaved-button app-unsaved-button--cancel"
                   onClick={handleCancelExit}
                   disabled={isSavingAll}
                 >
                   Cancel
-                </Button>
+                </button>
               </div>
             </div>
           </div>

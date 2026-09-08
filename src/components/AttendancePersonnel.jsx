@@ -1,4 +1,3 @@
-import { Button } from './ui/Controls';
 import React, { useCallback, useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useSearchParams } from 'react-router-dom';
@@ -258,9 +257,9 @@ const AttendancePersonnel = () => {
               </div>
               <div className="qr-link">
                 <span>{stationLink || 'Loading...'}</span>
-                <Button variant="ghost" type="button" className="ghost-btn" onClick={handleCopyLink}>
+                <button type="button" className="ghost-btn" onClick={handleCopyLink}>
                   Copy link
-                </Button>
+                </button>
               </div>
               {copyMessage && <div className="qr-feedback">{copyMessage}</div>}
             </div>
@@ -315,13 +314,13 @@ const AttendancePersonnel = () => {
                         </span>
                       </td>
                       <td>
-                        <Button variant="outline"
+                        <button
                           type="button"
                           className="attendance-details-btn"
                           onClick={() => setSelectedRecord(record)}
                         >
                           View Details
-                        </Button>
+                        </button>
                       </td>
                     </tr>
                   ))

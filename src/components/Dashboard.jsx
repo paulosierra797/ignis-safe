@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
-import { Card, Panel, Feedback } from './ui/Controls';
 import CloseButton from './CloseButton';
 import AIRecommendationsDialog from './AIRecommendationsDialog';
 import { getPersonnelOverviewStats, getUsersFromProfiles } from '../utils/usersService';
@@ -430,12 +429,10 @@ if (currentKnowledge < 40) {
           onSearchChange={setSearchQuery}
         />
 
-        <div className="dashboard-tools"><AIRecommendationsDialog inline /></div>
-
         {loadError && (
-          <Feedback tone="warning" className="dashboard-load-message">
+          <div className="dashboard-load-message">
             {loadError}
-          </Feedback>
+          </div>
         )}
 
         {/* Personnel Metrics Section */}
@@ -446,7 +443,7 @@ if (currentKnowledge < 40) {
             description="Current staffing, attendance, duty, and leave information for today's operations."
           />
           <div className="metrics-grid">
-            <Card as="div"
+            <div
               className="metric-card clickable"
               role="button"
               tabIndex={0}
@@ -467,9 +464,9 @@ if (currentKnowledge < 40) {
                 </div>
                 <p className="metric-description">Overall registered personnel accounts.</p>
               </div>
-            </Card>
+            </div>
 
-            <Card as="div"
+            <div
               className="metric-card clickable"
               role="button"
               tabIndex={0}
@@ -495,9 +492,9 @@ if (currentKnowledge < 40) {
                 </div>
                 <p className="metric-description">Personnel assigned to Shift A for today's duty schedule.</p>
               </div>
-            </Card>
+            </div>
 
-            <Card as="div"
+            <div
               className="metric-card clickable"
               role="button"
               tabIndex={0}
@@ -523,9 +520,9 @@ if (currentKnowledge < 40) {
                 </div>
                 <p className="metric-description">Personnel assigned to Shift B for today's duty schedule.</p>
               </div>
-            </Card>
+            </div>
 
-            <Card as="div"
+            <div
               className="metric-card clickable"
               role="button"
               tabIndex={0}
@@ -550,9 +547,9 @@ if (currentKnowledge < 40) {
                 </div>
                 <p className="metric-description">Share of expected personnel who recorded attendance today.</p>
               </div>
-            </Card>
+            </div>
 
-            <Card as="div"
+            <div
               className="metric-card clickable"
               role="button"
               tabIndex={0}
@@ -578,9 +575,9 @@ if (currentKnowledge < 40) {
                 </div>
                 <p className="metric-description">Assigned personnel available for duty after approved leave is considered.</p>
               </div>
-            </Card>
+            </div>
 
-            <Card as="div"
+            <div
               className="metric-card clickable"
               role="button"
               tabIndex={0}
@@ -605,7 +602,7 @@ if (currentKnowledge < 40) {
                 </div>
                 <p className="metric-description">Personnel covered by an approved leave period today.</p>
               </div>
-            </Card>
+            </div>
           </div>
         </div>
 
@@ -617,7 +614,7 @@ if (currentKnowledge < 40) {
             description="Registration, recent use, and training completion across mobile learners."
           />
           <div className="metrics-grid-4">
-            <Card as="div"
+            <div
               className="metric-card compact clickable"
               role="button"
               tabIndex={0}
@@ -645,9 +642,9 @@ if (currentKnowledge < 40) {
                 </span>
                 <p className="metric-description">All learner accounts currently registered in the mobile application.</p>
               </div>
-            </Card>
+            </div>
 
-            <Card as="div"
+            <div
               className="metric-card compact clickable"
               role="button"
               tabIndex={0}
@@ -672,9 +669,9 @@ if (currentKnowledge < 40) {
                 </span>
                 <p className="metric-description">Learners who opened and used the application during the selected day.</p>
               </div>
-            </Card>
+            </div>
 
-            <Card as="div"
+            <div
               className="metric-card compact clickable"
               role="button"
               tabIndex={0}
@@ -699,9 +696,9 @@ if (currentKnowledge < 40) {
                 </span>
                 <p className="metric-description">Accounts created during the most recent 30-day period.</p>
               </div>
-            </Card>
+            </div>
 
-            <Card as="div"
+            <div
               className="metric-card compact clickable"
               role="button"
               tabIndex={0}
@@ -729,7 +726,7 @@ if (currentKnowledge < 40) {
                 </div>
                 <p className="metric-description">Average module completion across the available training content.</p>
               </div>
-            </Card>
+            </div>
           </div>
         </div>
 
@@ -812,7 +809,7 @@ if (currentKnowledge < 40) {
           description="Recent submitted activity and module completion, shown together for quick comparison."
         />
         <div className="charts-section">
-          <Panel as="div"
+          <div
             className="chart-card clickable"
             role="button"
             tabIndex={0}
@@ -856,9 +853,9 @@ if (currentKnowledge < 40) {
                 ))}
               </div>
             </div>
-          </Panel>
+          </div>
 
-          <Panel as="div"
+          <div
             className="chart-card clickable"
             role="button"
             tabIndex={0}
@@ -900,9 +897,10 @@ if (currentKnowledge < 40) {
                 ))}
               </div>
             </div>
-          </Panel>
+          </div>
         </div>
 
+        <AIRecommendationsDialog />
 
         {isOnDutyModalOpen && (
           <div className="dashboard-modal-overlay" role="dialog" aria-modal="true">

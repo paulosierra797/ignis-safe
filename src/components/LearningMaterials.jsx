@@ -1,4 +1,3 @@
-import { Button } from './ui/Controls';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -649,30 +648,30 @@ try {
                 You changed this module but have not saved it yet. What would you like to do before leaving or switching modules?
               </p>
               <div className="confirm-buttons learning-materials-unsaved-actions app-unsaved-actions">
-                <Button variant="primary"
+                <button
                   type="button"
                   className="confirm-btn app-unsaved-button app-unsaved-button--save"
                   onClick={handleSaveAndContinue}
                   disabled={saving}
                 >
                   {saving ? 'Saving...' : 'Save and Continue'}
-                </Button>
-                <Button variant="danger"
+                </button>
+                <button
                   type="button"
                   className="discard-btn app-unsaved-button app-unsaved-button--discard"
                   onClick={handleDiscardAndContinue}
                   disabled={saving}
                 >
                   Leave Without Saving
-                </Button>
-                <Button variant="secondary"
+                </button>
+                <button
                   type="button"
                   className="cancel-btn app-unsaved-button app-unsaved-button--cancel"
                   onClick={handleCancelEditorNavigation}
                   disabled={saving}
                 >
                   Keep Editing
-                </Button>
+                </button>
               </div>
             </div>
           </div>

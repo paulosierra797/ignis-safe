@@ -307,7 +307,38 @@
 
 .device-dialog-button {
   min-width: 128px;
+  min-height: 44px;
+  padding: 0.7rem 1.2rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
   cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.device-dialog-button:hover {
+  transform: translateY(-1px);
+}
+
+.device-dialog-button--secondary {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+}
+
+.device-dialog-button--secondary:hover {
+  background: #f8fafc;
+}
+
+.device-dialog-button--danger {
+  background: #b91c1c;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(185, 28, 28, 0.2);
+}
+
+.device-dialog-button--danger:hover {
+  background: #991b1b;
 }
 
 .device-dialog-loading {

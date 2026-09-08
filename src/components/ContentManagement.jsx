@@ -1,4 +1,3 @@
-import { Button } from './ui/Controls';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -591,30 +590,30 @@ export default function ContentManagement() {
               You have unsaved changes in the Landing Page editor. What would you like to do before leaving?
             </p>
             <div className="content-unsaved-actions app-unsaved-actions">
-              <Button variant="primary"
+              <button
                 type="button"
                 className="content-unsaved-btn content-unsaved-btn-save app-unsaved-button app-unsaved-button--save"
                 onClick={handleSaveAndContinue}
                 disabled={isLandingSaving}
               >
                 {isLandingSaving ? 'Saving...' : 'Save Draft and Continue'}
-              </Button>
-              <Button variant="danger"
+              </button>
+              <button
                 type="button"
                 className="content-unsaved-btn content-unsaved-btn-leave app-unsaved-button app-unsaved-button--discard"
                 onClick={handleLeaveWithoutSaving}
                 disabled={isLandingSaving}
               >
                 Leave Without Saving
-              </Button>
-              <Button variant="secondary"
+              </button>
+              <button
                 type="button"
                 className="content-unsaved-btn content-unsaved-btn-cancel app-unsaved-button app-unsaved-button--cancel"
                 onClick={handleCancelExit}
                 disabled={isLandingSaving}
               >
                 Cancel
-              </Button>
+              </button>
             </div>
           </div>
         </div>

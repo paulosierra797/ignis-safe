@@ -62,7 +62,14 @@
 }
 
 .chart-edit-btn {
+  border: none;
+  background: #fbbf24;
+  color: #1f2937;
+  font-weight: 700;
+  padding: 0.6rem 1.6rem;
+  border-radius: 10px;
   cursor: pointer;
+  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);
 }
 
 .org-chart {
@@ -571,12 +578,38 @@
 
 .org-modal-btn {
   flex: 1 1 0;
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.org-modal-btn-cancel {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.org-modal-btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.org-modal-btn-save {
+  background: #f97316;
+  color: white;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.35);
+}
+
+.org-modal-btn-save:hover {
+  transform: translateY(-1px);
 }
 
 .org-modal-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
 .org-result-modal .org-modal-btn {
@@ -607,6 +640,16 @@
 
 .org-unsaved-actions .org-modal-btn {
   min-width: 160px;
+}
+
+.org-modal-btn-leave {
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.org-modal-btn-leave:hover {
+  background: #ffe4e6;
 }
 
 .org-modal-btn:focus-visible {

@@ -1,4 +1,3 @@
-import { StatusBadge, Button } from './ui/Controls';
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FiAlertTriangle, FiCheckCircle, FiEye, FiMoreHorizontal, FiX, FiXCircle } from 'react-icons/fi';
@@ -594,9 +593,9 @@ export default function AdminReports() {
                             <ClampedText>{report.category || '-'}</ClampedText>
                           </td>
                           <td className="col-status">
-                            <StatusBadge className={`report-status-pill status-${String(report.status || '').toLowerCase().replace(/_/g, '-')}`}>
+                            <span className={`report-status-pill status-${String(report.status || '').toLowerCase().replace(/_/g, '-')}`}>
                               {formatStatusLabel(report.status)}
-                            </StatusBadge>
+                            </span>
                           </td>
                           <td className="col-file">
                             <ReportFileAction report={report} onViewFiles={setFilesModalReport} />
@@ -622,13 +621,13 @@ export default function AdminReports() {
                           <ClampedText>{report.title || '-'}</ClampedText>
                         </h3>
 
-                        <StatusBadge
+                        <span
                           className={`report-status-pill status-${String(report.status || '')
                             .toLowerCase()
                             .replace(/_/g, '-')}`}
                         >
                           {formatStatusLabel(report.status)}
-                        </StatusBadge>
+                        </span>
                       </div>
 
                       <div className="admin-report-card-body">
@@ -693,7 +692,7 @@ export default function AdminReports() {
                 </p>
 
                 <div className="reject-modal-actions">
-                  <Button variant="secondary"
+                  <button
                     className="reject-modal-btn reject-modal-cancel"
                     onClick={() => {
                       setRejectModalOpen(false);
@@ -702,15 +701,15 @@ export default function AdminReports() {
                     }}
                   >
                     Cancel
-                  </Button>
+                  </button>
 
-                  <Button variant="danger"
+                  <button
                     className="reject-modal-btn reject-modal-confirm"
                     onClick={confirmReject}
                     disabled={processingId}
                   >
                     Confirm Reject
-                  </Button>
+                  </button>
                 </div>
               </div>
             </div>

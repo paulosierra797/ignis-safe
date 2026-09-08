@@ -205,12 +205,39 @@
 .avatar-crop-btn {
   flex: 0 0 auto;
   min-width: 140px;
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.avatar-crop-btn-cancel {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.avatar-crop-btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.avatar-crop-btn-save {
+  background: #FDB914;
+  color: #1f2937;
+  box-shadow: 0 2px 6px rgba(253, 185, 20, 0.35);
+}
+
+.avatar-crop-btn-save:hover {
+  background: #e5a512;
+  transform: translateY(-1px);
 }
 
 .avatar-crop-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
 .avatar-crop-btn:focus-visible {

@@ -1,4 +1,3 @@
-import { StatusBadge, Button } from './ui/Controls';
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useBlocker, useSearchParams } from 'react-router-dom';
@@ -203,22 +202,22 @@ function AccountStatusModal({ account, onClose }) {
           <div className="account-status-details" role="list">
             <div className="account-status-detail-row" role="listitem">
               <span className="account-status-detail-label">Account</span>
-              <StatusBadge className={`status-pill ${statusDetails.account.className}`}>
+              <span className={`status-pill ${statusDetails.account.className}`}>
                 {statusDetails.account.label}
-              </StatusBadge>
+              </span>
             </div>
             <div className="account-status-detail-row" role="listitem">
               <span className="account-status-detail-label">Account Status</span>
-              <StatusBadge className={`status-pill ${statusDetails.accountStatus.className}`}>
+              <span className={`status-pill ${statusDetails.accountStatus.className}`}>
                 {statusDetails.accountStatus.label}
-              </StatusBadge>
+              </span>
             </div>
             {isPersonnelAccount(account) && (
               <div className="account-status-detail-row" role="listitem">
                 <span className="account-status-detail-label">Personnel Status</span>
-                <StatusBadge className={`status-pill service-status-pill ${normalizedServiceStatus}`}>
+                <span className={`status-pill service-status-pill ${normalizedServiceStatus}`}>
                   {formatStatusLabel(account.service_status, 'Active')}
-                </StatusBadge>
+                </span>
               </div>
             )}
           </div>
@@ -294,13 +293,13 @@ function PersonnelProfileModal({
               <p><FiMail aria-hidden="true" />{account.email || 'No email recorded'}</p>
             </div>
             <div className="personnel-profile-status-group">
-              <StatusBadge className={`status-pill ${normalizedStatus}`}>
+              <span className={`status-pill ${normalizedStatus}`}>
                 {formatStatusLabel(account.status, 'Inactive')}
-              </StatusBadge>
+              </span>
               {isPersonnelAccount(account) && (
-                <StatusBadge className={`status-pill service-status-pill ${normalizedServiceStatus}`}>
+                <span className={`status-pill service-status-pill ${normalizedServiceStatus}`}>
                   {formatStatusLabel(account.service_status, 'Active')}
-                </StatusBadge>
+                </span>
               )}
             </div>
           </div>
@@ -385,11 +384,11 @@ function PersonnelProfileModal({
         </div>
 
         <div className="accounts-modal-footer personnel-profile-footer">
-          <Button variant="secondary" type="button" className="cancel-btn" onClick={onClose}>Close</Button>
-          <Button variant="primary" type="button" className="save-btn" onClick={onEdit}>
+          <button type="button" className="cancel-btn" onClick={onClose}>Close</button>
+          <button type="button" className="save-btn" onClick={onEdit}>
             <FiEdit3 aria-hidden="true" />
             Edit Details
-          </Button>
+          </button>
         </div>
       </section>
     </div>
@@ -472,9 +471,9 @@ function LeaveRequestDetailsModal({
                 <div>
                   <span>Status</span>
                   <strong>
-                    <StatusBadge className={`profile-request-status profile-request-status-${request.status}`}>
+                    <span className={`profile-request-status profile-request-status-${request.status}`}>
                       {formatRequestStatus(request.status)}
-                    </StatusBadge>
+                    </span>
                   </strong>
                 </div>
               </div>
@@ -527,14 +526,14 @@ function LeaveRequestDetailsModal({
                   {leaveDocuments.length > 0 ? (
                     <div className="leave-view-document-list">
                       {leaveDocuments.map((doc, index) => (
-                        <Button variant="outline"
+                        <button
                           key={doc.id}
                           type="button"
                           className="leave-view-document-btn"
                           onClick={() => onViewDocument(doc)}
                         >
                           View Document{leaveDocuments.length > 1 ? ` ${index + 1}` : ''}
-                        </Button>
+                        </button>
                       ))}
                     </div>
                   ) : (
@@ -585,16 +584,16 @@ function LeaveRequestDetailsModal({
         </div>
 
         <div className="accounts-modal-footer personnel-profile-footer">
-          <Button variant="secondary" type="button" className="cancel-btn" onClick={onClose}>Close</Button>
+          <button type="button" className="cancel-btn" onClick={onClose}>Close</button>
           {request.status !== 'pending' && (
-            <Button variant="outline"
+            <button
               type="button"
               className="save-btn leave-details-archive-btn"
               onClick={() => onArchive(request)}
             >
               <FaArchive aria-hidden="true" />
               Archive Request
-            </Button>
+            </button>
           )}
         </div>
       </section>
@@ -3510,18 +3509,18 @@ const permissions = getDefaultPermissions(formData.role);
           <div className="accounts-header-actions">
             {activeAccountsTab === 'schedule' && (
               <>
-                <Button variant="outline" className="shift-schedule-btn" onClick={openShiftModal}>
+                <button className="shift-schedule-btn" onClick={openShiftModal}>
                   Set Shift Dates
-                </Button>
-                <Button variant="outline" className="shift-schedule-btn" onClick={openPersonnelShiftModal}>
+                </button>
+                <button className="shift-schedule-btn" onClick={openPersonnelShiftModal}>
                   Assign Personnel
-                </Button>
+                </button>
               </>
             )}
             {activeAccountsTab === 'personnel' && (
-              <Button variant="primary" className="add-personnel-btn" onClick={handleOpenAddModal}>
+              <button className="add-personnel-btn" onClick={handleOpenAddModal}>
                 Add Personnel
-              </Button>
+              </button>
             )}
           </div>
         </div>
@@ -3864,14 +3863,14 @@ const permissions = getDefaultPermissions(formData.role);
                   <span>
                     {visibleLeaveRequestHistory.length} of {filteredLeaveRequestHistory.length} shown
                   </span>
-                  <Button variant="outline"
+                  <button
                     type="button"
                     className="request-archive-list-button"
                     onClick={() => openRequestArchive('leave')}
                   >
                     <FaArchive aria-hidden="true" />
                     Archive List
-                  </Button>
+                  </button>
                 </div>
               </div>
 
@@ -3935,9 +3934,9 @@ const permissions = getDefaultPermissions(formData.role);
                       </td>
                       <td>{calculateLeaveDays(request.start_date, request.end_date)}</td>
                       <td className="profile-request-status-cell">
-                        <StatusBadge className={`profile-request-status profile-request-status-${request.status}`}>
+                        <span className={`profile-request-status profile-request-status-${request.status}`}>
                           {formatRequestStatus(request.status)}
-                        </StatusBadge>
+                        </span>
                       </td>
                       <td>
                         {request.created_at
@@ -4041,22 +4040,22 @@ const permissions = getDefaultPermissions(formData.role);
                         <td>{new Date(request.requested_at).toLocaleDateString('en-US')}</td>
                         <td>
                           <div className="profile-request-actions">
-                            <Button variant="primary"
+                            <button
                               className="leave-approve-btn"
                               type="button"
                               onClick={() => handleApproveProfileChangeRequest(request)}
                               disabled={isProcessing}
                             >
                               {isProcessing ? 'Processing...' : 'Approve'}
-                            </Button>
-                            <Button variant="danger"
+                            </button>
+                            <button
                               className="leave-reject-btn"
                               type="button"
                               onClick={() => handleRejectProfileChangeRequest(request)}
                               disabled={isProcessing}
                             >
                               Reject
-                            </Button>
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -4090,20 +4089,20 @@ const permissions = getDefaultPermissions(formData.role);
                   </p>
 
                   <div className="leave-card-actions">
-                    <Button variant="primary"
+                    <button
                       className="leave-approve-btn"
                       onClick={() => handleApproveProfileChangeRequest(request)}
                       disabled={isProcessing}
                     >
                       Approve
-                    </Button>
-                    <Button variant="danger"
+                    </button>
+                    <button
                       className="leave-reject-btn"
                       onClick={() => handleRejectProfileChangeRequest(request)}
                       disabled={isProcessing}
                     >
                       Reject
-                    </Button>
+                    </button>
                   </div>
                 </div>
               );
@@ -4127,14 +4126,14 @@ const permissions = getDefaultPermissions(formData.role);
                   <span>
                     {visibleProfileChangeHistory.length} of {filteredProfileChangeHistory.length} shown
                   </span>
-                  <Button variant="outline"
+                  <button
                     type="button"
                     className="request-archive-list-button"
                     onClick={() => openRequestArchive('profile')}
                   >
                     <FaArchive aria-hidden="true" />
                     Archive List
-                  </Button>
+                  </button>
                 </div>
               </div>
 
@@ -4190,9 +4189,9 @@ const permissions = getDefaultPermissions(formData.role);
                       <td><ProfileRequestChanges request={request} /></td>
                       <td>{request.reason || '—'}</td>
                       <td className="profile-request-status-cell">
-                        <StatusBadge className={`profile-request-status profile-request-status-${request.status}`}>
+                        <span className={`profile-request-status profile-request-status-${request.status}`}>
                           {formatRequestStatus(request.status)}
-                        </StatusBadge>
+                        </span>
                       </td>
                       <td>
                         {request.requested_at
@@ -4239,9 +4238,9 @@ const permissions = getDefaultPermissions(formData.role);
 
                 <p>
                   <strong>Status</strong><br />
-                  <StatusBadge className={`profile-request-status profile-request-status-${request.status}`}>
+                  <span className={`profile-request-status profile-request-status-${request.status}`}>
                     {formatRequestStatus(request.status)}
-                  </StatusBadge>
+                  </span>
                 </p>
 
                 <p>
@@ -4264,14 +4263,14 @@ const permissions = getDefaultPermissions(formData.role);
                 </p>
 
                 {request.status !== 'pending' && (
-                  <Button variant="outline"
+                  <button
                     type="button"
                     className="request-mobile-archive-button"
                     onClick={() => requestArchiveHistoryItem('profile', request)}
                   >
                     <FaArchive aria-hidden="true" />
                     Archive
-                  </Button>
+                  </button>
                 )}
               </div>
             ))}
@@ -4376,9 +4375,9 @@ const permissions = getDefaultPermissions(formData.role);
             </select>
           </div>
 
-          <Button variant="ghost" className="accounts-clear-btn" onClick={handleClearFilters}>
+          <button className="accounts-clear-btn" onClick={handleClearFilters}>
             CLEAR FILTERS
-          </Button>
+          </button>
         </div>
 
         {loadingAccounts ? (
@@ -4482,9 +4481,9 @@ const permissions = getDefaultPermissions(formData.role);
                           <td>{entry.email}</td>
                           <td>{entry.role}</td>
                           <td className="profile-request-status-cell">
-                            <StatusBadge className={`profile-request-status profile-request-status-${entry.actionKey}`}>
+                            <span className={`profile-request-status profile-request-status-${entry.actionKey}`}>
                               {entry.actionLabel}
-                            </StatusBadge>
+                            </span>
                           </td>
                           <td>{formatAccountDateTime(entry.performedAt)}</td>
                           <td>{entry.performedBy}</td>
@@ -4734,13 +4733,13 @@ const permissions = getDefaultPermissions(formData.role);
       <div className="accounts-edit-personnel-divider" />
 
       <div className="accounts-modal-footer">
-        <Button variant="secondary" className="accounts-edit-cancel-btn" onClick={() => setIsEditModalOpen(false)}>
+        <button className="accounts-edit-cancel-btn" onClick={() => setIsEditModalOpen(false)}>
           Cancel
-        </Button>
-        <Button variant="primary" className="accounts-edit-save-btn" onClick={handleUpdatePersonnel}>
+        </button>
+        <button className="accounts-edit-save-btn" onClick={handleUpdatePersonnel}>
           <FiSave aria-hidden="true" />
           Save Changes
-        </Button>
+        </button>
       </div>
     </div>
   </div>
@@ -4998,20 +4997,20 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
 
               <div className="accounts-modal-footer app-unsaved-actions">
-                <Button variant="secondary"
+                <button
                   type="button"
                   className="accounts-modal-draft app-unsaved-button app-unsaved-button--cancel"
                   onClick={handleKeepEditingAddPersonnel}
                 >
                   Keep Editing
-                </Button>
-                <Button variant="danger"
+                </button>
+                <button
                   type="button"
                   className="accounts-modal-discard app-unsaved-button app-unsaved-button--discard"
                   onClick={handleDiscardAddPersonnel}
                 >
                   Discard Changes
-                </Button>
+                </button>
               </div>
             </div>
           </div>
@@ -5715,20 +5714,20 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
 
               <div className="accounts-modal-footer app-unsaved-actions">
-                <Button variant="secondary"
+                <button
                   type="button"
                   className="accounts-modal-draft app-unsaved-button app-unsaved-button--cancel"
                   onClick={handleKeepEditingShiftSchedule}
                 >
                   Keep Editing
-                </Button>
-                <Button variant="danger"
+                </button>
+                <button
                   type="button"
                   className="accounts-modal-discard app-unsaved-button app-unsaved-button--discard"
                   onClick={handleDiscardShiftSchedule}
                 >
                   Discard Changes
-                </Button>
+                </button>
               </div>
             </div>
           </div>
@@ -5755,20 +5754,20 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
 
               <div className="accounts-modal-footer app-unsaved-actions">
-                <Button variant="secondary"
+                <button
                   type="button"
                   className="accounts-modal-draft app-unsaved-button app-unsaved-button--cancel"
                   onClick={handleKeepEditingPersonnelShift}
                 >
                   Keep Editing
-                </Button>
-                <Button variant="danger"
+                </button>
+                <button
                   type="button"
                   className="accounts-modal-discard app-unsaved-button app-unsaved-button--discard"
                   onClick={handleDiscardPersonnelShift}
                 >
                   Discard Changes
-                </Button>
+                </button>
               </div>
             </div>
           </div>
@@ -5824,9 +5823,9 @@ const permissions = getDefaultPermissions(formData.role);
                           <div className="request-archive-item-main">
                             <div className="request-archive-item-heading">
                               <strong>{request.personnel_name || request.personnel_id}</strong>
-                              <StatusBadge className={`profile-request-status profile-request-status-${request.status}`}>
+                              <span className={`profile-request-status profile-request-status-${request.status}`}>
                                 {formatRequestStatus(request.status)}
-                              </StatusBadge>
+                              </span>
                             </div>
 
                             {requestArchiveType === 'leave' ? (
@@ -5846,7 +5845,7 @@ const permissions = getDefaultPermissions(formData.role);
                             </small>
                           </div>
 
-                          <Button variant="outline"
+                          <button
                             type="button"
                             className="request-restore-button"
                             onClick={() => handleRestoreHistoryItem(requestArchiveType, request)}
@@ -5855,7 +5854,7 @@ const permissions = getDefaultPermissions(formData.role);
                           >
                             <FaUndo aria-hidden="true" />
                             {processingArchiveRequestId === request.request_id ? 'Restoring...' : 'Restore'}
-                          </Button>
+                          </button>
                         </article>
                       ))}
                     </div>
@@ -5921,13 +5920,13 @@ const permissions = getDefaultPermissions(formData.role);
                 <button className="accounts-modal-draft" onClick={closeDeleteUserModal} disabled={isDeleteUserProcessing}>
                   Cancel
                 </button>
-                <Button variant="danger"
+                <button
                   className="delete-btn"
                   onClick={confirmDeleteUser}
                   disabled={isDeleteUserProcessing || deleteConfirmationInput.trim() !== 'Delete'}
                 >
                   {isDeleteUserProcessing ? 'Deleting...' : 'Delete'}
-                </Button>
+                </button>
               </div>
             </div>
           </div>
@@ -5965,9 +5964,9 @@ const permissions = getDefaultPermissions(formData.role);
                 <button className="accounts-dialog-button accounts-dialog-button-secondary" onClick={closeRejectModal} disabled={Boolean(processingRequestId)}>
                   <FaTimes aria-hidden="true" /> Cancel
                 </button>
-                <Button variant="danger" className="accounts-dialog-button accounts-dialog-button-danger" onClick={confirmRejectLeaveRequest} disabled={Boolean(processingRequestId)}>
+                <button className="accounts-dialog-button accounts-dialog-button-danger" onClick={confirmRejectLeaveRequest} disabled={Boolean(processingRequestId)}>
                   <FaTimesCircle aria-hidden="true" /> {processingRequestId ? 'Rejecting...' : 'Reject Request'}
-                </Button>
+                </button>
               </div>
             </div>
           </div>

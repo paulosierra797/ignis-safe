@@ -3,10 +3,8 @@ import { createPortal } from 'react-dom';
 import ModuleRecommendations from './ModuleRecommendations';
 import CloseButton from './CloseButton';
 import './AIRecommendationsDialog.css';
-import { Button } from './ui/Controls';
-import { FiZap } from 'react-icons/fi';
 
-export default function AIRecommendationsDialog({ inline = false }) {
+export default function AIRecommendationsDialog() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -27,17 +25,16 @@ export default function AIRecommendationsDialog({ inline = false }) {
 
   return (
     <>
-      <Button
-        variant="outline"
+      <button
         type="button"
-        className={inline ? 'ai-recommendations-inline' : 'ai-recommendations-fab'}
+        className="ai-recommendations-fab"
         onClick={() => setIsOpen(true)}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
       >
-        <FiZap aria-hidden="true" />
+        <span className="ai-recommendations-fab-icon" aria-hidden="true">✦</span>
         <span>AI Recommendations</span>
-      </Button>
+      </button>
 
       {isOpen && createPortal((
         <div

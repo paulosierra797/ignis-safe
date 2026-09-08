@@ -1,4 +1,3 @@
-import { StatusBadge } from './ui/Controls';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -194,9 +193,9 @@ export default function History() {
                     <td>{activity.action}</td>
                     <td>{new Date(activity.performed_at).toLocaleString('en-US')}</td>
                     <td className="status-column">
-                      <StatusBadge className={`status-badge ${getStatusClass(activity.status)}`}>
+                      <span className={`status-badge ${getStatusClass(activity.status)}`}>
                         {formatStatusLabel(activity.status)}
-                      </StatusBadge>
+                      </span>
                     </td>
                     <td>{activity.details || '-'}</td>
                   </tr>
@@ -214,9 +213,9 @@ export default function History() {
               <div className="history-card" key={activity.log_id}>
                 <div className="history-card-header">
                   <span className="report-number">#{index + 1}</span>
-                  <StatusBadge className={`status-badge ${getStatusClass(activity.status)}`}>
+                  <span className={`status-badge ${getStatusClass(activity.status)}`}>
                     {formatStatusLabel(activity.status)}
-                  </StatusBadge>
+                  </span>
                 </div>
 
                 <h3>{activity.action}</h3>

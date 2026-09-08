@@ -1,4 +1,3 @@
-import { StatusBadge } from './ui/Controls';
 import React, { useMemo, useState } from 'react';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 import { formatStatusLabel } from '../utils/statusUtils';
@@ -164,9 +163,9 @@ export default function PersonnelPicker({
                       <span className="personnel-picker-checkbox-name">{person.name}</span>
                       <small>{person.email || 'No email available'}</small>
                     </span>
-                    <StatusBadge className={`personnel-picker-status-badge ${active ? 'is-active' : 'is-inactive'}`}>
+                    <span className={`personnel-picker-status-badge ${active ? 'is-active' : 'is-inactive'}`}>
                       {formatStatusLabel(person.status)}
-                    </StatusBadge>
+                    </span>
                   </span>
                 </label>
               );

@@ -1,3 +1,4 @@
+import { StatusBadge } from './ui/Controls';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './Reports.css';
 import Sidebar from './Sidebar';
@@ -591,9 +592,9 @@ export default function Reports() {
                       </td>
                       <td>{formatDateTime(report.submitted_at || report.created_at)}</td>
                       <td>
-                        <span className={`status-badge ${getStatusClass(report.status)}`}>
+                        <StatusBadge className={`status-badge ${getStatusClass(report.status)}`}>
                           {formatStatusLabel(report.status)}
-                        </span>
+                        </StatusBadge>
                       </td>
                       <td>
                         <ReportFileAction report={report} onViewFiles={setFilesModalReport} />
@@ -619,9 +620,9 @@ export default function Reports() {
                 <div className="report-history-card" key={report.report_id}>
                   <div className="report-history-card-header">
                     <h3>{report.title || '-'}</h3>
-                    <span className={`status-badge ${getStatusClass(report.status)}`}>
+                    <StatusBadge className={`status-badge ${getStatusClass(report.status)}`}>
                       {formatStatusLabel(report.status)}
-                    </span>
+                    </StatusBadge>
                   </div>
                   <div className="report-history-card-row">
                     <strong>Attachments:</strong>

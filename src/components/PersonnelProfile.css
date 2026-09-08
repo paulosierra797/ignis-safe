@@ -720,19 +720,7 @@ body.sidebar-collapsed .personnel-profile-header-fixed {
 }
 
 .save-btn {
-  background: #FDB914;
-  color: #1f2937;
-  border: none;
-  padding: 0.75rem 2rem;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.save-btn:hover {
-  background: #e5a512;
 }
 
 .profile-actions-row {

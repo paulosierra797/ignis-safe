@@ -179,16 +179,6 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  min-height: 42px;
-  padding: 0.68rem 1.15rem;
-  border: 0;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #1d4ed8, #2563eb);
-  box-shadow: 0 7px 16px rgba(37, 99, 235, 0.18);
-  color: #fff;
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 750;
   cursor: pointer;
 }
 
@@ -798,53 +788,17 @@
 .assessment-unsaved-btn {
   flex: 1 1 0;
   min-width: 160px;
-  border: none;
-  border-radius: 10px;
-  padding: 0.65rem 1rem;
-  font-weight: 700;
-  font-size: 0.9rem;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
 .assessment-unsaved-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 .assessment-unsaved-btn:focus-visible {
   outline: 3px solid #fdba74;
   outline-offset: 2px;
-}
-
-.assessment-unsaved-btn-save {
-  background: #f97316;
-  color: white;
-  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.35);
-}
-
-.assessment-unsaved-btn-save:hover {
-  transform: translateY(-1px);
-}
-
-.assessment-unsaved-btn-leave {
-  border: 1px solid #fecdd3;
-  background: #fff1f2;
-  color: #be123c;
-}
-
-.assessment-unsaved-btn-leave:hover {
-  background: #ffe4e6;
-}
-
-.assessment-unsaved-btn-cancel {
-  background: #f1f5f9;
-  color: #334155;
-}
-
-.assessment-unsaved-btn-cancel:hover {
-  background: #e2e8f0;
 }
 
 @keyframes assessmentUnsavedModalIn {

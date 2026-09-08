@@ -1,3 +1,4 @@
+import { Button } from './ui/Controls';
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FaBars } from 'react-icons/fa';
@@ -282,26 +283,26 @@ const PageHeader = ({
             ) : (
               <div className="device-dialog-actions">
                 {forgetDialog.status === 'confirm' && (
-                  <button type="button" className="device-dialog-button device-dialog-button--secondary" onClick={closeForgetDialog}>
+                  <Button variant="secondary" type="button" className="device-dialog-button device-dialog-button--secondary" onClick={closeForgetDialog}>
                     Cancel
-                  </button>
+                  </Button>
                 )}
                 {forgetDialog.status === 'confirm' && (
-                  <button type="button" className="device-dialog-button device-dialog-button--danger" onClick={confirmForgetThisDevice}>
+                  <Button variant="danger" type="button" className="device-dialog-button device-dialog-button--danger" onClick={confirmForgetThisDevice}>
                     Forget Device
-                  </button>
+                  </Button>
                 )}
                 {forgetDialog.status === 'error' && (
-                  <button type="button" className="device-dialog-button device-dialog-button--danger" onClick={confirmForgetThisDevice}>
+                  <Button variant="danger" type="button" className="device-dialog-button device-dialog-button--danger" onClick={confirmForgetThisDevice}>
                     Try Again
-                  </button>
+                  </Button>
                 )}
                 {(forgetDialog.status === 'success'
                   || forgetDialog.status === 'already-forgotten'
                   || forgetDialog.status === 'error') && (
-                  <button type="button" className="device-dialog-button device-dialog-button--secondary" onClick={closeForgetDialog}>
+                  <Button variant="secondary" type="button" className="device-dialog-button device-dialog-button--secondary" onClick={closeForgetDialog}>
                     {forgetDialog.status === 'success' ? 'Done' : 'Close'}
-                  </button>
+                  </Button>
                 )}
               </div>
             )}

@@ -1,3 +1,4 @@
+import { Button } from './ui/Controls';
 import React, { useMemo, useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -209,15 +210,15 @@ const AttendanceAdmin = () => {
         />
 
         <div className="attendance-admin-actions">
-          <button className="export-csv-btn" onClick={exportToCSV}>Export CSV</button>
-          <button
+          <Button variant="outline" className="export-csv-btn" onClick={exportToCSV}>Export CSV</Button>
+          <Button variant="outline"
             type="button"
             className="export-pdf-btn"
             onClick={exportToPDF}
             disabled={isExportingPdf}
           >
             {isExportingPdf ? 'Generating PDF...' : 'Export PDF'}
-          </button>
+          </Button>
         </div>
 
         {exportMessage && (
@@ -261,9 +262,9 @@ const AttendanceAdmin = () => {
             </div>
 
             <div className="filter-actions">
-              <button className="clear-filters-btn" onClick={handleClearFilters}>
+              <Button variant="ghost" className="clear-filters-btn" onClick={handleClearFilters}>
                 CLEAR FILTERS
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -306,13 +307,13 @@ const AttendanceAdmin = () => {
                       </span>
                     </td>
                     <td>
-                      <button
+                      <Button variant="outline"
                         type="button"
                         className="attendance-details-btn"
                         onClick={() => setSelectedRecord(item)}
                       >
                         View Details
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))
@@ -366,13 +367,13 @@ const AttendanceAdmin = () => {
             <span className={`attendance-verification-badge ${item.verificationStatus}`}>
               {getVerificationLabel(item.verificationStatus)}
             </span>
-            <button
+            <Button variant="outline"
               type="button"
               className="attendance-details-btn"
               onClick={() => setSelectedRecord(item)}
             >
               View Verification Details
-            </button>
+            </Button>
           </div>
         </div>
       </div>

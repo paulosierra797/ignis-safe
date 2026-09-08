@@ -1,3 +1,4 @@
+import { Button } from './ui/Controls';
 import React, { useEffect, useState } from 'react';
 import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
@@ -347,14 +348,14 @@ export default function AdminProfile() {
                 </div>
 
                 <div className="profile-actions-row">
-                  <button
+                  <Button variant="primary"
                     type="button"
                     className="save-changes-btn"
                     onClick={handleSaveGeneral}
                     disabled={savingGeneral}
                   >
                     {savingGeneral ? 'Saving...' : 'Save Changes'}
-                  </button>
+                  </Button>
                 </div>
               </section>
 
@@ -396,14 +397,14 @@ export default function AdminProfile() {
                 </div>
 
                 <div className="profile-actions-row">
-                  <button
+                  <Button variant="primary"
                     type="button"
                     className="save-changes-btn"
                     onClick={handleSaveSecurity}
                     disabled={savingSecurity}
                   >
                     {savingSecurity ? 'Saving...' : 'Save Changes'}
-                  </button>
+                  </Button>
                 </div>
               </section>
             </div>
@@ -423,13 +424,13 @@ export default function AdminProfile() {
                 ))}
               </ul>
               <div className="modal-actions">
-                <button
+                <Button variant="secondary"
                   className="cancel-btn"
                   onClick={() => setConfirmModal({ open: false, changes: [], onConfirm: null })}
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button variant="primary"
                   className="save-btn"
                   onClick={() => {
                     const { onConfirm } = confirmModal;
@@ -438,7 +439,7 @@ export default function AdminProfile() {
                   }}
                 >
                   Confirm Changes
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -452,7 +453,7 @@ export default function AdminProfile() {
               </div>
               <p>{modal.message}</p>
               <div className="modal-actions">
-                <button className="save-btn" onClick={closeModal}>OK</button>
+                <Button variant="primary" className="save-btn" onClick={closeModal}>OK</Button>
               </div>
             </div>
           </div>

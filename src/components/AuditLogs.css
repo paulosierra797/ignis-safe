@@ -277,18 +277,8 @@
 
 .audit-logs-view-details-btn {
   margin-top: 0.35rem;
-  border: none;
-  background: none;
-  color: #b91c1c;
-  font-weight: 700;
-  font-size: 0.78rem;
   cursor: pointer;
-  padding: 0;
   text-decoration: underline;
-}
-
-.audit-logs-view-details-btn:hover {
-  color: #7f1d1d;
 }
 
 .audit-logs-action-badge {

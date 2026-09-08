@@ -1,3 +1,4 @@
+import { Button } from './ui/Controls';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
@@ -780,13 +781,13 @@ export default function Chart() {
 
             <p className="chart-subtitle">Last edit: {lastEditLabel}</p>
           </div>
-          <button
+          <Button variant="outline"
             className="chart-edit-btn"
             disabled={!isAdmin || isSaving || isLoadingChart}
             onClick={handleEditToggle}
           >
             {isSaving ? 'Saving...' : editMode ? 'Done' : 'Edit'}
-          </button>
+          </Button>
         </div>
 
         <div className="org-chart">
@@ -877,30 +878,30 @@ export default function Chart() {
             </p>
 
             <div className="org-modal-actions org-unsaved-actions app-unsaved-actions">
-              <button
+              <Button variant="primary"
                 type="button"
                 className="org-modal-btn org-modal-btn-save app-unsaved-button app-unsaved-button--save"
                 onClick={handleSaveAndContinue}
                 disabled={isSaving}
               >
                 {isSaving ? 'Saving...' : 'Save and Continue'}
-              </button>
-              <button
+              </Button>
+              <Button variant="danger"
                 type="button"
                 className="org-modal-btn org-modal-btn-leave app-unsaved-button app-unsaved-button--discard"
                 onClick={handleLeaveWithoutSaving}
                 disabled={isSaving}
               >
                 Leave Without Saving
-              </button>
-              <button
+              </Button>
+              <Button variant="secondary"
                 type="button"
                 className="org-modal-btn org-modal-btn-cancel app-unsaved-button app-unsaved-button--cancel"
                 onClick={handleCancelNavigation}
                 disabled={isSaving}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -921,22 +922,22 @@ export default function Chart() {
             </ul>
 
             <div className="org-modal-actions">
-              <button
+              <Button variant="secondary"
                 type="button"
                 className="org-modal-btn org-modal-btn-cancel"
                 onClick={handleCancelConfirm}
                 disabled={isSaving}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button variant="primary"
                 type="button"
                 className="org-modal-btn org-modal-btn-save"
                 onClick={handleConfirmSave}
                 disabled={isSaving}
               >
                 {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -966,13 +967,13 @@ export default function Chart() {
               </>
             )}
 
-            <button
+            <Button variant="primary"
               type="button"
               className="org-modal-btn org-modal-btn-save"
               onClick={() => setSuccessSummary(null)}
             >
               OK
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -983,13 +984,13 @@ export default function Chart() {
             <div className="org-modal-icon org-modal-icon-error">!</div>
             <h3 className="org-modal-title">Save Failed</h3>
             <p className="org-modal-message">{errorInfo.message}</p>
-            <button
+            <Button variant="primary"
               type="button"
               className="org-modal-btn org-modal-btn-save"
               onClick={() => setErrorInfo(null)}
             >
               OK
-            </button>
+            </Button>
           </div>
         </div>
       )}

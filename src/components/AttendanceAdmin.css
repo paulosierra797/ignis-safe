@@ -40,35 +40,11 @@
 }
 
 .export-csv-btn {
-  padding: 10px 25px;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.export-csv-btn:hover {
-  background-color: #218838;
 }
 
 .export-pdf-btn {
-  padding: 10px 25px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.export-pdf-btn:hover:not(:disabled) {
-  background-color: #c82333;
 }
 
 .export-pdf-btn:disabled {
@@ -314,20 +290,8 @@
 }
 
 .attendance-details-btn {
-  min-height: 36px;
-  padding: 8px 13px;
-  border: 1px solid #dc3545;
-  border-radius: 7px;
-  background: #ffffff;
-  color: #b91c1c;
-  font-size: 12px;
-  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-}
-
-.attendance-details-btn:hover {
-  background: #fff1f2;
 }
 
 .signature-cell {

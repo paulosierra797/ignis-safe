@@ -1,3 +1,4 @@
+import { FormField, Panel, Button, StatusBadge, EmptyState, Skeleton } from './ui/Controls';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -23,7 +24,6 @@ import {
 } from '../utils/personnelOperationsService';
 import { getManilaToday } from '../utils/dateUtils';
 import { logPersonnelActivity } from '../utils/activityLogService';
-import { formatStatusLabel } from '../utils/statusUtils';
 import './PersonnelOperations.css';
 
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -167,7 +167,7 @@ function LeaveRequestDetailsGrid({ item, isDocumentsExpanded, onToggleDocuments 
       </div>
       <div className="leave-summary-field">
         <span className="leave-summary-label">Status</span>
-        <span className={`leave-status ${statusClass}`}>{formatStatusLabel(item?.status)}</span>
+        <StatusBadge value={item?.status} />
       </div>
 
       <div className="leave-summary-field">
@@ -211,14 +211,14 @@ function LeaveRequestDetailsGrid({ item, isDocumentsExpanded, onToggleDocuments 
         <span className="leave-summary-label">Supporting Documents</span>
         {documents.length > 0 ? (
           <div className="leave-documents-viewer">
-            <button
+            <Button variant="outline"
               type="button"
               className="leave-view-files-btn"
               onClick={() => onToggleDocuments(item.request_id)}
               aria-expanded={isDocumentsExpanded}
             >
               View Files ({documents.length})
-            </button>
+            </Button>
             {isDocumentsExpanded && (
               <div className="leave-document-link-list">
                 {documents.map((doc) => (
@@ -659,7 +659,6 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
         ? 'Approved'
         : 'Rejected'
     : leaveRequest.current_status || 'Active';
-  const badgeClass = requestStatus || String(leaveRequest.current_status || 'active').toLowerCase().replace(/\s+/g, '-');
 
   const leaveHistoryRecords = useMemo(
     () => (leaveRequest.history || []).filter((item) => (
@@ -686,7 +685,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
         />
 
         <div className="personnel-ops-grid">
-          <section className="ops-card schedule-card">
+          <Panel as="section" className="ops-card schedule-card">
             <div className="my-shift-card">
               <span className="my-shift-card-label">Your Assigned Shift: </span>
               <span className={`my-shift-card-value my-shift-${myShiftType ? myShiftType.toLowerCase() : 'none'}`}>
@@ -755,7 +754,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                 style={{ minHeight: `${(calendarCells.length / 7) * 152 - 4}px` }}
               >
                 {scheduleLoading && (
-                  <div className="shift-calendar-loading">Loading shift schedule...</div>
+                  <div className="shift-calendar-loading"><Skeleton label="Loading shift schedule" /></div>
                 )}
 
                 {!scheduleLoading && calendarCells.map((dayDate, index) => {
@@ -857,14 +856,12 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
               </div>
               </div>
             </div>
-          </section>
+          </Panel>
 
-          <section className="ops-card leave-card">
+          <Panel as="section" className="ops-card leave-card">
             <div className="ops-card-header">
               <h2>Leave Request</h2>
-              <span className={`leave-status ${badgeClass}`}>
-                {badgeLabel}
-              </span>
+              <StatusBadge value={badgeLabel} />
             </div>
 
             {hasPendingLeaveRequest ? (
@@ -906,8 +903,8 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                   </div>
 
                   {leaveForm.leaveType === 'Other' && (
-                    <div className="leave-field">
-                      <label htmlFor="leave-other-type">Specify Leave Type</label>
+                    <FormField label="Specify Leave Type" htmlFor="leave-other-type" className="leave-field">
+
                       <input
                         id="leave-other-type"
                         type="text"
@@ -922,11 +919,11 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                       {visibleLeaveFieldErrors.otherLeaveType && (
                         <span className="leave-field-error">{visibleLeaveFieldErrors.otherLeaveType}</span>
                       )}
-                    </div>
+                    </FormField>
                   )}
 
-                  <div className="leave-field">
-                    <label htmlFor="leave-start-date">Leave Start Date</label>
+                  <FormField label="Leave Start Date" htmlFor="leave-start-date" className="leave-field">
+
                     <input
                       id="leave-start-date"
                       type="date"
@@ -940,10 +937,10 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                     {visibleLeaveFieldErrors.startDate && (
                       <span className="leave-field-error">{visibleLeaveFieldErrors.startDate}</span>
                     )}
-                  </div>
+                  </FormField>
 
-                  <div className="leave-field">
-                    <label htmlFor="leave-end-date">Leave End Date</label>
+                  <FormField label="Leave End Date" htmlFor="leave-end-date" className="leave-field">
+
                     <input
                       id="leave-end-date"
                       type="date"
@@ -957,10 +954,10 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                     {visibleLeaveFieldErrors.endDate && (
                       <span className="leave-field-error">{visibleLeaveFieldErrors.endDate}</span>
                     )}
-                  </div>
+                  </FormField>
 
-                  <div className="leave-field">
-                    <label htmlFor="leave-days-readonly">Number of Leave Days</label>
+                  <FormField label="Number of Leave Days" htmlFor="leave-days-readonly" className="leave-field">
+
                     <input
                       id="leave-days-readonly"
                       type="text"
@@ -969,10 +966,10 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                       readOnly
                       disabled
                     />
-                  </div>
+                  </FormField>
 
-                  <div className="leave-field">
-                    <label htmlFor="leave-contact-number">Contact Number During Leave</label>
+                  <FormField label="Contact Number During Leave" htmlFor="leave-contact-number" className="leave-field">
+
                     <input
                       id="leave-contact-number"
                       type="text"
@@ -991,7 +988,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                     {visibleLeaveFieldErrors.contactNumber && (
                       <span className="leave-field-error">{visibleLeaveFieldErrors.contactNumber}</span>
                     )}
-                  </div>
+                  </FormField>
 
                   <div className="leave-field leave-field-full">
                     <label htmlFor="leave-reason">Reason for Leave</label>
@@ -1010,10 +1007,8 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                     )}
                   </div>
 
-                  <div className="leave-field">
-                    <label htmlFor="leave-document">
-                      Supporting Document (Optional)
-                    </label>
+                  <FormField label="Supporting Document (Optional)" htmlFor="leave-document" className="leave-field">
+
                     <div className="leave-document-input-row">
                       <label
                         className={`leave-document-choose-btn${leaveForm.documentFiles.length >= LEAVE_DOCUMENT_MAX_FILES ? ' is-disabled' : ''}`}
@@ -1058,10 +1053,10 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                     <span className="leave-field-hint">
                       Accepted formats: PDF, JPG, JPEG, PNG (max 5MB each, up to {LEAVE_DOCUMENT_MAX_FILES} files).
                     </span>
-                  </div>
+                  </FormField>
 
-                  <div className="leave-field">
-                    <label htmlFor="leave-reliever">Reliever / Shift Coverage</label>
+                  <FormField label="Reliever / Shift Coverage" htmlFor="leave-reliever" className="leave-field">
+
                     <select
                       id="leave-reliever"
                       name="relieverValue"
@@ -1076,29 +1071,29 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                         <option key={option.admin_id} value={option.admin_id}>{option.name}</option>
                       ))}
                     </select>
-                  </div>
+                  </FormField>
                 </div>
 
                 <div className="leave-form-actions">
                   {hasLeaveFormEntries && (
-                    <button
+                    <Button variant="ghost"
                       type="button"
                       className="leave-clear-form-btn"
                       onClick={handleClearLeaveForm}
                       disabled={leaveSaving}
                     >
                       Clear Form
-                    </button>
+                    </Button>
                   )}
 
-                  <button
+                  <Button variant="primary"
                     className="ops-primary-btn"
                     type="button"
                     onClick={handleOpenLeaveConfirm}
                     disabled={leaveSaving || loading || !isLeaveFormValid}
-                  >
+                    >
                     Submit Leave Request
-                  </button>
+                  </Button>
                 </div>
               </>
             )}
@@ -1119,10 +1114,10 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
                   ))}
                 </div>
               ) : (
-                <p className="leave-history-empty">No approved or rejected leave requests yet.</p>
+                <EmptyState title="No approved or rejected leave requests yet." />
               )}
             </div>
-          </section>
+          </Panel>
         </div>
 
         {message.text && (
@@ -1136,14 +1131,14 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
             className="personnel-modal-overlay"
             role="presentation"
             onClick={closeLeaveConfirm}
-          >
+                    >
             <div
               className="personnel-modal leave-confirm-modal"
               role="dialog"
               aria-modal="true"
               aria-label="Confirm leave request"
               onClick={(event) => event.stopPropagation()}
-            >
+                    >
               <div className="personnel-modal-header">
                 <h3>Confirm Leave Request</h3>
                 <button
@@ -1215,22 +1210,22 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
               </div>
 
               <div className="personnel-modal-footer">
-                <button
+                <Button variant="secondary"
                   type="button"
                   className="leave-modal-cancel-btn"
                   onClick={closeLeaveConfirm}
                   disabled={leaveSaving}
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button variant="primary"
                   type="button"
                   className="ops-primary-btn"
                   onClick={handleConfirmLeaveSubmit}
                   disabled={leaveSaving}
                 >
                   {leaveSaving ? 'Submitting...' : 'Confirm and Submit'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

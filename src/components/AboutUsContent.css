@@ -313,58 +313,12 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  min-height: 40px;
-  padding: 0.6rem 1.05rem;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 700;
   cursor: pointer;
-  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
 }
 
 .aboutus-btn:disabled {
   cursor: not-allowed;
   opacity: 0.6;
-}
-
-.aboutus-btn-primary {
-  background: linear-gradient(135deg, #b91c1c, #dc2626);
-  box-shadow: 0 7px 16px rgba(185, 28, 28, 0.18);
-  color: #fff;
-}
-
-.aboutus-btn-outline {
-  border-color: #dfb6b6;
-  background: #fff7f7;
-  color: #7f1d1d;
-}
-
-.aboutus-btn-outline:hover:not(:disabled) {
-  border-color: #b91c1c;
-  background: #fdeded;
-}
-
-.aboutus-btn-secondary {
-  border-color: #d0d5dd;
-  background: #fff;
-  color: #344054;
-}
-
-.aboutus-btn-secondary:hover:not(:disabled) {
-  background: #f8fafc;
-}
-
-.aboutus-btn-danger {
-  background: #b42318;
-  color: #fff;
-}
-
-.aboutus-btn-small {
-  min-height: 34px;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.76rem;
 }
 
 .aboutus-list-header {

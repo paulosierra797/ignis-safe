@@ -1,3 +1,4 @@
+import { Button } from './ui/Controls';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
 import { FiArchive, FiBell, FiFileText, FiCheckCircle, FiClock, FiSearch } from 'react-icons/fi';
@@ -1297,13 +1298,13 @@ export default function Announcements() {
                     {announcement.content}
                   </p>
                   {overflowingIds.has(announcement.announcement_id) && (
-                    <button
+                    <Button variant="ghost"
                       type="button"
                       className="announcement-toggle-button"
                       onClick={() => toggleAnnouncementExpanded(announcement.announcement_id)}
                     >
                       {expandedIds.has(announcement.announcement_id) ? 'See less' : 'See more'}
-                    </button>
+                    </Button>
                   )}
                   {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
                     <div className="announcement-attachments">
@@ -1367,16 +1368,16 @@ export default function Announcements() {
 
                     <div className="announcement-actions">
                       {!isAdmin && !announcement.acknowledged_by_current_user && (
-                        <button
+                        <Button variant="primary"
                           type="button"
                           className="announcement-ack-button"
                           onClick={() => openAckConfirm(announcement.announcement_id)}
                           disabled={acknowledgingId === announcement.announcement_id}
                         >
                           {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}
-                        </button>
+                        </Button>
                       )}
-                      <button
+                      <Button variant="outline"
                         type="button"
                         className="announcement-archive-button"
                         onClick={() => setArchiveModalId(announcement.announcement_id)}
@@ -1388,7 +1389,7 @@ export default function Announcements() {
                         }
                       >
                         Archive
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
@@ -1524,13 +1525,13 @@ export default function Announcements() {
                       </div>
                       <p className="announcement-content">{displayedMessage}</p>
                       {isLongMessage && (
-                        <button
+                        <Button variant="ghost"
                           type="button"
                           className="announcement-toggle-button"
                           onClick={() => toggleArchivedMessage(announcement.announcement_id)}
                         >
                           {isMessageExpanded ? 'See less' : 'See more'}
-                        </button>
+                        </Button>
                       )}
                       {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
                         <div className="announcement-attachments">
@@ -1576,14 +1577,14 @@ export default function Announcements() {
                         )}
                       </div>
                       <div className="archived-restore-action">
-                        <button
+                        <Button variant="outline"
                           type="button"
                           className="archived-restore-button"
                           onClick={() => handleRestoreAnnouncement(announcement.announcement_id)}
                           disabled={restoringId === announcement.announcement_id}
                         >
                           {restoringId === announcement.announcement_id ? 'Restoring...' : 'Restore'}
-                        </button>
+                        </Button>
                       </div>
                     </article>
                     );
@@ -1712,27 +1713,27 @@ export default function Announcements() {
                 : 'You have unsaved changes in this announcement. What would you like to do before leaving this page?'}
             </p>
             <div className="unsaved-exit-actions app-unsaved-actions">
-              <button
+              <Button variant="primary"
                 type="button"
                 className="unsaved-exit-btn unsaved-exit-btn-save app-unsaved-button app-unsaved-button--save"
                 onClick={handleSaveAnnouncementDraftAndContinue}
               >
                 Save Draft and Continue
-              </button>
-              <button
+              </Button>
+              <Button variant="danger"
                 type="button"
                 className="unsaved-exit-btn unsaved-exit-btn-leave app-unsaved-button app-unsaved-button--discard"
                 onClick={handleLeaveAnnouncementWithoutSaving}
               >
                 Leave Without Saving
-              </button>
-              <button
+              </Button>
+              <Button variant="secondary"
                 type="button"
                 className="unsaved-exit-btn unsaved-exit-btn-cancel app-unsaved-button app-unsaved-button--cancel"
                 onClick={handleKeepEditingAnnouncement}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -500,53 +500,17 @@
 .content-unsaved-btn {
   flex: 1 1 0;
   min-width: 160px;
-  border: none;
-  border-radius: 10px;
-  padding: 0.65rem 1rem;
-  font-weight: 700;
-  font-size: 0.9rem;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
 .content-unsaved-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 .content-unsaved-btn:focus-visible {
   outline: 3px solid #fdba74;
   outline-offset: 2px;
-}
-
-.content-unsaved-btn-save {
-  background: #f97316;
-  color: white;
-  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.35);
-}
-
-.content-unsaved-btn-save:hover {
-  transform: translateY(-1px);
-}
-
-.content-unsaved-btn-leave {
-  border: 1px solid #fecdd3;
-  background: #fff1f2;
-  color: #be123c;
-}
-
-.content-unsaved-btn-leave:hover {
-  background: #ffe4e6;
-}
-
-.content-unsaved-btn-cancel {
-  background: #f1f5f9;
-  color: #334155;
-}
-
-.content-unsaved-btn-cancel:hover {
-  background: #e2e8f0;
 }
 
 @keyframes contentUnsavedModalIn {

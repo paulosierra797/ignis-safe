@@ -1,3 +1,4 @@
+import { Button } from './ui/Controls';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   FiPlus, FiEdit2, FiTrash2, FiArrowUp, FiArrowDown, FiSave, FiX,
@@ -108,12 +109,12 @@ function ConfirmDeleteModal({ open, title, message, busy, onCancel, onConfirm })
         <h3>{title}</h3>
         <p>{message}</p>
         <div className="aboutus-modal-actions">
-          <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}>
+          <Button variant="secondary" type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}>
             Cancel
-          </button>
-          <button type="button" className="aboutus-btn aboutus-btn-danger" onClick={onConfirm} disabled={busy}>
+          </Button>
+          <Button variant="danger" type="button" className="aboutus-btn aboutus-btn-danger" onClick={onConfirm} disabled={busy}>
             {busy ? 'Deleting...' : 'Delete'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -427,9 +428,9 @@ function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
           </div>
 
           <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSavePartner)} disabled={partner.saving}>
+            <Button variant="primary" type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSavePartner)} disabled={partner.saving}>
               <FiSave aria-hidden="true" /> {partner.saving ? 'Saving...' : 'Save BFP Dasmariñas content'}
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -454,9 +455,9 @@ function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
                       <span className="aboutus-contact-card-type">{row.contact_type}</span>
                       <span className="aboutus-contact-card-value">{row.display_value}</span>
                     </div>
-                    <button type="button" className="aboutus-btn aboutus-btn-secondary aboutus-btn-small" onClick={() => numbers.startEdit(row)}>
+                    <Button variant="secondary" type="button" className="aboutus-btn aboutus-btn-secondary aboutus-btn-small" onClick={() => numbers.startEdit(row)}>
                       <FiEdit2 aria-hidden="true" /> Edit
-                    </button>
+                    </Button>
                   </>
                 )}
               </li>
@@ -478,8 +479,8 @@ function ContactNumberEditRow({ form, setField, onSave, onCancel, busy }) {
         <SingleField label="Dial value" value={form.dial_value} onChange={(v) => setField('dial_value', v)} placeholder="0468846131" />
       </div>
       <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
+        <Button variant="secondary" type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</Button>
+        <Button variant="primary" type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</Button>
       </div>
     </div>
   );
@@ -541,9 +542,9 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
           </div>
 
           <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSaveEmergency)} disabled={emergency.saving}>
+            <Button variant="primary" type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSaveEmergency)} disabled={emergency.saving}>
               <FiSave aria-hidden="true" /> {emergency.saving ? 'Saving...' : 'Save Emergency Contacts content'}
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -570,9 +571,9 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
                       <span className="aboutus-contact-card-value">{row.display_value}</span>
                       <StatusBadge active={row.is_active} />
                     </div>
-                    <button type="button" className="aboutus-btn aboutus-btn-secondary aboutus-btn-small" onClick={() => numbers.startEdit(row)}>
+                    <Button variant="secondary" type="button" className="aboutus-btn aboutus-btn-secondary aboutus-btn-small" onClick={() => numbers.startEdit(row)}>
                       <FiEdit2 aria-hidden="true" /> Edit
-                    </button>
+                    </Button>
                   </>
                 )}
               </li>
@@ -615,8 +616,8 @@ function EmergencyNumberEditRow({ form, setField, onSave, onCancel, busy }) {
         onChangeEn={(v) => setField('label_en', v)} onChangeTl={(v) => setField('label_tl', v)} />
       <ActiveCheckbox checked={form.is_active} onChange={(v) => setField('is_active', v)} />
       <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
+        <Button variant="secondary" type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</Button>
+        <Button variant="primary" type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</Button>
       </div>
     </div>
   );
@@ -849,9 +850,9 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
               onChangeEn={(v) => info.setField('no_results_en', v)} onChangeTl={(v) => info.setField('no_results_tl', v)} />
           </div>
           <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSaveInfo)} disabled={info.saving}>
+            <Button variant="primary" type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSaveInfo)} disabled={info.saving}>
               <FiSave aria-hidden="true" /> {info.saving ? 'Saving...' : 'Save directory content'}
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -859,9 +860,9 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
       <div className="aboutus-subsection">
         <div className="aboutus-list-header">
           <h3>Districts / groups</h3>
-          <button type="button" className="aboutus-btn aboutus-btn-outline" onClick={startAddGroup}>
+          <Button variant="outline" type="button" className="aboutus-btn aboutus-btn-outline" onClick={startAddGroup}>
             <FiPlus aria-hidden="true" /> Add district/group
-          </button>
+          </Button>
         </div>
 
         {groupEditing === 'new' && (
@@ -869,8 +870,8 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
             <FieldPair label="Title" valueEn={groupForm.title_en} valueTl={groupForm.title_tl}
               onChangeEn={(v) => setGroupForm((f) => ({ ...f, title_en: v }))} onChangeTl={(v) => setGroupForm((f) => ({ ...f, title_tl: v }))} />
             <div className="aboutus-edit-row-actions">
-              <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelGroupEdit} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-              <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveGroup)} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
+              <Button variant="secondary" type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelGroupEdit} disabled={busy}><FiX aria-hidden="true" /> Cancel</Button>
+              <Button variant="primary" type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveGroup)} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</Button>
             </div>
           </div>
         )}
@@ -887,8 +888,8 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                         onChangeEn={(v) => setGroupForm((f) => ({ ...f, title_en: v }))} onChangeTl={(v) => setGroupForm((f) => ({ ...f, title_tl: v }))} />
                       <ActiveCheckbox checked={groupForm.is_active} onChange={(v) => setGroupForm((f) => ({ ...f, is_active: v }))} />
                       <div className="aboutus-edit-row-actions">
-                        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelGroupEdit} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-                        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveGroup)} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
+                        <Button variant="secondary" type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelGroupEdit} disabled={busy}><FiX aria-hidden="true" /> Cancel</Button>
+                        <Button variant="primary" type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveGroup)} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</Button>
                       </div>
                     </div>
                   ) : (
@@ -919,9 +920,9 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                     <div className="aboutus-directory-entries">
                       <div className="aboutus-list-header">
                         <h4>Stations</h4>
-                        <button type="button" className="aboutus-btn aboutus-btn-outline aboutus-btn-small" onClick={() => startAddEntry(group.group_key)}>
+                        <Button variant="outline" type="button" className="aboutus-btn aboutus-btn-outline aboutus-btn-small" onClick={() => startAddEntry(group.group_key)}>
                           <FiPlus aria-hidden="true" /> Add station
-                        </button>
+                        </Button>
                       </div>
 
                       {entryEditing?.groupKey === group.group_key && entryEditing.entryKey === 'new' && (
@@ -964,9 +965,9 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                 <div className="aboutus-directory-phones">
                                   <div className="aboutus-list-header">
                                     <h5>Phone numbers</h5>
-                                    <button type="button" className="aboutus-btn aboutus-btn-outline aboutus-btn-small" onClick={() => startAddPhone(entry.entry_key)}>
+                                    <Button variant="outline" type="button" className="aboutus-btn aboutus-btn-outline aboutus-btn-small" onClick={() => startAddPhone(entry.entry_key)}>
                                       <FiPlus aria-hidden="true" /> Add phone
-                                    </button>
+                                    </Button>
                                   </div>
 
                                   {phoneEditing?.entryKey === entry.entry_key && phoneEditing.id === 'new' && (
@@ -1047,8 +1048,8 @@ function EntryEditRow({ form, setForm, onSave, onCancel, busy }) {
       <SingleField label="Email" type="email" value={form.email} onChange={(v) => setField('email', v)} />
       <ActiveCheckbox checked={form.is_active} onChange={(v) => setField('is_active', v)} />
       <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
+        <Button variant="secondary" type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</Button>
+        <Button variant="primary" type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</Button>
       </div>
     </div>
   );
@@ -1063,8 +1064,8 @@ function PhoneEditRow({ form, setForm, onSave, onCancel, busy }) {
         <SingleField label="Dial value" value={form.dial_value} onChange={(v) => setField('dial_value', v)} />
       </div>
       <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
+        <Button variant="secondary" type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</Button>
+        <Button variant="primary" type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</Button>
       </div>
     </div>
   );
@@ -1113,8 +1114,8 @@ function GeneralTextsCard({ notify, reportDirty, requestSave }) {
                     <SingleField label="Icon key" value={sections.form.icon_key} onChange={(v) => sections.setField('icon_key', v)} />
                     <ActiveCheckbox checked={sections.form.is_active} onChange={(v) => sections.setField('is_active', v)} />
                     <div className="aboutus-edit-row-actions">
-                      <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={sections.cancelEdit} disabled={sections.busy}><FiX aria-hidden="true" /> Cancel</button>
-                      <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(sections.save)} disabled={sections.busy}><FiSave aria-hidden="true" /> {sections.busy ? 'Saving...' : 'Save'}</button>
+                      <Button variant="secondary" type="button" className="aboutus-btn aboutus-btn-secondary" onClick={sections.cancelEdit} disabled={sections.busy}><FiX aria-hidden="true" /> Cancel</Button>
+                      <Button variant="primary" type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(sections.save)} disabled={sections.busy}><FiSave aria-hidden="true" /> {sections.busy ? 'Saving...' : 'Save'}</Button>
                     </div>
                   </div>
                 ) : (
@@ -1159,22 +1160,22 @@ function ConfirmSaveModal({ busy, onCancel, onConfirm }) {
           Are you sure you want to save these changes? The updated content will be reflected in the IGNIS SAFE mobile app.
         </p>
         <div className="app-unsaved-actions">
-          <button
+          <Button variant="secondary"
             type="button"
             className="app-unsaved-button app-unsaved-button--cancel"
             onClick={onCancel}
             disabled={busy}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button variant="primary"
             type="button"
             className="app-unsaved-button app-unsaved-button--save"
             onClick={onConfirm}
             disabled={busy}
           >
             {busy ? 'Saving...' : 'Save Changes'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

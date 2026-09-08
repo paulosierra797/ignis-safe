@@ -514,12 +514,6 @@
 .announcement-toggle-button {
   display: inline-block;
   margin: -0.4rem 0 0.7rem;
-  padding: 0;
-  border: none;
-  background: none;
-  color: #dc2626;
-  font-size: 0.82rem;
-  font-weight: 700;
   cursor: pointer;
 }
 
@@ -706,13 +700,6 @@
 }
 
 .announcement-ack-button {
-  border: none;
-  border-radius: 8px;
-  padding: 0.48rem 0.9rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  background: #166534;
-  color: #fff;
   cursor: pointer;
 }
 
@@ -722,23 +709,10 @@
 }
 
 .announcement-archive-button {
-  border: 1px solid #dc2626;
-  border-radius: 8px;
-  padding: 0.46rem 0.9rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  background: #fff;
-  color: #dc2626;
   cursor: pointer;
 }
 
-.announcement-archive-button:hover:not(:disabled) {
-  background: #fef2f2;
-}
-
 .announcement-archive-button:disabled {
-  border-color: #d1d5db;
-  color: #6b7280;
   cursor: not-allowed;
 }
 
@@ -902,53 +876,17 @@
 .unsaved-exit-btn {
   flex: 1 1 0;
   min-width: 160px;
-  border: none;
-  border-radius: 10px;
-  padding: 0.65rem 1rem;
-  font-weight: 700;
-  font-size: 0.9rem;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
 .unsaved-exit-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 .unsaved-exit-btn:focus-visible {
   outline: 3px solid #fdba74;
   outline-offset: 2px;
-}
-
-.unsaved-exit-btn-save {
-  background: #f97316;
-  color: white;
-  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.35);
-}
-
-.unsaved-exit-btn-save:hover {
-  transform: translateY(-1px);
-}
-
-.unsaved-exit-btn-leave {
-  border: 1px solid #fecdd3;
-  background: #fff1f2;
-  color: #be123c;
-}
-
-.unsaved-exit-btn-leave:hover {
-  background: #ffe4e6;
-}
-
-.unsaved-exit-btn-cancel {
-  background: #f1f5f9;
-  color: #334155;
-}
-
-.unsaved-exit-btn-cancel:hover {
-  background: #e2e8f0;
 }
 
 @keyframes unsavedExitModalIn {
@@ -1098,12 +1036,6 @@
 }
 
 .archived-restore-button {
-  border: none;
-  border-radius: 8px;
-  padding: 0.48rem 0.8rem;
-  font-weight: 700;
-  background: #166534;
-  color: #fff;
   cursor: pointer;
 }
 

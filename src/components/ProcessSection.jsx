@@ -1,17 +1,38 @@
 import './ProcessSection.css'
+import { useRef } from 'react';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import { useLandingContent } from '../context/LandingContentContext';
 import fsisQrCode from '../assets/qrcode_fsis.e-bfp.com.png';
 import { getLandingUiCopy, normalizeDasmarinasText } from '../utils/landingLanguage';
 
 const FSIS_APPLICATION_URL = 'https://fsis.e-bfp.com/';
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 export default function ProcessSection() {
+  const sectionRef = useRef(null);
+  useGSAP(() => {
+    const media = gsap.matchMedia();
+    media.add({ desktop: '(min-width: 768px)', reduce: '(prefers-reduced-motion: reduce)' }, context => {
+      if (context.conditions.reduce) return;
+      gsap.from('.process-heading-row', {
+        y: context.conditions.desktop ? 10 : 4,
+        opacity: 0.92,
+        duration: 0.22,
+        ease: 'power2.out',
+        clearProps: 'transform,opacity',
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 90%', once: true },
+      });
+    });
+    return () => media.revert();
+  }, { scope: sectionRef });
   const { content: landingContent, language } = useLandingContent();
   const copy = getLandingUiCopy(language);
   const currentContent = landingContent.process[language] || landingContent.process.english;
 
   return (
-    <section className="process" id="process">
+    <section ref={sectionRef} className="process" id="process">
       <div className="process-container">
         <div className="process-heading-row">
           <div>

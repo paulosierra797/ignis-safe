@@ -35,6 +35,17 @@ const AUDIENCE_OPTIONS = [
   { value: 'specific_personnel', label: 'Specific Personnel' }
 ];
 
+const AUDIENCE_HISTORY_OPTIONS = [
+  { value: 'all', label: 'All Records' },
+  { value: 'public', label: 'Public' },
+  { value: 'all_personnel', label: 'All Personnel' },
+  { value: 'specific_personnel', label: 'Specific Personnel' }
+];
+
+const matchesAudienceHistory = (announcement, audience) => (
+  audience === 'all' || announcement?.audience_type === audience
+);
+
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_TYPES = new Set([
@@ -139,6 +150,7 @@ export default function Announcements() {
   const [message, setMessage] = useState({ type: '', text: '' });
   const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [audienceHistoryFilter, setAudienceHistoryFilter] = useState('all');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [overflowingIds, setOverflowingIds] = useState(() => new Set());
   const contentRefs = useRef({});
@@ -157,6 +169,7 @@ export default function Announcements() {
   const [archivedLoading, setArchivedLoading] = useState(false);
   const [restoringId, setRestoringId] = useState('');
   const [archivedSearch, setArchivedSearch] = useState('');
+  const [archivedAudienceFilter, setArchivedAudienceFilter] = useState('all');
   const [archivedSortField, setArchivedSortField] = useState('date'); // 'date' | 'title'
   const [archivedSortDir, setArchivedSortDir] = useState('desc'); // 'asc' | 'desc'
   const [archivedListExpanded, setArchivedListExpanded] = useState(false);
@@ -490,18 +503,28 @@ export default function Announcements() {
   useEffect(() => {
     if (archivedOpen) return;
     setArchivedSearch('');
+    setArchivedAudienceFilter('all');
     setArchivedListExpanded(false);
     setArchivedExpandedMsgIds(new Set());
   }, [archivedOpen]);
 
   useEffect(() => {
     setArchivedListExpanded(false);
-  }, [archivedSearch, archivedSortField, archivedSortDir]);
+  }, [archivedSearch, archivedSortField, archivedSortDir, archivedAudienceFilter]);
+
+  const getAudienceCount = useCallback((records, audience) => (
+    audience === 'all'
+      ? records.length
+      : records.filter((announcement) => matchesAudienceHistory(announcement, audience)).length
+  ), []);
 
   const sortedArchivedAnnouncements = useMemo(() => {
     const normalizedQuery = archivedSearch.trim().toLowerCase();
+    const audienceFiltered = isAdmin
+      ? archivedAnnouncements.filter((announcement) => matchesAudienceHistory(announcement, archivedAudienceFilter))
+      : archivedAnnouncements.slice();
     const filtered = normalizedQuery
-      ? archivedAnnouncements.filter((announcement) => {
+      ? audienceFiltered.filter((announcement) => {
           const haystack = [
             announcement.title,
             announcement.content,
@@ -514,7 +537,7 @@ export default function Announcements() {
 
           return haystack.includes(normalizedQuery);
         })
-      : archivedAnnouncements.slice();
+      : audienceFiltered;
 
     const getArchivedTime = (announcement) => {
       const raw = isAdmin ? announcement.archived_at : announcement.personnel_archived_at;
@@ -531,7 +554,7 @@ export default function Announcements() {
     });
 
     return filtered;
-  }, [archivedAnnouncements, archivedSearch, archivedSortField, archivedSortDir, isAdmin]);
+  }, [archivedAnnouncements, archivedSearch, archivedSortField, archivedSortDir, archivedAudienceFilter, isAdmin]);
 
   const visibleArchivedAnnouncements =
     archivedListExpanded || sortedArchivedAnnouncements.length <= ARCHIVED_VISIBLE_LIMIT
@@ -552,11 +575,12 @@ export default function Announcements() {
 
   const filteredAnnouncements = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return announcements;
-    }
+    const audienceFiltered = isAdmin
+      ? announcements.filter((announcement) => matchesAudienceHistory(announcement, audienceHistoryFilter))
+      : announcements;
+    if (!normalizedQuery) return audienceFiltered;
 
-    return announcements.filter((announcement) => {
+    return audienceFiltered.filter((announcement) => {
       const haystack = [
         announcement.title,
         announcement.content,
@@ -568,11 +592,11 @@ export default function Announcements() {
 
       return haystack.includes(normalizedQuery);
     });
-  }, [announcements, searchQuery]);
+  }, [announcements, searchQuery, audienceHistoryFilter, isAdmin]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery]);
+  }, [searchQuery, audienceHistoryFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAnnouncements.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -1308,6 +1332,26 @@ export default function Announcements() {
             </div>
           </div>
 
+          {isAdmin && (
+            <div className="audience-history-filter-wrap">
+              <span className="audience-history-label">Audience history</span>
+              <div className="audience-history-filter" role="group" aria-label="Filter sent announcements by audience">
+                {AUDIENCE_HISTORY_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`audience-history-option${audienceHistoryFilter === option.value ? ' is-active' : ''}`}
+                    onClick={() => setAudienceHistoryFilter(option.value)}
+                    aria-pressed={audienceHistoryFilter === option.value}
+                  >
+                    <span>{option.label}</span>
+                    <strong>{getAudienceCount(announcements, option.value)}</strong>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <div className="announcement-empty">Loading announcements...</div>
           ) : filteredAnnouncements.length === 0 ? (
@@ -1536,42 +1580,63 @@ export default function Announcements() {
             </div>
 
             {!archivedLoading && archivedAnnouncements.length > 0 && (
-              <div className="archived-toolbar">
-                <label className="archived-search">
-                  <FiSearch className="archived-search-icon" aria-hidden="true" />
-                  <input
-                    type="search"
-                    value={archivedSearch}
-                    onChange={(event) => setArchivedSearch(event.target.value)}
-                    placeholder="Search archived announcements"
-                    aria-label="Search archived announcements"
-                  />
-                </label>
-                <div className="archived-sort">
-                  <label>
-                    <span>Sort by</span>
-                    <select
-                      value={archivedSortField}
-                      onChange={(event) => setArchivedSortField(event.target.value)}
-                      aria-label="Sort archived announcements by"
-                    >
-                      <option value="date">Date archived</option>
-                      <option value="title">Title</option>
-                    </select>
+              <>
+                {isAdmin && (
+                  <div className="archived-audience-history">
+                    <span className="audience-history-label">Audience history</span>
+                    <div className="audience-history-filter" role="group" aria-label="Filter archived announcements by audience">
+                      {AUDIENCE_HISTORY_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          className={`audience-history-option${archivedAudienceFilter === option.value ? ' is-active' : ''}`}
+                          onClick={() => setArchivedAudienceFilter(option.value)}
+                          aria-pressed={archivedAudienceFilter === option.value}
+                        >
+                          <span>{option.label}</span>
+                          <strong>{getAudienceCount(archivedAnnouncements, option.value)}</strong>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="archived-toolbar">
+                  <label className="archived-search">
+                    <FiSearch className="archived-search-icon" aria-hidden="true" />
+                    <input
+                      type="search"
+                      value={archivedSearch}
+                      onChange={(event) => setArchivedSearch(event.target.value)}
+                      placeholder="Search archived announcements"
+                      aria-label="Search archived announcements"
+                    />
                   </label>
-                  <button
-                    type="button"
-                    className="archived-sort-dir"
-                    onClick={() => setArchivedSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-                    aria-label={`Sort direction: ${archivedSortDir === 'asc' ? 'ascending' : 'descending'}`}
-                    title={archivedSortDir === 'asc' ? 'Ascending' : 'Descending'}
-                  >
-                    {archivedSortField === 'title'
-                      ? (archivedSortDir === 'asc' ? 'A → Z' : 'Z → A')
-                      : (archivedSortDir === 'asc' ? 'Oldest first' : 'Newest first')}
-                  </button>
+                  <div className="archived-sort">
+                    <label>
+                      <span>Sort by</span>
+                      <select
+                        value={archivedSortField}
+                        onChange={(event) => setArchivedSortField(event.target.value)}
+                        aria-label="Sort archived announcements by"
+                      >
+                        <option value="date">Date archived</option>
+                        <option value="title">Title</option>
+                      </select>
+                    </label>
+                    <button
+                      type="button"
+                      className="archived-sort-dir"
+                      onClick={() => setArchivedSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+                      aria-label={`Sort direction: ${archivedSortDir === 'asc' ? 'ascending' : 'descending'}`}
+                      title={archivedSortDir === 'asc' ? 'Ascending' : 'Descending'}
+                    >
+                      {archivedSortField === 'title'
+                        ? (archivedSortDir === 'asc' ? 'A → Z' : 'Z → A')
+                        : (archivedSortDir === 'asc' ? 'Oldest first' : 'Newest first')}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             <div className="archived-panel">
@@ -1580,7 +1645,7 @@ export default function Announcements() {
                 ) : archivedAnnouncements.length === 0 ? (
                   <div className="announcement-empty">No archived announcements.</div>
                 ) : sortedArchivedAnnouncements.length === 0 ? (
-                  <div className="announcement-empty">No archived announcements match your search.</div>
+                  <div className="announcement-empty">No archived announcements match this audience or search.</div>
                 ) : (
                   <>
                   {visibleArchivedAnnouncements.map((announcement) => {

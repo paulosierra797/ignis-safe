@@ -337,7 +337,17 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   }, [embedded]);
 
   const scrollToNavSection = useCallback((sectionRef, sectionKey) => {
-    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const pageHeader = document.querySelector('.announcements-main .page-header');
+    const contentToolbar = document.querySelector('.content-management-toolbar');
+    const offset = (pageHeader?.getBoundingClientRect().height || 0)
+      + (contentToolbar?.getBoundingClientRect().height || 0)
+      + 20;
+    const top = window.scrollY + section.getBoundingClientRect().top - offset;
+
+    window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
     setActiveNavSection(sectionKey);
   }, []);
 

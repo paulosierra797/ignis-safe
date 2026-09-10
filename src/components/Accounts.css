@@ -5146,3 +5146,103 @@
   align-items: flex-start;
   gap: 0.75rem;
 }
+
+/* Final phone layout for the personnel directory. The desktop table becomes
+   a stacked record so fixed table columns cannot squeeze values into letters. */
+@media (max-width: 768px) {
+  .account-directory-table-wrap {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .account-directory-table,
+  .account-directory-table tbody {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: auto;
+  }
+
+  .account-directory-table thead {
+    display: none !important;
+  }
+
+  .account-directory-row {
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 0 0.75rem;
+    padding: 0.75rem;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+  }
+
+  .account-directory-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .account-directory-row td,
+  .account-directory-table td.col-email,
+  .account-directory-table td.col-rank-role,
+  .account-directory-table td.col-status,
+  .account-directory-table td.col-leave,
+  .account-directory-table td.col-actions {
+    display: grid !important;
+    grid-template-columns: 88px minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0.65rem 0 !important;
+    text-align: left !important;
+  }
+
+  .account-directory-row td.col-name {
+    display: block !important;
+    width: 100% !important;
+    padding: 0 0 0.75rem !important;
+  }
+
+  .account-directory-row td.col-name::before,
+  .account-directory-row td.col-actions::before {
+    content: none;
+  }
+
+  .account-directory-row td > *,
+  .account-directory-name-cell,
+  .account-directory-rank-role-cell,
+  .account-directory-table td.col-email span,
+  .account-directory-rank,
+  .account-directory-role,
+  .account-directory-leave-dates,
+  .account-directory-leave-none {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+    justify-self: stretch;
+    overflow: visible;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    white-space: normal;
+  }
+
+  .account-directory-name-cell strong {
+    min-width: 0;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .account-directory-table .account-directory-status-group {
+    justify-content: flex-start;
+  }
+
+  .account-directory-row td.col-actions {
+    display: flex !important;
+    justify-content: flex-end !important;
+    padding-bottom: 0 !important;
+  }
+}

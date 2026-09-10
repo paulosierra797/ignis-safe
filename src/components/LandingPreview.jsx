@@ -22,14 +22,23 @@ const DEVICE_PRESETS = [
 
 const MIN_PREVIEW_HEIGHT = 320;
 
-// Blocks link navigation inside the preview (Header's Login link, Footer's
-// Terms/Privacy links) so clicking around the preview can't route the admin
-// away from the editor. Buttons (FAQ accordion, EN/TL toggles, copy buttons)
-// have no default browser action, so they're unaffected and stay interactive.
+// Keep every link inside the preview boundary. React Router links otherwise
+// retain the admin page's router context and can navigate the real application.
 const blockLinkNavigation = (event) => {
-  if (event.target.closest('a')) {
-    event.preventDefault();
-  }
+  const link = event.target.closest('a');
+  if (!link) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const href = link.getAttribute('href') || '';
+  const hashIndex = href.indexOf('#');
+  if (hashIndex < 0) return;
+
+  const sectionId = decodeURIComponent(href.slice(hashIndex + 1));
+  const previewDocument = link.ownerDocument;
+  const section = sectionId ? previewDocument.getElementById(sectionId) : null;
+  section?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 function PreviewFrame({ width, height, onNaturalHeightChange, children }) {
@@ -79,6 +88,7 @@ function PreviewFrame({ width, height, onNaturalHeightChange, children }) {
         ref={iframeRef}
         title="Landing page preview"
         className="landing-preview-iframe"
+        sandbox="allow-same-origin"
         style={{ width, height }}
       />
       {mountNode && createPortal(children, mountNode)}

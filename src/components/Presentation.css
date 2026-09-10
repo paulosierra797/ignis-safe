@@ -1,0 +1,173 @@
+/* Presentation-only refinements. Keep field, table and dialog behavior local. */
+.app {
+  --surface-divider: #dde2e7;
+  --workspace-surface: #ffffff;
+}
+
+.app .page-header {
+  border-bottom: 1px solid var(--surface-divider);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.app .page-header .page-title {
+  letter-spacing: 0;
+}
+
+/* The white login pane is the form surface, not a frame around another card. */
+.app .login-page .login-form-container,
+.app .login-page .login-form-container-verify {
+  width: 100%;
+  max-width: 480px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding-inline: 0;
+}
+
+.app .login-page .login-right {
+  background: #ffffff;
+}
+
+.app .login-page .login-right::before,
+.app .login-page .login-right::after {
+  display: none;
+}
+
+.app .login-page .login-button {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.app .login-page .login-button:hover {
+  box-shadow: none;
+}
+
+/* Summary figures share one ruled surface instead of floating individually. */
+.app .dashboard-main :is(.metrics-grid, .metrics-grid-4),
+.app .analytics-main .analytics-stats-row {
+  gap: 1px !important;
+  padding: 1px 0;
+  background: var(--surface-divider);
+  border-radius: 0;
+}
+
+.app .dashboard-main .metric-card,
+.app .analytics-main .analytics-stat-card {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0 !important;
+  background: var(--workspace-surface);
+  box-shadow: none;
+  transform: none;
+  transition: background-color 160ms ease;
+}
+
+.app .dashboard-main .metric-card:hover {
+  background: #f9fafb;
+  box-shadow: none;
+  transform: none;
+}
+
+.app .dashboard-main .metric-card:focus-visible {
+  outline-offset: -3px;
+}
+
+.app .dashboard-main .metric-content {
+  min-width: 0;
+}
+
+.app .dashboard-main :is(.metric-label, .section-title),
+.app .analytics-main .analytics-stat-card h3 {
+  letter-spacing: 0;
+}
+
+/* Full page sections are unframed; repeated records and actual tools stay framed. */
+.app .accounts-main .accounts-directory-section,
+.app .content-management-main .announcement-card,
+.app .announcements-main .announcement-card,
+.app .personnel-ops-content > .personnel-ops-grid > .ops-card {
+  border: 0;
+  border-radius: 0 !important;
+  box-shadow: none;
+  background: transparent;
+  padding-inline: 0 !important;
+}
+
+.app .accounts-main .accounts-directory-section .accounts-filters {
+  border: 0;
+  border-bottom: 1px solid var(--surface-divider);
+  border-radius: 0;
+  padding-inline: 0;
+  background: transparent;
+}
+
+.app .content-management-main .editor-card,
+.app .announcements-main .editor-card {
+  border: 0;
+  border-bottom: 1px solid var(--surface-divider);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app .dashboard-main .chart-card,
+.app .analytics-main .analytics-chart-card {
+  border: 0;
+  border-top: 1px solid var(--surface-divider);
+  border-radius: 0 !important;
+  box-shadow: none;
+  background: #ffffff;
+}
+
+.app .dashboard-main .chart-card:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.app .personnel-ops-container {
+  background: #f6f7f8;
+}
+
+.app .contact .contact-detail-card {
+  border: 0;
+  border-bottom: 1px solid var(--surface-divider);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding-inline: 0;
+}
+
+@media (min-width: 641px) and (max-width: 900px) {
+  .app .login-page {
+    grid-template-rows: auto auto;
+    align-content: center;
+  }
+
+  .app .login-page :is(.login-left, .login-right) {
+    height: auto;
+    min-height: 0;
+  }
+
+  .app .login-page .login-right {
+    padding-block: 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .app .login-page .login-right {
+    padding-inline: 1.25rem;
+  }
+
+  .app .dashboard-main .metric-card {
+    padding: 1rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app .dashboard-main .metric-card {
+    transition: none;
+  }
+}

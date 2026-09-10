@@ -27,22 +27,24 @@ import { setAuthFlowGated } from '../utils/authFlowGate';
 import { logPersonnelActivity } from '../utils/activityLogService';
 
 import './LoginPage.css';
+import useEntranceMotion from '../hooks/useEntranceMotion';
 import bfpDasmaLogo from '../assets/bfp_dasma-login.webp';
-import bfpDasmaLogoSmall from '../assets/bfp_dasma-login-small.webp';
+import bfpDasmaLogoFull from '../assets/bfp_dasma.png';
 
 const LoginBrandPanel = ({ portal }) => {
   const isPersonnel = portal === 'personnel';
+  const brandRef = useEntranceMotion('.login-bfp-group, .login-brand-content');
 
   return (
-  <aside className="login-left" aria-label={`IGNIS SAFE ${isPersonnel ? 'personnel' : 'admin'} welcome`}>
+  <aside ref={brandRef} className="login-left" aria-label={`IGNIS SAFE ${isPersonnel ? 'personnel' : 'admin'} welcome`}>
     <div className="login-bfp-group">
       <span className="login-bfp-logo-frame">
         <img
           src={bfpDasmaLogo}
           alt="Bureau of Fire Protection Dasmariñas City Fire Station logo"
           className="login-bfp-logo"
-          srcSet={`${bfpDasmaLogoSmall} 140w, ${bfpDasmaLogo} 220w`}
-          sizes="(max-width: 600px) 126px, 220px"
+          srcSet={`${bfpDasmaLogo} 220w, ${bfpDasmaLogoFull} 546w`}
+          sizes="(max-width: 640px) 243px, (max-width: 900px) 262px, (max-height: 700px) 262px, 374px"
         />
       </span>
 

@@ -1,5 +1,14 @@
 # UI Presentation Refresh
 
+## Current Status
+
+The non-login refresh has been reverted at the user's request. Only the login
+and recovery styling, larger BFP logo, and login branding animation remain.
+Workspace headers, dashboard/analytics surfaces, personnel sections, announcement
+and editor sections, public contact rows, and public hero motion were restored
+to their previous presentation. GSAP remains a dependency for the login animation.
+The sections below document the original refresh and its original validation.
+
 ## Scope
 
 - Preserves the pending larger BFP login logo work.

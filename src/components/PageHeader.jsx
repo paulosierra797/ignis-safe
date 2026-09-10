@@ -6,7 +6,6 @@ import { useUser } from '../context/UserContext';
 import { useLayout } from '../context/LayoutContext';
 import { ALREADY_FORGOTTEN_DEVICE_MESSAGE } from '../utils/authService';
 import './PageHeader.css';
-import useEntranceMotion from '../hooks/useEntranceMotion';
 
 const formatRoleLabel = (role) => {
   if (!role) {
@@ -49,7 +48,6 @@ const PageHeader = ({
     message: ''
   });
   const dropdownRef = useRef(null);
-  const titleRef = useEntranceMotion();
   const navigate = useNavigate();
   const {
     currentUser,
@@ -188,7 +186,7 @@ const PageHeader = ({
         >
           <FaBars />
         </button>
-        <h1 ref={titleRef} className="page-title">{title}</h1>
+        <h1 className="page-title">{title}</h1>
       </div>
       <div className="page-header-right">
 

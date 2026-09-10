@@ -8,7 +8,6 @@ import {
   FiPhoneCall,
 } from 'react-icons/fi';
 import './HeroSection.css'
-import useEntranceMotion from '../hooks/useEntranceMotion';
 import firestation from '../assets/firestation.webp'
 import firestationSmall from '../assets/firestation-640.webp'
 import { useLandingContent } from '../context/LandingContentContext';
@@ -17,7 +16,6 @@ import { getLandingUiCopy, getLocalizedSection, normalizeDasmarinasText } from '
 const FSIS_APPLICATION_URL = 'https://fsis.e-bfp.com/';
 
 export default function HeroSection() {
-  const contentRef = useEntranceMotion('.hero-eyebrow, h1, .hero-lead, .hero-actions');
   const { content, language } = useLandingContent();
   const copy = getLandingUiCopy(language);
   const heroContent = getLocalizedSection(content.hero, language);
@@ -102,7 +100,7 @@ export default function HeroSection() {
         <div className="hero-image-overlay" aria-hidden="true" />
 
         <div className="hero-container">
-          <div ref={contentRef} className="hero-content">
+          <div className="hero-content">
             <span className="hero-eyebrow">{copy.heroEyebrow}</span>
             <h1>{normalizeDasmarinasText(heroContent.title)}</h1>
             <p>

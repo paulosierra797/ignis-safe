@@ -1196,6 +1196,7 @@ export default function AboutUsContent() {
   const [dirtyScopes, setDirtyScopes] = useState({});
   const [pendingSave, setPendingSave] = useState(null);
   const [confirmingSave, setConfirmingSave] = useState(false);
+  const [activeSection, setActiveSection] = useState(QUICK_NAV_ITEMS[0].id);
 
   const notify = (type, text) => setMessage({ type, text });
 
@@ -1261,9 +1262,10 @@ export default function AboutUsContent() {
     // section heading clears both bars instead of hiding behind them.
     const headerHeight = main?.querySelector('.page-header')?.offsetHeight ?? 0;
     const navHeight = main?.querySelector('.aboutus-quicknav')?.offsetHeight ?? 0;
-    const top = window.scrollY + target.getBoundingClientRect().top - headerHeight - navHeight - 16;
-
-    window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+    const offset = headerHeight + navHeight + 16;
+    target.style.scrollMarginTop = `${offset}px`;
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSection(id);
   };
 
   return (
@@ -1277,7 +1279,13 @@ export default function AboutUsContent() {
 
         <nav className="aboutus-quicknav" aria-label="About Us content sections">
           {QUICK_NAV_ITEMS.map((item) => (
-            <button key={item.id} type="button" className="aboutus-quicknav-item" onClick={() => scrollToSection(item.id)}>
+            <button
+              key={item.id}
+              type="button"
+              className={`aboutus-quicknav-item${activeSection === item.id ? ' is-active' : ''}`}
+              aria-current={activeSection === item.id ? 'location' : undefined}
+              onClick={() => scrollToSection(item.id)}
+            >
               {item.label}
             </button>
           ))}

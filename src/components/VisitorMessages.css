@@ -887,3 +887,83 @@ body.sidebar-collapsed .visitor-messages-main { margin-left: var(--sidebar-colla
 @media (prefers-reduced-motion: reduce) {
   .is-spinning { animation: none; }
 }
+
+@media (max-width: 640px) {
+  .visitor-messages-page,
+  .visitor-messages-main {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .visitor-messages-main {
+    padding: 0.65rem;
+  }
+
+  .visitor-messages-intro {
+    min-width: 0;
+  }
+
+  .visitor-messages-intro h2 {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .visitor-conversation-item {
+    align-items: start;
+    gap: 0.7rem;
+    padding: 0.85rem 0.75rem;
+  }
+
+  .visitor-conversation-copy,
+  .visitor-conversation-name,
+  .visitor-conversation-preview,
+  .visitor-conversation-meta {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .visitor-conversation-name {
+    align-items: flex-start;
+  }
+
+  .visitor-conversation-name strong {
+    display: -webkit-box;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .visitor-conversation-name time {
+    padding-top: 0.1rem;
+  }
+
+  .visitor-conversation-preview {
+    display: -webkit-box;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .visitor-conversation-meta {
+    flex-wrap: wrap;
+  }
+}
+
+/* Conversation dialogs use the same top layer as the rest of the workspace
+   dialogs so their close controls cannot sit underneath PageHeader. */
+.visitor-archive-modal-backdrop {
+  z-index: 2000;
+}
+
+.visitor-messages-workspace-frame.is-archive-modal {
+  z-index: 2010;
+}
+
+.visitor-delete-modal-backdrop {
+  z-index: 2100;
+}

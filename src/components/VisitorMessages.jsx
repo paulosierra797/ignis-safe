@@ -27,6 +27,7 @@ import {
   setVisitorConversationStatus,
   VISITOR_CHAT_MAX_LENGTH,
 } from '../utils/visitorChatService';
+import { formatStatusLabel } from '../utils/statusUtils';
 import './VisitorMessages.css';
 
 const formatDateTime = (value) => {
@@ -364,7 +365,9 @@ export default function VisitorMessages() {
                     </span>
                     <span className="visitor-conversation-preview">{conversation.last_message_preview}</span>
                     <span className="visitor-conversation-meta">
-                      <span className={`visitor-conversation-status is-${conversation.status}`}>{conversation.status}</span>
+                      <span className={`visitor-conversation-status is-${conversation.status}`}>
+                        {formatStatusLabel(conversation.status)}
+                      </span>
                       {conversation.delete_after && (
                         <span className="visitor-conversation-delete-status">Deletes {formatListTime(conversation.delete_after)}</span>
                       )}

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
-import { FiArchive, FiBell, FiFileText, FiCheckCircle, FiClock, FiSearch } from 'react-icons/fi';
+import { FiArchive, FiBell, FiFileText, FiCheckCircle, FiClock, FiEdit2, FiSearch, FiTrash2 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
@@ -11,6 +11,8 @@ import PersonnelPicker from './PersonnelPicker';
 import { useUser } from '../context/UserContext';
 import {
   createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
   getAnnouncementsForUser,
   acknowledgeAnnouncement,
   getAudienceLabel,
@@ -144,6 +146,11 @@ export default function Announcements() {
   const messageTextareaRef = useRef(null);
   const [archiveModalId, setArchiveModalId] = useState('');
   const [archiving, setArchiving] = useState(false);
+  const [editAnnouncement, setEditAnnouncement] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', content: '' });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleteAnnouncementId, setDeleteAnnouncementId] = useState('');
+  const [deletingAnnouncement, setDeletingAnnouncement] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [archivedLoaded, setArchivedLoaded] = useState(false);
   const [archivedAnnouncements, setArchivedAnnouncements] = useState([]);
@@ -829,6 +836,52 @@ export default function Announcements() {
     await loadAnnouncements();
   };
 
+  const openEditAnnouncement = (announcement) => {
+    if (!isAdmin || !announcement) return;
+    setEditAnnouncement(announcement);
+    setEditForm({ title: announcement.title || '', content: announcement.content || '' });
+  };
+
+  const handleSaveAnnouncementEdit = async (event) => {
+    event.preventDefault();
+    if (!editAnnouncement) return;
+
+    setSavingEdit(true);
+    const { error } = await updateAnnouncement(
+      currentUser,
+      editAnnouncement.announcement_id,
+      editForm
+    );
+    setSavingEdit(false);
+
+    if (error) {
+      setMessage({ type: 'error', text: `Failed to edit announcement: ${error}` });
+      return;
+    }
+
+    setEditAnnouncement(null);
+    setMessage({ type: 'success', text: 'Announcement updated.' });
+    setArchivedLoaded(false);
+    await loadAnnouncements();
+  };
+
+  const handleDeleteAnnouncement = async () => {
+    if (!deleteAnnouncementId) return;
+    setDeletingAnnouncement(true);
+    const { error } = await deleteAnnouncement(currentUser, deleteAnnouncementId);
+    setDeletingAnnouncement(false);
+
+    if (error) {
+      setMessage({ type: 'error', text: `Failed to delete announcement: ${error}` });
+      return;
+    }
+
+    setAnnouncements((current) => current.filter((item) => item.announcement_id !== deleteAnnouncementId));
+    setArchivedAnnouncements((current) => current.filter((item) => item.announcement_id !== deleteAnnouncementId));
+    setDeleteAnnouncementId('');
+    setMessage({ type: 'success', text: 'Announcement permanently deleted.' });
+  };
+
   const handleNudgePersonnel = async (personnelIds, targetAnnouncementId = acknowledgementModalId) => {
     const announcement = announcements.find(
       (row) => row.announcement_id === targetAnnouncementId
@@ -1376,6 +1429,16 @@ export default function Announcements() {
                           {acknowledgingId === announcement.announcement_id ? 'Acknowledging...' : 'Acknowledge'}
                         </button>
                       )}
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="announcement-edit-button"
+                          onClick={() => openEditAnnouncement(announcement)}
+                        >
+                          <FiEdit2 aria-hidden="true" />
+                          Edit
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="announcement-archive-button"
@@ -1387,8 +1450,19 @@ export default function Announcements() {
                             : 'Please acknowledge this announcement before archiving it.'
                         }
                       >
+                        <FiArchive aria-hidden="true" />
                         Archive
                       </button>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          className="announcement-delete-button"
+                          onClick={() => setDeleteAnnouncementId(announcement.announcement_id)}
+                        >
+                          <FiTrash2 aria-hidden="true" />
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -1584,6 +1658,16 @@ export default function Announcements() {
                         >
                           {restoringId === announcement.announcement_id ? 'Restoring...' : 'Restore'}
                         </button>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            className="archived-delete-button"
+                            onClick={() => setDeleteAnnouncementId(announcement.announcement_id)}
+                          >
+                            <FiTrash2 aria-hidden="true" />
+                            Delete
+                          </button>
+                        )}
                       </div>
                     </article>
                     );
@@ -1630,6 +1714,67 @@ export default function Announcements() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {editAnnouncement && (
+        <div className="announcement-manage-modal-overlay" onMouseDown={() => !savingEdit && setEditAnnouncement(null)}>
+          <section
+            className="announcement-manage-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="editAnnouncementTitle"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="announcement-manage-modal-header">
+              <div>
+                <span>Posted announcement</span>
+                <h2 id="editAnnouncementTitle">Edit Announcement</h2>
+              </div>
+              <CloseButton onClick={() => setEditAnnouncement(null)} disabled={savingEdit} label="Close edit announcement" />
+            </header>
+            <form className="announcement-manage-form" onSubmit={handleSaveAnnouncementEdit}>
+              <label>
+                <span>Title</span>
+                <input
+                  value={editForm.title}
+                  onChange={(event) => setEditForm((current) => ({ ...current, title: event.target.value }))}
+                  required
+                />
+              </label>
+              <label>
+                <span>Message</span>
+                <textarea
+                  value={editForm.content}
+                  onChange={(event) => setEditForm((current) => ({
+                    ...current,
+                    content: truncateAnnouncementWords(event.target.value)
+                  }))}
+                  rows="7"
+                  required
+                />
+                <small>{countAnnouncementWords(editForm.content)}/{MAX_ANNOUNCEMENT_WORDS} words</small>
+              </label>
+              <div className="announcement-manage-modal-actions">
+                <button type="button" className="announcement-manage-cancel" onClick={() => setEditAnnouncement(null)} disabled={savingEdit}>Cancel</button>
+                <button type="submit" className="announcement-manage-save" disabled={savingEdit}>{savingEdit ? 'Saving...' : 'Save Changes'}</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+
+      {deleteAnnouncementId && (
+        <div className="announcement-manage-modal-overlay">
+          <section className="announcement-delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="deleteAnnouncementTitle">
+            <span className="announcement-delete-confirm-icon"><FiTrash2 aria-hidden="true" /></span>
+            <h2 id="deleteAnnouncementTitle">Delete this announcement?</h2>
+            <p>This permanently removes the announcement and its related recipient and acknowledgment records. This action cannot be undone.</p>
+            <div className="announcement-manage-modal-actions">
+              <button type="button" className="announcement-manage-cancel" onClick={() => setDeleteAnnouncementId('')} disabled={deletingAnnouncement}>Cancel</button>
+              <button type="button" className="announcement-manage-delete" onClick={handleDeleteAnnouncement} disabled={deletingAnnouncement}>{deletingAnnouncement ? 'Deleting...' : 'Delete Permanently'}</button>
+            </div>
+          </section>
         </div>
       )}
 

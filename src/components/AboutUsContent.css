@@ -71,6 +71,12 @@
   color: #172033;
 }
 
+.aboutus-quicknav-item.is-active {
+  border-color: #fecaca;
+  background: #fff1f2;
+  color: #991b1b;
+}
+
 .aboutus-quicknav-item:focus-visible {
   outline: 2px solid #b91c1c;
   outline-offset: 2px;
@@ -671,5 +677,44 @@
 
   .aboutus-emergency-editor-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .aboutus-main {
+    padding: 0.65rem;
+  }
+
+  .aboutus-quicknav {
+    top: var(--aboutus-header-h, 64px);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.3rem;
+    margin-bottom: 1rem;
+    padding: 0.35rem;
+    border-radius: 10px;
+  }
+
+  .aboutus-quicknav-item {
+    min-width: 0;
+    min-height: 38px;
+    padding: 0.45rem 0.35rem;
+    font-size: 0.7rem;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .aboutus-card {
+    margin-bottom: 1rem;
+    padding: 1rem 0.8rem 1.15rem;
+    border-radius: 12px;
+  }
+
+  .aboutus-subsection {
+    padding: 0.8rem 0.7rem;
+  }
+
+  .aboutus-language-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

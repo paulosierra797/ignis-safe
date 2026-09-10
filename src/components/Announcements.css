@@ -1674,3 +1674,252 @@
 .announcement-tracking-wrap {
   margin-top: 0;
 }
+
+/* Posted announcement management ------------------------------------ */
+.announcement-edit-button,
+.announcement-delete-button,
+.archived-delete-button,
+.announcement-manage-cancel,
+.announcement-manage-save,
+.announcement-manage-delete {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.announcement-edit-button:hover,
+.announcement-edit-button:focus-visible {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.announcement-delete-button,
+.archived-delete-button,
+.announcement-manage-delete {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.announcement-delete-button:hover,
+.announcement-delete-button:focus-visible,
+.archived-delete-button:hover,
+.archived-delete-button:focus-visible,
+.announcement-manage-delete:hover,
+.announcement-manage-delete:focus-visible {
+  background: #fef2f2;
+}
+
+.archived-restore-action {
+  gap: 0.6rem;
+}
+
+.announcement-manage-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2400;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+/* All announcement dialogs must remain above the shared sticky header and
+   mobile navigation drawer. */
+.archive-list-modal-overlay,
+.announcement-confirm-modal-overlay {
+  z-index: 2400;
+}
+
+.announcement-manage-modal,
+.announcement-delete-confirm {
+  width: min(560px, 100%);
+  max-height: calc(100dvh - 2rem);
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+}
+
+.announcement-manage-modal {
+  display: flex;
+  flex-direction: column;
+}
+
+.announcement-manage-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid #f3d7d7;
+  background: #fffafa;
+}
+
+.announcement-manage-modal-header > div {
+  min-width: 0;
+}
+
+.announcement-manage-modal-header span {
+  color: #b91c1c;
+  font-size: 0.66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.announcement-manage-modal-header h2 {
+  margin: 0.15rem 0 0;
+  color: #172033;
+  font-size: 1.15rem;
+}
+
+.announcement-manage-form {
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  gap: 1rem;
+  padding: 1.1rem;
+}
+
+.announcement-manage-form label {
+  display: grid;
+  gap: 0.4rem;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.announcement-manage-form input,
+.announcement-manage-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #172033;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.announcement-manage-form textarea {
+  resize: vertical;
+}
+
+.announcement-manage-form small {
+  justify-self: end;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.announcement-manage-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.announcement-manage-save {
+  border-color: #b91c1c;
+  background: #b91c1c;
+  color: #ffffff;
+}
+
+.announcement-delete-confirm {
+  padding: 1.35rem;
+  text-align: center;
+}
+
+.announcement-delete-confirm-icon {
+  width: 46px;
+  height: 46px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 1.2rem;
+}
+
+.announcement-delete-confirm h2 {
+  margin: 0.85rem 0 0.45rem;
+  font-size: 1.2rem;
+}
+
+.announcement-delete-confirm p {
+  margin: 0 0 1.1rem;
+  color: #64748b;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 640px) {
+  .announcements-main {
+    padding: 0.65rem;
+  }
+
+  .announcements-main .page-header {
+    margin-bottom: 0.85rem;
+    padding: 0.65rem 0.7rem;
+    border-radius: 10px;
+  }
+
+  .announcements-main .page-title {
+    font-size: 1rem;
+  }
+
+  .announcement-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .announcement-actions > button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .archived-restore-action {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .archived-restore-action > button {
+    width: 100%;
+  }
+
+  .announcement-manage-modal-overlay {
+    place-items: end center;
+    padding: 0;
+  }
+
+  .announcement-manage-modal,
+  .announcement-delete-confirm {
+    width: 100%;
+    max-height: 92dvh;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .announcement-manage-modal-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .announcement-manage-modal-actions > button {
+    width: 100%;
+  }
+}

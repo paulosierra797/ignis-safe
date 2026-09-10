@@ -1328,3 +1328,85 @@
   font-size: 0.8rem;
   white-space: nowrap;
 }
+
+@media (max-width: 768px) {
+  .personnel-ops-content {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    padding: 0.65rem;
+    overflow-x: hidden;
+  }
+
+  .ops-card,
+  .schedule-card {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 0.9rem;
+    border-radius: 12px;
+  }
+
+  .shift-calendar-scroll {
+    overflow-x: visible;
+    padding-inline: 0;
+  }
+
+  .shift-calendar-grid {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 3px;
+  }
+
+  .shift-calendar-days {
+    grid-auto-rows: 112px;
+  }
+
+  .shift-calendar-day-card {
+    height: 112px;
+    min-width: 0;
+    padding: 0.4rem 0.32rem;
+    border-radius: 8px;
+  }
+
+  .shift-calendar-day-card.today {
+    padding: calc(0.4rem - 1px) calc(0.32rem - 1px);
+  }
+
+  .shift-calendar-day-top {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .shift-tag {
+    max-width: 100%;
+    font-size: 0.52rem;
+    white-space: normal;
+  }
+
+  .shift-calendar-duty-names {
+    display: none;
+  }
+
+  .calendar-stat {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  .personnel-modal-overlay {
+    z-index: 1900;
+    align-items: stretch;
+    padding: max(0.5rem, env(safe-area-inset-top)) 0.5rem max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .personnel-modal {
+    max-height: 100%;
+    border-radius: 10px;
+  }
+
+  .personnel-modal-header {
+    z-index: 5;
+  }
+}

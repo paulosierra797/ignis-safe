@@ -108,6 +108,119 @@
     font-size: 0.88rem;
   }
 }
+
+/* Mobile directory and dialog containment. The sticky page header sits at
+   z-index 1450, so account dialogs must be in a higher UI layer. */
+.accounts-modal-overlay {
+  z-index: 1900;
+}
+
+@media (max-width: 768px) {
+  .accounts-main {
+    min-width: 0;
+    padding-inline: 0.65rem;
+    overflow-x: hidden;
+  }
+
+  .accounts-directory-section,
+  .account-directory-group,
+  .account-directory-group-body,
+  .account-directory-table-wrap,
+  .account-directory-table,
+  .account-directory-table tbody {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .account-directory-row {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    padding: 0.75rem;
+  }
+
+  .account-directory-row td {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(76px, 0.7fr) minmax(0, 1.3fr);
+    align-items: start;
+    gap: 0.75rem;
+    text-align: left;
+  }
+
+  .account-directory-row td > * {
+    min-width: 0;
+    max-width: 100%;
+    justify-self: stretch;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .account-directory-row td.col-name {
+    display: block;
+  }
+
+  .account-directory-name-cell {
+    width: 100%;
+  }
+
+  .account-directory-table td.col-email span {
+    display: block;
+    white-space: normal;
+  }
+
+  .account-directory-rank-role-cell,
+  .account-directory-leave-dates,
+  .account-directory-leave-none {
+    text-align: left;
+  }
+
+  .account-directory-row td.col-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .accounts-modal-overlay {
+    align-items: stretch;
+    padding: max(0.5rem, env(safe-area-inset-top)) 0.5rem max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .accounts-modal,
+  .personnel-profile-modal,
+  .accounts-status-modal {
+    width: 100%;
+    max-height: 100%;
+    border-radius: 10px;
+  }
+
+  .accounts-modal-header,
+  .personnel-profile-header,
+  .accounts-status-modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 8;
+    min-width: 0;
+  }
+
+  .accounts-modal-header > div,
+  .personnel-profile-header > div,
+  .accounts-status-modal-header > div {
+    min-width: 0;
+  }
+
+  .accounts-modal-header .app-close-button,
+  .personnel-profile-header .app-close-button,
+  .accounts-status-modal-header .app-close-button {
+    position: static;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+  }
+}
 .leave-approval-mobile-list,
 .profile-request-mobile-list,
 .profile-history-mobile-list,
@@ -4993,6 +5106,38 @@
 
   .account-status-detail-row .status-pill {
     align-self: flex-start;
+  }
+}
+
+/* Keep all account dialogs above the shared mobile page header. This final
+   rule intentionally follows the legacy modal declaration in this file. */
+.accounts-modal-overlay {
+  z-index: 1900;
+}
+
+@media (max-width: 768px) {
+  .account-directory-table,
+  .account-directory-table tbody,
+  .account-directory-row,
+  .account-directory-row td {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .account-directory-row td {
+    display: grid;
+    grid-template-columns: minmax(76px, 0.7fr) minmax(0, 1.3fr);
+    align-items: start;
+    text-align: left;
+  }
+
+  .account-directory-row td.col-name {
+    display: block;
+  }
+
+  .account-directory-row td.col-actions {
+    display: flex;
   }
 }
 .account-card-header {

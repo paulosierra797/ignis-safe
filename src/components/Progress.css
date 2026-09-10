@@ -1074,6 +1074,40 @@
   }
 }
 
+@media (max-width: 640px) {
+  .progress-modal-overlay {
+    align-items: stretch;
+    padding: max(0.5rem, env(safe-area-inset-top)) 0.5rem max(0.5rem, env(safe-area-inset-bottom));
+  }
+
+  .progress-modal {
+    width: 100%;
+    max-height: 100%;
+    border-radius: 10px;
+  }
+
+  .progress-modal-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.75rem;
+    padding: 0.9rem;
+  }
+
+  .progress-modal-close.app-close-button {
+    position: static;
+    align-self: start;
+    flex: 0 0 40px;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+  }
+
+  .progress-modal-heading h2 {
+    overflow-wrap: anywhere;
+  }
+}
+
 @media(max-width:768px){
 
   .progress-desktop-table{

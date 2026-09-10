@@ -698,6 +698,58 @@
   }
 }
 
+/* Mobile login spacing follows the real browser viewport shown in the QA
+   screenshots: the top action gets its own row and the card is allowed to
+   breathe instead of being compressed into a fixed-height canvas. */
+@media (max-width: 640px) {
+  .login-page {
+    height: auto;
+    min-height: 100dvh;
+    padding: 4.85rem 0.65rem 0.8rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .login-landing-back {
+    top: 0.8rem;
+    left: 0.8rem;
+    min-height: 44px;
+  }
+
+  .login-left,
+  .login-right {
+    height: auto;
+  }
+
+  .login-left {
+    min-height: 172px;
+    gap: 0.55rem;
+    padding: 0.9rem 1rem;
+  }
+
+  .login-bfp-logo-frame {
+    width: 62px;
+  }
+
+  .login-brand-content h1 {
+    font-size: clamp(1.45rem, 6.3vw, 1.75rem);
+  }
+
+  .login-brand-content p {
+    max-width: 330px;
+    font-size: 0.74rem;
+  }
+
+  .login-right {
+    padding: 1rem 0.7rem 1.2rem;
+  }
+
+  .login-page .login-form-container,
+  .login-page .login-form-container-verify {
+    padding: 1.15rem;
+  }
+}
+
 @keyframes slideInRight {
   from {
     opacity: 0;
@@ -2063,5 +2115,53 @@
   .recovery-header-icon--loading,
   .recovery-loading-track span {
     animation: none;
+  }
+}
+
+/* Final mobile viewport rules: keep the browser-safe top action separate from
+   the authentication card and let short devices scroll instead of clipping. */
+@media (max-width: 640px) {
+  .login-page {
+    height: auto;
+    min-height: 100dvh;
+    grid-template-rows: auto auto;
+    gap: 0;
+    padding: 5rem 0.75rem max(0.85rem, env(safe-area-inset-bottom));
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .login-landing-back {
+    top: max(0.85rem, env(safe-area-inset-top));
+    left: 0.85rem;
+  }
+
+  .login-left {
+    min-height: 176px;
+    padding: 0.9rem 1rem 1rem;
+  }
+
+  .login-bfp-logo-frame {
+    width: 62px;
+  }
+
+  .login-brand-content h1 {
+    font-size: clamp(1.45rem, 7vw, 1.75rem);
+  }
+
+  .login-brand-content p {
+    max-width: 330px;
+    font-size: 0.74rem;
+  }
+
+  .login-right {
+    padding: 0.9rem;
+    overflow: visible;
+  }
+
+  .login-page .login-form-container,
+  .login-page .login-form-container-verify {
+    max-height: none;
+    padding: 1.15rem;
   }
 }

@@ -1,0 +1,32 @@
+/* Shared numeric indicators: plain counts, without a colored bubble. */
+.nav-item .nav-badge,
+.nav-item.active .nav-badge,
+.accounts-tab .accounts-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.sidebar--collapsed .nav-item .nav-badge {
+  top: 0.25rem;
+  right: 0.25rem;
+  min-width: 1.25rem;
+  height: 1rem;
+  padding: 0;
+  font-size: 0.6875rem;
+}

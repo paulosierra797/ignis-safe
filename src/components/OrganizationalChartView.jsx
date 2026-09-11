@@ -5,6 +5,7 @@ import { OrgCard, initialOrgData, normalizeOrgData } from './Chart';
 import { getOrgChartConfig } from '../utils/orgChartService';
 import './Chart.css';
 import './OrganizationalChartView.css';
+import OrgChartLayout from './OrgChartLayout';
 import { useLandingContent } from '../context/LandingContentContext';
 import { getLandingUiCopy } from '../utils/landingLanguage';
 
@@ -50,36 +51,11 @@ export default function OrganizationalChartView() {
             </p>
           </div>
 
-          <div className="org-chart">
-            {isLoading && <p className="chart-loading">{copy.loadingOrganizationalChart}</p>}
-
-            <div className="org-level">
-              <OrgCard node={orgData.top} editMode={false} canEdit={false} />
-            </div>
-
-            <div className="org-connector vertical" />
-
-            <div className="org-level">
-              <OrgCard node={orgData.second} editMode={false} canEdit={false} />
-            </div>
-
-            <div className="org-connector vertical" />
-            <div className="org-connector horizontal" />
-
-            <div className="org-columns">
-              {orgData.departments.map((department) => (
-                <div className="org-column" key={department.id}>
-                  <OrgCard node={department} editMode={false} canEdit={false} />
-                  <div className="org-connector vertical short" />
-                  <div className="org-subunits">
-                    {department.units.map((unit) => (
-                      <OrgCard key={unit.id} node={unit} editMode={false} canEdit={false} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <OrgChartLayout
+            data={orgData}
+            loadingMessage={isLoading ? copy.loadingOrganizationalChart : undefined}
+            renderNode={node => <OrgCard node={node} editMode={false} canEdit={false} />}
+          />
         </div>
       </main>
 

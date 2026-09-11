@@ -1,11 +1,7 @@
 .org-chart-page {
-  padding: clamp(3rem, 5vw, 5rem) 0;
+  padding: 40px 0;
   min-height: calc(100vh - 76px - 200px);
-  background:
-    radial-gradient(circle at 8% 24%, rgba(185, 28, 28, 0.065), transparent 24%),
-    radial-gradient(circle at 94% 86%, rgba(245, 158, 11, 0.055), transparent 25%),
-    repeating-linear-gradient(45deg, rgba(127, 29, 29, 0.014) 0 1px, transparent 1px 28px),
-    #ffffff;
+  background: #f6f7f8;
 }
 
 .org-chart-page-container {
@@ -19,17 +15,17 @@
 
 .org-chart-page-eyebrow {
   margin: 0 0 0.4rem;
-  color: #9a3412;
+  color: #991b1b;
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
 }
 
 .org-chart-page-header h2 {
   width: fit-content;
   margin: 0 0 0.6rem;
-  color: #a8171c;
-  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  color: #202731;
+  font-size: 32px;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -53,6 +49,8 @@
 }
 
 @media (max-width: 767px) {
+  .org-chart-page { padding-block: 24px; }
+  .org-chart-page-header h2 { font-size: 26px; }
   .org-chart-page-container {
     width: calc(100% - 2rem);
   }

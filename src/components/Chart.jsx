@@ -13,6 +13,7 @@ import { logAdminActivity } from '../utils/usersService';
 import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_TYPES } from '../utils/avatarCrop';
 import AvatarCropModal from './AvatarCropModal';
 import './Chart.css';
+import OrgChartLayout from './OrgChartLayout';
 
 const LEGACY_AVATAR_PLACEHOLDER_PATH = '/user-avatar.png';
 
@@ -789,60 +790,19 @@ export default function Chart() {
           </button>
         </div>
 
-        <div className="org-chart">
-          {isLoadingChart && <p className="chart-loading">Loading chart...</p>}
-          <div className="org-level">
+        <OrgChartLayout
+          data={orgData}
+          loadingMessage={isLoadingChart ? 'Loading chart...' : undefined}
+          renderNode={node => (
             <OrgCard
-              node={withPreview(orgData.top)}
+              node={withPreview(node)}
               editMode={editMode}
               canEdit={isAdmin}
               onChange={handleUpdate}
               onImageChange={handleAvatarSelect}
             />
-          </div>
-
-          <div className="org-connector vertical" />
-
-          <div className="org-level">
-            <OrgCard
-              node={withPreview(orgData.second)}
-              editMode={editMode}
-              canEdit={isAdmin}
-              onChange={handleUpdate}
-              onImageChange={handleAvatarSelect}
-            />
-          </div>
-
-          <div className="org-connector vertical" />
-          <div className="org-connector horizontal" />
-
-          <div className="org-columns">
-            {orgData.departments.map((department) => (
-              <div className="org-column" key={department.id}>
-                <OrgCard
-                  node={withPreview(department)}
-                  editMode={editMode}
-                  canEdit={isAdmin}
-                  onChange={handleUpdate}
-                  onImageChange={handleAvatarSelect}
-                />
-                <div className="org-connector vertical short" />
-                <div className="org-subunits">
-                  {department.units.map((unit) => (
-                    <OrgCard
-                      key={unit.id}
-                      node={withPreview(unit)}
-                      editMode={editMode}
-                      canEdit={isAdmin}
-                      onChange={handleUpdate}
-                      onImageChange={handleAvatarSelect}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          )}
+        />
       </div>
 
       {!errorInfo && (

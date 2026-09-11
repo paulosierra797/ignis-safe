@@ -1,11 +1,12 @@
-/* Keep sent history and its tools flat and easy to scan. */
+/* Separate announcements while keeping their internal tools flat. */
 .announcements-main .sent-announcement-history {
   border: 0; border-radius: 0; box-shadow: none; padding: 0; background: transparent;
 }
-.sent-announcement-history .announcement-list { gap: 0; }
+.sent-announcement-history .announcement-list { gap: 24px; padding-block: 20px; }
 .sent-announcement-history .announcement-item {
-  border: 0; border-bottom: 1px solid #dce1e7; border-radius: 0;
-  padding: 24px 0; box-shadow: none; background: transparent;
+  border: 1px solid #dce1e7; border-radius: 8px;
+  padding: 24px; box-shadow: 0 2px 5px rgba(15, 23, 42, 0.04); background: #fff;
+  min-width: 0;
 }
 .sent-history-toolbar {
   display: grid; grid-template-columns: minmax(180px, 0.8fr) minmax(180px, 1fr) minmax(230px, 1.2fr);
@@ -76,6 +77,8 @@
   .history-recipient-search { grid-column: 1 / -1; }
 }
 @media (max-width: 640px) {
+  .sent-announcement-history .announcement-list { gap: 20px; padding-block: 16px; }
+  .sent-announcement-history .announcement-item { padding: 18px 14px; }
   .sent-history-toolbar { grid-template-columns: 1fr; }
   .sent-history-toolbar input, .history-audience-field select, .acknowledgement-status-filter select { font-size: 16px; }
   .nudge-tracking .nudge-tracking-summary { grid-template-columns: 1fr 1fr; }

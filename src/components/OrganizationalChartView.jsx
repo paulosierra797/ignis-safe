@@ -12,7 +12,7 @@ import { getLandingUiCopy } from '../utils/landingLanguage';
 export default function OrganizationalChartView() {
   const { language } = useLandingContent();
   const copy = getLandingUiCopy(language);
-  const [orgData, setOrgData] = useState(initialOrgData);
+  const [orgData, setOrgData] = useState(() => normalizeOrgData(initialOrgData));
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

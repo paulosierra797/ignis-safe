@@ -14,6 +14,8 @@ import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_TYPES } from '../utils/avatarCrop';
 import AvatarCropModal from './AvatarCropModal';
 import './Chart.css';
 import OrgChartLayout from './OrgChartLayout';
+import OrgSelectField from './OrgSelectField';
+import { ORG_RANK_OPTIONS, separateOrgRank } from '../utils/orgChartFields';
 
 const LEGACY_AVATAR_PLACEHOLDER_PATH = '/user-avatar.png';
 
@@ -159,6 +161,7 @@ const isDeprecatedRescueUnit = (unit = {}) => {
 const normalizeNode = (node = {}) => {
   const normalized = {
     ...node,
+    ...separateOrgRank(node),
     avatar_url:
       node.avatar_url && node.avatar_url !== LEGACY_AVATAR_PLACEHOLDER_PATH
         ? node.avatar_url
@@ -177,7 +180,7 @@ const normalizeNode = (node = {}) => {
 // eslint-disable-next-line react-refresh/only-export-components
 export const normalizeOrgData = (data) => {
   if (!data || !data.top || !data.second || !Array.isArray(data.departments)) {
-    return initialOrgData;
+    return normalizeOrgData(initialOrgData);
   }
 
   return {
@@ -213,6 +216,10 @@ const buildChangeList = (original, current, pendingAvatarFiles) => {
   flattenNodes(current).forEach((node) => {
     const prev = originalMap.get(node.id);
     if (!prev) return;
+
+    if (prev.rank !== node.rank) {
+      changes.push({ nodeId: node.id, field: 'rank', label: 'Rank', oldValue: prev.rank || '(none)', newValue: node.rank || '(none)' });
+    }
 
     if (prev.name !== node.name) {
       changes.push({
@@ -275,10 +282,15 @@ const buildSuccessSummary = (changes) =>
       };
     }
     return {
-      headline: 'Position updated successfully.',
+      headline: `${change.label} updated successfully.`,
       detail: `${change.oldValue} was changed to ${change.newValue}.`
     };
   });
+
+const positionOptions = [...new Set([
+  initialOrgData.top.title, initialOrgData.second.title,
+  ...initialOrgData.departments.flatMap(department => [department.title, ...department.units.map(unit => unit.title)])
+])].map(value => ({ value, label: value }));
 
 export const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
   const fallbackAvatar = useMemo(() => buildAvatarPlaceholder(node.name), [node.name]);
@@ -307,6 +319,8 @@ export const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) =>
       {editMode ? (
         <>
           <div className="org-edit-fields">
+            <OrgSelectField label="Rank" value={node.rank} options={ORG_RANK_OPTIONS}
+              disabled={!canEdit} onChange={value => onChange(node.id, 'rank', value)} />
             <label className="org-edit-field">
               <span>Full name</span>
               <input
@@ -317,16 +331,8 @@ export const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) =>
                 onChange={(event) => onChange(node.id, 'name', event.target.value)}
               />
             </label>
-            <label className="org-edit-field">
-              <span>Position</span>
-              <input
-                className="org-input"
-                type="text"
-                value={node.title}
-                disabled={!canEdit}
-                onChange={(event) => onChange(node.id, 'title', event.target.value)}
-              />
-            </label>
+            <OrgSelectField label="Position" value={node.title} options={positionOptions}
+              disabled={!canEdit} onChange={value => onChange(node.id, 'title', value)} />
           </div>
           {canEdit && (
             <>
@@ -351,10 +357,11 @@ export const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) =>
           )}
         </>
       ) : (
-        <>
+        <div className="org-person-info">
+          <p className="org-rank">{node.rank || '\u00a0'}</p>
           <p className="org-name" title={node.name} aria-label={node.name}>{node.name}</p>
           <p className="org-title" title={node.title} aria-label={node.title}>{node.title}</p>
-        </>
+        </div>
       )}
     </div>
   );
@@ -379,7 +386,7 @@ const OrgChangeLine = ({ change }) => {
 export default function Chart() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editMode, setEditMode] = useState(false);
-  const [orgData, setOrgData] = useState(initialOrgData);
+  const [orgData, setOrgData] = useState(() => normalizeOrgData(initialOrgData));
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingChart, setIsLoadingChart] = useState(true);
   const [lastEditedAt, setLastEditedAt] = useState(null);

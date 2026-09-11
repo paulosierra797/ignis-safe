@@ -46,33 +46,37 @@
 
 .org-tree .org-card {
   width: 100%; min-width: 0; max-width: none;
-  display: grid; grid-template-columns: 64px minmax(0, 1fr);
+  display: grid; grid-template-columns: 80px minmax(0, 1fr);
   gap: 4px 12px; align-content: center; align-items: center;
   text-align: left; padding: 12px 0; background: #fff;
   border-radius: 0; box-shadow: none; transition: none;
 }
 .org-tree .org-avatar {
-  grid-row: span 2; width: 64px; height: 64px; margin: 0;
+  grid-row: auto; width: 80px; height: 80px; margin: 0;
   border: 2px solid #fff; box-shadow: 0 0 0 2px #b91c1c;
 }
 .org-tree .org-name {
   min-width: 0; max-width: none; width: 100%; margin: 0; padding: 0;
   border-radius: 0; background: none; box-shadow: none;
-  color: #202731; font-size: 14px; line-height: 1.45; letter-spacing: 0;
+  color: #202731; font-size: 16px; line-height: 1.45; letter-spacing: 0;
   align-self: end;
 }
 .org-tree .org-title {
   min-width: 0; max-width: none; margin: 0; padding: 0;
-  font-size: 12px; line-height: 1.5; color: #991b1b;
+  font-size: 14px; line-height: 1.5; color: #525d6c;
   align-self: start;
 }
 .org-tree-leader > .org-card {
-  max-width: 320px; grid-template-columns: 88px minmax(0, 1fr);
+  max-width: 400px; grid-template-columns: 104px minmax(0, 1fr);
   padding: 16px 12px; gap: 4px 16px;
 }
-.org-tree-leader .org-avatar { width: 88px; height: 88px; }
-.org-tree-unit .org-card { grid-template-columns: 44px minmax(0, 1fr); gap: 4px 10px; }
-.org-tree-unit .org-avatar { width: 44px; height: 44px; box-shadow: 0 0 0 1px #d6dbe1; }
+.org-tree-leader .org-avatar { width: 104px; height: 104px; }
+.org-tree-unit .org-card { grid-template-columns: 56px minmax(0, 1fr); gap: 4px 10px; }
+.org-tree-unit .org-avatar { width: 56px; height: 56px; box-shadow: 0 0 0 1px #d6dbe1; }
+.org-tree .org-rank { margin: 0; color: #991b1b; font-size: 12px; font-weight: 700; line-height: 1.4; }
+.org-person-info { display: grid; gap: 4px; min-width: 0; }
+.org-choice-field { display: grid; gap: 8px; min-width: 0; }
+.org-tree select.org-input { text-align: left; text-overflow: ellipsis; }
 .org-tree .org-card.org-card-editing {
   display: flex; width: 100%; min-width: 0; max-width: none;
   padding: 16px; border: 1px solid #d6dbe1; border-radius: 8px;
@@ -102,11 +106,13 @@
   .org-tree-branch:last-child::before {
     left: 0; right: auto; top: 0; bottom: 0; border-top: 0; border-left: 2px solid var(--org-line);
   }
-  .org-tree-branch:last-child::before { height: 68px; bottom: auto; }
+  .org-tree-branch:last-child::before { height: 76px; bottom: auto; }
   .org-tree-branch::after { display: none; }
   .org-tree-department::before {
-    content: ''; position: absolute; top: 44px; left: -20px; width: 20px; border-top: 2px solid var(--org-line);
+    content: ''; position: absolute; top: 52px; left: -20px; width: 20px; border-top: 2px solid var(--org-line);
   }
   .org-tree-units { margin-left: 12px; }
   .org-tree .org-card-editing .org-input { font-size: 16px; }
+  .org-tree-leader > .org-card { grid-template-columns: 80px minmax(0, 1fr); padding-inline: 0; gap: 4px 12px; }
+  .org-tree-leader .org-avatar { width: 80px; height: 80px; }
 }

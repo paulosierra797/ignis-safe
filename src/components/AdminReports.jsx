@@ -1,7 +1,9 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { FiAlertTriangle, FiCheckCircle, FiEye, FiMoreHorizontal, FiX, FiXCircle } from 'react-icons/fi';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import RecordActions from './RecordActions';
+import { FiAlertTriangle, FiCheckCircle, FiEye, FiX, FiXCircle } from 'react-icons/fi';
 import Sidebar from './Sidebar';
+import Pagination from './Pagination';
+import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
 import { formatStatusLabel } from '../utils/statusUtils';
 import {
@@ -24,7 +26,6 @@ const REPORT_ACTIONS = [
   { value: 'rejected', label: 'Reject', icon: FiXCircle, tone: 'reject' }
 ];
 
-const REPORT_ACTION_MENU_WIDTH = 220;
 
 const formatDateTime = (value) => {
   if (!value) return '-';
@@ -200,158 +201,10 @@ function AttachedFilesModal({ report, onClose }) {
 }
 
 function ReportActionsMenu({ report, isBusy, onStatusChange }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState(null);
-  const triggerRef = useRef(null);
-  const menuRef = useRef(null);
-
-  const closeMenu = useCallback((restoreFocus = false) => {
-    setMenuPosition(null);
-    setIsOpen(false);
-    if (restoreFocus) {
-      triggerRef.current?.focus();
-    }
-  }, []);
-
-  const updateMenuPosition = useCallback(() => {
-    if (!triggerRef.current || !isOpen) return;
-
-    const triggerRect = triggerRef.current.getBoundingClientRect();
-    const menuHeight = menuRef.current?.getBoundingClientRect().height || 144;
-    const viewportPadding = 12;
-    const gap = 8;
-    const openAbove = triggerRect.bottom + gap + menuHeight > window.innerHeight - viewportPadding;
-    const preferredTop = openAbove
-      ? triggerRect.top - menuHeight - gap
-      : triggerRect.bottom + gap;
-    const top = Math.min(
-      Math.max(preferredTop, viewportPadding),
-      Math.max(viewportPadding, window.innerHeight - menuHeight - viewportPadding)
-    );
-    const left = Math.min(
-      Math.max(triggerRect.right - REPORT_ACTION_MENU_WIDTH, viewportPadding),
-      Math.max(viewportPadding, window.innerWidth - REPORT_ACTION_MENU_WIDTH - viewportPadding)
-    );
-
-    setMenuPosition({ top, left });
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return undefined;
-
-    updateMenuPosition();
-
-    const handleOutsidePointer = (event) => {
-      if (
-        !triggerRef.current?.contains(event.target) &&
-        !menuRef.current?.contains(event.target)
-      ) {
-        closeMenu();
-      }
-    };
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        closeMenu(true);
-      }
-    };
-
-    const handleViewportChange = () => updateMenuPosition();
-
-    document.addEventListener('pointerdown', handleOutsidePointer);
-    document.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('resize', handleViewportChange);
-    window.addEventListener('scroll', handleViewportChange, true);
-
-    return () => {
-      document.removeEventListener('pointerdown', handleOutsidePointer);
-      document.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', handleViewportChange);
-      window.removeEventListener('scroll', handleViewportChange, true);
-    };
-  }, [closeMenu, isOpen, updateMenuPosition]);
-
-  useEffect(() => {
-    if (isOpen && menuPosition) {
-      menuRef.current?.querySelector('[role="menuitem"]')?.focus();
-    }
-  }, [isOpen, menuPosition]);
-
-  const handleMenuKeyDown = (event) => {
-    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-
-    const menuItems = Array.from(menuRef.current?.querySelectorAll('[role="menuitem"]') || []);
-    if (menuItems.length === 0) return;
-
-    event.preventDefault();
-    const currentIndex = menuItems.indexOf(document.activeElement);
-    let nextIndex = currentIndex;
-
-    if (event.key === 'Home') nextIndex = 0;
-    if (event.key === 'End') nextIndex = menuItems.length - 1;
-    if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % menuItems.length;
-    if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + menuItems.length) % menuItems.length;
-
-    menuItems[nextIndex]?.focus();
-  };
-
-  return (
-    <div className="admin-reports-actions">
-      <button
-        ref={triggerRef}
-        type="button"
-        className="admin-report-action-trigger"
-        aria-label={`Open actions for ${report.title || 'report'}`}
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        title="Report actions"
-        disabled={isBusy}
-        onClick={() => {
-          setMenuPosition(null);
-          setIsOpen((open) => !open);
-        }}
-      >
-        <FiMoreHorizontal aria-hidden="true" />
-      </button>
-
-      {isOpen && createPortal(
-        <div
-          ref={menuRef}
-          className="admin-report-action-menu"
-          role="menu"
-          aria-label={`Actions for ${report.title || 'report'}`}
-          onKeyDown={handleMenuKeyDown}
-          style={{
-            top: menuPosition?.top ?? 0,
-            left: menuPosition?.left ?? 0,
-            visibility: menuPosition ? 'visible' : 'hidden'
-          }}
-        >
-          {REPORT_ACTIONS.map((action) => {
-            const ActionIcon = action.icon;
-
-            return (
-              <button
-                key={action.value}
-                type="button"
-                role="menuitem"
-                className={`admin-report-action-menu-item action-${action.tone}`}
-                onClick={() => {
-                  closeMenu();
-                  onStatusChange(report, action.value);
-                }}
-              >
-                <ActionIcon aria-hidden="true" />
-                <span>{action.label}</span>
-              </button>
-            );
-          })}
-        </div>,
-        document.body
-      )}
-    </div>
-  );
+  return <RecordActions label={`Actions for ${report.title || 'report'}`} disabled={isBusy} actions={REPORT_ACTIONS.map(action => ({
+    key: action.value, label: action.label, icon: <action.icon aria-hidden="true" />,
+    destructive: action.tone === 'reject', onSelect: () => onStatusChange(report, action.value)
+  }))} />;
 }
 
 export default function AdminReports() {
@@ -466,6 +319,8 @@ export default function AdminReports() {
     return statusOk && searchOk;
   });
 
+  const reportPages = usePagination(filteredReports, searchQuery + statusFilter);
+
   const submittedCount = reports.filter((report) => String(report.status || '').toLowerCase() === 'submitted').length;
   const reviewCount = reports.filter((report) => String(report.status || '').toLowerCase() === 'under_review').length;
   const approvedCount = reports.filter((report) => String(report.status || '').toLowerCase() === 'approved').length;
@@ -576,7 +431,7 @@ export default function AdminReports() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredReports.map((report) => {
+                    {reportPages.items.map((report) => {
                       const isBusy = processingId === report.report_id;
                       return (
                         <tr key={report.report_id}>
@@ -611,7 +466,7 @@ export default function AdminReports() {
               </div>
 
               <div className="admin-reports-mobile-list">
-                {filteredReports.map((report) => {
+                {reportPages.items.map((report) => {
                   const isBusy = processingId === report.report_id;
 
                   return (
@@ -715,6 +570,7 @@ export default function AdminReports() {
             </div>
           )}
 
+          <Pagination {...reportPages} label="Report pages" />
           {filesModalReport && (
             <AttachedFilesModal
               report={filesModalReport}

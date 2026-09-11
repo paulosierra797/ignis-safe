@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useBlocker, useSearchParams } from 'react-router-dom';
 import { FaCheckCircle, FaChevronDown, FaEye, FaSearch, FaTimes, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import ArchiveButton from './ArchiveButton';
 import RecordActions from './RecordActions';
+import Pagination from './Pagination';
+import usePagination from '../hooks/usePagination';
 import {
   FiBriefcase,
   FiCalendar,
@@ -68,7 +69,6 @@ const GMAIL_VALIDATION_ERROR = 'Please enter a valid Gmail address ending in @gm
 const isValidGmailAddress = (value) => gmailAddressRegex.test(String(value || '').trim());
 const ADD_PERSONNEL_TIMEOUT_MS = 30000;
 const CALENDAR_WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const REQUEST_PREVIEW_LIMIT = 3;
 const ACCOUNTS_TABS = [
   { key: 'schedule', label: 'Personnel Schedule' },
   { key: 'personnel', label: 'Personnel Directory' },
@@ -76,7 +76,7 @@ const ACCOUNTS_TABS = [
   { key: 'profile-changes', label: 'Profile Change Requests' }
 ];
 const ACCOUNTS_TAB_KEYS = ACCOUNTS_TABS.map((tab) => tab.key);
-const ACCOUNT_PAGE_SIZE = 5;
+const ACCOUNT_PAGE_SIZE = 10;
 const SERVICE_STATUS_OPTIONS = ['Active', 'Retired', 'Resigned', 'Separated', 'Dismissed', 'Deceased'];
 const EMPTY_PERSONNEL_FORM = {
   first_name: '',
@@ -623,172 +623,8 @@ const toIsoDate = (date) => {
 
 
 
-const ACCOUNT_ACTION_MENU_WIDTH = 220;
-
 function RowActionsMenu({ ariaLabel, actions }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState(null);
-  const triggerRef = useRef(null);
-  const menuRef = useRef(null);
-
-  const updateMenuPosition = useCallback(() => {
-    if (!triggerRef.current || !isOpen) {
-      return;
-    }
-
-    const triggerRect = triggerRef.current.getBoundingClientRect();
-    const menuHeight = menuRef.current?.getBoundingClientRect().height || Math.max(136, actions.length * 42 + 12);
-    const viewportPadding = 12;
-    const gap = 8;
-    const openAbove = triggerRect.bottom + gap + menuHeight > window.innerHeight - viewportPadding;
-    const preferredTop = openAbove
-      ? triggerRect.top - menuHeight - gap
-      : triggerRect.bottom + gap;
-    const top = Math.min(
-      Math.max(preferredTop, viewportPadding),
-      Math.max(viewportPadding, window.innerHeight - menuHeight - viewportPadding)
-    );
-    const left = Math.min(
-      Math.max(triggerRect.right - ACCOUNT_ACTION_MENU_WIDTH, viewportPadding),
-      Math.max(viewportPadding, window.innerWidth - ACCOUNT_ACTION_MENU_WIDTH - viewportPadding)
-    );
-
-    setMenuPosition({ top, left });
-  }, [actions.length, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return undefined;
-    }
-
-    updateMenuPosition();
-
-    const handleOutsidePointer = (event) => {
-      if (
-        !triggerRef.current?.contains(event.target) &&
-        !menuRef.current?.contains(event.target)
-      ) {
-        setMenuPosition(null);
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        setMenuPosition(null);
-        setIsOpen(false);
-        triggerRef.current?.focus();
-      }
-    };
-
-    const handleViewportChange = () => updateMenuPosition();
-
-    document.addEventListener('pointerdown', handleOutsidePointer);
-    document.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('resize', handleViewportChange);
-    window.addEventListener('scroll', handleViewportChange, true);
-
-    return () => {
-      document.removeEventListener('pointerdown', handleOutsidePointer);
-      document.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', handleViewportChange);
-      window.removeEventListener('scroll', handleViewportChange, true);
-    };
-  }, [isOpen, updateMenuPosition]);
-
-  useEffect(() => {
-    if (isOpen && menuPosition) {
-      menuRef.current?.querySelector('[role="menuitem"]')?.focus();
-    }
-  }, [isOpen, menuPosition]);
-
-  const handleMenuToggle = () => {
-    setMenuPosition(null);
-    setIsOpen((open) => !open);
-  };
-
-  return (
-    <>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="account-action-menu-trigger"
-        aria-label={ariaLabel}
-        aria-haspopup="menu"
-        aria-expanded={isOpen}
-        onClick={handleMenuToggle}
-      >
-        <span aria-hidden="true">...</span>
-      </button>
-
-      {isOpen && createPortal(
-        <div
-          ref={menuRef}
-          className="account-action-menu"
-          role="menu"
-          aria-label="Personnel actions"
-          style={{
-            top: menuPosition?.top ?? 0,
-            left: menuPosition?.left ?? 0,
-            visibility: menuPosition ? 'visible' : 'hidden'
-          }}
-        >
-          {actions.map((action) => (
-            <button
-              key={action.key}
-              type="button"
-              role="menuitem"
-              className={`account-action-menu-item${action.destructive ? ' is-destructive' : ''}`}
-              disabled={action.disabled}
-              onClick={() => {
-                if (action.disabled) return;
-                setMenuPosition(null);
-                setIsOpen(false);
-                action.onSelect();
-              }}
-            >
-              {action.icon && (
-                <span className="account-action-menu-item-icon" aria-hidden="true">
-                  {action.icon}
-                </span>
-              )}
-              <span className="account-action-menu-item-label">{action.label}</span>
-            </button>
-          ))}
-        </div>,
-        document.body
-      )}
-    </>
-  );
-}
-
-function RequestSectionToggle({ expanded, itemCount, label, onToggle }) {
-  if (itemCount <= REQUEST_PREVIEW_LIMIT) {
-    return null;
-  }
-
-  return (
-    <div className="request-section-toggle-row">
-      <button
-        type="button"
-        className="request-section-toggle"
-        aria-expanded={expanded}
-        aria-label={`${expanded ? 'Collapse' : 'Expand'} ${label}`}
-        onClick={onToggle}
-      >
-        <span>{expanded ? 'Collapse' : 'Expand'}</span>
-        <span className={`request-section-toggle-icon${expanded ? ' is-expanded' : ''}`} aria-hidden="true">
-          <FaChevronDown />
-        </span>
-      </button>
-      {!expanded && (
-        <span className="request-section-preview-note">
-          Showing the latest {REQUEST_PREVIEW_LIMIT} {label}
-        </span>
-      )}
-    </div>
-  );
+  return <RecordActions label={ariaLabel} actions={actions} />;
 }
 
 function ProfileRequestChanges({ request }) {
@@ -836,18 +672,15 @@ function AccountDirectoryGroup({
   description,
   accounts,
   totalCount,
-  startIndex = 1,
   emptyMessage,
   getAccountActions,
   isOnLeave,
   formatLeaveDate,
   variant,
   page,
-  totalPages,
   onPageChange,
   onViewStatus,
 }) {
-  const rangeEnd = accounts.length > 0 ? startIndex + accounts.length - 1 : 0;
 
   return (
     <section className={`account-directory-group account-directory-group-${variant}`}>
@@ -932,30 +765,7 @@ function AccountDirectoryGroup({
         </div>
       )}
 
-      {totalCount > 0 && (
-        <div className="accounts-directory-pagination" aria-label={`${title} pagination`}>
-          <p>
-            Showing {startIndex}-{rangeEnd} of {totalCount} {title.toLowerCase()}
-          </p>
-          <div className="accounts-directory-page-controls">
-            <button
-              type="button"
-              onClick={() => onPageChange(Math.max(1, page - 1))}
-              disabled={page === 1}
-            >
-              Previous
-            </button>
-            <span>Page {page} of {totalPages}</span>
-            <button
-              type="button"
-              onClick={() => onPageChange(Math.min(totalPages, page + 1))}
-              disabled={page === totalPages}
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
+      <Pagination page={page} totalItems={totalCount} onPageChange={onPageChange} label={`${title} pages`} />
     </section>
   );
 }
@@ -1021,13 +831,6 @@ export default function Accounts() {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [personnelPage, setPersonnelPage] = useState(1);
   const [adminPage, setAdminPage] = useState(1);
-  const [expandedRequestSections, setExpandedRequestSections] = useState({
-    pendingLeave: false,
-    leaveHistory: false,
-    pendingProfile: false,
-    profileHistory: false,
-    personnelHistory: false
-  });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddExitConfirmOpen, setIsAddExitConfirmOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
@@ -1830,23 +1633,17 @@ export default function Accounts() {
     return matchesProfileHistorySearch(request, profileHistorySearch.trim().toLowerCase());
   });
 
-  const getVisibleRequestItems = (items, sectionKey) => (
-    expandedRequestSections[sectionKey]
-      ? items
-      : items.slice(0, REQUEST_PREVIEW_LIMIT)
-  );
-  const visiblePendingLeaveRequests = getVisibleRequestItems(pendingLeaveRequests, 'pendingLeave');
-  const visibleLeaveRequestHistory = getVisibleRequestItems(filteredLeaveRequestHistory, 'leaveHistory');
-  const visiblePendingProfileChangeRequests = getVisibleRequestItems(pendingProfileChangeRequests, 'pendingProfile');
-  const visibleProfileChangeHistory = getVisibleRequestItems(filteredProfileChangeHistory, 'profileHistory');
-  const visiblePersonnelAccountHistory = getVisibleRequestItems(filteredPersonnelAccountHistory, 'personnelHistory');
-
-  const toggleRequestSection = (sectionKey) => {
-    setExpandedRequestSections((current) => ({
-      ...current,
-      [sectionKey]: !current[sectionKey]
-    }));
-  };
+  const archivePages = usePagination(requestArchiveType === 'leave' ? archivedLeaveRequests : archivedProfileChangeRequests, requestArchiveType);
+  const pendingLeavePages = usePagination(pendingLeaveRequests);
+  const leaveHistoryPages = usePagination(filteredLeaveRequestHistory, leaveHistorySearch + leaveHistoryStatusFilter);
+  const pendingProfilePages = usePagination(pendingProfileChangeRequests);
+  const profileHistoryPages = usePagination(filteredProfileChangeHistory, profileHistorySearch + profileHistoryStatusFilter);
+  const personnelHistoryPages = usePagination(filteredPersonnelAccountHistory, personnelHistorySearch + personnelHistoryActionFilter);
+  const visiblePendingLeaveRequests = pendingLeavePages.items;
+  const visibleLeaveRequestHistory = leaveHistoryPages.items;
+  const visiblePendingProfileChangeRequests = pendingProfilePages.items;
+  const visibleProfileChangeHistory = profileHistoryPages.items;
+  const visiblePersonnelAccountHistory = personnelHistoryPages.items;
 
   const handleApproveProfileChangeRequest = async (request) => {
     if (!request?.request_id || processingProfileRequestId) {
@@ -3843,12 +3640,7 @@ const permissions = getDefaultPermissions(formData.role);
     );
   })}
 </div>
-          <RequestSectionToggle
-            expanded={expandedRequestSections.pendingLeave}
-            itemCount={pendingLeaveRequests.length}
-            label="leave requests"
-            onToggle={() => toggleRequestSection('pendingLeave')}
-          />
+          <Pagination {...pendingLeavePages} label="Pending leave request pages" />
               </div>
             </div>
 
@@ -3963,12 +3755,7 @@ const permissions = getDefaultPermissions(formData.role);
               </table>
             </div>
           )}
-          <RequestSectionToggle
-            expanded={expandedRequestSections.leaveHistory}
-            itemCount={filteredLeaveRequestHistory.length}
-            label="history entries"
-            onToggle={() => toggleRequestSection('leaveHistory')}
-          />
+          <Pagination {...leaveHistoryPages} label="Leave history pages" />
               </div>
             </div>
           </div>
@@ -4103,12 +3890,7 @@ const permissions = getDefaultPermissions(formData.role);
               );
             })}
           </div>
-          <RequestSectionToggle
-            expanded={expandedRequestSections.pendingProfile}
-            itemCount={pendingProfileChangeRequests.length}
-            label="profile requests"
-            onToggle={() => toggleRequestSection('pendingProfile')}
-          />
+          <Pagination {...pendingProfilePages} label="Pending profile request pages" />
               </div>
             </div>
 
@@ -4262,12 +4044,7 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
             ))}
           </div>
-          <RequestSectionToggle
-            expanded={expandedRequestSections.profileHistory}
-            itemCount={filteredProfileChangeHistory.length}
-            label="history entries"
-            onToggle={() => toggleRequestSection('profileHistory')}
-          />
+          <Pagination {...profileHistoryPages} label="Profile history pages" />
               </div>
             </div>
           </div>
@@ -4480,12 +4257,7 @@ const permissions = getDefaultPermissions(formData.role);
                   </table>
                 </div>
               )}
-              <RequestSectionToggle
-                expanded={expandedRequestSections.personnelHistory}
-                itemCount={filteredPersonnelAccountHistory.length}
-                label="history entries"
-                onToggle={() => toggleRequestSection('personnelHistory')}
-              />
+              <Pagination {...personnelHistoryPages} label="Personnel history pages" />
           </div>
         </section>
         </>
@@ -5802,10 +5574,7 @@ const permissions = getDefaultPermissions(formData.role);
                     <p className="leave-approval-empty">No archived requests.</p>
                   ) : (
                     <div className="request-archive-list">
-                      {(requestArchiveType === 'leave'
-                        ? archivedLeaveRequests
-                        : archivedProfileChangeRequests
-                      ).map((request) => (
+                      {archivePages.items.map((request) => (
                         <article className="request-archive-item" key={request.request_id}>
                           <div className="request-archive-item-main">
                             <div className="request-archive-item-heading">
@@ -5832,7 +5601,7 @@ const permissions = getDefaultPermissions(formData.role);
                             </small>
                           </div>
 
-                          <button
+                          <RecordActions label="Archived request actions"><button
                             type="button"
                             className="request-restore-button"
                             onClick={() => handleRestoreHistoryItem(requestArchiveType, request)}
@@ -5841,12 +5610,13 @@ const permissions = getDefaultPermissions(formData.role);
                           >
                             <FaUndo aria-hidden="true" />
                             {processingArchiveRequestId === request.request_id ? 'Restoring...' : 'Restore'}
-                          </button>
+                          </button></RecordActions>
                         </article>
                       ))}
                     </div>
                   )
                 )}
+                <Pagination {...archivePages} label="Archived request pages" />
               </div>
             </div>
           </div>

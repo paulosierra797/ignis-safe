@@ -31,6 +31,8 @@ import {
 import './Announcements.css';
 import './AnnouncementHistory.css';
 import RecordActions from './RecordActions';
+import Pagination from './Pagination';
+import usePagination from '../hooks/usePagination';
 import { matchesSpecificRecipient } from '../utils/announcementHistoryFilters';
 
 const AUDIENCE_OPTIONS = [
@@ -178,15 +180,13 @@ export default function Announcements() {
   const [archivedAudienceFilter, setArchivedAudienceFilter] = useState('all');
   const [archivedSortField, setArchivedSortField] = useState('date'); // 'date' | 'title'
   const [archivedSortDir, setArchivedSortDir] = useState('desc'); // 'asc' | 'desc'
-  const [archivedListExpanded, setArchivedListExpanded] = useState(false);
   const [archivedExpandedMsgIds, setArchivedExpandedMsgIds] = useState(() => new Set());
   const [acknowledgementModalId, setAcknowledgementModalId] = useState('');
   const [nudgingIds, setNudgingIds] = useState(() => new Set());
   const [nudgeCooldownUntilById, setNudgeCooldownUntilById] = useState(() => new Map());
   const lastViewedAnnouncementsAtRef = useRef(null);
   const [unreadTrackingReady, setUnreadTrackingReady] = useState(false);
-  const ITEMS_PER_PAGE = 3;
-  const ARCHIVED_VISIBLE_LIMIT = 5;
+  const ITEMS_PER_PAGE = 10;
   const ARCHIVED_PREVIEW_LENGTH = 260;
   const [formData, setFormData] = useState(() => {
     const draft = readAnnouncementDraft();
@@ -510,13 +510,9 @@ export default function Announcements() {
     if (archivedOpen) return;
     setArchivedSearch('');
     setArchivedAudienceFilter('all');
-    setArchivedListExpanded(false);
     setArchivedExpandedMsgIds(new Set());
   }, [archivedOpen]);
 
-  useEffect(() => {
-    setArchivedListExpanded(false);
-  }, [archivedSearch, archivedSortField, archivedSortDir, archivedAudienceFilter]);
 
   const getAudienceCount = useCallback((records, audience) => (
     audience === 'all'
@@ -562,10 +558,8 @@ export default function Announcements() {
     return filtered;
   }, [archivedAnnouncements, archivedSearch, archivedSortField, archivedSortDir, archivedAudienceFilter, isAdmin]);
 
-  const visibleArchivedAnnouncements =
-    archivedListExpanded || sortedArchivedAnnouncements.length <= ARCHIVED_VISIBLE_LIMIT
-      ? sortedArchivedAnnouncements
-      : sortedArchivedAnnouncements.slice(0, ARCHIVED_VISIBLE_LIMIT);
+  const archivedPages = usePagination(sortedArchivedAnnouncements, JSON.stringify([archivedSearch, archivedSortField, archivedSortDir, archivedAudienceFilter, archivedOpen]));
+  const visibleArchivedAnnouncements = archivedPages.items;
 
   const toggleArchivedMessage = (announcementId) => {
     setArchivedExpandedMsgIds((prev) => {
@@ -604,8 +598,8 @@ export default function Announcements() {
     setCurrentPage(1);
   }, [searchQuery, audienceHistoryFilter, recipientSearch]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredAnnouncements.length / ITEMS_PER_PAGE));
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const safePage = Math.min(currentPage, Math.max(1, Math.ceil(filteredAnnouncements.length / ITEMS_PER_PAGE)));
+  const startIndex = (safePage - 1) * ITEMS_PER_PAGE;
   const paginatedAnnouncements = filteredAnnouncements.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   const acknowledgementModalAnnouncement = announcements.find(
     (row) => row.announcement_id === acknowledgementModalId
@@ -1534,27 +1528,7 @@ export default function Announcements() {
                 </article>
               ))}
             </div>
-            {totalPages > 1 && (
-              <div className="announcement-pagination">
-                <button
-                  className="pagination-button pagination-prev"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  aria-label="Previous page"
-                >
-                  ◀
-                </button>
-                <span className="pagination-info">Page {currentPage} of {totalPages}</span>
-                <button
-                  className="pagination-button pagination-next"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  aria-label="Next page"
-                >
-                  ▶
-                </button>
-              </div>
-            )}
+            <Pagination page={safePage} totalItems={filteredAnnouncements.length} onPageChange={setCurrentPage} label="Sent announcement pages" />
             </>
           )}
           </div>
@@ -1740,17 +1714,7 @@ export default function Announcements() {
                     </article>
                     );
                   })}
-                  {sortedArchivedAnnouncements.length > ARCHIVED_VISIBLE_LIMIT && (
-                    <button
-                      type="button"
-                      className="archived-show-more"
-                      onClick={() => setArchivedListExpanded((prev) => !prev)}
-                    >
-                      {archivedListExpanded
-                        ? 'Show less'
-                        : `Show ${sortedArchivedAnnouncements.length - ARCHIVED_VISIBLE_LIMIT} more`}
-                    </button>
-                  )}
+                  <Pagination {...archivedPages} label="Archived announcement pages" />
                   </>
                 )}
             </div>

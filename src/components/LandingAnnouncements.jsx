@@ -1,3 +1,4 @@
+import Pagination from './Pagination';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import CloseButton from './CloseButton';
 import './LandingAnnouncements.css';
@@ -74,13 +75,7 @@ export default function LandingAnnouncements() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
 
-  const getItemsPerPage = () => {
-  if (window.innerWidth < 768) return 1;
-  if (window.innerWidth < 1100) return 2;
-  return 3;
-};
-
-const [itemsPerPage, setItemsPerPage] = useState(getItemsPerPage());
+  const itemsPerPage = 10;
 
   useEffect(() => {
     const loadAnnouncements = async () => {
@@ -92,15 +87,7 @@ const [itemsPerPage, setItemsPerPage] = useState(getItemsPerPage());
 
     loadAnnouncements();
   }, []);
-  useEffect(() => {
-  const handleResize = () => {
-    setItemsPerPage(getItemsPerPage());
-  };
 
-window.addEventListener("resize", handleResize);
-
-  return () => window.removeEventListener("resize", handleResize);
-}, []);
 
   useEffect(() => {
     if (!selectedAnnouncement) return undefined;
@@ -192,27 +179,7 @@ window.addEventListener("resize", handleResize);
               </article>
             ))}
           </div>
-          {totalPages > 1 && (
-            <div className="landing-announcement-pagination">
-              <button
-                className="landing-pagination-button"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={safeCurrentPage === 1}
-                aria-label={copy.previousPage}
-              >
-                &larr;
-              </button>
-              <span className="landing-pagination-info">{copy.page} {safeCurrentPage} {copy.of} {totalPages}</span>
-              <button
-                className="landing-pagination-button"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={safeCurrentPage === totalPages}
-                aria-label={copy.nextPage}
-              >
-                &rarr;
-              </button>
-            </div>
-          )}
+          <Pagination page={safeCurrentPage} totalItems={announcements.length} onPageChange={setCurrentPage} label="Public announcement pages" />
           </>
         )}
       </div>

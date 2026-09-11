@@ -1,3 +1,5 @@
+import Pagination from './Pagination';
+import usePagination from '../hooks/usePagination';
 import React, { useEffect } from 'react';
 import { FiArrowLeft, FiBell } from 'react-icons/fi';
 import CloseButton from './CloseButton';
@@ -26,6 +28,7 @@ const formatNudgeDate = (isoDate) => {
 
 export default function AnnouncementNudgeHistoryModal({ person, onClose }) {
   const history = person?.nudge_history || [];
+  const historyPages = usePagination(history, person?.personnel_id);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -100,11 +103,11 @@ export default function AnnouncementNudgeHistoryModal({ person, onClose }) {
                   <td colSpan={3}>No nudge history available.</td>
                 </tr>
               ) : (
-                history.map((entry, index) => {
+                historyPages.items.map((entry, index) => {
                   const stamp = formatNudgeDate(entry.at);
                   return (
                     <tr key={`${person.personnel_id}-history-${index}`}>
-                      <td data-label="#">{index + 1}</td>
+                      <td data-label="#">{historyPages.offset + index + 1}</td>
                       <td data-label="Nudge Date">{stamp.date}</td>
                       <td data-label="Nudge Time">{stamp.time}</td>
                     </tr>
@@ -114,6 +117,7 @@ export default function AnnouncementNudgeHistoryModal({ person, onClose }) {
             </tbody>
           </table>
         </div>
+        <Pagination {...historyPages} label="Nudge history pages" />
       </section>
     </div>
   );

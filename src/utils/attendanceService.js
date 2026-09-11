@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { getManilaToday } from './dateUtils';
+import { readAllRows } from './readAllRows';
 
 
 export const getFaceByAdminId = async (adminId) => {
@@ -468,16 +469,8 @@ const attachSignedPhotoUrls = async (records) => {
 };
 
 export const getAttendanceRecords = async () => {
-  const { data, error } = await supabase
-    .from('attendance_records')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    throw new Error(error.message || 'Failed to fetch attendance records');
-  }
-
-  const records = (data || []).map(mapAttendanceRow);
+  const data = await readAllRows(() => supabase.from('attendance_records').select('*').order('created_at', { ascending: false }).order('id'));
+  const records = data.map(mapAttendanceRow);
   return attachSignedPhotoUrls(records);
 };
 
@@ -513,7 +506,7 @@ export const getAttendanceStatus = async ({ shiftId = 'DEFAULT', qrSessionId } =
   };
 };
 
-export const getMyAttendanceHistory = async (limit = 20) => {
+export const getMyAttendanceHistory = async (limit = Infinity) => {
   const { data: userData, error: userError } = await supabase.auth.getUser();
 
   if (userError || !userData?.user?.id) {
@@ -523,19 +516,10 @@ export const getMyAttendanceHistory = async (limit = 20) => {
   // Scope explicitly by personnel_user_id (the authenticated account's id) rather than
   // relying only on RLS - admin accounts are allowed to read every row under RLS, so an
   // admin viewing the Personnel workspace would otherwise see everyone's attendance here.
-  const { data, error } = await supabase
-    .from('attendance_records')
-    .select('*')
+  const data = await readAllRows(() => supabase.from('attendance_records').select('*')
     .eq('personnel_user_id', userData.user.id)
-    .order('attendance_date', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    throw new Error(error.message || 'Failed to load attendance history.');
-  }
-
-  const records = (data || []).map(mapAttendanceRow);
+    .order('attendance_date', { ascending: false }).order('created_at', { ascending: false }).order('id'), limit);
+  const records = data.map(mapAttendanceRow);
   return attachSignedPhotoUrls(records);
 };
 

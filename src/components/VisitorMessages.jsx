@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ArchiveButton from './ArchiveButton';
 import RecordActions from './RecordActions';
+import Pagination from './Pagination';
+import usePagination from '../hooks/usePagination';
 import {
   FiArrowLeft,
   FiArchive,
@@ -246,6 +248,8 @@ export default function VisitorMessages() {
     setError('');
   };
 
+  const conversationPages = usePagination(filteredConversations, filteredConversations.map(row => row.conversation_id).join(','));
+
   return (
     <div className="visitor-messages-page">
       <Sidebar />
@@ -342,7 +346,7 @@ export default function VisitorMessages() {
                 <div className="visitor-conversation-empty"><FiRefreshCw className="is-spinning" /> Loading conversations...</div>
               ) : filteredConversations.length === 0 ? (
                 <div className="visitor-conversation-empty"><FiMessageCircle /> No conversations found.</div>
-              ) : filteredConversations.map((conversation) => (
+              ) : conversationPages.items.map((conversation) => (
                 <button
                   key={conversation.id}
                   type="button"
@@ -374,6 +378,7 @@ export default function VisitorMessages() {
                 </button>
               ))}
             </div>
+            <Pagination {...conversationPages} label="Conversation pages" />
             </aside>
 
             <div className="visitor-thread">

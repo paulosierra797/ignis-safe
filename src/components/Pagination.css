@@ -1,0 +1,13 @@
+.list-pagination { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 10px 16px; padding: 20px 0; width: 100%; box-sizing: border-box; }
+.list-pagination-controls { display: flex; align-items: center; gap: 4px; max-width: 100%; padding: 6px 8px; border: 1px solid #e2e8f0; border-radius: 999px; background: #fff; box-shadow: 0 2px 8px rgba(15,23,42,.05); }
+.list-pagination .list-pagination-controls button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; min-width: 32px; width: 32px; height: 32px; padding: 0; border: 1px solid transparent; border-radius: 50%; background: transparent; color: #475569; font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; box-shadow: none; cursor: pointer; }
+.list-pagination .list-pagination-controls button[aria-current="page"] { background: #fef2f2; border-color: #fecaca; color: #b91c1c; }
+.list-pagination .list-pagination-controls button:hover:not(:disabled) { background: #f1f5f9; }
+.list-pagination .list-pagination-controls button:focus-visible { outline: 2px solid #b91c1c; outline-offset: 2px; }
+.list-pagination .list-pagination-controls button:disabled { opacity: .35; cursor: not-allowed; }
+.list-pagination-gap { width: 18px; text-align: center; color: #64748b; font-size: 12px; }
+.list-pagination-summary { color: #64748b; font-size: 12px; font-variant-numeric: tabular-nums; }
+@media (max-width: 480px) {
+  .list-pagination-controls { gap: 2px; padding: 6px; }
+  .list-pagination .list-pagination-controls button { flex-basis: 28px; min-width: 28px; width: 28px; height: 32px; }
+}

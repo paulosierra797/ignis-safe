@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Sidebar from './Sidebar';
+import Pagination from './Pagination';
+import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
 import './History.css';
 import { useUser } from '../context/UserContext';
@@ -112,6 +114,8 @@ export default function History() {
     return 'status-pending';
   };
 
+  const historyPages = usePagination(filteredActivities, searchQuery + filterDate);
+
   return (
     <div className="history-container">
       <Sidebar variant="personnel" />
@@ -187,9 +191,9 @@ export default function History() {
                     <td colSpan="5" className="no-data">Loading audit logs...</td>
                   </tr>
                 )}
-                {!loadingActivities && filteredActivities.map((activity, index) => (
+                {!loadingActivities && historyPages.items.map((activity, index) => (
                   <tr key={activity.log_id}>
-                    <td>{index + 1}</td>
+                    <td>{historyPages.offset + index + 1}</td>
                     <td>{activity.action}</td>
                     <td>{new Date(activity.performed_at).toLocaleString('en-US')}</td>
                     <td className="status-column">
@@ -209,10 +213,10 @@ export default function History() {
             </table>
           </div>
           <div className="history-mobile-list">
-            {filteredActivities.map((activity, index) => (
+            {historyPages.items.map((activity, index) => (
               <div className="history-card" key={activity.log_id}>
                 <div className="history-card-header">
-                  <span className="report-number">#{index + 1}</span>
+                  <span className="report-number">#{historyPages.offset + index + 1}</span>
                   <span className={`status-badge ${getStatusClass(activity.status)}`}>
                     {formatStatusLabel(activity.status)}
                   </span>
@@ -228,6 +232,7 @@ export default function History() {
               <p className="no-data">No account activity found</p>
             )}
           </div>
+          <Pagination {...historyPages} label="Activity history pages" />
         </div>
       </div>
     </div>

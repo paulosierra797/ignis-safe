@@ -658,3 +658,8 @@
     gap: 4px;
   }
 }
+.attendance-archive-confirm-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.attendance-archive-confirm-actions button { min-height: 44px; padding: 10px 20px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; font: inherit; cursor: pointer; }
+.attendance-archive-confirm-actions button:last-child { background: #b91c1c; border-color: #b91c1c; color: white; }
+.attendance-archive-confirm-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.attendance-details-modal.attendance-archive-dialog { width: min(480px, calc(100vw - 24px)); }

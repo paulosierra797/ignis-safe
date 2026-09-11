@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Sidebar from './Sidebar';
+import Pagination from './Pagination';
+import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
 import ExpandableText from './ExpandableText';
 import { useUser } from '../context/UserContext';
@@ -672,6 +674,8 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
     setExpandedDocumentsId((prev) => (prev === requestId ? null : requestId));
   };
 
+  const leavePages = usePagination(leaveHistoryRecords);
+
   return (
     <div className="personnel-ops-container">
       <Sidebar variant="personnel" />
@@ -1108,7 +1112,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
 
               {leaveHistoryRecords.length > 0 ? (
                 <div className="leave-history-list">
-                  {leaveHistoryRecords.map((item) => (
+                  {leavePages.items.map((item) => (
                     <div key={item.request_id} className="leave-history-item">
                       <LeaveRequestDetailsGrid
                         item={item}
@@ -1121,6 +1125,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
               ) : (
                 <p className="leave-history-empty">No approved or rejected leave requests yet.</p>
               )}
+              <Pagination {...leavePages} label="My leave history pages" />
             </div>
           </section>
         </div>

@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import Pagination from './Pagination';
+import RecordActions from './RecordActions';
+import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import {
@@ -134,7 +137,7 @@ const AttendancePersonnel = () => {
       try {
         const [status, history] = await Promise.all([
           getAttendanceStatus({ shiftId: stationId }),
-          getMyAttendanceHistory(20)
+          getMyAttendanceHistory()
         ]);
 
         if (!isCancelled) {
@@ -170,6 +173,8 @@ const AttendancePersonnel = () => {
       setCopyMessage('Copy failed');
     }
   };
+
+  const attendancePages = usePagination(attendanceHistory);
 
   return (
     <div className="attendance-personnel-container">
@@ -301,7 +306,7 @@ const AttendancePersonnel = () => {
                     <td colSpan="7" className="empty-state">No attendance records yet.</td>
                   </tr>
                 ) : (
-                  attendanceHistory.map((record) => (
+                  attendancePages.items.map((record) => (
                     <tr key={record.id}>
                       <td>{record.date}</td>
                       <td>{record.shiftId}</td>
@@ -314,13 +319,13 @@ const AttendancePersonnel = () => {
                         </span>
                       </td>
                       <td>
-                        <button
+                        <RecordActions label="Attendance record actions"><button
                           type="button"
                           className="attendance-details-btn"
                           onClick={() => setSelectedRecord(record)}
                         >
                           View Details
-                        </button>
+                        </button></RecordActions>
                       </td>
                     </tr>
                   ))
@@ -330,6 +335,7 @@ const AttendancePersonnel = () => {
           </div>
         </div>
 
+        <Pagination {...attendancePages} label="My attendance history pages" />
         {selectedRecord && (
           <div
             className="attendance-details-overlay"

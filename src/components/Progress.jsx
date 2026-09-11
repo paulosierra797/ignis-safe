@@ -18,6 +18,7 @@ import {
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import RecordActions from './RecordActions';
+import Pagination from './Pagination';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import './Progress.css';
@@ -99,7 +100,7 @@ const matchesCompletionFilter = (overallPercent, filterValue) => {
   return overallPercent >= range.min && overallPercent <= range.max;
 };
 
-const USERS_PER_PAGE = 5;
+const USERS_PER_PAGE = 10;
 
 export default function Progress() {
   const [progressRows, setProgressRows] = useState([]);
@@ -708,30 +709,7 @@ export default function Progress() {
   )}
 
 </div>
-          {!isLoading && filteredRows.length > USERS_PER_PAGE && (
-            <div className="progress-pagination" aria-label="User progress pagination">
-              <p>
-                Showing {`${(safePage - 1) * USERS_PER_PAGE + 1}–${Math.min(safePage * USERS_PER_PAGE, filteredRows.length)}`} of {filteredRows.length} users
-              </p>
-              <div className="progress-pagination-controls">
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
-                  disabled={safePage === 1}
-                >
-                  Previous
-                </button>
-                <span>Page {safePage} of {totalPages}</span>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
-                  disabled={safePage === totalPages}
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
+          {!isLoading && <Pagination page={safePage} totalItems={filteredRows.length} onPageChange={setCurrentPage} label="Learning profile pages" />}
         </div>
 
         {showModal && selectedUser && (

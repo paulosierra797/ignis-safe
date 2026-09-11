@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Sidebar from './Sidebar';
+import Pagination from './Pagination';
 import PageHeader from './PageHeader';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -323,29 +324,7 @@ export default function AuditLogs() {
             </tbody>
           </table>
 
-          {!loadingLogs && filteredLogs.length > 0 && (
-            <div className="audit-logs-pagination">
-              <button
-                type="button"
-                className="audit-logs-page-btn"
-                onClick={() => setCurrentPage(Math.max(1, safePage - 1))}
-                disabled={safePage === 1}
-              >
-                Previous
-              </button>
-              <span className="audit-logs-page-info">
-                Page {safePage} of {totalPages}
-              </span>
-              <button
-                type="button"
-                className="audit-logs-page-btn"
-                onClick={() => setCurrentPage(Math.min(totalPages, safePage + 1))}
-                disabled={safePage === totalPages}
-              >
-                Next
-              </button>
-            </div>
-          )}
+          {!loadingLogs && <Pagination page={safePage} totalItems={filteredLogs.length} onPageChange={setCurrentPage} label="Audit log pages" />}
         </div>
       </div>
 

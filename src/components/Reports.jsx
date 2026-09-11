@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './Reports.css';
 import Sidebar from './Sidebar';
+import Pagination from './Pagination';
+import usePagination from '../hooks/usePagination';
 import RecordActions from './RecordActions';
 import PageHeader from './PageHeader';
 import { FaTimes } from 'react-icons/fa';
@@ -405,6 +407,8 @@ export default function Reports() {
     }
   };
 
+  const reportPages = usePagination(filteredReportHistory, JSON.stringify(historyFilters));
+
   return (
     <div className="reports-page-container">
       <Sidebar variant="personnel" />
@@ -581,9 +585,9 @@ export default function Reports() {
                       <td colSpan="6" className="no-data">Loading report history...</td>
                     </tr>
                   )}
-                  {!loadingHistory && filteredReportHistory.map((report, index) => (
+                  {!loadingHistory && reportPages.items.map((report, index) => (
                     <tr key={report.report_id}>
-                      <td className="report-history-no-cell">{index + 1}</td>
+                      <td className="report-history-no-cell">{reportPages.offset + index + 1}</td>
                       <td>
                         {report.title ? <ClampedText>{report.title}</ClampedText> : '-'}
                       </td>
@@ -616,7 +620,7 @@ export default function Reports() {
             </div>
 
             <div className="report-history-mobile-list">
-              {filteredReportHistory.map((report) => (
+              {reportPages.items.map((report) => (
                 <div className="report-history-card" key={report.report_id}>
                   <div className="report-history-card-header">
                     <h3>{report.title || '-'}</h3>
@@ -639,6 +643,7 @@ export default function Reports() {
                 <p className="no-data">No reports match your search.</p>
               )}
             </div>
+            <Pagination {...reportPages} label="Report history pages" />
           </div>
         </div>
       </div>

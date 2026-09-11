@@ -1,3 +1,5 @@
+import Pagination from './Pagination';
+import usePagination from '../hooks/usePagination';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   FiBell,
@@ -83,6 +85,8 @@ export default function AnnouncementNudgeTracking({
       return String(left.name).localeCompare(String(right.name));
     });
   }, [tracking, searchQuery]);
+
+  const recipientPages = usePagination(visibleRows, searchQuery);
 
   if (tracking.length === 0) {
     return null;
@@ -186,7 +190,7 @@ export default function AnnouncementNudgeTracking({
                 <td colSpan={5} className="nudge-tracking-empty">No personnel match your search.</td>
               </tr>
             ) : (
-              visibleRows.map((person) => {
+              recipientPages.items.map((person) => {
                 const isOverdue = isPersonOverdue(person, announcement, currentTime);
 
                 return (
@@ -214,6 +218,7 @@ export default function AnnouncementNudgeTracking({
           </tbody>
         </table>
       </div>
+      <Pagination {...recipientPages} label="Recipient status pages" />
       </details>
     </section>
   );

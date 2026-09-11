@@ -1,3 +1,5 @@
+import Pagination from './Pagination';
+import usePagination from '../hooks/usePagination';
 import React, { useEffect, useMemo, useState } from 'react';
 import { FiBell, FiCheckCircle, FiClock, FiSearch, FiSend, FiUsers } from 'react-icons/fi';
 import CloseButton from './CloseButton';
@@ -80,6 +82,8 @@ export default function AnnouncementAcknowledgementModal({
         .includes(normalizedQuery)
     );
   }, [acknowledged, activeTab, pending, searchQuery]);
+
+  const recipientPages = usePagination(visiblePersonnel, activeTab + searchQuery);
 
   const personnelLeftToNudge = pending.filter(
     (person) => (cooldownUntilById.get(person.personnel_id) || 0) <= currentTime
@@ -189,7 +193,7 @@ export default function AnnouncementAcknowledgementModal({
                   : 'Everyone has acknowledged this announcement.'}
             </div>
           ) : (
-            visiblePersonnel.map((person) => {
+            recipientPages.items.map((person) => {
               const isNudging = nudgingIds.has(person.personnel_id);
               const remainingCooldown = Math.max(
                 0,
@@ -245,6 +249,7 @@ export default function AnnouncementAcknowledgementModal({
             })
           )}
         </div>
+        <Pagination {...recipientPages} label="Recipient pages" />
       </section>
 
       {historyPerson && (

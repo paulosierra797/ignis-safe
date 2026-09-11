@@ -58,20 +58,22 @@ function PreviewFrame({ width, height, onNaturalHeightChange, children }) {
     });
 
     doc.documentElement.style.margin = '0';
+    doc.documentElement.style.height = 'auto';
     doc.body.style.margin = '0';
+    doc.body.style.height = 'auto';
     doc.body.innerHTML = '';
 
     const container = doc.createElement('div');
+    container.style.display = 'flow-root';
     doc.body.appendChild(container);
     setMountNode(container);
   }, []);
 
   useEffect(() => {
     if (!mountNode || !onNaturalHeightChange) return undefined;
-    const doc = mountNode.ownerDocument;
-
     const measure = () => {
-      onNaturalHeightChange(Math.ceil(doc.documentElement.scrollHeight));
+      // Measure content, not the iframe viewport, so the frame can shrink too.
+      onNaturalHeightChange(Math.ceil(mountNode.getBoundingClientRect().height));
     };
 
     measure();
@@ -164,7 +166,7 @@ export default function LandingPreview({ content }) {
               onNaturalHeightChange={handleNaturalHeightChange}
             >
               <LandingContentPreviewProvider content={content}>
-                <div className="app" onClickCapture={blockLinkNavigation}>
+                <div className="app" style={{ minHeight: 0 }} onClickCapture={blockLinkNavigation}>
                   <Header />
                   <main id="main-content">
                     <HeroSection />

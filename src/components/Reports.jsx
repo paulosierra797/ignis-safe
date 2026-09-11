@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './Reports.css';
 import Sidebar from './Sidebar';
+import RecordActions from './RecordActions';
 import PageHeader from './PageHeader';
 import { FaTimes } from 'react-icons/fa';
 import UnsavedChangesPrompt from './UnsavedChangesPrompt';
@@ -82,7 +83,7 @@ function ReportFileAction({ report, onViewFiles }) {
 
   if (attachments.length === 1) {
     return (
-      <a
+      <RecordActions label={`Actions for ${report.title || 'report'}`}><a
         className="view-btn"
         href={attachments[0].file_url}
         target="_blank"
@@ -90,14 +91,14 @@ function ReportFileAction({ report, onViewFiles }) {
         title={attachments[0].file_name}
       >
         Open File
-      </a>
+      </a></RecordActions>
     );
   }
 
   return (
-    <button type="button" className="view-btn" onClick={() => onViewFiles(report)}>
+    <RecordActions label={`Actions for ${report.title || 'report'}`}><button type="button" className="view-btn" onClick={() => onViewFiles(report)}>
       View Files ({attachments.length})
-    </button>
+    </button></RecordActions>
   );
 }
 

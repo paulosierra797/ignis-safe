@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import RecordActions from './RecordActions';
 import {
   FiPlus, FiEdit2, FiTrash2, FiArrowUp, FiArrowDown, FiSave, FiX,
   FiChevronDown, FiChevronRight
@@ -901,6 +902,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                       </button>
                       <div className="aboutus-item-actions">
                         <ReorderButtons index={groupIndex} count={groups.length} busy={busy} onMoveUp={() => moveGroup(groupIndex, -1)} onMoveDown={() => moveGroup(groupIndex, 1)} />
+                        <RecordActions label={`Actions for ${group.title_en}`}>
                         <button type="button" className="aboutus-icon-btn" onClick={() => startEditGroup(group)} aria-label="Edit district/group" title="Edit"><FiEdit2 aria-hidden="true" /></button>
                         <button
                           type="button"
@@ -911,6 +913,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                         >
                           <FiTrash2 aria-hidden="true" />
                         </button>
+                        </RecordActions>
                       </div>
                     </div>
                   )}
@@ -946,6 +949,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                   </button>
                                   <div className="aboutus-item-actions">
                                     <ReorderButtons index={entryIndex} count={group.entries.length} busy={busy} onMoveUp={() => moveEntry(group, entryIndex, -1)} onMoveDown={() => moveEntry(group, entryIndex, 1)} />
+                                    <RecordActions label={`Actions for ${entry.name_en}`}>
                                     <button type="button" className="aboutus-icon-btn" onClick={() => startEditEntry(group.group_key, entry)} aria-label="Edit station" title="Edit"><FiEdit2 aria-hidden="true" /></button>
                                     <button
                                       type="button"
@@ -956,6 +960,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                     >
                                       <FiTrash2 aria-hidden="true" />
                                     </button>
+                                    </RecordActions>
                                   </div>
                                 </div>
                               )}
@@ -986,6 +991,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                             </div>
                                             <div className="aboutus-item-actions">
                                               <ReorderButtons index={phoneIndex} count={entry.phones.length} busy={busy} onMoveUp={() => movePhone(entry, phoneIndex, -1)} onMoveDown={() => movePhone(entry, phoneIndex, 1)} />
+                                              <RecordActions label={`Actions for ${phone.display_value}`}>
                                               <button type="button" className="aboutus-icon-btn" onClick={() => startEditPhone(entry.entry_key, phone)} aria-label="Edit phone" title="Edit"><FiEdit2 aria-hidden="true" /></button>
                                               <button
                                                 type="button"
@@ -996,6 +1002,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                               >
                                                 <FiTrash2 aria-hidden="true" />
                                               </button>
+                                              </RecordActions>
                                             </div>
                                           </>
                                         )}
@@ -1126,7 +1133,9 @@ function GeneralTextsCard({ notify, reportDirty, requestSave }) {
                     </div>
                     <div className="aboutus-item-actions">
                       <ReorderButtons index={index} count={sections.rows.length} busy={sections.busy} onMoveUp={() => sections.move(index, -1)} onMoveDown={() => sections.move(index, 1)} />
+                      <RecordActions label={`Actions for ${row.title_en}`}>
                       <button type="button" className="aboutus-icon-btn" onClick={() => sections.startEdit(row)} aria-label="Edit section" title="Edit"><FiEdit2 aria-hidden="true" /></button>
+                      </RecordActions>
                     </div>
                   </>
                 )}

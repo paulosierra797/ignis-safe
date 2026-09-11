@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ArchiveButton from './ArchiveButton';
+import RecordActions from './RecordActions';
 import {
   FiArrowLeft,
   FiArchive,
@@ -400,7 +401,7 @@ export default function VisitorMessages() {
                     )}
                     <span>{thread.conversation.visitor_label}</span>
                   </div>
-                  <div className="visitor-thread-actions">
+                  <RecordActions label="Conversation actions">
                     {archivedView ? (
                       <>
                         {thread.conversation.status === 'resolved' && (
@@ -452,7 +453,7 @@ export default function VisitorMessages() {
                         />
                       </>
                     )}
-                  </div>
+                  </RecordActions>
                 </header>
 
                 {thread.conversation.delete_after && (

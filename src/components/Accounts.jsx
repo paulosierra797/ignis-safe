@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useBlocker, useSearchParams } from 'react-router-dom';
 import { FaCheckCircle, FaChevronDown, FaEye, FaSearch, FaTimes, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import ArchiveButton from './ArchiveButton';
+import RecordActions from './RecordActions';
 import {
   FiBriefcase,
   FiCalendar,
@@ -622,7 +623,7 @@ const toIsoDate = (date) => {
 
 
 
-const ACCOUNT_ACTION_MENU_WIDTH = 196;
+const ACCOUNT_ACTION_MENU_WIDTH = 220;
 
 function RowActionsMenu({ ariaLabel, actions }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -4033,14 +4034,14 @@ const permissions = getDefaultPermissions(formData.role);
                         <td>{request.reason || '—'}</td>
                         <td>{new Date(request.requested_at).toLocaleDateString('en-US')}</td>
                         <td>
-                          <div className="profile-request-actions">
+                          <RecordActions label={`Actions for ${request.personnel_name}'s profile request`}>
                             <button
                               className="leave-approve-btn"
                               type="button"
                               onClick={() => handleApproveProfileChangeRequest(request)}
                               disabled={isProcessing}
                             >
-                              {isProcessing ? 'Processing...' : 'Approve'}
+                              <FaCheckCircle aria-hidden="true" /> {isProcessing ? 'Processing...' : 'Approve'}
                             </button>
                             <button
                               className="leave-reject-btn"
@@ -4048,9 +4049,9 @@ const permissions = getDefaultPermissions(formData.role);
                               onClick={() => handleRejectProfileChangeRequest(request)}
                               disabled={isProcessing}
                             >
-                              Reject
+                              <FaTimesCircle aria-hidden="true" /> Reject
                             </button>
-                          </div>
+                          </RecordActions>
                         </td>
                       </tr>
                     );
@@ -4082,22 +4083,22 @@ const permissions = getDefaultPermissions(formData.role);
                     {new Date(request.requested_at).toLocaleDateString('en-US')}
                   </p>
 
-                  <div className="leave-card-actions">
+                  <RecordActions label={`Actions for ${request.personnel_name}'s profile request`}>
                     <button
                       className="leave-approve-btn"
                       onClick={() => handleApproveProfileChangeRequest(request)}
                       disabled={isProcessing}
                     >
-                      Approve
+                      <FaCheckCircle aria-hidden="true" /> Approve
                     </button>
                     <button
                       className="leave-reject-btn"
                       onClick={() => handleRejectProfileChangeRequest(request)}
                       disabled={isProcessing}
                     >
-                      Reject
+                      <FaTimesCircle aria-hidden="true" /> Reject
                     </button>
-                  </div>
+                  </RecordActions>
                 </div>
               );
             })}
@@ -4196,11 +4197,13 @@ const permissions = getDefaultPermissions(formData.role);
                       <td>{request.reviewed_by_name || '—'}</td>
                       <td>
                         {request.status !== 'pending' && (
+                          <RecordActions label="Profile change history actions">
                           <ArchiveButton
                             onClick={() => requestArchiveHistoryItem('profile', request)}
                             label={`Archive profile change request for ${request.personnel_name || 'personnel'}`}
                             title="Archive request"
                           />
+                          </RecordActions>
                         )}
                       </td>
                     </tr>
@@ -4249,10 +4252,12 @@ const permissions = getDefaultPermissions(formData.role);
                 </p>
 
                 {request.status !== 'pending' && (
+                  <RecordActions label="Profile change history actions">
                   <ArchiveButton
                     label={`Archive profile change request for ${request.personnel_name || 'personnel'}`}
                     onClick={() => requestArchiveHistoryItem('profile', request)}
                   />
+                  </RecordActions>
                 )}
               </div>
             ))}

@@ -24,7 +24,7 @@ const REPORT_ACTIONS = [
   { value: 'rejected', label: 'Reject', icon: FiXCircle, tone: 'reject' }
 ];
 
-const REPORT_ACTION_MENU_WIDTH = 190;
+const REPORT_ACTION_MENU_WIDTH = 220;
 
 const formatDateTime = (value) => {
   if (!value) return '-';

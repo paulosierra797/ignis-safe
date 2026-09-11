@@ -30,6 +30,7 @@ import {
 } from '../utils/announcementsService';
 import './Announcements.css';
 import './AnnouncementHistory.css';
+import RecordActions from './RecordActions';
 import { matchesSpecificRecipient } from '../utils/announcementHistoryFilters';
 
 const AUDIENCE_OPTIONS = [
@@ -1477,7 +1478,7 @@ export default function Announcements() {
                       </span>
                     )}
 
-                    <div className="announcement-actions">
+                    <RecordActions label={`Actions for ${announcement.title}`}>
                       {!isAdmin && !announcement.acknowledged_by_current_user && (
                         <button
                           type="button"
@@ -1518,7 +1519,7 @@ export default function Announcements() {
                           Delete
                         </button>
                       )}
-                    </div>
+                    </RecordActions>
                   </div>
 
                   {isAdmin &&
@@ -1716,7 +1717,7 @@ export default function Announcements() {
                           </>
                         )}
                       </div>
-                      <div className="archived-restore-action">
+                      <RecordActions label={`Actions for archived ${announcement.title}`}>
                         <button
                           type="button"
                           className="archived-restore-button"
@@ -1735,7 +1736,7 @@ export default function Announcements() {
                             Delete
                           </button>
                         )}
-                      </div>
+                      </RecordActions>
                     </article>
                     );
                   })}

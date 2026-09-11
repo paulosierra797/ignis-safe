@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
+import RecordActions from './RecordActions';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import DatePicker from 'react-datepicker';
@@ -306,13 +307,13 @@ const AttendanceAdmin = () => {
                       </span>
                     </td>
                     <td>
-                      <button
+                      <RecordActions label="Attendance record actions"><button
                         type="button"
                         className="attendance-details-btn"
                         onClick={() => setSelectedRecord(item)}
                       >
                         View Details
-                      </button>
+                      </button></RecordActions>
                     </td>
                   </tr>
                 ))
@@ -366,13 +367,13 @@ const AttendanceAdmin = () => {
             <span className={`attendance-verification-badge ${item.verificationStatus}`}>
               {getVerificationLabel(item.verificationStatus)}
             </span>
-            <button
+            <RecordActions label="Attendance record actions"><button
               type="button"
               className="attendance-details-btn"
               onClick={() => setSelectedRecord(item)}
             >
               View Verification Details
-            </button>
+            </button></RecordActions>
           </div>
         </div>
       </div>

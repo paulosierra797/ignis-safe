@@ -17,6 +17,7 @@ import {
   FiUser,
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
+import RecordActions from './RecordActions';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import './Progress.css';
@@ -621,12 +622,14 @@ export default function Progress() {
                     <td>{formatDate(item.lastActivityAt)}</td>
                     <td title={item.lastAccessedModule}>{item.lastAccessedModule}</td>
                     <td>
+                      <RecordActions label="Learning profile actions">
                       <button
                         className="progress-view-btn"
                         onClick={() => handleViewUser(item)}
                       >
-                        VIEW
+                        View details
                       </button>
+                      </RecordActions>
                     </td>
                   </tr>
                 ))
@@ -693,12 +696,12 @@ export default function Progress() {
         </div>
 
 
-        <button
+        <RecordActions label="Learning profile actions"><button
           className="progress-view-btn"
           onClick={() => handleViewUser(item)}
         >
-          VIEW DETAILS
-        </button>
+          View details
+        </button></RecordActions>
 
       </div>
     ))

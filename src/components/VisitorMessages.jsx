@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ArchiveButton from './ArchiveButton';
 import {
   FiArrowLeft,
   FiArchive,
@@ -261,15 +262,10 @@ export default function VisitorMessages() {
               <span><strong>{inboxSummary.unread}</strong> Unread</span>
               <span><strong>{inboxSummary.open}</strong> Open</span>
             </div>
-            <button
-              type="button"
-              className="visitor-archive-view-button"
+            <ArchiveButton
               onClick={handleArchiveViewToggle}
-              aria-label="View archived conversations"
-              title="View archived conversations"
-            >
-              <FiArchive />
-            </button>
+              label="View archived conversations"
+            />
           </div>
         </section>
 
@@ -448,15 +444,12 @@ export default function VisitorMessages() {
                           {thread.conversation.status === 'resolved' ? <FiClock /> : <FiCheckCircle />}
                           {updatingStatus ? 'Updating...' : thread.conversation.status === 'resolved' ? 'Reopen' : 'Mark Resolved'}
                         </button>
-                        <button
-                          type="button"
-                          className="visitor-thread-archive-action"
+                        <ArchiveButton
+                          label="Archive conversation"
                           onClick={handleArchive}
                           disabled={updatingArchive}
-                        >
-                          <FiArchive />
-                          {updatingArchive ? 'Archiving...' : 'Archive'}
-                        </button>
+                          busy={updatingArchive}
+                        />
                       </>
                     )}
                   </div>

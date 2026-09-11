@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBlocker, useLocation } from 'react-router-dom';
-import { FiArchive, FiBell, FiFileText, FiCheckCircle, FiClock, FiEdit2, FiSearch, FiTrash2 } from 'react-icons/fi';
+import { FiBell, FiFileText, FiCheckCircle, FiClock, FiEdit2, FiSearch, FiTrash2 } from 'react-icons/fi';
+import ArchiveButton from './ArchiveButton';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
@@ -1052,19 +1053,12 @@ export default function Announcements() {
             </div>
 
             {isAnnouncementTab ? (
-              <button
-                type="button"
-                className={`archive-list-button${archivedOpen ? ' is-open' : ''}`}
+              <ArchiveButton
+                label={`View archived announcements${archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}`}
                 onClick={toggleArchivedPanel}
                 aria-expanded={archivedOpen}
                 aria-controls="announcementArchiveList"
-              >
-                <FiArchive aria-hidden="true" />
-                Archive List
-                {archivedLoaded && (
-                  <span className="archive-list-count">{archivedAnnouncements.length}</span>
-                )}
-              </button>
+              />
             ) : (
               <div className="landing-nav-toolbar" aria-label="Landing page section navigation">
                 <button
@@ -1321,19 +1315,12 @@ export default function Announcements() {
             <h2>{isAdmin ? 'Sent Announcements' : 'Announcement Feed'}</h2>
             <div className="list-card-header-actions">
               {!isAdmin && (
-                <button
-                  type="button"
-                  className={`archive-list-button${archivedOpen ? ' is-open' : ''}`}
+                <ArchiveButton
+                  label={`View archived announcements${archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}`}
                   onClick={toggleArchivedPanel}
                   aria-expanded={archivedOpen}
                   aria-controls="announcementArchiveList"
-                >
-                  <FiArchive aria-hidden="true" />
-                  Archived Announcements
-                  {archivedLoaded && (
-                    <span className="archive-list-count">{archivedAnnouncements.length}</span>
-                  )}
-                </button>
+                />
               )}
               <span className="announcement-count">{filteredAnnouncements.length} item(s)</span>
             </div>
@@ -1490,9 +1477,8 @@ export default function Announcements() {
                           Edit
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className="announcement-archive-button"
+                      <ArchiveButton
+                        label="Archive announcement"
                         onClick={() => setArchiveModalId(announcement.announcement_id)}
                         disabled={!isAdmin && !announcement.acknowledged_by_current_user}
                         title={
@@ -1500,10 +1486,7 @@ export default function Announcements() {
                             ? undefined
                             : 'Please acknowledge this announcement before archiving it.'
                         }
-                      >
-                        <FiArchive aria-hidden="true" />
-                        Archive
-                      </button>
+                      />
                       {isAdmin && (
                         <button
                           type="button"
@@ -1776,14 +1759,12 @@ export default function Announcements() {
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                className="announcement-confirm-modal-confirm"
+              <ArchiveButton
+                showLabel
+                busy={archiving}
                 onClick={handleArchiveAnnouncement}
                 disabled={archiving}
-              >
-                {archiving ? 'Archiving...' : 'Archive'}
-              </button>
+              />
             </div>
           </div>
         </div>

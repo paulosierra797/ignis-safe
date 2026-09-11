@@ -1,0 +1,63 @@
+button.archive-control.archive-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  gap: 8px;
+  border: 1px solid #b91c1c;
+  border-radius: 8px;
+  background: #b91c1c;
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+button.archive-control.archive-control > svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  margin: 0;
+  color: currentColor;
+}
+
+button.archive-control.archive-control--labelled {
+  width: auto;
+  min-width: 140px;
+  padding-inline: 16px;
+}
+
+button.archive-control.archive-control:hover:not(:disabled) {
+  background: #991b1b;
+  border-color: #991b1b;
+  color: #ffffff;
+  box-shadow: none;
+  transform: none;
+}
+
+button.archive-control.archive-control:focus-visible {
+  outline: 3px solid #1d4ed8;
+  outline-offset: 3px;
+}
+
+button.archive-control.archive-control:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.archive-control.archive-control { transition: none; }
+}

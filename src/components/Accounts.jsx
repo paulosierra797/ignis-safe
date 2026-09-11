@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useBlocker, useSearchParams } from 'react-router-dom';
-import { FaArchive, FaCheckCircle, FaChevronDown, FaEye, FaSearch, FaTimes, FaTimesCircle, FaUndo } from 'react-icons/fa';
+import { FaCheckCircle, FaChevronDown, FaEye, FaSearch, FaTimes, FaTimesCircle, FaUndo } from 'react-icons/fa';
+import ArchiveButton from './ArchiveButton';
 import {
   FiBriefcase,
   FiCalendar,
@@ -586,14 +587,10 @@ function LeaveRequestDetailsModal({
         <div className="accounts-modal-footer personnel-profile-footer">
           <button type="button" className="cancel-btn" onClick={onClose}>Close</button>
           {request.status !== 'pending' && (
-            <button
-              type="button"
-              className="save-btn leave-details-archive-btn"
+            <ArchiveButton
+              label="Archive leave request"
               onClick={() => onArchive(request)}
-            >
-              <FaArchive aria-hidden="true" />
-              Archive Request
-            </button>
+            />
           )}
         </div>
       </section>
@@ -3863,14 +3860,10 @@ const permissions = getDefaultPermissions(formData.role);
                   <span>
                     {visibleLeaveRequestHistory.length} of {filteredLeaveRequestHistory.length} shown
                   </span>
-                  <button
-                    type="button"
-                    className="request-archive-list-button"
+                  <ArchiveButton
+                    label="View archived leave requests"
                     onClick={() => openRequestArchive('leave')}
-                  >
-                    <FaArchive aria-hidden="true" />
-                    Archive List
-                  </button>
+                  />
                 </div>
               </div>
 
@@ -3952,14 +3945,15 @@ const permissions = getDefaultPermissions(formData.role);
                                 key: 'view',
                                 label: 'View Details',
                                 onSelect: () => openLeaveHistoryDetails(request)
-                              },
-                              ...(request.status !== 'pending' ? [{
-                                key: 'archive',
-                                label: 'Archive',
-                                onSelect: () => requestArchiveHistoryItem('leave', request)
-                              }] : [])
+                              }
                             ]}
                           />
+                          {request.status !== 'pending' && (
+                            <ArchiveButton
+                              label={`Archive leave request for ${request.personnel_name || 'personnel'}`}
+                              onClick={() => requestArchiveHistoryItem('leave', request)}
+                            />
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -4126,14 +4120,10 @@ const permissions = getDefaultPermissions(formData.role);
                   <span>
                     {visibleProfileChangeHistory.length} of {filteredProfileChangeHistory.length} shown
                   </span>
-                  <button
-                    type="button"
-                    className="request-archive-list-button"
+                  <ArchiveButton
+                    label="View archived profile change requests"
                     onClick={() => openRequestArchive('profile')}
-                  >
-                    <FaArchive aria-hidden="true" />
-                    Archive List
-                  </button>
+                  />
                 </div>
               </div>
 
@@ -4206,15 +4196,11 @@ const permissions = getDefaultPermissions(formData.role);
                       <td>{request.reviewed_by_name || '—'}</td>
                       <td>
                         {request.status !== 'pending' && (
-                          <button
-                            type="button"
-                            className="request-row-icon-button"
+                          <ArchiveButton
                             onClick={() => requestArchiveHistoryItem('profile', request)}
-                            aria-label={`Archive profile change request for ${request.personnel_name || 'personnel'}`}
+                            label={`Archive profile change request for ${request.personnel_name || 'personnel'}`}
                             title="Archive request"
-                          >
-                            <FaArchive aria-hidden="true" />
-                          </button>
+                          />
                         )}
                       </td>
                     </tr>
@@ -4263,14 +4249,10 @@ const permissions = getDefaultPermissions(formData.role);
                 </p>
 
                 {request.status !== 'pending' && (
-                  <button
-                    type="button"
-                    className="request-mobile-archive-button"
+                  <ArchiveButton
+                    label={`Archive profile change request for ${request.personnel_name || 'personnel'}`}
                     onClick={() => requestArchiveHistoryItem('profile', request)}
-                  >
-                    <FaArchive aria-hidden="true" />
-                    Archive
-                  </button>
+                  />
                 )}
               </div>
             ))}
@@ -5993,7 +5975,9 @@ const permissions = getDefaultPermissions(formData.role);
                 <button className="accounts-modal-draft" onClick={closeConfirmActionModal} disabled={isConfirmActionProcessing}>
                   Cancel
                 </button>
-        <button
+        {pendingConfirmAction.action === 'archive-request-history' ? (
+          <ArchiveButton showLabel onClick={confirmActionModal} busy={isConfirmActionProcessing} />
+        ) : <button
           className={
             ['remove-shift-assignment', 'save-cleared-shift-schedule'].includes(pendingConfirmAction.action)
               ? 'accounts-modal-add'
@@ -6007,7 +5991,7 @@ const permissions = getDefaultPermissions(formData.role);
                       ? 'Saving...'
                       : 'Processing...'
                     : pendingConfirmAction.confirmLabel}
-                </button>
+                </button>}
               </div>
             </div>
           </div>

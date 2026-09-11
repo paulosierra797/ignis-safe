@@ -92,7 +92,7 @@ export default function AnnouncementNudgeTracking({
   const announcementDeadlineTime = announcementDeadline
     ? new Date(announcementDeadline).getTime()
     : NaN;
-  const isAnnouncementOverdue = Number.isFinite(announcementDeadlineTime) &&
+  const isAnnouncementOverdue = hasPendingPeople && Number.isFinite(announcementDeadlineTime) &&
     announcementDeadlineTime <= currentTime;
 
   return (
@@ -100,16 +100,15 @@ export default function AnnouncementNudgeTracking({
       <div className="nudge-tracking-header">
         <h4 className="nudge-tracking-title">
           <FiBell aria-hidden="true" />
-          Acknowledgement / Nudge Tracking
+          Recipient activity
         </h4>
         <button
           type="button"
           className="nudge-tracking-primary-action"
           onClick={onOpenAcknowledgements}
-          disabled={!hasPendingPeople}
         >
           <FiSend aria-hidden="true" />
-          Nudge Personnel
+          Manage recipients
         </button>
       </div>
 
@@ -153,7 +152,11 @@ export default function AnnouncementNudgeTracking({
         </span>
       </div>
 
-      {tracking.length > 5 && (
+      <progress className="nudge-ack-progress" value={summary.acknowledgedCount} max={Math.max(1, summary.totalRecipients)} aria-label={`${summary.acknowledgedCount} of ${summary.totalRecipients} recipients acknowledged`} />
+
+      <details className="nudge-recipient-disclosure">
+      <summary>Recipient status ({tracking.length})</summary>
+      {tracking.length > 0 && (
         <label className="nudge-tracking-search">
           <FiSearch aria-hidden="true" />
           <span className="sr-only">Search personnel</span>
@@ -211,6 +214,7 @@ export default function AnnouncementNudgeTracking({
           </tbody>
         </table>
       </div>
+      </details>
     </section>
   );
 }

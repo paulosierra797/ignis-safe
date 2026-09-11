@@ -29,6 +29,8 @@ import {
   countAnnouncementWords
 } from '../utils/announcementsService';
 import './Announcements.css';
+import './AnnouncementHistory.css';
+import { matchesSpecificRecipient } from '../utils/announcementHistoryFilters';
 
 const AUDIENCE_OPTIONS = [
   { value: 'public', label: 'Public (all users)' },
@@ -152,6 +154,8 @@ export default function Announcements() {
   const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [audienceHistoryFilter, setAudienceHistoryFilter] = useState('all');
+  const [recipientSearchInput, setRecipientSearchInput] = useState('');
+  const [recipientSearch, setRecipientSearch] = useState('');
   const [expandedIds, setExpandedIds] = useState(() => new Set());
   const [overflowingIds, setOverflowingIds] = useState(() => new Set());
   const contentRefs = useRef({});
@@ -577,7 +581,7 @@ export default function Announcements() {
   const filteredAnnouncements = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     const audienceFiltered = isAdmin
-      ? announcements.filter((announcement) => matchesAudienceHistory(announcement, audienceHistoryFilter))
+      ? announcements.filter((announcement) => matchesAudienceHistory(announcement, audienceHistoryFilter) && matchesSpecificRecipient(announcement, recipientSearch, recipients))
       : announcements;
     if (!normalizedQuery) return audienceFiltered;
 
@@ -593,11 +597,11 @@ export default function Announcements() {
 
       return haystack.includes(normalizedQuery);
     });
-  }, [announcements, searchQuery, audienceHistoryFilter, isAdmin]);
+  }, [announcements, searchQuery, audienceHistoryFilter, isAdmin, recipientSearch, recipients]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, audienceHistoryFilter]);
+  }, [searchQuery, audienceHistoryFilter, recipientSearch]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAnnouncements.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -1310,7 +1314,7 @@ export default function Announcements() {
             />
           </div>
         ) : (
-          <div className="announcement-card list-card">
+          <div className={`announcement-card list-card${isAdmin ? ' sent-announcement-history' : ''}`}>
           <div className="list-card-header">
             <h2>{isAdmin ? 'Sent Announcements' : 'Announcement Feed'}</h2>
             <div className="list-card-header-actions">
@@ -1327,24 +1331,41 @@ export default function Announcements() {
           </div>
 
           {isAdmin && (
-            <div className="audience-history-filter-wrap">
-              <span className="audience-history-label">Audience history</span>
-              <div className="audience-history-filter" role="group" aria-label="Filter sent announcements by audience">
+            <div className="sent-history-toolbar">
+              <label className="history-audience-field">
+                <span>Audience</span>
+                <select value={audienceHistoryFilter} onChange={event => {
+                  setAudienceHistoryFilter(event.target.value);
+                  setRecipientSearch('');
+                  setRecipientSearchInput('');
+                }}>
                 {AUDIENCE_HISTORY_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`audience-history-option${audienceHistoryFilter === option.value ? ' is-active' : ''}`}
-                    onClick={() => setAudienceHistoryFilter(option.value)}
-                    aria-pressed={audienceHistoryFilter === option.value}
-                  >
-                    <span>{option.label}</span>
-                    <strong>{getAudienceCount(announcements, option.value)}</strong>
-                  </button>
+                  <option key={option.value} value={option.value}>{option.label} ({getAudienceCount(announcements, option.value)})</option>
                 ))}
-              </div>
+                </select>
+              </label>
+              <label className="history-message-field"><span>Announcement</span>
+                <input type="search" value={searchQuery} onChange={event => setSearchQuery(event.target.value)} placeholder="Search title or message" />
+              </label>
+              <form className="history-recipient-search" onSubmit={event => {
+                event.preventDefault();
+                setRecipientSearch(recipientSearchInput.trim());
+                if (recipientSearchInput.trim()) setAudienceHistoryFilter('specific_personnel');
+              }}>
+                <label><span>Specific recipient</span>
+                  <input type="search" value={recipientSearchInput} onChange={event => {
+                    setRecipientSearchInput(event.target.value);
+                    if (!event.target.value.trim()) setRecipientSearch('');
+                  }} placeholder="Search name or email" />
+                </label>
+                <button type="submit" title="Search specific recipients" aria-label="Search specific recipients"><FiSearch aria-hidden="true" /></button>
+              </form>
+              {(recipientSearch || searchQuery || audienceHistoryFilter !== 'all') && <button className="history-clear-filter" type="button" onClick={() => {
+                setAudienceHistoryFilter('all'); setRecipientSearch(''); setRecipientSearchInput(''); setSearchQuery('');
+              }}>Clear filters</button>}
             </div>
           )}
+          {isAdmin && recipientSearch && <p className="history-result-note" role="status">Sent specifically to recipients matching <strong>{recipientSearch}</strong>: {filteredAnnouncements.length} announcement(s)</p>}
 
           {loading ? (
             <div className="announcement-empty">Loading announcements...</div>
@@ -1573,21 +1594,12 @@ export default function Announcements() {
               <>
                 {isAdmin && (
                   <div className="archived-audience-history">
-                    <span className="audience-history-label">Audience history</span>
-                    <div className="audience-history-filter" role="group" aria-label="Filter archived announcements by audience">
+                    <label className="history-audience-field"><span>Audience</span>
+                    <select value={archivedAudienceFilter} onChange={event => setArchivedAudienceFilter(event.target.value)}>
                       {AUDIENCE_HISTORY_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          type="button"
-                          className={`audience-history-option${archivedAudienceFilter === option.value ? ' is-active' : ''}`}
-                          onClick={() => setArchivedAudienceFilter(option.value)}
-                          aria-pressed={archivedAudienceFilter === option.value}
-                        >
-                          <span>{option.label}</span>
-                          <strong>{getAudienceCount(archivedAnnouncements, option.value)}</strong>
-                        </button>
+                        <option key={option.value} value={option.value}>{option.label} ({getAudienceCount(archivedAnnouncements, option.value)})</option>
                       ))}
-                    </div>
+                    </select></label>
                   </div>
                 )}
                 <div className="archived-toolbar">
@@ -1747,8 +1759,9 @@ export default function Announcements() {
 
       {archiveModalId && (
         <div className="announcement-confirm-modal-overlay">
-          <div className="announcement-confirm-modal-card">
-            <h3>Archive this announcement?</h3>
+          <div className="announcement-confirm-modal-card" role="alertdialog" aria-modal="true" aria-labelledby="archiveAnnouncementTitle">
+            <div className="history-confirm-heading"><h3 id="archiveAnnouncementTitle">Archive this announcement?</h3><CloseButton label="Close archive confirmation" onClick={() => setArchiveModalId('')} disabled={archiving} /></div>
+            <p className="history-selected-title">{announcements.find(row => row.announcement_id === archiveModalId)?.title}</p>
             <p>You can restore it later from Archived Announcements.</p>
             <div className="announcement-confirm-modal-actions">
               <button
@@ -1820,8 +1833,8 @@ export default function Announcements() {
       {deleteAnnouncementId && (
         <div className="announcement-manage-modal-overlay">
           <section className="announcement-delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="deleteAnnouncementTitle">
-            <span className="announcement-delete-confirm-icon"><FiTrash2 aria-hidden="true" /></span>
-            <h2 id="deleteAnnouncementTitle">Delete this announcement?</h2>
+            <div className="history-confirm-heading"><h2 id="deleteAnnouncementTitle">Delete this announcement?</h2><CloseButton label="Close delete confirmation" onClick={() => setDeleteAnnouncementId('')} disabled={deletingAnnouncement} /></div>
+            <p className="history-selected-title">{[...announcements, ...archivedAnnouncements].find(row => row.announcement_id === deleteAnnouncementId)?.title}</p>
             <p>This permanently removes the announcement and its related recipient and acknowledgment records. This action cannot be undone.</p>
             <div className="announcement-manage-modal-actions">
               <button type="button" className="announcement-manage-cancel" onClick={() => setDeleteAnnouncementId('')} disabled={deletingAnnouncement}>Cancel</button>

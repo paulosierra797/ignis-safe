@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { FiBell } from 'react-icons/fi';
+import { FiArrowLeft, FiBell } from 'react-icons/fi';
 import CloseButton from './CloseButton';
 import './AnnouncementNudgeHistoryModal.css';
 
@@ -56,6 +56,7 @@ export default function AnnouncementNudgeHistoryModal({ person, onClose }) {
       >
         <header className="nudge-history-modal-header">
           <div>
+            <button type="button" className="nudge-history-back" onClick={onClose}><FiArrowLeft aria-hidden="true" /> Back to recipients</button>
             <span className="nudge-history-modal-eyebrow">
               <FiBell aria-hidden="true" />
               Reminder activity

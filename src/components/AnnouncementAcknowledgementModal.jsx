@@ -100,6 +100,8 @@ export default function AnnouncementAcknowledgementModal({
     >
       <section
         className="acknowledgement-modal"
+        inert={historyPerson ? true : undefined}
+        aria-hidden={historyPerson ? true : undefined}
         role="dialog"
         aria-modal="true"
         aria-labelledby="acknowledgementModalTitle"
@@ -110,7 +112,7 @@ export default function AnnouncementAcknowledgementModal({
               <FiUsers aria-hidden="true" />
               Recipient activity
             </span>
-            <h2 id="acknowledgementModalTitle">Acknowledgement Details</h2>
+            <h2 id="acknowledgementModalTitle">Manage recipients</h2>
             <p title={announcement?.title}>{announcement?.title}</p>
           </div>
           <CloseButton onClick={onClose} label="Close acknowledgement details" />
@@ -134,26 +136,12 @@ export default function AnnouncementAcknowledgementModal({
         </div>
 
         <div className="acknowledgement-toolbar">
-          <div className="acknowledgement-tabs" role="tablist" aria-label="Acknowledgement status">
-            <button
-              type="button"
-              className={activeTab === 'acknowledged' ? 'active' : ''}
-              onClick={() => setActiveTab('acknowledged')}
-              role="tab"
-              aria-selected={activeTab === 'acknowledged'}
-            >
-              Acknowledged ({acknowledged.length})
-            </button>
-            <button
-              type="button"
-              className={activeTab === 'pending' ? 'active' : ''}
-              onClick={() => setActiveTab('pending')}
-              role="tab"
-              aria-selected={activeTab === 'pending'}
-            >
-              Not Acknowledged ({pending.length})
-            </button>
-          </div>
+          <label className="acknowledgement-status-filter"><span>Status</span>
+            <select value={activeTab} onChange={event => setActiveTab(event.target.value)}>
+              <option value="pending">Pending ({pending.length})</option>
+              <option value="acknowledged">Acknowledged ({acknowledged.length})</option>
+            </select>
+          </label>
 
           <label className="acknowledgement-search">
             <FiSearch aria-hidden="true" />
@@ -191,7 +179,7 @@ export default function AnnouncementAcknowledgementModal({
           </div>
         )}
 
-        <div className="acknowledgement-list" role="tabpanel">
+        <div className="acknowledgement-list" role="region" aria-label={`${activeTab === 'pending' ? 'Pending' : 'Acknowledged'} recipients`}>
           {visiblePersonnel.length === 0 ? (
             <div className="acknowledgement-empty">
               {searchQuery.trim()

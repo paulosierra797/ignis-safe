@@ -3,11 +3,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FaArrowLeft,
   FaCheck,
-  FaEnvelope,
   FaEye,
   FaEyeSlash,
   FaKey,
-  FaLock,
   FaShieldAlt
 } from 'react-icons/fa';
 import { supabase } from '../utils/supabaseClient';
@@ -66,10 +64,10 @@ const LoginBrandPanel = ({ portal }) => {
 };
 
 const RecoveryHeader = ({ icon, kicker, title, description, tone = 'default' }) => (
-  <header className="recovery-header">
-    <span className={`recovery-header-icon recovery-header-icon--${tone}`} aria-hidden="true">
+  <header className={`recovery-header${icon ? '' : ' recovery-header--no-icon'}`}>
+    {icon && <span className={`recovery-header-icon recovery-header-icon--${tone}`} aria-hidden="true">
       {React.createElement(icon)}
-    </span>
+    </span>}
     <div className="recovery-header-copy">
       <p className="recovery-kicker">{kicker}</p>
       <h1>{title}</h1>
@@ -882,7 +880,6 @@ useEffect(() => {
           <div className="login-right">
             <div className="login-form-container recovery-card">
               <RecoveryHeader
-                icon={FaEnvelope}
                 kicker="Account recovery"
                 title="Forgot your password?"
                 description="Enter the email connected to your authorized Admin or Personnel account."
@@ -1090,9 +1087,6 @@ useEffect(() => {
           <div className="login-right">
             <div className="login-form-container">
               <div className="login-card-intro">
-                <span className="login-card-intro-icon" aria-hidden="true">
-                  <FaLock />
-                </span>
                 <div>
                   <p className="login-card-kicker">Secure access</p>
                   <h2>{displayPortal === 'personnel' ? 'Personnel Sign In' : 'Administrator Sign In'}</h2>

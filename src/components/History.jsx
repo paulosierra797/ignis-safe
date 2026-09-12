@@ -8,6 +8,7 @@ import './History.css';
 import { useUser } from '../context/UserContext';
 import { getPersonnelActivityLogs } from '../utils/activityLogService';
 import { formatStatusLabel } from '../utils/statusUtils';
+import { FaSearch, FaTimes } from 'react-icons/fa';
 
 const isSameDay = (isoValue, dateInput) => {
   if (!isoValue || !dateInput) return false;
@@ -134,11 +135,11 @@ export default function History() {
           <div className="history-filters">
             <div className="search-section">
               <label>Search Activity</label>
-              <div className="search-input-wrapper">
-                <span className="search-icon">🔍</span>
+              <div className="search-input-wrapper history-search-control">
+                <FaSearch className="history-search-icon" aria-hidden="true" />
                 <input
                   type="text"
-                  className="search-input"
+                  className="search-input history-search-input"
                   placeholder="Search by activity or details..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -155,8 +156,9 @@ export default function History() {
                   value={filterDate}
                   onChange={(e) => setFilterDate(e.target.value)}
                 />
-                <button className="clear-filters-btn" onClick={handleClearFilters}>
-                  CLEAR FILTERS
+                <button type="button" className="clear-filters-btn history-clear-filters" onClick={handleClearFilters}>
+                  <FaTimes aria-hidden="true" />
+                  <span>Clear Filters</span>
                 </button>
               </div>
             </div>

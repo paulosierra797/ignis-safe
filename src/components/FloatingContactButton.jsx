@@ -122,7 +122,13 @@ export default function FloatingContactButton() {
     return () => document.removeEventListener('keydown', escape);
   }, [open]);
 
-  return <div className="floating-contact-widget" style={position ? { left: position.left, top: position.top, right: 'auto', bottom: 'auto' } : undefined}>
+  const widgetStyle = open
+    ? undefined
+    : position
+      ? { left: position.left, top: position.top, right: 'auto', bottom: 'auto' }
+      : undefined;
+
+  return <div className={`floating-contact-widget${open ? ' is-open' : ''}`} style={widgetStyle}>
     {open && <div ref={panelRef} className="floating-contact-panel" id="floating-contact-panel" style={panelPosition}>
       <VisitorChat variant="compact" active onClose={() => { setOpen(false); buttonRef.current?.focus(); }} />
     </div>}

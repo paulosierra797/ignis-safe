@@ -1824,3 +1824,465 @@
     border-bottom: 0;
   }
 }
+
+/* Unified barangay list and detail report ------------------------------ */
+.progress-filters.progress-filters--barangays {
+  grid-template-columns: minmax(240px, 360px) auto;
+  justify-content: center;
+}
+
+.progress-table--breakdown {
+  min-width: 850px;
+}
+
+.progress-table--breakdown th:last-child,
+.progress-table--breakdown td:last-child {
+  width: 84px;
+  text-align: center;
+}
+
+.progress-barangay-view-btn,
+.progress-barangay-member-view {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.progress-barangay-view-btn:hover,
+.progress-barangay-view-btn:focus-visible,
+.progress-barangay-member-view:hover,
+.progress-barangay-member-view:focus-visible {
+  border-color: #f87171;
+  background: #fff7f7;
+  color: #b91c1c;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
+  outline: none;
+}
+
+.progress-barangay-mobile-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 0.35rem;
+  border: 1px solid #f0a0a4;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #b91c1c;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.progress-barangay-mobile-view-btn:hover,
+.progress-barangay-mobile-view-btn:focus-visible {
+  background: #fef2f2;
+  outline: 3px solid rgba(185, 28, 28, 0.1);
+  outline-offset: 1px;
+}
+
+.progress-barangay-modal {
+  width: min(96%, 1120px);
+  max-width: 1120px;
+}
+
+.progress-barangay-modal-content {
+  display: grid;
+  gap: 1rem;
+  background: #f5f7fa;
+}
+
+.progress-barangay-detail-metrics {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  overflow: hidden;
+  border: 1px solid #dfe4ea;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.progress-barangay-detail-metrics > div {
+  min-width: 0;
+  padding: 1rem;
+  border-right: 1px solid #e6eaf0;
+}
+
+.progress-barangay-detail-metrics > div:last-child {
+  border-right: 0;
+}
+
+.progress-barangay-detail-metrics span {
+  display: block;
+  min-height: 2.4em;
+  color: #667085;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.progress-barangay-detail-metrics strong {
+  display: block;
+  margin-top: 0.35rem;
+  color: #172033;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.progress-barangay-detail-metrics > div:nth-child(2) strong,
+.progress-barangay-detail-metrics > div:nth-child(4) strong {
+  color: #15803d;
+}
+
+.progress-barangay-detail-metrics > div:nth-child(5) strong {
+  color: #1d4ed8;
+}
+
+.progress-barangay-distribution,
+.progress-barangay-detail-section {
+  border: 1px solid #dfe4ea;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.progress-barangay-distribution {
+  padding: 1rem 1.1rem;
+}
+
+.progress-barangay-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 0 0.8rem;
+}
+
+.progress-barangay-detail-section > .progress-barangay-detail-heading {
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid #e6eaf0;
+}
+
+.progress-barangay-detail-heading h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: #172033;
+  font-size: 0.92rem;
+}
+
+.progress-barangay-detail-heading h3 svg {
+  color: #b91c1c;
+}
+
+.progress-barangay-detail-heading p,
+.progress-barangay-detail-heading > span {
+  margin: 0.2rem 0 0;
+  color: #667085;
+  font-size: 0.72rem;
+}
+
+.progress-barangay-detail-heading > span {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.progress-barangay-status-track {
+  display: flex;
+  width: 100%;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #e5e7eb;
+}
+
+.progress-barangay-status-track span {
+  display: block;
+  height: 100%;
+  transition: width 220ms ease;
+}
+
+.progress-barangay-status-track .is-completed,
+.progress-barangay-status-legend .is-completed i {
+  background: #16a34a;
+}
+
+.progress-barangay-status-track .is-progress,
+.progress-barangay-status-legend .is-progress i {
+  background: #f59e0b;
+}
+
+.progress-barangay-status-track .is-not-started,
+.progress-barangay-status-legend .is-not-started i {
+  background: #94a3b8;
+}
+
+.progress-barangay-status-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.2rem;
+  margin-top: 0.8rem;
+}
+
+.progress-barangay-status-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #667085;
+  font-size: 0.72rem;
+}
+
+.progress-barangay-status-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.progress-barangay-status-legend strong {
+  color: #344054;
+}
+
+.progress-barangay-detail-table-wrap {
+  max-height: 280px;
+  overflow: auto;
+}
+
+.progress-barangay-detail-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+}
+
+.progress-barangay-detail-table th,
+.progress-barangay-detail-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #edf0f3;
+  color: #475467;
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+.progress-barangay-detail-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #f8fafc;
+  color: #344054;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.progress-barangay-detail-table th:first-child,
+.progress-barangay-detail-table td:first-child {
+  max-width: 360px;
+  text-align: left;
+}
+
+.progress-barangay-detail-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.progress-barangay-detail-table tbody tr:hover {
+  background: #fff8f8;
+}
+
+.progress-barangay-members {
+  max-height: 330px;
+  overflow-y: auto;
+}
+
+.progress-barangay-member {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 1fr) 120px 64px 42px;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 62px;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid #edf0f3;
+  transition: background 160ms ease;
+}
+
+.progress-barangay-member:last-child {
+  border-bottom: 0;
+}
+
+.progress-barangay-member:hover {
+  background: #fff8f8;
+}
+
+.progress-barangay-member-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fbe9ea;
+  color: #a71930;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.progress-barangay-member-name {
+  display: grid;
+  min-width: 0;
+}
+
+.progress-barangay-member-name strong,
+.progress-barangay-member-name small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progress-barangay-member-name strong {
+  color: #172033;
+  font-size: 0.8rem;
+}
+
+.progress-barangay-member-name small {
+  color: #667085;
+  font-size: 0.7rem;
+}
+
+.progress-barangay-member-status {
+  justify-self: start;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.progress-barangay-member-status.is-completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.progress-barangay-member-status.is-in-progress {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.progress-barangay-member-progress {
+  color: #344054;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.progress-barangay-member-view {
+  width: 34px;
+  height: 34px;
+  justify-self: end;
+}
+
+.progress-barangay-detail-empty {
+  margin: 0;
+  padding: 1.5rem;
+  color: #667085;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+@media (max-width: 980px) {
+  .progress-barangay-detail-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .progress-barangay-detail-metrics > div:nth-child(3) {
+    border-right: 0;
+  }
+
+  .progress-barangay-detail-metrics > div:nth-child(-n + 3) {
+    border-bottom: 1px solid #e6eaf0;
+  }
+}
+
+@media (max-width: 768px) {
+  .progress-filters.progress-filters--barangays {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-barangay-modal {
+    width: 100%;
+    max-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .progress-barangay-modal .progress-modal-header {
+    border-radius: 0;
+  }
+
+  .progress-barangay-modal-content {
+    padding: 1rem;
+  }
+
+  .progress-barangay-detail-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .progress-barangay-member {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.55rem;
+  }
+
+  .progress-barangay-member-status {
+    grid-column: 2;
+  }
+
+  .progress-barangay-member-progress {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .progress-barangay-member-view {
+    grid-column: 3;
+    grid-row: 2;
+  }
+}
+
+@media (max-width: 480px) {
+  .progress-barangay-detail-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .progress-barangay-detail-metrics > div,
+  .progress-barangay-detail-metrics > div:nth-child(3) {
+    border-right: 1px solid #e6eaf0;
+    border-bottom: 1px solid #e6eaf0;
+  }
+
+  .progress-barangay-detail-metrics > div:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .progress-barangay-detail-metrics > div:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .progress-barangay-detail-metrics > div {
+    padding: 0.8rem;
+  }
+
+  .progress-barangay-status-legend {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

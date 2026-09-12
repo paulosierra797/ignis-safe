@@ -1,4 +1,5 @@
-import { Suspense, useEffect } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
+import useLandingScrollMotion from './hooks/useLandingScrollMotion';
 import './App.css'
 import './components/WorkspaceDensity.css'
 import './components/Presentation.css'
@@ -180,6 +181,8 @@ function ScrollToTop() {
 }
 
 function LandingPage() {
+  const landingMain = useRef(null);
+  useLandingScrollMotion(landingMain);
   const location = useLocation();
   const { currentUser } = useUser();
   const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
@@ -217,7 +220,7 @@ function LandingPage() {
   return (
     <>
       <Header />
-      <main id="main-content">
+      <main id="main-content" ref={landingMain}>
         <HeroSection />
         {/* Reserve approximate section heights so the lazy chunks loading in
             don't shove the footer down (CLS). */}

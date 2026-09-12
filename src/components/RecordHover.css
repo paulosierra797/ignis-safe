@@ -24,6 +24,7 @@ body :is(
   .aboutus-item-row,
   .attached-files-modal-item,
   .leave-document-file-item,
+  .progress-user-card,
   .module-editor-item-card,
   .recommendation-card,
   .org-change-item
@@ -60,6 +61,7 @@ body :is(
     .aboutus-item-row,
     .attached-files-modal-item,
     .leave-document-file-item,
+    .progress-user-card,
     .module-editor-item-card,
     .recommendation-card,
     .org-change-item
@@ -96,6 +98,7 @@ body :is(
   .aboutus-item-row,
   .attached-files-modal-item,
   .leave-document-file-item,
+  .progress-user-card,
   .module-editor-item-card,
   .recommendation-card,
   .org-change-item
@@ -118,6 +121,7 @@ body :is(
     .aboutus-item-row,
     .attached-files-modal-item,
     .leave-document-file-item,
+    .progress-user-card,
     .module-editor-item-card,
     .recommendation-card,
     .org-change-item

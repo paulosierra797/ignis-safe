@@ -1532,3 +1532,235 @@
     grid-column: auto;
   }
 }
+
+/* Users page hierarchy and scalable lists ----------------------------- */
+.progress-controls {
+  position: sticky;
+  top: 72px;
+  z-index: 440;
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
+}
+
+.progress-filters {
+  grid-template-columns: repeat(3, minmax(160px, 1fr)) minmax(260px, 1.4fr) auto;
+  gap: 0.8rem;
+}
+
+.progress-filter,
+.progress-filter-query {
+  min-width: 0;
+}
+
+.progress-filter-query input {
+  padding-inline: 1rem;
+  text-overflow: ellipsis;
+}
+
+.progress-filter-query input::placeholder {
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+/* Participation figures share one summary surface instead of five cards. */
+.progress-barangay-panel {
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.progress-barangay-stats {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.progress-barangay-stats .progress-stat-card,
+.progress-barangay-stats .progress-stat-card.completed,
+.progress-barangay-stats .progress-stat-card.in-progress,
+.progress-barangay-stats .progress-stat-card.not-started,
+.progress-barangay-stats .progress-stat-card.rate {
+  width: auto;
+  min-height: 104px;
+  padding: 1rem 1.15rem;
+  border: 0;
+  border-right: 1px solid #e2e8f0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.progress-barangay-stats .progress-stat-card:last-child {
+  border-right: 0;
+}
+
+.progress-section-pagination {
+  border-top: 1px solid #e2e8f0;
+  background: #fbfcfe;
+}
+
+.progress-section-pagination .list-pagination {
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+}
+
+.progress-section-pagination--users {
+  border-top: 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.progress-section-pagination--users .list-pagination {
+  justify-content: flex-end;
+}
+
+.progress-table--users {
+  min-width: 1100px;
+}
+
+.progress-table--users th:nth-child(9),
+.progress-table--users td:nth-child(9) {
+  text-align: center;
+}
+
+.progress-milestone-count,
+.progress-mobile-milestone-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.progress-milestone-count {
+  min-width: 42px;
+  padding: 0.25rem 0.55rem;
+  border: 1px solid #fde68a;
+  border-radius: 999px;
+  background: #fffbeb;
+}
+
+.progress-milestone-count svg,
+.progress-mobile-milestone-count svg {
+  flex: 0 0 auto;
+}
+
+.progress-modal-milestones {
+  margin-bottom: 1.5rem;
+}
+
+.progress-modal-milestone-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.65rem;
+}
+
+.progress-modal-milestone {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  background: #fffbeb;
+}
+
+.progress-modal-milestone-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.progress-modal-milestone > span:last-child {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.progress-modal-milestone strong {
+  color: #78350f;
+  font-size: 0.82rem;
+}
+
+.progress-modal-milestone small,
+.progress-modal-milestones-empty {
+  color: #92400e;
+  font-size: 0.74rem;
+}
+
+.progress-modal-milestones-empty {
+  margin: 0;
+}
+
+@media (max-width: 1300px) {
+  .progress-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .progress-filter-query {
+    grid-column: 1 / -1;
+  }
+
+  .progress-clear {
+    grid-column: 2;
+  }
+
+}
+
+@media (max-width: 1024px) {
+  .progress-barangay-stats .progress-stat-card:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .progress-barangay-stats .progress-stat-card {
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .progress-barangay-stats .progress-stat-card.rate {
+    border-right: 0;
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .progress-controls {
+    top: 68px;
+    max-height: calc(100dvh - 76px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .progress-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-filter-query,
+  .progress-clear {
+    grid-column: auto;
+  }
+
+  .progress-section-pagination .list-pagination,
+  .progress-section-pagination--users .list-pagination {
+    justify-content: center;
+    padding-inline: 0.75rem;
+  }
+
+  .progress-barangay-stats .progress-stat-card,
+  .progress-barangay-stats .progress-stat-card:nth-child(2n) {
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .progress-barangay-stats .progress-stat-card:last-child {
+    border-bottom: 0;
+  }
+}

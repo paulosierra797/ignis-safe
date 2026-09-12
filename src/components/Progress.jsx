@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FiActivity,
+  FiAward,
   FiBarChart2,
   FiBookOpen,
   FiCalendar,
@@ -73,6 +74,26 @@ const getLanguageLabel = (languageCode) => {
   return formatProfileLabel(normalized);
 };
 
+const getUserMilestones = (user) => {
+  const milestones = [];
+  const startedModules = user.modules?.filter((module) => module.progress > 0).length || 0;
+
+  if (startedModules > 0) {
+    milestones.push({ key: 'started', label: 'Training Started', detail: `${startedModules} module${startedModules === 1 ? '' : 's'} accessed` });
+  }
+  if (user.modulesCompleted > 0) {
+    milestones.push({ key: 'modules', label: 'Module Finisher', detail: `${user.modulesCompleted} module${user.modulesCompleted === 1 ? '' : 's'} completed` });
+  }
+  if (user.completedSimulations > 0) {
+    milestones.push({ key: 'simulations', label: 'Simulation Participant', detail: `${user.completedSimulations} simulation${user.completedSimulations === 1 ? '' : 's'} completed` });
+  }
+  if (user.overallPercent >= 100) {
+    milestones.push({ key: 'complete', label: 'Training Complete', detail: 'All available modules completed' });
+  }
+
+  return milestones;
+};
+
 const COMPLETION_RANGES = [
   { label: 'All', min: null, max: null },
   { label: '0%', min: 0, max: 0 },
@@ -101,6 +122,7 @@ const matchesCompletionFilter = (overallPercent, filterValue) => {
 };
 
 const USERS_PER_PAGE = 10;
+const BARANGAYS_PER_PAGE = 10;
 
 export default function Progress() {
   const [progressRows, setProgressRows] = useState([]);
@@ -120,6 +142,7 @@ export default function Progress() {
   const [userFeedback, setUserFeedback] = useState([]);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [barangayPage, setBarangayPage] = useState(1);
   const completionBlurTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -171,6 +194,7 @@ export default function Progress() {
     setCompletionFilter('All');
     setCompletionSearchText('All');
     setSearchQuery('');
+    setBarangayPage(1);
   };
 
   const completionDropdownOptions = useMemo(() => {
@@ -304,13 +328,37 @@ export default function Progress() {
 
   const barangaySummary = useMemo(() => summarizeUsers(barangayScopedRows), [barangayScopedRows]);
 
-  const barangayBreakdown = useMemo(() => buildBarangaySummary(progressRows), [progressRows]);
+  const barangayBreakdown = useMemo(() => {
+    const recordedSummary = buildBarangaySummary(progressRows);
+    const summaryByBarangay = new Map(recordedSummary.map((row) => [row.barangay, row]));
+
+    return barangayOptions
+      .filter((barangay) => barangay !== 'All')
+      .map((barangay) => summaryByBarangay.get(barangay) || {
+        barangay,
+        registered: 0,
+        completed: 0,
+        inProgress: 0,
+        notStarted: 0,
+        completionRate: 0,
+      });
+  }, [barangayOptions, progressRows]);
 
   const visibleBreakdown = useMemo(() => (
     barangayFilter === 'All'
       ? barangayBreakdown
       : barangayBreakdown.filter((row) => row.barangay === barangayFilter)
   ), [barangayBreakdown, barangayFilter]);
+
+  const barangayTotalPages = Math.max(1, Math.ceil(visibleBreakdown.length / BARANGAYS_PER_PAGE));
+  const safeBarangayPage = Math.min(barangayPage, barangayTotalPages);
+  const paginatedBreakdown = useMemo(
+    () => visibleBreakdown.slice(
+      (safeBarangayPage - 1) * BARANGAYS_PER_PAGE,
+      safeBarangayPage * BARANGAYS_PER_PAGE
+    ),
+    [safeBarangayPage, visibleBreakdown]
+  );
 
   const totalUsers = progressRows.length;
 
@@ -328,7 +376,10 @@ export default function Progress() {
               <select
                 id="progress-filter-barangay"
                 value={barangayFilter}
-                onChange={(event) => setBarangayFilter(event.target.value)}
+                onChange={(event) => {
+                  setBarangayFilter(event.target.value);
+                  setBarangayPage(1);
+                }}
               >
                 {barangayOptions.map((barangayOption) => (
                   <option key={barangayOption} value={barangayOption}>
@@ -387,9 +438,10 @@ export default function Progress() {
               </div>
             </div>
 
-            <div className="progress-filter">
-              <label>Search</label>
+            <div className="progress-filter progress-filter-query">
+              <label htmlFor="progress-user-search">Search Users</label>
               <input
+                id="progress-user-search"
                 type="text"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
@@ -413,7 +465,7 @@ export default function Progress() {
               </h2>
               <p>
                 {barangayFilter === 'All'
-                  ? `Training participation across all ${barangayBreakdown.length} recorded ${barangayBreakdown.length === 1 ? 'barangay' : 'barangays'}.`
+                  ? `Training participation across all ${barangayBreakdown.length} official ${barangayBreakdown.length === 1 ? 'barangay' : 'barangays'}.`
                   : `Showing IGNIS SAFE participation for ${barangayFilter}.`}
               </p>
             </div>
@@ -498,7 +550,7 @@ export default function Progress() {
                     </td>
                   </tr>
                 ) : (
-                  visibleBreakdown.map((row) => (
+                  paginatedBreakdown.map((row) => (
                     <tr
                       key={row.barangay}
                       className={row.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'progress-row-muted' : ''}
@@ -532,7 +584,7 @@ export default function Progress() {
             ) : visibleBreakdown.length === 0 ? (
               <div className="progress-card-empty">No barangay records found.</div>
             ) : (
-              visibleBreakdown.map((row) => (
+              paginatedBreakdown.map((row) => (
                 <div className="progress-user-card" key={row.barangay}>
                   <div className="progress-card-header">
                     <div>
@@ -557,6 +609,16 @@ export default function Progress() {
               ))
             )}
           </div>
+          {!isLoading && (
+            <div className="progress-section-pagination progress-section-pagination--barangays">
+              <Pagination
+                page={safeBarangayPage}
+                totalItems={visibleBreakdown.length}
+                onPageChange={setBarangayPage}
+                label="Barangay completion summary pages"
+              />
+            </div>
+          )}
         </div>
 
         <div className="progress-table-card progress-users-table">
@@ -574,6 +636,16 @@ export default function Progress() {
               {errorMessage}
             </div>
           )}
+          {!isLoading && (
+            <div className="progress-section-pagination progress-section-pagination--users">
+              <Pagination
+                page={safePage}
+                totalItems={filteredRows.length}
+                onPageChange={setCurrentPage}
+                label="Learning profile pages"
+              />
+            </div>
+          )}
          <div className="progress-desktop-table">
   <table className="progress-table progress-table--users">
             <thead>
@@ -586,19 +658,20 @@ export default function Progress() {
                 <th>Overall %</th>
                 <th>Last Activity</th>
                 <th>Last Accessed Module</th>
+                <th>Milestones</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
+                  <td colSpan="10" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
                     Loading progress...
                   </td>
                 </tr>
               ) : filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
+                  <td colSpan="10" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
                     No progress records found.
                   </td>
                 </tr>
@@ -622,6 +695,12 @@ export default function Progress() {
                     <td>{item.overallPercent}%</td>
                     <td>{formatDate(item.lastActivityAt)}</td>
                     <td title={item.lastAccessedModule}>{item.lastAccessedModule}</td>
+                    <td title={getUserMilestones(item).map((milestone) => milestone.label).join(', ') || 'No milestones yet'}>
+                      <span className="progress-milestone-count">
+                        <FiAward aria-hidden="true" />
+                        {getUserMilestones(item).length}
+                      </span>
+                    </td>
                     <td>
                       <RecordActions label="Learning profile actions">
                       <button
@@ -696,6 +775,13 @@ export default function Progress() {
           </strong>
         </div>
 
+        <div className="progress-card-row">
+          <span>Milestones</span>
+          <strong className="progress-mobile-milestone-count">
+            <FiAward aria-hidden="true" /> {getUserMilestones(item).length}
+          </strong>
+        </div>
+
 
         <RecordActions label="Learning profile actions"><button
           className="progress-view-btn"
@@ -709,7 +795,6 @@ export default function Progress() {
   )}
 
 </div>
-          {!isLoading && <Pagination page={safePage} totalItems={filteredRows.length} onPageChange={setCurrentPage} label="Learning profile pages" />}
         </div>
 
         {showModal && selectedUser && (
@@ -779,6 +864,13 @@ export default function Progress() {
                     <h4><FiUser className="progress-modal-section-icon" aria-hidden="true" />Account and App Details</h4>
                     <div className="progress-modal-info progress-modal-account-info">
                       <div className="progress-modal-info-item">
+                        <span className="progress-modal-info-icon"><FiUser aria-hidden="true" /></span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">USERNAME</span>
+                          <span className="progress-modal-value">{selectedUser.username}</span>
+                        </div>
+                      </div>
+                      <div className="progress-modal-info-item">
                         <span className="progress-modal-info-icon"><FiCheckCircle aria-hidden="true" /></span>
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">REGISTRATION</span>
@@ -828,6 +920,13 @@ export default function Progress() {
                           <span className="progress-modal-value">{selectedUser.lastSimulation}</span>
                         </div>
                       </div>
+                      <div className="progress-modal-info-item">
+                        <span className="progress-modal-info-icon"><FiCheckCircle aria-hidden="true" /></span>
+                        <div className="progress-modal-info-body">
+                          <span className="progress-modal-label">SIMULATIONS COMPLETED</span>
+                          <span className="progress-modal-value">{selectedUser.completedSimulations}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -857,6 +956,25 @@ export default function Progress() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                <div className="progress-modal-full progress-modal-milestones">
+                  <h4><FiAward className="progress-modal-section-icon" aria-hidden="true" />Learning Milestones</h4>
+                  {getUserMilestones(selectedUser).length === 0 ? (
+                    <p className="progress-modal-milestones-empty">No learning milestones earned yet.</p>
+                  ) : (
+                    <div className="progress-modal-milestone-list">
+                      {getUserMilestones(selectedUser).map((milestone) => (
+                        <div className="progress-modal-milestone" key={milestone.key}>
+                          <span className="progress-modal-milestone-icon"><FiAward aria-hidden="true" /></span>
+                          <span>
+                            <strong>{milestone.label}</strong>
+                            <small>{milestone.detail}</small>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="progress-modal-full">

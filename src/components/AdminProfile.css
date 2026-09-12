@@ -8,14 +8,14 @@
 .admin-profile-content {
   flex: 1;
   margin-left: var(--sidebar-width);
-  padding: 2rem;
+  padding: 0 2rem 2rem;
   height: 100vh;
   overflow-y: auto;
 }
 
-/* Keep the shared header gutters matched to this page's content padding. */
+/* Match the flush, full-width admin header used on Reports and other pages. */
 .admin-profile-content > .page-header {
-  --page-header-gutter-x: 2rem;
+  margin: 0 -2rem 1.5rem;
 }
 
 .modal-overlay {
@@ -429,12 +429,11 @@
 */
 @media (max-width: 1024px) {
   .admin-profile-content {
-    padding: 1.5rem;
+    padding: 0 1.5rem 1.5rem;
   }
 
   .admin-profile-content > .page-header {
-    --page-header-gutter-x: 1.5rem;
-    --page-header-gutter-y: 1.5rem;
+    margin: 0 -1.5rem 1.25rem;
   }
 
   .profile-layout {
@@ -445,8 +444,13 @@
 @media (max-width: 900px) {
   .admin-profile-content {
     margin-left: 0;
-    padding: 1.25rem;
+    padding: 0 1rem 1rem;
     height: auto;
+  }
+
+  .admin-profile-content > .page-header {
+    margin: 0 -1rem 1.25rem;
+    border-radius: 0;
   }
 
   .profile-layout {
@@ -461,7 +465,7 @@
 
 @media (max-width: 768px) {
   .admin-profile-content {
-    padding: 1.25rem;
+    padding: 0 1rem 1rem;
   }
 
   .security-grid {
@@ -484,7 +488,12 @@
 
 @media (max-width: 480px) {
   .admin-profile-content {
-    padding: 1rem;
+    padding: 0 0.75rem 0.75rem;
+  }
+
+  .admin-profile-content > .page-header {
+    margin-right: -0.75rem;
+    margin-left: -0.75rem;
   }
 
   .profile-summary-card {

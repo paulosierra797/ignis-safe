@@ -1,5 +1,4 @@
 .floating-contact-widget { position: fixed; right: 20px; bottom: 20px; z-index: 10010; width: 48px; height: 48px; }
-.floating-contact-widget.is-open { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); left: auto; top: auto; }
 .app:has(.nav.active) .floating-contact-widget { visibility: hidden; pointer-events: none; }
 .floating-contact-button { display: grid; place-items: center; width: 48px; height: 48px; min-height: 48px; padding: 0; border: 1px solid rgba(255,255,255,.5); border-radius: 50%; background: #b91c1c; color: #fff; box-shadow: 0 5px 18px rgba(100,20,20,.25); touch-action: none; user-select: none; cursor: grab; }
 .floating-contact-button { position: relative; z-index: 1; }
@@ -7,5 +6,5 @@
 .floating-contact-button:active { cursor: grabbing; }
 .floating-contact-button:hover { background: #991b1b; }
 .floating-contact-button:focus-visible { outline: 3px solid #f59e0b; outline-offset: 3px; }
-.floating-contact-panel { position: fixed; width: min(410px, calc(100vw - 16px)); overflow: hidden; border-radius: 8px; background: #fff; box-shadow: 0 12px 36px rgba(15,23,42,.2); }
+.floating-contact-panel { position: fixed; overflow: hidden; border-radius: 8px; background: #fff; box-shadow: 0 12px 36px rgba(15,23,42,.2); }
 .floating-contact-panel .visitor-chat--compact { width: 100%; max-height: inherit; }

@@ -13,6 +13,8 @@ const viewport = () => ({
   height: window.visualViewport?.height || window.innerHeight,
 });
 const bounded = (value, min, max) => Math.max(min, Math.min(value, Math.max(min, max)));
+const BUTTON_SIZE = 48;
+const EDGE_GAP = 12;
 
 export default function FloatingContactButton() {
   const { language } = useLandingContent();
@@ -25,6 +27,10 @@ export default function FloatingContactButton() {
     } catch { return null; }
   });
   const [panelPosition, setPanelPosition] = useState({});
+  const [side, setSide] = useState(() => {
+    if (!position) return 'right';
+    return position.left + BUTTON_SIZE / 2 < viewport().left + viewport().width / 2 ? 'left' : 'right';
+  });
   const buttonRef = useRef(null);
   const panelRef = useRef(null);
   const dragRef = useRef(null);
@@ -44,6 +50,18 @@ export default function FloatingContactButton() {
     positionRef.current = next;
     setPosition(next);
   }, []);
+
+  const snapToSide = useCallback((nextPosition) => {
+    const view = viewport();
+    const nextSide = nextPosition.left + BUTTON_SIZE / 2 < view.left + view.width / 2 ? 'left' : 'right';
+    const snapped = clampPosition(
+      nextSide === 'left' ? view.left + EDGE_GAP : view.left + view.width - BUTTON_SIZE - EDGE_GAP,
+      nextPosition.top
+    );
+    setSide(nextSide);
+    updatePosition(snapped);
+    return snapped;
+  }, [clampPosition, updatePosition]);
 
   const handleDragStart = event => {
     if (event.button !== 0 || !event.isPrimary) return;
@@ -65,7 +83,8 @@ export default function FloatingContactButton() {
   const handleDragEnd = event => {
     if (dragRef.current?.pointerId !== event.pointerId) return;
     if (dragRef.current.moved) {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(positionRef.current)); } catch { /* Dragging also works without storage. */ }
+      const snapped = snapToSide(positionRef.current);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapped)); } catch { /* Dragging also works without storage. */ }
     }
     dragRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
@@ -73,7 +92,9 @@ export default function FloatingContactButton() {
 
   useLayoutEffect(() => {
     const keepInsideViewport = () => {
-      if (positionRef.current) updatePosition(clampPosition(positionRef.current.left, positionRef.current.top));
+      if (!positionRef.current) return;
+      const snapped = snapToSide(positionRef.current);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(snapped)); } catch { /* Position persistence is optional. */ }
     };
     keepInsideViewport();
     window.addEventListener('resize', keepInsideViewport);
@@ -84,7 +105,7 @@ export default function FloatingContactButton() {
       window.visualViewport?.removeEventListener('resize', keepInsideViewport);
       window.visualViewport?.removeEventListener('scroll', keepInsideViewport);
     };
-  }, [clampPosition, updatePosition]);
+  }, [snapToSide]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -92,11 +113,20 @@ export default function FloatingContactButton() {
       const anchor = buttonRef.current.getBoundingClientRect();
       const panel = panelRef.current.getBoundingClientRect();
       const view = viewport();
-      const above = anchor.top - panel.height - 12;
+      const panelGap = 10;
+      const viewportGap = 8;
+      const availableWidth = side === 'left'
+        ? view.left + view.width - viewportGap - anchor.right - panelGap
+        : anchor.left - panelGap - view.left - viewportGap;
+      const panelWidth = Math.max(0, Math.min(410, availableWidth));
+      const maxHeight = Math.max(100, view.height - viewportGap * 2);
+      const renderedHeight = Math.min(panel.height, maxHeight);
+      const preferredTop = anchor.top + anchor.height / 2 - renderedHeight / 2;
       setPanelPosition({
-        left: bounded(anchor.right - panel.width, view.left + 8, view.left + view.width - panel.width - 8),
-        top: bounded(above >= view.top + 8 ? above : anchor.bottom + 12, view.top + 8, view.top + view.height - panel.height - 8),
-        maxHeight: Math.max(100, view.height - 80),
+        left: side === 'left' ? anchor.right + panelGap : anchor.left - panelGap - panelWidth,
+        top: bounded(preferredTop, view.top + viewportGap, view.top + view.height - renderedHeight - viewportGap),
+        width: panelWidth,
+        maxHeight,
       });
     };
     placePanel();
@@ -111,7 +141,7 @@ export default function FloatingContactButton() {
       window.visualViewport?.removeEventListener('resize', placePanel);
       window.visualViewport?.removeEventListener('scroll', placePanel);
     };
-  }, [open, position]);
+  }, [open, position, side]);
 
   useEffect(() => {
     if (!open) return;
@@ -122,11 +152,9 @@ export default function FloatingContactButton() {
     return () => document.removeEventListener('keydown', escape);
   }, [open]);
 
-  const widgetStyle = open
-    ? undefined
-    : position
-      ? { left: position.left, top: position.top, right: 'auto', bottom: 'auto' }
-      : undefined;
+  const widgetStyle = position
+    ? { left: position.left, top: position.top, right: 'auto', bottom: 'auto' }
+    : undefined;
 
   return <div className={`floating-contact-widget${open ? ' is-open' : ''}`} style={widgetStyle}>
     {open && <div ref={panelRef} className="floating-contact-panel" id="floating-contact-panel" style={panelPosition}>

@@ -4,6 +4,7 @@ import { useUser } from '../context/UserContext';
 import { getPendingAcknowledgementCount } from '../utils/announcementsService';
 import { signOut } from '../utils/authService';
 import { supabase } from '../utils/supabaseClient';
+import './ProtectedRoute.css';
 
 export default function ProtectedRoute({ children, requiredPermission, allowedRoles = [] }) {
   const { currentUser, loading } = useUser();
@@ -105,18 +106,8 @@ export default function ProtectedRoute({ children, requiredPermission, allowedRo
     return (
       <>
         {children}
-        <div style={{
-          position: 'fixed',
-          top: 16,
-          right: 16,
-          background: 'rgba(255,255,255,0.95)',
-          padding: '8px 12px',
-          borderRadius: 10,
-          boxShadow: '0 8px 24px rgba(15,23,42,0.08)',
-          zIndex: 9999,
-          fontSize: '0.95rem',
-          color: '#374151'
-        }}>
+        <div className="announcement-check-indicator" role="status" aria-live="polite">
+          <span className="announcement-check-spinner" aria-hidden="true" />
           Checking announcements...
         </div>
       </>

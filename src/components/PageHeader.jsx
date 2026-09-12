@@ -215,7 +215,6 @@ const PageHeader = ({
               <span className="page-user-name">{resolvedUserName}</span>
               <span className="page-user-role">{resolvedUserRole}</span>
             </div>
-            <span className="page-user-arrow" aria-hidden="true">▼</span>
           </button>
           {isDropdownOpen && (
             <div className="page-user-dropdown">

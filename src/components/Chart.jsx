@@ -16,6 +16,7 @@ import './Chart.css';
 import OrgChartLayout from './OrgChartLayout';
 import OrgSelectField from './OrgSelectField';
 import { ORG_RANK_OPTIONS, separateOrgRank } from '../utils/orgChartFields';
+import { FiTrash2 } from 'react-icons/fi';
 
 const LEGACY_AVATAR_PLACEHOLDER_PATH = '/user-avatar.png';
 
@@ -206,6 +207,11 @@ const flattenNodes = (data) => {
   return nodes;
 };
 
+const getNodeAndDescendantIds = (node) => [
+  node.id,
+  ...(node.units || []).flatMap((unit) => getNodeAndDescendantIds(unit))
+];
+
 const createOrgNode = (kind) => ({
   id: `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   rank: '',
@@ -220,6 +226,7 @@ const createOrgNode = (kind) => ({
 // in the confirmation modal before anything is persisted.
 const buildChangeList = (original, current, pendingAvatarFiles) => {
   const originalMap = new Map(flattenNodes(original).map((node) => [node.id, node]));
+  const currentMap = new Map(flattenNodes(current).map((node) => [node.id, node]));
   const changes = [];
 
   flattenNodes(current).forEach((node) => {
@@ -268,6 +275,17 @@ const buildChangeList = (original, current, pendingAvatarFiles) => {
     }
   });
 
+  flattenNodes(original).forEach((node) => {
+    if (!currentMap.has(node.id)) {
+      changes.push({
+        nodeId: node.id,
+        field: 'removed',
+        label: 'Personnel',
+        oldValue: `${node.name} - ${node.title}`
+      });
+    }
+  });
+
   return changes;
 };
 
@@ -278,6 +296,9 @@ const buildActivityDetails = (changes) => {
     .map((change) => {
       if (change.field === 'added') {
         return `Added ${change.newValue} to the organizational chart.`;
+      }
+      if (change.field === 'removed') {
+        return `Removed ${change.oldValue} from the organizational chart.`;
       }
       if (change.field === 'avatar') {
         return `Updated profile image for ${change.personName}.`;
@@ -293,6 +314,12 @@ const buildSuccessSummary = (changes) =>
       return {
         headline: 'Personnel added successfully.',
         detail: `${change.newValue} was added to the organizational chart.`
+      };
+    }
+    if (change.field === 'removed') {
+      return {
+        headline: 'Personnel removed successfully.',
+        detail: `${change.oldValue} was removed from the organizational chart.`
       };
     }
     if (change.field === 'avatar') {
@@ -318,7 +345,16 @@ const positionOptions = [...new Set([
   ...initialOrgData.departments.flatMap(department => [department.title, ...department.units.map(unit => unit.title)])
 ])].map(value => ({ value, label: value }));
 
-export const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) => {
+export const OrgCard = ({
+  node,
+  editMode,
+  canEdit,
+  canDelete = false,
+  deleteLabel = 'Delete personnel',
+  onChange,
+  onImageChange,
+  onDelete
+}) => {
   const fallbackAvatar = useMemo(() => buildAvatarPlaceholder(node.name), [node.name]);
   const fileInputRef = useRef(null);
   const [failedAvatarSrc, setFailedAvatarSrc] = useState(null);
@@ -332,6 +368,17 @@ export const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) =>
 
   return (
     <div className={`org-card${editMode ? ' org-card-editing' : ''}`}>
+      {editMode && canEdit && canDelete && (
+        <button
+          type="button"
+          className="org-card-delete"
+          onClick={() => onDelete?.(node.id)}
+          aria-label={`${deleteLabel}: ${node.name || 'personnel'}`}
+          title={deleteLabel}
+        >
+          <FiTrash2 aria-hidden="true" />
+        </button>
+      )}
       <img
         src={avatarSrc}
         alt={node.name}
@@ -396,6 +443,9 @@ export const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) =>
 const OrgChangeLine = ({ change }) => {
   if (change.field === 'added') {
     return <><strong>Added:</strong> {change.newValue}</>;
+  }
+  if (change.field === 'removed') {
+    return <><strong>Removed:</strong> {change.oldValue}</>;
   }
   if (change.field === 'avatar') {
     return (
@@ -580,6 +630,34 @@ export default function Chart() {
           ? { ...department, units: [...(department.units || []), createOrgNode('subsection')] }
           : department
       ))
+    }));
+  };
+
+  const handleDeleteNode = (nodeId) => {
+    if (!isAdmin || !editMode || [orgData.top.id, orgData.second.id].includes(nodeId)) return;
+
+    const targetNode = flattenNodes(orgData).find((node) => node.id === nodeId);
+    if (!targetNode) return;
+    const removedIds = new Set(getNodeAndDescendantIds(targetNode));
+
+    removedIds.forEach((id) => {
+      if (avatarPreviewUrls[id]) URL.revokeObjectURL(avatarPreviewUrls[id]);
+    });
+    setAvatarPreviewUrls((current) => Object.fromEntries(
+      Object.entries(current).filter(([id]) => !removedIds.has(id))
+    ));
+    setPendingAvatarFiles((current) => Object.fromEntries(
+      Object.entries(current).filter(([id]) => !removedIds.has(id))
+    ));
+
+    setOrgData((current) => ({
+      ...current,
+      departments: current.departments
+        .filter((department) => department.id !== nodeId)
+        .map((department) => ({
+          ...department,
+          units: (department.units || []).filter((unit) => unit.id !== nodeId)
+        }))
     }));
   };
 
@@ -857,8 +935,13 @@ export default function Chart() {
               node={withPreview(node)}
               editMode={editMode}
               canEdit={isAdmin}
+              canDelete={![orgData.top.id, orgData.second.id].includes(node.id)}
+              deleteLabel={orgData.departments.some((department) => department.id === node.id)
+                ? 'Delete section and its personnel'
+                : 'Delete personnel'}
               onChange={handleUpdate}
               onImageChange={handleAvatarSelect}
+              onDelete={handleDeleteNode}
             />
           )}
         />

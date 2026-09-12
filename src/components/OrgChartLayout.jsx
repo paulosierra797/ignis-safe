@@ -1,4 +1,5 @@
 import './OrgChartLayout.css';
+import { FiPlus } from 'react-icons/fi';
 
 export default function OrgChartLayout({
   data,
@@ -26,7 +27,8 @@ export default function OrgChartLayout({
                   className="org-tree-add org-tree-add-unit"
                   onClick={() => onAddUnit?.(department.id)}
                 >
-                  + Add subsection personnel
+                  <FiPlus aria-hidden="true" />
+                  Add personnel under this section
                 </button>
               )}
               {department.units.length > 0 && <ul className="org-tree-units">
@@ -40,7 +42,8 @@ export default function OrgChartLayout({
       </>}
       {editMode && (
         <button type="button" className="org-tree-add org-tree-add-section" onClick={onAddDepartment}>
-          + Add section personnel
+          <FiPlus aria-hidden="true" />
+          Add new section
         </button>
       )}
     </section>

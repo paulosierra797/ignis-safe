@@ -4,12 +4,13 @@
   background: #fff;
   width: 100%;
   min-width: 0;
+  overflow-x: auto;
 }
 
 .org-tree .chart-loading { margin-bottom: 24px; text-align: center; }
 .org-tree-leader { display: flex; justify-content: center; }
 .org-tree-stem { width: 2px; height: 32px; margin-inline: auto; background: var(--org-line); }
-.org-tree-branches { display: grid; grid-template-columns: repeat(var(--org-branches), minmax(0, 1fr)); }
+.org-tree-branches { display: grid; grid-template-columns: repeat(var(--org-branches), minmax(240px, 1fr)); }
 .org-tree-branch { position: relative; min-width: 0; padding: 32px 16px 0; }
 
 /* Each branch supplies its own part of the shared connector, with no gaps. */
@@ -87,6 +88,26 @@
 .org-tree .org-card-editing .org-input { font-size: 14px; color: #202731; background: #fff; border-color: #cbd5e1; }
 .org-tree .org-card-editing .org-avatar-upload { color: #991b1b; background: #fff; box-shadow: none; border-color: #d6dbe1; }
 
+.org-card-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #fecaca;
+  border-radius: 50%;
+  background: #fff;
+  color: #dc2626;
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.1);
+}
+
+.org-card-delete svg { width: 16px; height: 16px; }
+.org-card-delete:hover { background: #fef2f2; border-color: #ef4444; }
+
 .org-tree-add {
   display: inline-flex;
   align-items: center;
@@ -99,7 +120,10 @@
   color: #991b1b;
   font-size: 0.78rem;
   font-weight: 700;
+  gap: 0.4rem;
 }
+
+.org-tree-add svg { flex: 0 0 auto; width: 16px; height: 16px; }
 
 .org-tree-add-unit {
   width: 100%;
@@ -118,7 +142,7 @@
   .org-tree-department .org-avatar { grid-row: auto; margin-bottom: 8px; }
 }
 
-@media (max-width: 700px) {
+@media (max-width: 900px) {
   .org-tree { padding: 24px 12px; }
   .org-tree-branches { display: block; position: relative; }
   .org-tree-branches::before {

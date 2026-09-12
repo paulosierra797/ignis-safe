@@ -36,7 +36,7 @@ body :is(
   [class*='records'],
   [class*='directory'],
   [class*='logs']
-):not(.nav-list) > :is(li, article, [role='listitem']) {
+):not(.nav-list, .steps-list) > :is(li, article, [role='listitem']) {
   transition: background-color 170ms ease, border-color 170ms ease, box-shadow 170ms ease, transform 170ms ease;
 }
 
@@ -73,7 +73,7 @@ body :is(
     [class*='records'],
     [class*='directory'],
     [class*='logs']
-  ):not(.nav-list) > :is(li, article, [role='listitem']):hover {
+  ):not(.nav-list, .steps-list) > :is(li, article, [role='listitem']):hover {
     border-color: var(--record-hover-border) !important;
     background-color: var(--record-hover-bg) !important;
     box-shadow: var(--record-hover-shadow) !important;

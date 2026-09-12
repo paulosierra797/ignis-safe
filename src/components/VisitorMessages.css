@@ -18,6 +18,7 @@
 
 .visitor-messages-main {
   min-width: 0;
+  min-height: 0;
   height: 100vh;
   height: 100dvh;
   margin-left: var(--sidebar-width);
@@ -26,6 +27,10 @@
   overflow: clip;
   padding: 2rem;
   color: #172033;
+}
+
+.visitor-messages-main > .page-header {
+  flex: 0 0 auto;
 }
 
 .visitor-messages-intro {
@@ -71,7 +76,7 @@
 }
 
 .visitor-messages-summary span {
-  min-width: 76px;
+  min-width: 72px;
   padding: 0.42rem 0.65rem;
   border: 1px solid #e2e7ed;
   border-radius: 6px;
@@ -140,6 +145,7 @@
   display: grid;
   flex: 1 1 0;
   grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
   border: 1px solid #dde3ea;
   border-radius: 8px;
@@ -271,9 +277,15 @@
 
 .visitor-conversation-list {
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   border-right: 1px solid #e3e7ed;
+}
+
+.visitor-conversation-list > .list-pagination {
+  flex: 0 0 auto;
 }
 
 .visitor-conversation-tools {
@@ -313,6 +325,10 @@
 
 .visitor-conversation-filters button {
   min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   border: 1px solid #dce2e9;
   border-radius: 5px;
   background: #fff;
@@ -323,10 +339,25 @@
   cursor: pointer;
 }
 
+.visitor-conversation-filters button strong {
+  min-width: 1.25rem;
+  padding: 0.08rem 0.3rem;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #475569;
+  font-size: 0.58rem;
+  line-height: 1.4;
+}
+
 .visitor-conversation-filters button.is-active {
   border-color: #b91c1c;
   background: #fff1f2;
   color: #991b1b;
+}
+
+.visitor-conversation-filters button.is-active strong {
+  background: #b91c1c;
+  color: #ffffff;
 }
 
 .visitor-conversation-scroll {
@@ -424,6 +455,9 @@
 
 .visitor-conversation-status.is-open { background: #dcfce7; color: #166534; }
 .visitor-conversation-status.is-resolved { background: #e9edf2; color: #475569; }
+.visitor-conversation-status.is-new { background: #fee2e2; color: #991b1b; }
+.visitor-conversation-status.is-archived { background: #e9edf2; color: #475569; }
+.visitor-conversation-status.is-deletion { background: #fff1c2; color: #854d0e; }
 .visitor-conversation-unread { background: #b91c1c; color: #fff; }
 .visitor-conversation-delete-status { background: #fff7d6; color: #854d0e; }
 
@@ -502,6 +536,20 @@
   font-size: 0.65rem;
   text-decoration: none;
 }
+
+.visitor-thread-person .visitor-thread-state {
+  width: fit-content;
+  margin-top: 0.25rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.visitor-thread-state.is-new { background: #fee2e2; color: #991b1b; }
+.visitor-thread-state.is-open { background: #dcfce7; color: #166534; }
+.visitor-thread-state.is-archived { background: #e9edf2; color: #475569; }
+.visitor-thread-state.is-deletion { background: #fff1c2; color: #854d0e; }
 
 .visitor-thread-status-action {
   min-height: 38px;
@@ -588,8 +636,10 @@
   min-height: 0;
   flex: 1 1 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
+  touch-action: pan-y;
   padding: 1.1rem;
   background: #f5f7fa;
 }
@@ -657,6 +707,7 @@
   padding: 0.8rem;
   border-top: 1px solid #e3e7ed;
   background: #fff;
+  box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.04);
 }
 
 .visitor-thread-composer > div { position: relative; }
@@ -899,6 +950,40 @@ body.sidebar-collapsed .visitor-messages-main { margin-left: var(--sidebar-colla
   .visitor-thread-composer > button span { display: none; }
   .visitor-delete-modal-actions { flex-direction: column-reverse; }
   .visitor-delete-modal-actions button { width: 100%; }
+}
+
+@media (max-width: 480px) {
+  .visitor-messages-intro {
+    flex-wrap: wrap;
+  }
+
+  .visitor-messages-intro-actions {
+    width: 100%;
+  }
+
+  .visitor-messages-summary {
+    flex: 1 1 auto;
+  }
+
+  .visitor-messages-summary span {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+@media (max-height: 720px) and (min-width: 641px) {
+  .visitor-messages-intro p {
+    display: none;
+  }
+
+  .visitor-messages-intro {
+    align-items: center;
+  }
+
+  .visitor-thread-header {
+    min-height: 70px;
+    padding-block: 0.55rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

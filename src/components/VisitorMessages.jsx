@@ -32,7 +32,6 @@ import {
   setVisitorConversationStatus,
   VISITOR_CHAT_MAX_LENGTH,
 } from '../utils/visitorChatService';
-import { formatStatusLabel } from '../utils/statusUtils';
 import './VisitorMessages.css';
 
 const formatDateTime = (value) => {
@@ -55,9 +54,20 @@ const formatListTime = (value) => {
     : date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
 };
 
+const getConversationState = (conversation) => {
+  if (conversation.delete_after) return { key: 'deletion', label: 'For deletion' };
+  if (conversation.is_archived) {
+    return {
+      key: 'archived',
+      label: conversation.status === 'resolved' ? 'Resolved / Archived' : 'Archived',
+    };
+  }
+  if (conversation.unread) return { key: 'new', label: 'New' };
+  return { key: 'open', label: 'Open' };
+};
+
 export default function VisitorMessages() {
   const [conversations, setConversations] = useState([]);
-  const [inboxSummary, setInboxSummary] = useState({ unread: 0, open: 0 });
   const [selectedId, setSelectedId] = useState('');
   const [thread, setThread] = useState(null);
   const [search, setSearch] = useState('');
@@ -83,16 +93,10 @@ export default function VisitorMessages() {
     }
     const nextConversations = result.data?.conversations || [];
     setConversations(nextConversations);
-    if (!archivedView) {
-      setInboxSummary({
-        unread: nextConversations.filter((item) => item.unread).length,
-        open: nextConversations.filter((item) => item.status === 'open').length,
-      });
-    }
     setSelectedId((current) => (
       nextConversations.some((item) => item.id === current)
         ? current
-        : nextConversations[0]?.id || ''
+        : ''
     ));
   }, [archivedView]);
 
@@ -135,10 +139,43 @@ export default function VisitorMessages() {
     if (list) list.scrollTop = list.scrollHeight;
   }, [thread?.messages?.length, selectedId]);
 
+  const conversationSummary = useMemo(() => {
+    if (archivedView) {
+      return {
+        new: 0,
+        open: 0,
+        archived: conversations.filter((item) => !item.delete_after).length,
+        deletion: conversations.filter((item) => item.delete_after).length,
+        total: conversations.length,
+      };
+    }
+
+    return {
+      new: conversations.filter((item) => item.unread).length,
+      open: conversations.filter((item) => item.status === 'open' && !item.unread).length,
+      archived: 0,
+      deletion: 0,
+      total: conversations.length,
+    };
+  }, [archivedView, conversations]);
+
+  const filterOptions = archivedView
+    ? [
+      { value: 'all', label: 'All', count: conversationSummary.total },
+      { value: 'archived', label: 'Archived', count: conversationSummary.archived },
+      { value: 'deletion', label: 'For deletion', count: conversationSummary.deletion },
+    ]
+    : [
+      { value: 'all', label: 'All', count: conversationSummary.total },
+      { value: 'new', label: 'New', count: conversationSummary.new },
+      { value: 'open', label: 'Open', count: conversationSummary.open },
+    ];
+
   const filteredConversations = useMemo(() => {
     const term = search.trim().toLowerCase();
     return conversations.filter((conversation) => {
-      const matchesStatus = statusFilter === 'all' || conversation.status === statusFilter;
+      const state = getConversationState(conversation).key;
+      const matchesStatus = statusFilter === 'all' || state === statusFilter;
       const matchesSearch = !term || [
         conversation.visitor_name,
         conversation.visitor_email,
@@ -249,7 +286,7 @@ export default function VisitorMessages() {
     setError('');
   };
 
-  const conversationPages = usePagination(filteredConversations, filteredConversations.map(row => row.conversation_id).join(','));
+  const conversationPages = usePagination(filteredConversations, filteredConversations.map(row => row.id).join(','));
 
   return (
     <div className="visitor-messages-page">
@@ -265,8 +302,9 @@ export default function VisitorMessages() {
           </div>
           <div className="visitor-messages-intro-actions">
             <div className="visitor-messages-summary">
-              <span><strong>{inboxSummary.unread}</strong> Unread</span>
-              <span><strong>{inboxSummary.open}</strong> Open</span>
+              <span><strong>{conversationSummary.total}</strong> Active</span>
+              <span><strong>{conversationSummary.new}</strong> New</span>
+              <span><strong>{conversationSummary.open}</strong> Open</span>
             </div>
             <ArchiveButton
               onClick={handleArchiveViewToggle}
@@ -298,8 +336,9 @@ export default function VisitorMessages() {
                 </div>
               </div>
               <div className="visitor-archive-modal-summary">
-                <span><strong>{conversations.length}</strong> Archived</span>
-                <span><strong>{conversations.filter((item) => item.delete_after).length}</strong> Pending deletion</span>
+                <span><strong>{conversationSummary.total}</strong> Total</span>
+                <span><strong>{conversationSummary.archived}</strong> Archived</span>
+                <span><strong>{conversationSummary.deletion}</strong> For deletion</span>
               </div>
               <button
                 type="button"
@@ -329,14 +368,15 @@ export default function VisitorMessages() {
                 />
               </label>
               <div className="visitor-conversation-filters" aria-label="Conversation status">
-                {['all', 'open', 'resolved'].map((status) => (
+                {filterOptions.map((option) => (
                   <button
-                    key={status}
+                    key={option.value}
                     type="button"
-                    className={statusFilter === status ? 'is-active' : ''}
-                    onClick={() => setStatusFilter(status)}
+                    className={statusFilter === option.value ? 'is-active' : ''}
+                    onClick={() => setStatusFilter(option.value)}
                   >
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                    <span>{option.label}</span>
+                    <strong>{option.count}</strong>
                   </button>
                 ))}
               </div>
@@ -347,8 +387,9 @@ export default function VisitorMessages() {
                 <div className="visitor-conversation-empty"><FiRefreshCw className="is-spinning" /> Loading conversations...</div>
               ) : filteredConversations.length === 0 ? (
                 <div className="visitor-conversation-empty"><FiMessageCircle /> No conversations found.</div>
-              ) : conversationPages.items.map((conversation) => (
-                <button
+              ) : conversationPages.items.map((conversation) => {
+                const conversationState = getConversationState(conversation);
+                return <button
                   key={conversation.id}
                   type="button"
                   className={`visitor-conversation-item ${selectedId === conversation.id ? 'is-selected' : ''} ${conversation.unread ? 'is-unread' : ''}`}
@@ -367,17 +408,16 @@ export default function VisitorMessages() {
                     </span>
                     <span className="visitor-conversation-preview">{conversation.last_message_preview}</span>
                     <span className="visitor-conversation-meta">
-                      <span className={`visitor-conversation-status is-${conversation.status}`}>
-                        {formatStatusLabel(conversation.status)}
+                      <span className={`visitor-conversation-status is-${conversationState.key}`}>
+                        {conversationState.label}
                       </span>
                       {conversation.delete_after && (
-                        <span className="visitor-conversation-delete-status">Deletes {formatListTime(conversation.delete_after)}</span>
+                        <span className="visitor-conversation-delete-status">Scheduled {formatListTime(conversation.delete_after)}</span>
                       )}
-                      {conversation.unread && <span className="visitor-conversation-unread">New</span>}
                     </span>
                   </span>
-                </button>
-              ))}
+                </button>;
+              })}
             </div>
             <Pagination {...conversationPages} label="Conversation pages" />
             </aside>
@@ -406,6 +446,9 @@ export default function VisitorMessages() {
                       <span><FiMail /> No email provided</span>
                     )}
                     <span>{thread.conversation.visitor_label}</span>
+                    <span className={`visitor-thread-state is-${getConversationState(thread.conversation).key}`}>
+                      {getConversationState(thread.conversation).label}
+                    </span>
                   </div>
                   <RecordActions label="Conversation actions">
                     {archivedView ? (
@@ -437,7 +480,7 @@ export default function VisitorMessages() {
                           disabled={updatingArchive || Boolean(thread.conversation.delete_after)}
                         >
                           <FiTrash2 />
-                          {thread.conversation.delete_after ? 'Deletion scheduled' : 'Delete conversation'}
+                          {thread.conversation.delete_after ? 'Scheduled for deletion' : 'Schedule deletion'}
                         </button>
                       </>
                     ) : (
@@ -466,7 +509,7 @@ export default function VisitorMessages() {
                   <div className="visitor-thread-deletion-notice" role="status">
                     <FiAlertTriangle />
                     <span>
-                      Permanent deletion is scheduled for <strong>{formatDateTime(thread.conversation.delete_after)}</strong>.
+                      <strong>For deletion:</strong> permanent deletion is scheduled for <strong>{formatDateTime(thread.conversation.delete_after)}</strong>.
                       Restore this conversation before then to cancel deletion.
                     </span>
                   </div>
@@ -488,7 +531,7 @@ export default function VisitorMessages() {
                   })}
                 </div>
 
-                {!archivedView ? <form className="visitor-thread-composer" onSubmit={handleReply}>
+                {!thread.conversation.is_archived ? <form className="visitor-thread-composer" onSubmit={handleReply}>
                   <div>
                     <label htmlFor="visitor-admin-reply" className="sr-only">Reply to visitor</label>
                     <textarea

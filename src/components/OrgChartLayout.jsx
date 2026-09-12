@@ -21,21 +21,26 @@ export default function OrgChartLayout({
           {data.departments.map(department => (
             <section className="org-tree-branch" key={department.id} aria-label={department.title}>
               <div className="org-tree-department">{renderNode(department)}</div>
-              {editMode && (
-                <button
-                  type="button"
-                  className="org-tree-add org-tree-add-unit"
-                  onClick={() => onAddUnit?.(department.id)}
-                >
-                  <FiPlus aria-hidden="true" />
-                  Add personnel under this section
-                </button>
-              )}
               {department.units.length > 0 && <ul className="org-tree-units">
                 {department.units.map(unit => (
                   <li className="org-tree-unit" key={unit.id}>{renderNode(unit)}</li>
                 ))}
               </ul>}
+              {editMode && (
+                <button
+                  type="button"
+                  className="org-tree-add org-tree-add-unit"
+                  onClick={() => onAddUnit?.(department.id)}
+                  aria-label={`Add personnel under ${department.title}`}
+                  title={`Add personnel under ${department.title}`}
+                >
+                  <FiPlus aria-hidden="true" />
+                  <span>
+                    <strong>Add personnel</strong>
+                    <small>{department.title}</small>
+                  </span>
+                </button>
+              )}
             </section>
           ))}
         </div>

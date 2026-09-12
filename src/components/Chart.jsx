@@ -216,7 +216,7 @@ const createOrgNode = (kind) => ({
   id: `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   rank: '',
   name: 'New personnel',
-  title: kind === 'section' ? 'New Section' : 'New Subsection',
+  title: kind === 'section' ? 'New Section' : 'New Position',
   avatar_url: '',
   ...(kind === 'section' ? { units: [] } : {})
 });
@@ -627,7 +627,7 @@ export default function Chart() {
       ...prev,
       departments: prev.departments.map((department) => (
         department.id === departmentId
-          ? { ...department, units: [...(department.units || []), createOrgNode('subsection')] }
+          ? { ...department, units: [...(department.units || []), createOrgNode('personnel')] }
           : department
       ))
     }));

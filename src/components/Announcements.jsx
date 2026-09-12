@@ -1472,6 +1472,16 @@ export default function Announcements() {
                       </span>
                     )}
 
+                    {isAdmin && (
+                      <div className="announcement-archive-placement">
+                        <ArchiveButton
+                          showLabel
+                          label="Archive"
+                          onClick={() => setArchiveModalId(announcement.announcement_id)}
+                        />
+                      </div>
+                    )}
+
                     <RecordActions label={`Actions for ${announcement.title}`}>
                       {!isAdmin && !announcement.acknowledged_by_current_user && (
                         <button
@@ -1493,16 +1503,18 @@ export default function Announcements() {
                           Edit
                         </button>
                       )}
-                      <ArchiveButton
-                        label="Archive announcement"
-                        onClick={() => setArchiveModalId(announcement.announcement_id)}
-                        disabled={!isAdmin && !announcement.acknowledged_by_current_user}
-                        title={
-                          isAdmin || announcement.acknowledged_by_current_user
-                            ? undefined
-                            : 'Please acknowledge this announcement before archiving it.'
-                        }
-                      />
+                      {!isAdmin && (
+                        <ArchiveButton
+                          label="Archive announcement"
+                          onClick={() => setArchiveModalId(announcement.announcement_id)}
+                          disabled={!announcement.acknowledged_by_current_user}
+                          title={
+                            announcement.acknowledged_by_current_user
+                              ? undefined
+                              : 'Please acknowledge this announcement before archiving it.'
+                          }
+                        />
+                      )}
                       {isAdmin && (
                         <button
                           type="button"

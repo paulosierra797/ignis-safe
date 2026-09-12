@@ -447,9 +447,9 @@ if (currentKnowledge < 40) {
               className="metric-card clickable"
               role="button"
               tabIndex={0}
-              onClick={() => navigate('/dashboard/accounts')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/accounts')}
-              aria-label="Open Personnel page"
+              onClick={() => navigate('/dashboard/accounts?tab=personnel')}
+              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/accounts?tab=personnel')}
+              aria-label="Open Personnel Directory"
             >
               <div className="metric-icon personnel">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">

@@ -801,6 +801,25 @@
   border-top: 1px solid #eef2f7;
 }
 
+.sent-announcement-history .announcement-card-footer {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.sent-announcement-history .announcement-card-footer > .record-actions-trigger {
+  margin-left: auto;
+}
+
+.announcement-archive-placement {
+  display: flex;
+  min-width: 0;
+}
+
+.announcement-archive-placement .archive-control--labelled {
+  min-width: 0;
+}
+
 .announcement-actions {
   display: flex;
   align-items: center;

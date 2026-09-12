@@ -7,15 +7,16 @@
 
 .admin-profile-content {
   flex: 1;
+  min-width: 0;
+  min-height: 100vh;
   margin-left: var(--sidebar-width);
   padding: 0 2rem 2rem;
-  height: 100vh;
-  overflow-y: auto;
 }
 
 /* Match the flush, full-width admin header used on Reports and other pages. */
 .admin-profile-content > .page-header {
   margin: 0 -2rem 1.5rem;
+  top: 0;
 }
 
 .modal-overlay {

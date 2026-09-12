@@ -763,9 +763,14 @@ useEffect(() => {
 
   return (
     <main className={`login-page login-page--${displayPortal}`}>
-      <button type="button" className="login-landing-back" onClick={() => navigate('/')}>
+      <button
+        type="button"
+        className="login-landing-back"
+        onClick={() => navigate('/')}
+        aria-label="Back to landing page"
+        title="Back to landing page"
+      >
         <FaArrowLeft aria-hidden="true" />
-        <span>Back to landing page</span>
       </button>
       {authStep === "otp"? (
   <>

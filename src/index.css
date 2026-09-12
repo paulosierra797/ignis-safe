@@ -74,6 +74,35 @@ button {
   border: none;
 }
 
+/* Shared interaction feedback for buttons that do not define a stronger
+   component-specific hover state. Color filtering keeps fixed, draggable,
+   and precisely positioned controls from shifting when hovered. */
+:where(button, input[type='button'], input[type='submit'], input[type='reset']) {
+  transition-property: background-color, border-color, color, box-shadow, filter, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(button, input[type='button'], input[type='submit'], input[type='reset']):not(:disabled):not([aria-disabled='true']):hover {
+    filter: brightness(0.94) saturate(1.06);
+  }
+}
+
+:where(button, input[type='button'], input[type='submit'], input[type='reset']):not(:disabled):not([aria-disabled='true']):active {
+  filter: brightness(0.9) saturate(1.04);
+}
+
+:where(button, input[type='button'], input[type='submit'], input[type='reset']):disabled {
+  filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button, input[type='button'], input[type='submit'], input[type='reset']) {
+    transition-duration: 0.01ms;
+  }
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: inherit;
 }

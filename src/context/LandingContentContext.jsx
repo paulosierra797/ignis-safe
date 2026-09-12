@@ -44,7 +44,7 @@ export const DEFAULT_LANDING_CONTENT = {
     landlinePrimary: '(046) 884-6131',
     landlineSecondary: '416-0875',
     mobile: '0995 336 9534',
-    email: 'dasmariasfire@gmail.com',
+    email: 'dasmarinasfire@gmail.com',
     facebookLabel: 'BFP-Dasmariñas FS Cavite',
     facebookUrl: 'https://www.facebook.com/GOLF.E207/',
     tagalog: {
@@ -304,6 +304,13 @@ const normalizeCopyObject = (value) => {
   );
 };
 
+const normalizeStationEmail = (value) => {
+  const email = String(value || DEFAULT_LANDING_CONTENT.contact.email).trim();
+  return email.toLowerCase() === 'dasmariasfire@gmail.com'
+    ? DEFAULT_LANDING_CONTENT.contact.email
+    : email;
+};
+
 const mergeWithDefaults = (candidate = {}) => ({
   hero: {
     ...DEFAULT_LANDING_CONTENT.hero,
@@ -331,6 +338,7 @@ const mergeWithDefaults = (candidate = {}) => ({
   contact: {
     ...DEFAULT_LANDING_CONTENT.contact,
     ...(candidate.contact || {}),
+    email: normalizeStationEmail(candidate.contact?.email),
     title: normalizeDasmarinasText(candidate.contact?.title ?? DEFAULT_LANDING_CONTENT.contact.title),
     emergencyTitle: normalizeDasmarinasText(candidate.contact?.emergencyTitle ?? DEFAULT_LANDING_CONTENT.contact.emergencyTitle),
     facebookLabel: normalizeDasmarinasText(candidate.contact?.facebookLabel ?? DEFAULT_LANDING_CONTENT.contact.facebookLabel),

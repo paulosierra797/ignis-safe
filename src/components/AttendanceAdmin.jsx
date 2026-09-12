@@ -5,6 +5,7 @@ import usePagination from '../hooks/usePagination';
 import RecordActions from './RecordActions';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
+import ToastMessage from './ToastMessage';
 import { FiArchive, FiRotateCcw } from 'react-icons/fi';
 import { getAttendanceArchiveIds, setAttendanceArchived } from '../utils/attendanceArchiveService';
 import DatePicker from 'react-datepicker';
@@ -248,17 +249,8 @@ const AttendanceAdmin = () => {
           </button>
         </div>
 
-        {exportMessage && (
-          <div
-            className={`attendance-export-message ${exportMessage.type}`}
-            role="alert"
-            aria-live="assertive"
-          >
-            {exportMessage.text}
-          </div>
-        )}
-
-        {loadError && <div className="signature-cell">{loadError}</div>}
+        <ToastMessage message={exportMessage?.text} type={exportMessage?.type} />
+        <ToastMessage message={loadError} type="error" />
 
         <div className="attendance-filters-box">
           <div className="filter-row">

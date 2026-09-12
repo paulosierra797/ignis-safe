@@ -6,6 +6,7 @@ import {
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import ToastMessage from './ToastMessage';
 import './AboutUsContent.css';
 import './AppDialog.css';
 import { useUser } from '../context/UserContext';
@@ -189,12 +190,7 @@ function ActiveCheckbox({ checked, onChange }) {
 }
 
 function MessageBanner({ message }) {
-  if (!message?.text) return null;
-  return (
-    <div className={`aboutus-message aboutus-message-${message.type || 'info'}`}>
-      {message.text}
-    </div>
-  );
+  return <ToastMessage message={message?.text} type={message?.type || 'info'} />;
 }
 
 // ---------------------------------------------------------------------------

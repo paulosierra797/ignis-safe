@@ -617,8 +617,9 @@
 }
 
 .announcement-toggle-button {
-  display: inline-block;
-  margin: -0.4rem 0 0.7rem;
+  display: block;
+  width: fit-content;
+  margin: -0.4rem auto 0.7rem 0;
   padding: 0;
   border: none;
   background: none;

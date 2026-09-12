@@ -4,6 +4,7 @@ import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
 import ExpandableText from './ExpandableText';
+import ToastMessage from './ToastMessage';
 import { useUser } from '../context/UserContext';
 import {
   getPersonnelLeaveRequest,
@@ -1130,11 +1131,7 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
           </section>
         </div>
 
-        {message.text && (
-          <div className={`ops-page-message ops-page-message-${message.type}`}>
-            {message.text}
-          </div>
-        )}
+        <ToastMessage message={message.text} type={message.type} />
 
         {isLeaveConfirmOpen && (
           <div

@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
+import ToastMessage from './ToastMessage';
 import { formatStatusLabel } from '../utils/statusUtils';
 import {
   getReportAttachments,
@@ -405,11 +406,7 @@ export default function AdminReports() {
             </button>
           </div>
 
-          {message.text && (
-            <div className={`admin-reports-message admin-reports-message-${message.type}`}>
-              {message.text}
-            </div>
-          )}
+          <ToastMessage message={message.text} type={message.type} />
 
           {loading ? (
             <div className="admin-reports-empty">Loading reports...</div>

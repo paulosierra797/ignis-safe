@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingContentEditor from './LandingContentEditor';
 import PersonnelPicker from './PersonnelPicker';
+import ToastMessage from './ToastMessage';
 import './AppDialog.css';
 import { useUser } from '../context/UserContext';
 import {
@@ -378,11 +379,7 @@ export default function ContentManagement() {
           </button>
         </div>
 
-        {message.text && (
-          <div className={`announcement-message ${message.type}`}>
-            {message.text}
-          </div>
-        )}
+        <ToastMessage message={message.text} type={message.type} />
 
         {activeTab === 'announcements' && (
           <>

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBlocker, useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import ToastMessage from './ToastMessage';
 import './AssessmentQuestions.css';
 import './AppDialog.css';
 import { useUser } from '../context/UserContext';
@@ -1453,11 +1454,7 @@ export default function AssessmentQuestions() {
           </div>
         </div>
 
-        {message.text && (
-          <div className={`assessment-message assessment-message-${message.type || 'info'}`}>
-            {message.text}
-          </div>
-        )}
+        <ToastMessage message={message.text} type={message.type || 'info'} />
 
         <div className="assessment-editor-bar">
           <div className="assessment-editor-summary">

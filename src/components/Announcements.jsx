@@ -9,6 +9,7 @@ import AnnouncementAcknowledgementModal from './AnnouncementAcknowledgementModal
 import AnnouncementNudgeTracking from './AnnouncementNudgeTracking';
 import LandingContentEditor from './LandingContentEditor';
 import PersonnelPicker from './PersonnelPicker';
+import ToastMessage from './ToastMessage';
 import { useUser } from '../context/UserContext';
 import {
   createAnnouncement,
@@ -75,6 +76,26 @@ const ALLOWED_ATTACHMENT_TYPES = new Set([
 const ANNOUNCEMENT_DRAFT_STORAGE_KEY = 'ignis-safe:announcement-draft';
 const ASIA_MANILA_TIME_ZONE = 'Asia/Manila';
 const ASIA_MANILA_OFFSET = '+08:00';
+
+const getManilaInputMinimum = () => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ASIA_MANILA_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(new Date()).reduce((result, part) => ({
+    ...result,
+    [part.type]: part.value
+  }), {});
+
+  return {
+    date: `${parts.year}-${parts.month}-${parts.day}`,
+    time: `${parts.hour}:${parts.minute}`
+  };
+};
 
 const truncateAnnouncementWords = (value) => {
   const text = String(value || '');
@@ -154,6 +175,7 @@ export default function Announcements() {
   const [ackConfirmId, setAckConfirmId] = useState('');
   const [ackConfirmChecked, setAckConfirmChecked] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const manilaInputMinimum = getManilaInputMinimum();
   const [attachmentFiles, setAttachmentFiles] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [audienceHistoryFilter, setAudienceHistoryFilter] = useState('all');
@@ -1079,11 +1101,7 @@ export default function Announcements() {
           </div>
         )}
 
-        {message.text && (
-          <div className={`announcement-message ${message.type}`}>
-            {message.text}
-          </div>
-        )}
+        <ToastMessage message={message.text} type={message.type} />
 
         {isAdmin && isAnnouncementTab && (
           <div className="announcement-card composer-card">
@@ -1177,15 +1195,26 @@ export default function Announcements() {
                       <input
                         id="announcementDeadlineDate"
                         type="date"
+                        min={manilaInputMinimum.date}
                         value={formData.acknowledgement_deadline_date}
-                        onChange={(event) =>
-                          setFormData((prev) => ({ ...prev, acknowledgement_deadline_date: event.target.value }))
-                        }
+                        onChange={(event) => setFormData((prev) => ({
+                          ...prev,
+                          acknowledgement_deadline_date: event.target.value,
+                          acknowledgement_deadline_time:
+                            event.target.value === manilaInputMinimum.date
+                            && prev.acknowledgement_deadline_time
+                            && prev.acknowledgement_deadline_time <= manilaInputMinimum.time
+                              ? ''
+                              : prev.acknowledgement_deadline_time
+                        }))}
                         aria-label="Acknowledgement deadline date"
                       />
                       <input
                         id="announcementDeadlineTime"
                         type="time"
+                        min={formData.acknowledgement_deadline_date === manilaInputMinimum.date
+                          ? manilaInputMinimum.time
+                          : undefined}
                         value={formData.acknowledgement_deadline_time}
                         onChange={(event) =>
                           setFormData((prev) => ({ ...prev, acknowledgement_deadline_time: event.target.value }))

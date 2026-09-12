@@ -1,6 +1,13 @@
 import './OrgChartLayout.css';
 
-export default function OrgChartLayout({ data, renderNode, loadingMessage }) {
+export default function OrgChartLayout({
+  data,
+  renderNode,
+  loadingMessage,
+  editMode = false,
+  onAddDepartment,
+  onAddUnit
+}) {
   return (
     <section className="org-tree" aria-label="Organizational hierarchy">
       {loadingMessage && <p className="chart-loading" role="status">{loadingMessage}</p>}
@@ -13,6 +20,15 @@ export default function OrgChartLayout({ data, renderNode, loadingMessage }) {
           {data.departments.map(department => (
             <section className="org-tree-branch" key={department.id} aria-label={department.title}>
               <div className="org-tree-department">{renderNode(department)}</div>
+              {editMode && (
+                <button
+                  type="button"
+                  className="org-tree-add org-tree-add-unit"
+                  onClick={() => onAddUnit?.(department.id)}
+                >
+                  + Add subsection personnel
+                </button>
+              )}
               {department.units.length > 0 && <ul className="org-tree-units">
                 {department.units.map(unit => (
                   <li className="org-tree-unit" key={unit.id}>{renderNode(unit)}</li>
@@ -22,6 +38,11 @@ export default function OrgChartLayout({ data, renderNode, loadingMessage }) {
           ))}
         </div>
       </>}
+      {editMode && (
+        <button type="button" className="org-tree-add org-tree-add-section" onClick={onAddDepartment}>
+          + Add section personnel
+        </button>
+      )}
     </section>
   );
 }

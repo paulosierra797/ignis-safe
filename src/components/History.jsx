@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
+import ToastMessage from './ToastMessage';
 import './History.css';
 import { useUser } from '../context/UserContext';
 import { getPersonnelActivityLogs } from '../utils/activityLogService';
@@ -172,7 +173,7 @@ export default function History() {
             </div>
           </div>
 
-          {tableMessage && <div className="history-message">{tableMessage}</div>}
+          <ToastMessage message={tableMessage} type="error" />
 
           <div className="history-table-container">
             <table className="history-table">

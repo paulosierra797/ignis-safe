@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import ToastMessage from './ToastMessage';
 import { useUser } from '../context/UserContext';
 import {
   getAnnouncementsForUser,
@@ -118,11 +119,7 @@ export default function UserAnnouncements() {
           compact={true}
         />
 
-        {message.text && (
-          <div className={`announcement-message ${message.type}`}>
-            {message.text}
-          </div>
-        )}
+        <ToastMessage message={message.text} type={message.type} />
 
         <div className="announcement-card list-card">
           <div className="list-card-header">

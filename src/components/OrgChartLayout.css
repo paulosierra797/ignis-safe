@@ -87,6 +87,30 @@
 .org-tree .org-card-editing .org-input { font-size: 14px; color: #202731; background: #fff; border-color: #cbd5e1; }
 .org-tree .org-card-editing .org-avatar-upload { color: #991b1b; background: #fff; box-shadow: none; border-color: #d6dbe1; }
 
+.org-tree-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.55rem 0.85rem;
+  border: 1px dashed #b91c1c;
+  border-radius: 8px;
+  background: #fff;
+  color: #991b1b;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.org-tree-add-unit {
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.org-tree-add-section {
+  width: min(320px, 100%);
+  margin: 1.5rem auto 0;
+}
+
 @media (max-width: 1100px) and (min-width: 701px) {
   .org-tree { padding-inline: 8px; }
   .org-tree-branch { padding-inline: 10px; }
@@ -115,4 +139,5 @@
   .org-tree .org-card-editing .org-input { font-size: 16px; }
   .org-tree-leader > .org-card { grid-template-columns: 80px minmax(0, 1fr); padding-inline: 0; gap: 4px 12px; }
   .org-tree-leader .org-avatar { width: 80px; height: 80px; }
+  .org-tree-add-unit { width: min(100%, 280px); }
 }

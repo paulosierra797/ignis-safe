@@ -21,6 +21,7 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import ExpandableText from './ExpandableText';
+import ToastMessage from './ToastMessage';
 import './Accounts.css';
 import './AppDialog.css';
 import { invitePersonnel } from '../utils/authService';
@@ -3499,9 +3500,7 @@ const permissions = getDefaultPermissions(formData.role);
 
               <div className="account-directory-group-body">
 
-          {pendingRequestMessage && (
-            <div className="leave-approval-message">{pendingRequestMessage}</div>
-          )}
+          <ToastMessage message={pendingRequestMessage} type="error" />
 
           {pendingRequestsLoading ? (
             <p className="leave-approval-empty">Loading leave requests...</p>
@@ -3684,9 +3683,7 @@ const permissions = getDefaultPermissions(formData.role);
             />
           </div>
 
-          {leaveHistoryMessage && (
-            <div className="leave-approval-message">{leaveHistoryMessage}</div>
-          )}
+          <ToastMessage message={leaveHistoryMessage} type="error" />
 
           {leaveHistoryLoading ? (
             <p className="leave-approval-empty">Loading leave request history...</p>
@@ -3787,9 +3784,7 @@ const permissions = getDefaultPermissions(formData.role);
 
               <div className="account-directory-group-body">
 
-          {profileRequestMessage && (
-            <div className="leave-approval-message">{profileRequestMessage}</div>
-          )}
+          <ToastMessage message={profileRequestMessage} type="error" />
 
           {profileRequestsLoading ? (
             <p className="leave-approval-empty">Loading profile change requests...</p>
@@ -4482,11 +4477,7 @@ const permissions = getDefaultPermissions(formData.role);
     )}
 
   </div>
-    {message.text && (
-    <div className={`accounts-modal-message accounts-modal-message-${message.type}`}>
-      {message.text}
-    </div>
-  )}
+    <ToastMessage message={message.text} type={message.type} />
 </div>
 
       <div className="accounts-edit-personnel-divider" />
@@ -4706,11 +4697,7 @@ const permissions = getDefaultPermissions(formData.role);
 
                 </div>
 
-                {message.text && (
-                  <div className={`accounts-modal-message accounts-modal-message-${message.type}`}>
-                    {message.text}
-                  </div>
-                )}
+                <ToastMessage message={message.text} type={message.type} />
               </div>
 
               <div className="accounts-modal-footer">
@@ -5558,11 +5545,7 @@ const permissions = getDefaultPermissions(formData.role);
               </div>
 
               <div className="accounts-modal-body request-archive-body">
-                {requestArchiveMessage && (
-                  <div className="accounts-modal-message accounts-modal-message-error">
-                    {requestArchiveMessage}
-                  </div>
-                )}
+                <ToastMessage message={requestArchiveMessage} type="error" />
 
                 {requestArchiveLoading ? (
                   <p className="leave-approval-empty">Loading archived requests...</p>

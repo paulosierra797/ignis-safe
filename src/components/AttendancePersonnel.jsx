@@ -6,6 +6,7 @@ import Pagination from './Pagination';
 import RecordActions from './RecordActions';
 import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
+import ToastMessage from './ToastMessage';
 import CloseButton from './CloseButton';
 import {
   generateQRSession,
@@ -266,7 +267,10 @@ const AttendancePersonnel = () => {
                   Copy link
                 </button>
               </div>
-              {copyMessage && <div className="qr-feedback">{copyMessage}</div>}
+              <ToastMessage
+                message={copyMessage}
+                type={copyMessage === 'Link copied' ? 'success' : copyMessage === 'Generating link...' ? 'info' : 'error'}
+              />
             </div>
           </div>
 

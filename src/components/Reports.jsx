@@ -5,6 +5,7 @@ import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
 import RecordActions from './RecordActions';
 import PageHeader from './PageHeader';
+import ToastMessage from './ToastMessage';
 import { FaTimes } from 'react-icons/fa';
 import UnsavedChangesPrompt from './UnsavedChangesPrompt';
 import { useUser } from '../context/UserContext';
@@ -490,11 +491,7 @@ export default function Reports() {
               </button>
             </div>
 
-            {message.text && (
-              <div className={`report-upload-message report-upload-message-${message.type}`}>
-                {message.text}
-              </div>
-            )}
+            <ToastMessage message={message.text} type={message.type} />
           </div>
 
           <div className="report-history-section">
@@ -505,9 +502,7 @@ export default function Reports() {
               </p>
             </div>
 
-            {historyMessage && (
-              <div className="report-upload-message report-upload-message-error">{historyMessage}</div>
-            )}
+            <ToastMessage message={historyMessage} type="error" />
 
             <div className="report-history-filters">
               <label className="report-history-filter">

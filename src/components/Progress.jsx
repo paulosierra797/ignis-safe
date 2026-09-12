@@ -17,11 +17,13 @@ import {
   FiStar,
   FiUser,
 } from 'react-icons/fi';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import RecordActions from './RecordActions';
 import Pagination from './Pagination';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
+import ToastMessage from './ToastMessage';
 import './Progress.css';
 import {
   UNSPECIFIED_BARANGAY_LABEL,
@@ -125,6 +127,8 @@ const USERS_PER_PAGE = 10;
 const BARANGAYS_PER_PAGE = 10;
 
 export default function Progress() {
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [progressRows, setProgressRows] = useState([]);
   const [moduleOptions, setModuleOptions] = useState(['All']);
   const [barangayOptions, setBarangayOptions] = useState(['All']);
@@ -144,6 +148,17 @@ export default function Progress() {
   const [currentPage, setCurrentPage] = useState(1);
   const [barangayPage, setBarangayPage] = useState(1);
   const completionBlurTimeoutRef = useRef(null);
+  const requestedView = searchParams.get('view');
+  const defaultView = location.pathname.endsWith('/users') ? 'users' : 'participation';
+  const activeView = ['participation', 'completion', 'users'].includes(requestedView)
+    ? requestedView
+    : defaultView;
+
+  const handleViewChange = (view) => {
+    setSearchParams({ view });
+    setCurrentPage(1);
+    setBarangayPage(1);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -369,8 +384,20 @@ export default function Progress() {
       <div className="progress-main">
         <PageHeader title="Users" />
 
+        <nav className="progress-view-tabs" aria-label="Users page sections">
+          <button type="button" className={activeView === 'participation' ? 'is-active' : ''} onClick={() => handleViewChange('participation')}>
+            Barangay Participation
+          </button>
+          <button type="button" className={activeView === 'completion' ? 'is-active' : ''} onClick={() => handleViewChange('completion')}>
+            Barangay Completion
+          </button>
+          <button type="button" className={activeView === 'users' ? 'is-active' : ''} onClick={() => handleViewChange('users')}>
+            User List
+          </button>
+        </nav>
+
         <div className="progress-controls">
-          <div className="progress-filters">
+          <div className={`progress-filters progress-filters--${activeView}`}>
             <div className="progress-filter">
               <label htmlFor="progress-filter-barangay">Filter by Barangay</label>
               <select
@@ -389,7 +416,7 @@ export default function Progress() {
               </select>
             </div>
 
-            <div className="progress-filter">
+            {activeView === 'users' && <div className="progress-filter">
               <label htmlFor="progress-filter-module">Filter by Module</label>
               <select
                 id="progress-filter-module"
@@ -402,9 +429,9 @@ export default function Progress() {
                   </option>
                 ))}
               </select>
-            </div>
+            </div>}
 
-            <div className="progress-filter progress-filter-searchable">
+            {activeView === 'users' && <div className="progress-filter progress-filter-searchable">
               <label htmlFor="progress-filter-completion">Filter by Completion</label>
               <div className="progress-searchable-select">
                 <input
@@ -436,9 +463,9 @@ export default function Progress() {
                   </ul>
                 )}
               </div>
-            </div>
+            </div>}
 
-            <div className="progress-filter progress-filter-query">
+            {activeView === 'users' && <div className="progress-filter progress-filter-query">
               <label htmlFor="progress-user-search">Search Users</label>
               <input
                 id="progress-user-search"
@@ -448,7 +475,7 @@ export default function Progress() {
                 placeholder="Search name, email, or barangay..."
                 autoComplete="off"
               />
-            </div>
+            </div>}
 
             <button className="progress-clear" onClick={handleClearFilters}>
               CLEAR FILTERS
@@ -456,7 +483,7 @@ export default function Progress() {
           </div>
         </div>
 
-        <section className="progress-barangay-panel">
+        {activeView === 'participation' && <section className="progress-barangay-panel">
           <div className="progress-barangay-panel-header">
             <div>
               <h2>
@@ -512,9 +539,9 @@ export default function Progress() {
               </div>
             </div>
           </div>
-        </section>
+        </section>}
 
-        <div className="progress-table-card progress-barangay-breakdown">
+        {activeView === 'completion' && <div className="progress-table-card progress-barangay-breakdown">
           <div className="progress-breakdown-header">
             <h3>
               <FiPieChart aria-hidden="true" />
@@ -619,9 +646,9 @@ export default function Progress() {
               />
             </div>
           )}
-        </div>
+        </div>}
 
-        <div className="progress-table-card progress-users-table">
+        {activeView === 'users' && <div className="progress-table-card progress-users-table">
           <div className="progress-breakdown-header">
             <h3>
               <FiBarChart2 aria-hidden="true" />
@@ -631,11 +658,7 @@ export default function Progress() {
               Showing {filteredRows.length} of {totalUsers} users
             </span>
           </div>
-          {errorMessage && (
-            <div style={{ padding: '0.8rem 1rem', color: '#991b1b', fontWeight: 600 }}>
-              {errorMessage}
-            </div>
-          )}
+          <ToastMessage message={errorMessage} type="error" />
           {!isLoading && (
             <div className="progress-section-pagination progress-section-pagination--users">
               <Pagination
@@ -795,7 +818,7 @@ export default function Progress() {
   )}
 
 </div>
-        </div>
+        </div>}
 
         {showModal && selectedUser && (
           <div className="progress-modal-overlay" onClick={handleCloseModal}>

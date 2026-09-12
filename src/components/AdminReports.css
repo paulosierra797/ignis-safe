@@ -318,10 +318,12 @@
 }
 
 .admin-reports-see-more {
+  display: block;
+  width: fit-content;
   background: none;
   border: none;
   padding: 0;
-  margin: 0;
+  margin: 0 auto 0 0;
   color: #ea580c;
   font-size: 0.8rem;
   font-weight: 700;

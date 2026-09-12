@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import ToastMessage from './ToastMessage';
 import './AppDialog.css';
 import {
   buildLearningMaterialModules,
@@ -551,7 +552,7 @@ try {
           </div>
         )}
 
-        {message.text && <div className={`learning-materials-message ${message.type}`}>{message.text}</div>}
+        <ToastMessage message={message.text} type={message.type} />
 
        {loading ? (
   <div className="learning-materials-empty">

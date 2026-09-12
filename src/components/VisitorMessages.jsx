@@ -3,6 +3,7 @@ import ArchiveButton from './ArchiveButton';
 import RecordActions from './RecordActions';
 import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
+import ToastMessage from './ToastMessage';
 import {
   FiArrowLeft,
   FiArchive,
@@ -274,7 +275,7 @@ export default function VisitorMessages() {
           </div>
         </section>
 
-        {!archivedView && error && <div className="visitor-messages-error" role="alert">{error}</div>}
+        {!archivedView && <ToastMessage message={error} type="error" />}
 
         {archivedView && (
           <button
@@ -312,7 +313,7 @@ export default function VisitorMessages() {
             </header>
           )}
 
-          {archivedView && error && <div className="visitor-messages-error visitor-archive-modal-error" role="alert">{error}</div>}
+          {archivedView && <ToastMessage message={error} type="error" />}
 
           <section className={`visitor-messages-workspace ${selectedId ? 'has-selection' : ''}`}>
             <aside className="visitor-conversation-list" aria-label="Visitor conversations">

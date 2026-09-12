@@ -206,6 +206,15 @@ const flattenNodes = (data) => {
   return nodes;
 };
 
+const createOrgNode = (kind) => ({
+  id: `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  rank: '',
+  name: 'New personnel',
+  title: kind === 'section' ? 'New Section' : 'New Subsection',
+  avatar_url: '',
+  ...(kind === 'section' ? { units: [] } : {})
+});
+
 // Builds the list of changed fields (name/title/avatar) between the snapshot taken
 // when edit mode was entered and the current in-progress edits, so it can be shown
 // in the confirmation modal before anything is persisted.
@@ -215,7 +224,15 @@ const buildChangeList = (original, current, pendingAvatarFiles) => {
 
   flattenNodes(current).forEach((node) => {
     const prev = originalMap.get(node.id);
-    if (!prev) return;
+    if (!prev) {
+      changes.push({
+        nodeId: node.id,
+        field: 'added',
+        label: 'Personnel',
+        newValue: `${node.name} - ${node.title}`
+      });
+      return;
+    }
 
     if (prev.rank !== node.rank) {
       changes.push({ nodeId: node.id, field: 'rank', label: 'Rank', oldValue: prev.rank || '(none)', newValue: node.rank || '(none)' });
@@ -259,6 +276,9 @@ const buildActivityDetails = (changes) => {
 
   return changes
     .map((change) => {
+      if (change.field === 'added') {
+        return `Added ${change.newValue} to the organizational chart.`;
+      }
       if (change.field === 'avatar') {
         return `Updated profile image for ${change.personName}.`;
       }
@@ -269,6 +289,12 @@ const buildActivityDetails = (changes) => {
 
 const buildSuccessSummary = (changes) =>
   changes.map((change) => {
+    if (change.field === 'added') {
+      return {
+        headline: 'Personnel added successfully.',
+        detail: `${change.newValue} was added to the organizational chart.`
+      };
+    }
     if (change.field === 'avatar') {
       return {
         headline: 'Profile image updated successfully.',
@@ -368,6 +394,9 @@ export const OrgCard = ({ node, editMode, canEdit, onChange, onImageChange }) =>
 };
 
 const OrgChangeLine = ({ change }) => {
+  if (change.field === 'added') {
+    return <><strong>Added:</strong> {change.newValue}</>;
+  }
   if (change.field === 'avatar') {
     return (
       <>
@@ -532,6 +561,26 @@ export default function Chart() {
     }
 
     setOrgData((prev) => applyNodeUpdate(prev, id, field, value));
+  };
+
+  const handleAddDepartment = () => {
+    if (!isAdmin || !editMode) return;
+    setOrgData((prev) => ({
+      ...prev,
+      departments: [...prev.departments, createOrgNode('section')]
+    }));
+  };
+
+  const handleAddUnit = (departmentId) => {
+    if (!isAdmin || !editMode) return;
+    setOrgData((prev) => ({
+      ...prev,
+      departments: prev.departments.map((department) => (
+        department.id === departmentId
+          ? { ...department, units: [...(department.units || []), createOrgNode('subsection')] }
+          : department
+      ))
+    }));
   };
 
   const handleEditToggle = () => {
@@ -800,6 +849,9 @@ export default function Chart() {
         <OrgChartLayout
           data={orgData}
           loadingMessage={isLoadingChart ? 'Loading chart...' : undefined}
+          editMode={editMode && isAdmin}
+          onAddDepartment={handleAddDepartment}
+          onAddUnit={handleAddUnit}
           renderNode={node => (
             <OrgCard
               node={withPreview(node)}

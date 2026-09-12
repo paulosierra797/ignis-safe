@@ -618,8 +618,8 @@ if (currentKnowledge < 40) {
               className="metric-card compact clickable"
               role="button"
               tabIndex={0}
-              onClick={() => navigate('/dashboard/users')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/users')}
+              onClick={() => navigate('/dashboard/users?view=users')}
+              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/users?view=users')}
               aria-label="Open Users page"
             >
               <div className="metric-icon users">
@@ -675,8 +675,8 @@ if (currentKnowledge < 40) {
               className="metric-card compact clickable"
               role="button"
               tabIndex={0}
-              onClick={() => navigate('/dashboard/users')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/users')}
+              onClick={() => navigate('/dashboard/users?view=users')}
+              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/users?view=users')}
               aria-label="Open Users page"
             >
               <div className="metric-icon registrations">
@@ -702,8 +702,8 @@ if (currentKnowledge < 40) {
               className="metric-card compact clickable"
               role="button"
               tabIndex={0}
-              onClick={() => navigate('/dashboard/progress')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/progress')}
+              onClick={() => navigate('/dashboard/progress?view=users')}
+              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/progress?view=users')}
               aria-label="Open Progress page"
             >
               <div className="metric-icon completion">
@@ -859,8 +859,8 @@ if (currentKnowledge < 40) {
             className="chart-card clickable"
             role="button"
             tabIndex={0}
-            onClick={() => navigate('/dashboard/progress')}
-            onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/progress')}
+            onClick={() => navigate('/dashboard/progress?view=users')}
+            onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/progress?view=users')}
             aria-label="Open Progress page"
           >
             <div className="chart-header">

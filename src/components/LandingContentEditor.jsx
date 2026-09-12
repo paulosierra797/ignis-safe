@@ -2,6 +2,7 @@ import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, u
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingPreview from './LandingPreview';
+import ToastMessage from './ToastMessage';
 import { useLandingContent } from '../context/LandingContentContext';
 import { useUser } from '../context/UserContext';
 import { FiArrowDown, FiArrowUp, FiMove, FiPlus, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
@@ -862,7 +863,10 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         </div>
       )}
 
-      {saveMessage && <div className="landing-editor-alert">{saveMessage}</div>}
+      <ToastMessage
+        message={saveMessage}
+        type={/fail|error|unable/i.test(saveMessage || '') ? 'error' : 'success'}
+      />
 
       <div className="landing-editor-groups">
         <GroupCard

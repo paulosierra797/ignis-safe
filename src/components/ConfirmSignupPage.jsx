@@ -9,6 +9,7 @@ import {
   verifySignupCode
 } from '../utils/authService';
 import { useUser } from '../context/UserContext';
+import ToastMessage from './ToastMessage';
 import ignissafe from '../assets/Logo1.png';
 import './ConfirmSignupPage.css';
 
@@ -265,11 +266,7 @@ export default function ConfirmSignupPage() {
               </ul>
             </div>
 
-            {message.text && (
-              <div className={`confirm-signup-message confirm-signup-message-${message.type}`}>
-                {message.text}
-              </div>
-            )}
+            <ToastMessage message={message.text} type={message.type} />
 
             <button
               type="submit"
@@ -318,11 +315,7 @@ export default function ConfirmSignupPage() {
             autoComplete="one-time-code"
           />
 
-          {message.text && (
-            <div className={`confirm-signup-message confirm-signup-message-${message.type}`}>
-              {message.text}
-            </div>
-          )}
+          <ToastMessage message={message.text} type={message.type} />
 
           <button type="submit" className="confirm-signup-primary" disabled={isVerifying}>
             {isVerifying ? 'Verifying...' : 'Verify OTP'}

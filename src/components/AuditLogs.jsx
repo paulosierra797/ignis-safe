@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Sidebar from './Sidebar';
 import Pagination from './Pagination';
 import PageHeader from './PageHeader';
+import ToastMessage from './ToastMessage';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { FaDownload, FaSearch, FaTimes } from 'react-icons/fa';
@@ -166,11 +167,7 @@ export default function AuditLogs() {
           showSearch={false}
         />
 
-        {tableMessage && (
-          <div style={{ marginBottom: '0.9rem', color: '#991b1b', fontWeight: 600 }}>
-            {tableMessage}
-          </div>
-        )}
+        <ToastMessage message={tableMessage} type="error" />
 
         <div className="audit-logs-stats">
           <div className="audit-logs-stat-card">

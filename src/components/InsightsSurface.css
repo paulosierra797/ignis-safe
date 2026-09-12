@@ -1,13 +1,13 @@
 /* Shared visual language for operational dashboard and learning analytics. */
 :is(.dashboard-main, .analytics-main) {
   --insight-surface: #ffffff;
-  --insight-canvas: #f3f4f6;
+  --insight-canvas: #f1f2f4;
   --insight-border: #e5e7eb;
   --insight-border-strong: #d1d5db;
   --insight-text: #111827;
   --insight-muted: #667085;
-  --insight-shadow: 0 5px 16px rgba(15, 23, 42, 0.055);
-  --insight-shadow-hover: 0 12px 26px rgba(15, 23, 42, 0.09);
+  --insight-shadow: 0 3px 10px rgba(15, 23, 42, 0.045);
+  --insight-shadow-hover: 0 11px 24px rgba(15, 23, 42, 0.09);
 }
 
 :is(.dashboard-container, .analytics-container) {
@@ -60,35 +60,103 @@
   outline-offset: 2px;
 }
 
-/* Compact dashboard metrics with the reference's corner icon treatment. */
+/*
+ * Summary cards use the reference's signature cut-away corner. The canvas
+ * circle masks the ordinary corner while the icon's white ring restores the
+ * raised cradle, making the badge part of the silhouette instead of an icon
+ * placed inside a rectangle.
+ */
 .dashboard-main :is(.metrics-grid, .metrics-grid-4) {
-  gap: 0.85rem;
+  gap: 1.1rem;
 }
 
 .dashboard-main .metric-card,
 .dashboard-main .metric-card.compact {
-  min-height: 168px;
+  min-height: 164px;
   display: block;
-  padding: 1rem 4.6rem 1rem 1rem;
+  overflow: visible;
+  padding: 1rem 4.85rem 0.9rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: var(--insight-shadow);
+}
+
+.dashboard-main .metric-card::before,
+.analytics-main .analytics-stat-card::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: -3px;
+  right: -7px;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: var(--insight-canvas);
+  pointer-events: none;
 }
 
 .dashboard-main .metric-card .metric-icon {
   position: absolute;
-  top: 0.85rem;
-  right: 0.85rem;
-  width: 42px;
-  height: 42px;
-  border: 4px solid #ffffff;
+  z-index: 3;
+  top: 10px;
+  right: 6px;
+  width: 36px;
+  height: 36px;
+  box-sizing: content-box;
+  border: 6px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 0 0 7px #f3f4f6, 0 4px 10px rgba(15, 23, 42, 0.08);
+  outline: 5px solid var(--insight-canvas);
+  box-shadow: 0 4px 9px rgba(15, 23, 42, 0.12);
 }
 
 .dashboard-main .metric-card .metric-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
+}
+
+.dashboard-main .metric-card .metric-icon.personnel {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.dashboard-main .metric-card .metric-icon.duty {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.dashboard-main .metric-card .metric-icon.attendance,
+.dashboard-main .metric-card .metric-icon.active-users {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.dashboard-main .metric-card .metric-icon.users {
+  background: #6366f1;
+  color: #ffffff;
+}
+
+.dashboard-main .metric-card .metric-icon.registrations {
+  background: #db2777;
+  color: #ffffff;
+}
+
+.dashboard-main .metric-card .metric-icon.completion {
+  background: #7c3aed;
+  color: #ffffff;
+}
+
+.dashboard-main .metric-card .metric-icon.leave {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+.dashboard-main .metric-card .metric-icon.active-users svg circle {
+  fill: #ffffff;
 }
 
 .dashboard-main .metric-content {
+  position: relative;
+  z-index: 2;
   min-width: 0;
   height: 100%;
   display: flex;
@@ -97,10 +165,11 @@
 }
 
 .dashboard-main .metric-label {
-  margin: 0 0 0.55rem;
-  color: #475467;
-  font-size: 0.82rem;
-  font-weight: 600;
+  max-width: calc(100% - 0.25rem);
+  margin: 0 0 0.6rem;
+  color: #3f4754;
+  font-size: 0.86rem;
+  font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -111,16 +180,16 @@
 
 .dashboard-main .main-number {
   color: var(--insight-text);
-  font-size: 1.85rem;
-  font-weight: 750;
+  font-size: 1.9rem;
+  font-weight: 700;
   line-height: 1.05;
 }
 
 .dashboard-main .metric-description {
   margin: auto 0 0;
   color: var(--insight-muted);
-  font-size: 0.72rem;
-  line-height: 1.45;
+  font-size: 0.7rem;
+  line-height: 1.4;
 }
 
 .dashboard-main :is(.metric-trend, .metric-detail, .metric-comparison) {
@@ -143,41 +212,53 @@
 
 /* Analytics summary cards mirror the dashboard metrics. */
 .analytics-main .analytics-stats-row {
-  gap: 0.85rem;
+  gap: 1.1rem;
 }
 
 .analytics-main .analytics-stat-card {
-  min-height: 168px;
-  padding: 1rem 4.6rem 1rem 1rem;
+  min-height: 164px;
+  overflow: visible;
+  padding: 1rem 4.85rem 0.9rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: var(--insight-shadow);
 }
 
 .analytics-main .analytics-stat-icon {
   position: absolute;
-  top: 0.85rem;
-  right: 0.85rem;
-  width: 42px;
-  height: 42px;
+  z-index: 3;
+  top: 10px;
+  right: 6px;
+  width: 36px;
+  height: 36px;
+  box-sizing: content-box;
   display: inline-grid;
   place-items: center;
-  border: 4px solid #ffffff;
+  border: 6px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 0 0 7px #f3f4f6, 0 4px 10px rgba(15, 23, 42, 0.08);
-  font-size: 1.05rem;
+  outline: 5px solid var(--insight-canvas);
+  box-shadow: 0 4px 9px rgba(15, 23, 42, 0.12);
+  font-size: 1rem;
+}
+
+.analytics-main .analytics-stat-card > :not(.analytics-stat-icon) {
+  position: relative;
+  z-index: 2;
 }
 
 .analytics-main .analytics-stat-icon.is-participation {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: #2563eb;
+  color: #ffffff;
 }
 
 .analytics-main .analytics-stat-icon.is-activity {
-  background: #dcfce7;
-  color: #15803d;
+  background: #16a34a;
+  color: #ffffff;
 }
 
 .analytics-main .analytics-stat-icon.is-time {
-  background: #fef3c7;
-  color: #b45309;
+  background: #f59e0b;
+  color: #ffffff;
 }
 
 .analytics-main .analytics-stat-heading span {
@@ -189,8 +270,9 @@
 }
 
 .analytics-main .analytics-stat-heading h3 {
-  color: #344054;
-  font-size: 0.82rem;
+  color: #3f4754;
+  font-size: 0.86rem;
+  font-weight: 500;
 }
 
 .analytics-main .analytics-stat-card .main-value {
@@ -262,7 +344,7 @@
   .dashboard-main .metric-card,
   .dashboard-main .metric-card.compact,
   .analytics-main .analytics-stat-card {
-    min-height: 156px;
+    min-height: 158px;
   }
 }
 
@@ -270,17 +352,27 @@
   .dashboard-main .metric-card,
   .dashboard-main .metric-card.compact,
   .analytics-main .analytics-stat-card {
-    min-height: 148px;
-    padding: 0.9rem 4.15rem 0.9rem 0.9rem;
+    min-height: 150px;
+    padding: 0.9rem 4.35rem 0.85rem 0.9rem;
+  }
+
+  .dashboard-main .metric-card::before,
+  .analytics-main .analytics-stat-card::before {
+    top: -2px;
+    right: -5px;
+    width: 66px;
+    height: 66px;
   }
 
   .dashboard-main .metric-card .metric-icon,
   .analytics-main .analytics-stat-icon {
-    top: 0.8rem;
-    right: 0.8rem;
-    width: 38px;
-    height: 38px;
-    box-shadow: 0 0 0 5px #f3f4f6, 0 3px 8px rgba(15, 23, 42, 0.08);
+    top: 9px;
+    right: 6px;
+    width: 32px;
+    height: 32px;
+    border-width: 5px;
+    outline-width: 5px;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.11);
   }
 
   :is(.dashboard-main .chart-header, .analytics-main .analytics-card-header) {

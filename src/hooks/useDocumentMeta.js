@@ -27,12 +27,12 @@ const PUBLIC_META = {
       + 'about fire safety inspection, permits, and public advisories.',
   },
   '/terms': {
-    title: 'Terms of Use — IGNIS SAFE',
-    description: 'Terms of use for the IGNIS SAFE portal of BFP Dasmariñas City Fire Station.',
+    title: 'Terms and Conditions — IGNIS SAFE',
+    description: 'Terms and conditions for using the IGNIS SAFE public, personnel, attendance, communication, and learning services.',
   },
   '/privacy': {
     title: 'Privacy Policy — IGNIS SAFE',
-    description: 'Privacy policy for the IGNIS SAFE portal of BFP Dasmariñas City Fire Station.',
+    description: 'How IGNIS SAFE collects, uses, protects, retains, and shares personal data across its public and authorized services.',
   },
   '/login': {
     title: 'Sign In — IGNIS SAFE | BFP Dasmariñas City Fire Station',

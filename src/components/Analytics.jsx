@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FaArrowDown, FaArrowUp, FaMinus } from 'react-icons/fa';
+import { FiCheckSquare, FiClock, FiUsers } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import './Analytics.css';
+import './InsightsSurface.css';
 import PerformanceChart from './PerformanceChart';
 import ActivityTrendsChart from './ActivityTrendsChart';
 import TrainingProgressChart from './TrainingProgressChart';
@@ -290,6 +292,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
 
         <div className="analytics-stats-row">
           <div className="analytics-stat-card">
+            <span className="analytics-stat-icon is-participation" aria-hidden="true"><FiUsers /></span>
             <div className="analytics-stat-heading">
               <span>Participation</span>
               <h3>Total Learners</h3>
@@ -302,6 +305,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
             <p>Total registered mobile app learners included in the selected filters.</p>
           </div>
           <div className="analytics-stat-card">
+            <span className="analytics-stat-icon is-activity" aria-hidden="true"><FiCheckSquare /></span>
             <div className="analytics-stat-heading">
               <span>Learning activity</span>
               <h3>Questions Answered</h3>
@@ -314,6 +318,7 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
             <p>Total assessment questions submitted by the learners included in the filters.</p>
           </div>
           <div className="analytics-stat-card">
+            <span className="analytics-stat-icon is-time" aria-hidden="true"><FiClock /></span>
             <div className="analytics-stat-heading">
               <span>Time spent</span>
               <h3>Average Session</h3>

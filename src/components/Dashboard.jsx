@@ -10,6 +10,7 @@ import { getPersonnelForDate, getShiftAssignmentSummaryForDate } from '../utils/
 import { getManilaToday } from '../utils/dateUtils';
 import { formatStatusLabel } from '../utils/statusUtils';
 import './Dashboard.css';
+import './InsightsSurface.css';
 
 const DEFAULT_ANALYTICS_STATS = {
   activeUsers: 0,

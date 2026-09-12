@@ -1,0 +1,102 @@
+/* Shared feedback for repeated records across admin, personnel, and public lists. */
+:where(table tbody > tr),
+:where(
+  .announcement-item,
+  .archived-item,
+  .request-archive-item,
+  .landing-announcement-card,
+  .visitor-conversation-item,
+  .aboutus-contact-card,
+  .aboutus-directory-entry,
+  .aboutus-item-row,
+  .attached-files-modal-item,
+  .leave-document-file-item,
+  .module-editor-item-card,
+  .recommendation-card
+) {
+  transition-property: background-color, border-color, box-shadow;
+  transition-duration: 160ms;
+  transition-timing-function: ease;
+}
+
+:where(table tbody > tr) > td {
+  transition: background-color 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :where(table tbody > tr):hover {
+    background-color: #fffaf5;
+    box-shadow: inset 3px 0 0 #f97316;
+  }
+
+  :where(table tbody > tr):hover > td {
+    background-color: #fffaf5;
+  }
+
+  :where(
+    .announcement-item,
+    .archived-item,
+    .request-archive-item,
+    .landing-announcement-card,
+    .visitor-conversation-item,
+    .aboutus-contact-card,
+    .aboutus-directory-entry,
+    .aboutus-item-row,
+    .attached-files-modal-item,
+    .leave-document-file-item,
+    .module-editor-item-card,
+    .recommendation-card
+  ):hover {
+    border-color: #fdba74;
+    background-color: #fffaf5;
+    box-shadow: inset 3px 0 0 #f97316, 0 5px 14px rgba(15, 23, 42, 0.08);
+  }
+}
+
+:where(table tbody > tr):focus-within {
+  background-color: #fffaf5;
+  box-shadow: inset 3px 0 0 #b91c1c;
+}
+
+:where(table tbody > tr):focus-within > td {
+  background-color: #fffaf5;
+}
+
+:where(
+  .announcement-item,
+  .archived-item,
+  .request-archive-item,
+  .landing-announcement-card,
+  .visitor-conversation-item,
+  .aboutus-contact-card,
+  .aboutus-directory-entry,
+  .aboutus-item-row,
+  .attached-files-modal-item,
+  .leave-document-file-item,
+  .module-editor-item-card,
+  .recommendation-card
+):focus-within {
+  border-color: #fca5a5;
+  box-shadow: inset 3px 0 0 #b91c1c, 0 5px 14px rgba(15, 23, 42, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(table tbody > tr),
+  :where(table tbody > tr) > td,
+  :where(
+    .announcement-item,
+    .archived-item,
+    .request-archive-item,
+    .landing-announcement-card,
+    .visitor-conversation-item,
+    .aboutus-contact-card,
+    .aboutus-directory-entry,
+    .aboutus-item-row,
+    .attached-files-modal-item,
+    .leave-document-file-item,
+    .module-editor-item-card,
+    .recommendation-card
+  ) {
+    transition-duration: 0.01ms;
+  }
+}

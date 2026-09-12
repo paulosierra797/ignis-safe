@@ -12,6 +12,7 @@ import '@fontsource/poppins/latin-900.css'
 import './index.css'
 import './components/CountBadge.css'
 import './components/RecordActions.css'
+import './components/RecordHover.css'
 import App from './App.jsx'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import RouteErrorBoundary from './components/RouteErrorBoundary.jsx';

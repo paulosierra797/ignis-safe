@@ -27,10 +27,50 @@
 }
 
 .visitor-chat--full {
-  width: min(calc(100% - 2rem), 920px);
-  height: min(760px, calc(100vh - 150px));
-  min-height: 620px;
+  width: min(100%, 1180px);
+  height: auto;
+  min-height: 0;
   margin: 0 auto;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.visitor-chat--full.has-conversation {
+  height: min(650px, calc(100vh - 170px));
+  min-height: 500px;
+  overflow: hidden;
+}
+
+.visitor-chat--full.is-onboarding .visitor-chat-header {
+  display: none;
+}
+
+.visitor-chat--full.has-conversation .visitor-chat-header {
+  min-height: 60px;
+  padding: 0 0 0.75rem;
+  border-bottom: 1px solid #dde3ea;
+  background: transparent;
+  color: #172033;
+}
+
+.visitor-chat--full.has-conversation .visitor-chat-brand-icon {
+  width: 38px;
+  height: 38px;
+  background: #f8e8e9;
+  color: #9f151a;
+}
+
+.visitor-chat--full.has-conversation .visitor-chat-header-copy p {
+  color: #64748b;
+}
+
+.visitor-chat--full.has-conversation .visitor-chat-header-action {
+  border-color: #dce2e9;
+  background: #ffffff;
+  color: #9f151a;
 }
 
 .visitor-chat-header {
@@ -154,9 +194,61 @@
 }
 
 .visitor-chat--full .visitor-chat-onboarding {
-  width: min(100%, 620px);
-  margin: auto;
-  padding: clamp(1.5rem, 4vw, 2.5rem);
+  width: 100%;
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(240px, 0.75fr) minmax(420px, 1.25fr);
+  align-items: start;
+  gap: clamp(2.5rem, 7vw, 6rem);
+  overflow: visible;
+  padding: clamp(1rem, 2vw, 1.75rem) 0;
+}
+
+.visitor-chat-page-intro {
+  min-width: 0;
+  padding-top: 0.3rem;
+}
+
+.visitor-chat-page-intro > span {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.visitor-chat-page-intro h1 {
+  margin: 0.55rem 0 0;
+  color: #172033;
+  font-size: clamp(1.7rem, 3.2vw, 2.65rem);
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.visitor-chat-page-intro button {
+  margin-top: 1.15rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #991b1b;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+}
+
+.visitor-chat--full .visitor-chat-start-form,
+.visitor-chat--full .visitor-chat-restore-form {
+  width: 100%;
+  max-width: 680px;
+  justify-self: end;
+  gap: 0.75rem;
+}
+
+.visitor-chat--full .visitor-chat-reconnect-error {
+  grid-column: 1 / -1;
 }
 
 .visitor-chat-welcome h2,
@@ -624,12 +716,29 @@
 
   .visitor-chat--full {
     width: 100%;
-    height: calc(100vh - 64px);
-    min-height: 560px;
+    height: auto;
+    min-height: 0;
     border-right: none;
     border-left: none;
     border-radius: 0;
     box-shadow: none;
+  }
+
+  .visitor-chat--full.has-conversation {
+    height: calc(100vh - 150px);
+    min-height: 520px;
+  }
+
+  .visitor-chat--full .visitor-chat-onboarding {
+    grid-template-columns: 1fr;
+    gap: 1.4rem;
+    padding: 0;
+  }
+
+  .visitor-chat--full .visitor-chat-start-form,
+  .visitor-chat--full .visitor-chat-restore-form {
+    max-width: none;
+    justify-self: stretch;
   }
 
   .visitor-chat-message {

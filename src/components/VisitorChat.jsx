@@ -245,7 +245,10 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
   };
 
   return (
-    <section className={`visitor-chat visitor-chat--${variant}`} aria-label="Visitor messaging">
+    <section
+      className={`visitor-chat visitor-chat--${variant} ${hasConversation ? 'has-conversation' : 'is-onboarding'}`}
+      aria-label="Visitor messaging"
+    >
       <header className="visitor-chat-header">
         <span className="visitor-chat-brand-icon" aria-hidden="true"><FiMessageCircle /></span>
         <div className="visitor-chat-header-copy">
@@ -374,6 +377,22 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
         </>
       ) : (
         <div className="visitor-chat-onboarding">
+          {!isCompact && (
+            <aside className="visitor-chat-page-intro">
+              <span><span className="visitor-chat-online-dot" /> {copy.team}</span>
+              <h1>{copy.messageUs}</h1>
+              <button
+                type="button"
+                onClick={() => {
+                  setRestoreMode((current) => !current);
+                  setError('');
+                }}
+              >
+                {restoreMode ? copy.startAgain : copy.restoreLink}
+              </button>
+            </aside>
+          )}
+
           {error && (
             <div className="visitor-chat-reconnect-error" role="alert">
               <p>{error}</p>
@@ -383,16 +402,18 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
 
           {restoreMode ? (
             <form className="visitor-chat-restore-form" onSubmit={handleRestore}>
-              <button
-                type="button"
-                className="visitor-chat-back"
-                onClick={() => {
-                  setRestoreMode(false);
-                  setError('');
-                }}
-              >
-                <FiArrowLeft aria-hidden="true" /> {copy.back}
-              </button>
+              {isCompact && (
+                <button
+                  type="button"
+                  className="visitor-chat-back"
+                  onClick={() => {
+                    setRestoreMode(false);
+                    setError('');
+                  }}
+                >
+                  <FiArrowLeft aria-hidden="true" /> {copy.back}
+                </button>
+              )}
               <div>
                 <h2>{copy.continueTitle}</h2>
                 <p>{copy.continueHelp}</p>
@@ -413,10 +434,12 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
             </form>
           ) : (
             <form className="visitor-chat-start-form" onSubmit={handleStart} noValidate>
-              <div className="visitor-chat-welcome">
-                <h2>{copy.startTitle}</h2>
-                <p>{copy.startHelp}</p>
-              </div>
+              {isCompact && (
+                <div className="visitor-chat-welcome">
+                  <h2>{copy.startTitle}</h2>
+                  <p>{copy.startHelp}</p>
+                </div>
+              )}
 
               <div className="visitor-chat-field">
                 <label htmlFor={`visitor-name-${variant}`}><FiUser aria-hidden="true" /> {copy.name}</label>
@@ -469,7 +492,7 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                 </div>
                 <textarea
                   id={`visitor-message-${variant}`}
-                  rows={isCompact ? 3 : 5}
+                  rows={isCompact ? 3 : 4}
                   value={details.message}
                   onChange={updateDetail('message')}
                   onBlur={handleFieldBlur('message')}
@@ -512,9 +535,11 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                 {sending ? copy.sending : copy.sendMessage}
               </button>
 
-              <button type="button" className="visitor-chat-restore-link" onClick={() => setRestoreMode(true)}>
-                {copy.restoreLink}
-              </button>
+              {isCompact && (
+                <button type="button" className="visitor-chat-restore-link" onClick={() => setRestoreMode(true)}>
+                  {copy.restoreLink}
+                </button>
+              )}
             </form>
           )}
         </div>

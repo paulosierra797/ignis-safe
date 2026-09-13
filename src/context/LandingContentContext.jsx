@@ -172,102 +172,176 @@ export const DEFAULT_LANDING_CONTENT = {
   },
   faq: {
     english: {
-      title: 'FREQUENTLY ASKED QUESTIONS',
+      title: 'Frequently asked questions',
       faqs: [
         {
           question: 'What is FSEC?',
-          answer: 'FSEC (Fire Safety Evaluation Clearance) is a document issued by the Bureau of Fire Protection (BFP). It certifies that the design plans of a building or structure comply with fire safety standards before construction begins.'
+          answer: 'A Fire Safety Evaluation Clearance (FSEC) is issued after the BFP determines that proposed building plans comply with the Fire Code of the Philippines and its implementing rules. It is generally required before the Office of the Building Official grants a building permit for new construction, renovation, alteration, or modification.'
         },
         {
           question: 'What is FSIC for Occupancy?',
-          answer: 'FSIC (Fire Safety Inspection Certificate) for Occupancy is issued by the Bureau of Fire Protection after inspection. It confirms that a building is safe to occupy and complies with fire safety requirements before people can use it.'
+          answer: 'A Fire Safety Inspection Certificate (FSIC) for Occupancy is issued after inspection confirms that required fire-safety construction, protection, and warning systems are properly installed and compliant. It supports the application for a Certificate of Occupancy and does not replace other permits required by the city or other agencies.'
         },
         {
           question: 'What is FSIC for Business?',
-          answer: 'FSIC for Business is also issued by the Bureau of Fire Protection. It certifies that a business establishment complies with fire safety regulations, and it is usually required when applying for or renewing a business permit.'
+          answer: 'An FSIC for Business confirms that a business establishment meets applicable fire-safety requirements after evaluation and inspection. It is commonly required for a new business permit or renewal. The applicable process may differ for new businesses, renewals, and establishments with an existing valid FSIC.'
+        },
+        {
+          question: 'How do I apply for and track an FSEC or FSIC online?',
+          answer: [
+            'Open the official FSIS portal linked from this website and create or sign in to your verified account.',
+            'Choose the correct application type, complete every required field, and upload the requested documents.',
+            'Monitor the application status, review the official fee assessment, and follow the available payment instructions.',
+            'Keep your reference number and official receipts. Download the issued clearance or certificate only from your application record.'
+          ]
+        },
+        {
+          question: 'What documents and fees will I need?',
+          answer: [
+            'Requirements depend on the application type and the building, occupancy, or business involved.',
+            'FSEC applications commonly require signed and sealed plans, calculations, specifications, and the prescribed application form. FSIC applications may require prior clearances and proof that required fire-protection systems are installed and maintained.',
+            'Fire Code fees are assessed after review. Check the latest BFP Citizen’s Charter, the official FSIS checklist, or confirm with the Dasmariñas City Fire Station before submitting.'
+          ]
         },
         {
           question: 'What are the requirements to be a Fire Officer?',
           answer: [
-            'Must be a Filipino citizen',
-            'Must have a Bachelor\'s degree',
-            'Must pass the Civil Service Exam (Fire Officer Exam)',
-            'Must meet height and physical fitness requirements',
-            'Must be of good moral character',
-            'Must pass medical, psychological, and physical tests',
-            'Must complete training (e.g., Basic Firefighter Course)'
+            'Qualifications can change by vacancy and current BFP and Civil Service rules, so the official recruitment announcement is controlling.',
+            'Applicants are commonly required to be Filipino citizens, hold a Bachelor’s degree, possess the required eligibility, and meet the stated age, character, health, and physical-fitness standards.',
+            'Document screening, medical and psychological evaluation, physical tests, background checks, and required training may form part of the selection process.'
           ]
         },
         {
           question: 'What to do in case of Kitchen Fire?',
           answer: [
-            'Stay calm',
-            'Turn off the stove if safe',
-            'Do NOT use water (especially for oil/grease fires)',
-            'Cover the fire with a lid or fire blanket',
-            'Use a fire extinguisher (Class K or ABC)',
-            'If the fire spreads, evacuate immediately',
-            'Call emergency services'
+            'Turn off the heat only if you can do so without reaching through flames.',
+            'For a small pan fire, slide a metal lid or baking sheet over the pan and leave it covered until completely cool.',
+            'Never pour water on burning oil or grease, and never carry the burning pan outside.',
+            'Use an appropriate Class K extinguisher if trained and you have a clear exit behind you. If the fire grows, evacuate, close the door, and call 911.'
           ]
         },
         {
           question: 'How to report a Fire Emergency?',
           answer: [
-            'Call the emergency hotline 911 in the Philippines',
-            'Provide clear details: exact location, type of fire, and if there are people trapped or injured',
-            'Stay on the line and follow instructions',
-            'You may also contact the nearest Bureau of Fire Protection station directly'
+            'Move to a safe location and call 911 immediately. You may also call the published Dasmariñas City Fire Station hotline.',
+            'State the exact address, nearby landmarks, what is burning, and whether anyone may be trapped or injured.',
+            'Warn others and evacuate. Stay on the line, answer the dispatcher’s questions, and do not re-enter the building.'
           ]
+        },
+        {
+          question: 'What information should I provide when calling about a fire?',
+          answer: [
+            'Give the complete address, barangay, nearest landmark, and best access route for fire trucks.',
+            'Describe what is burning, the visible size of the fire or smoke, and any hazards such as LPG tanks, fuel, chemicals, or electrical equipment.',
+            'Report trapped, missing, injured, elderly, child, or mobility-limited occupants. Give your name and callback number and follow the dispatcher’s instructions.'
+          ]
+        },
+        {
+          question: 'How do I use a fire extinguisher safely?',
+          answer: [
+            'Use an extinguisher only for a small, contained fire when the correct extinguisher is available, emergency services have been called, and a clear exit remains behind you.',
+            'Remember PASS: Pull the pin, Aim at the base of the fire, Squeeze the handle, and Sweep from side to side.',
+            'If the fire does not go out immediately, the room fills with smoke, or your exit becomes unsafe, stop and evacuate.'
+          ]
+        },
+        {
+          question: 'What should I do during a smoke-filled evacuation?',
+          answer: [
+            'Stay low where the air is clearer and move toward the nearest safe exit. Check a closed door for heat before opening it.',
+            'Do not use elevators. Close doors behind you when possible to slow smoke and fire spread.',
+            'Go to the agreed assembly point, call 911, account for household members, and never return inside until authorities declare it safe.'
+          ]
+        },
+        {
+          question: 'Can the IGNIS SAFE mobile app replace calling 911?',
+          answer: 'No. IGNIS SAFE provides fire-safety lessons, simulations, progress tracking, and public information. It is not an emergency dispatch channel. During a fire or life-threatening emergency, move to safety and call 911 immediately.'
         }
       ]
     },
     tagalog: {
-      title: 'MGA MADALAS ITANONG',
+      title: 'Mga madalas itanong',
       faqs: [
         {
           question: 'Ano ang FSEC?',
-          answer: 'Ang FSEC (Fire Safety Evaluation Clearance) ay dokumentong inilalabas ng Bureau of Fire Protection (BFP). Ito ay nagpapatunay na ang mga plano ng gusali o estruktura ay sumusunod sa fire safety standards bago magsimula ang konstruksyon.'
+          answer: 'Ang Fire Safety Evaluation Clearance (FSEC) ay inilalabas kapag natukoy ng BFP na ang proposed building plans ay sumusunod sa Fire Code of the Philippines at implementing rules nito. Karaniwan itong kailangan bago magbigay ang Office of the Building Official ng building permit para sa bagong construction, renovation, alteration, o modification.'
         },
         {
           question: 'Ano ang FSIC para sa Occupancy?',
-          answer: 'Ang FSIC (Fire Safety Inspection Certificate) para sa Occupancy ay inilalabas ng Bureau of Fire Protection matapos ang inspeksyon. Kinukumpirma nito na ligtas okupahan ang isang gusali at sumusunod ito sa mga fire safety requirement bago ito magamit ng tao.'
+          answer: 'Ang Fire Safety Inspection Certificate (FSIC) para sa Occupancy ay inilalabas matapos makumpirma sa inspeksyon na maayos na nailagay at sumusunod ang kinakailangang fire-safety construction, protection, at warning systems. Sinusuportahan nito ang aplikasyon para sa Certificate of Occupancy at hindi nito pinapalitan ang ibang permit na hinihingi ng lungsod o ibang ahensya.'
         },
         {
           question: 'Ano ang FSIC para sa Business?',
-          answer: 'Ang FSIC para sa Business ay inilalabas din ng Bureau of Fire Protection. Pinapatunayan nito na ang isang negosyo ay sumusunod sa mga fire safety regulasyon, at karaniwan itong kailangan sa pag-aapply o pag-renew ng business permit.'
+          answer: 'Ang FSIC para sa Business ay nagpapatunay na natutugunan ng isang business establishment ang naaangkop na fire-safety requirements matapos ang evaluation at inspection. Karaniwan itong kailangan para sa bagong business permit o renewal. Maaaring magkaiba ang proseso para sa bagong negosyo, renewal, at establishment na may valid na FSIC.'
+        },
+        {
+          question: 'Paano mag-apply at mag-track ng FSEC o FSIC online?',
+          answer: [
+            'Buksan ang opisyal na FSIS portal na naka-link sa website na ito at gumawa o mag-sign in sa verified account.',
+            'Piliin ang tamang application type, kumpletuhin ang lahat ng field, at i-upload ang hinihinging dokumento.',
+            'Subaybayan ang application status, tingnan ang opisyal na fee assessment, at sundin ang available na payment instructions.',
+            'Itago ang reference number at official receipts. I-download lamang ang clearance o certificate mula sa iyong application record.'
+          ]
+        },
+        {
+          question: 'Anong mga dokumento at bayarin ang kailangan?',
+          answer: [
+            'Nakadepende ang requirements sa uri ng aplikasyon at sa building, occupancy, o business na sakop nito.',
+            'Karaniwang kailangan sa FSEC ang prescribed application form at signed at sealed plans, calculations, at specifications. Sa FSIC, maaaring kailanganin ang naunang clearances at patunay na naka-install at nama-maintain ang kinakailangang fire-protection systems.',
+            'Ang Fire Code fees ay ina-assess matapos ang review. Tingnan ang pinakabagong BFP Citizen’s Charter at opisyal na FSIS checklist, o mag-confirm sa Dasmariñas City Fire Station bago magsumite.'
+          ]
         },
         {
           question: 'Ano ang mga kinakailangan upang maging Fire Officer?',
           answer: [
-            'Dapat ay mamamayang Pilipino',
-            'Dapat may Bachelor\'s degree',
-            'Dapat pumasa sa Civil Service Exam (Fire Officer Exam)',
-            'Dapat pumasa sa height at physical fitness requirements',
-            'Dapat may mabuting asal at karakter',
-            'Dapat pumasa sa medical, psychological, at physical tests',
-            'Dapat makumpleto ang training (hal. Basic Firefighter Course)'
+            'Maaaring magbago ang qualifications ayon sa vacancy at kasalukuyang BFP at Civil Service rules, kaya ang opisyal na recruitment announcement ang dapat sundin.',
+            'Karaniwang kailangang mamamayang Pilipino, may Bachelor’s degree, may kinakailangang eligibility, at pasado sa nakasaad na age, character, health, at physical-fitness standards.',
+            'Maaaring kabilang sa selection process ang document screening, medical at psychological evaluation, physical tests, background check, at required training.'
           ]
         },
         {
           question: 'Ano ang dapat gawin kapag may Kitchen Fire?',
           answer: [
-            'Manatiling kalmado',
-            'Patayin ang kalan kung ligtas itong gawin',
-            'Huwag gumamit ng tubig lalo na kung langis o grasa ang nasusunog',
-            'Takpan ang apoy gamit ang takip o fire blanket',
-            'Gumamit ng fire extinguisher (Class K o ABC)',
-            'Kung lumalaki ang apoy, lumikas agad',
-            'Tumawag sa emergency services'
+            'Patayin lamang ang init kung magagawa ito nang hindi inaabot o dinaraanan ang apoy.',
+            'Para sa maliit na apoy sa kawali, dahan-dahang takpan ito ng metal lid o baking sheet at huwag alisin hanggang ganap na lumamig.',
+            'Huwag kailanman buhusan ng tubig ang nasusunog na mantika o grasa, at huwag dalhin sa labas ang nasusunog na kawali.',
+            'Gumamit ng angkop na Class K extinguisher kung trained at may malinaw na exit sa likod mo. Kapag lumalaki ang apoy, lumikas, isara ang pinto, at tumawag sa 911.'
           ]
         },
         {
           question: 'Paano mag-report ng Fire Emergency?',
           answer: [
-            'Tawagan ang emergency hotline 911 sa Pilipinas',
-            'Magbigay ng malinaw na detalye: eksaktong lokasyon, uri ng sunog, at kung may na-trap o nasaktan',
-            'Manatili sa linya at sundin ang mga tagubilin',
-            'Maari ring direktang kontakin ang pinakamalapit na Bureau of Fire Protection station'
+            'Pumunta sa ligtas na lugar at tumawag agad sa 911. Maaari ring tawagan ang nakalathalang hotline ng Dasmariñas City Fire Station.',
+            'Sabihin ang eksaktong address, kalapit na landmark, kung ano ang nasusunog, at kung may taong maaaring na-trap o nasaktan.',
+            'Bigyan ng babala ang iba at lumikas. Manatili sa linya, sagutin ang tanong ng dispatcher, at huwag bumalik sa loob.'
           ]
+        },
+        {
+          question: 'Anong impormasyon ang dapat ibigay kapag nagre-report ng sunog?',
+          answer: [
+            'Ibigay ang kumpletong address, barangay, pinakamalapit na landmark, at pinakamadaling ruta para sa fire trucks.',
+            'Ilarawan kung ano ang nasusunog, gaano kalaki ang nakikitang apoy o usok, at kung may LPG tank, gasolina, kemikal, o electrical equipment.',
+            'Sabihin kung may na-trap, nawawala, nasaktan, bata, nakatatanda, o taong may limitadong mobility. Ibigay ang pangalan at callback number at sundin ang dispatcher.'
+          ]
+        },
+        {
+          question: 'Paano ligtas na gumamit ng fire extinguisher?',
+          answer: [
+            'Gumamit lamang para sa maliit at kontroladong apoy kapag tama ang extinguisher, natawagan na ang emergency services, at may malinaw na exit sa likod mo.',
+            'Tandaan ang PASS: Pull ang pin, Aim sa base ng apoy, Squeeze ang handle, at Sweep pakaliwa at pakanan.',
+            'Kapag hindi agad namatay ang apoy, napupuno ng usok ang silid, o nalalagay sa panganib ang exit, huminto at lumikas.'
+          ]
+        },
+        {
+          question: 'Ano ang dapat gawin kapag mausok ang evacuation route?',
+          answer: [
+            'Manatiling mababa kung saan mas malinaw ang hangin at pumunta sa pinakamalapit na ligtas na exit. Suriin muna kung mainit ang saradong pinto bago buksan.',
+            'Huwag gumamit ng elevator. Isara ang mga pinto sa likod mo kung kaya upang mapabagal ang pagkalat ng apoy at usok.',
+            'Pumunta sa napagkasunduang assembly point, tumawag sa 911, bilangin ang mga kasama, at huwag bumalik hanggang ideklarang ligtas ng awtoridad.'
+          ]
+        },
+        {
+          question: 'Maaari bang ipalit sa pagtawag sa 911 ang IGNIS SAFE mobile app?',
+          answer: 'Hindi. Ang IGNIS SAFE ay para sa fire-safety lessons, simulations, progress tracking, at pampublikong impormasyon. Hindi ito emergency dispatch channel. Kapag may sunog o panganib sa buhay, pumunta sa ligtas na lugar at tumawag agad sa 911.'
         }
       ]
     }
@@ -302,6 +376,22 @@ const normalizeCopyObject = (value) => {
   return Object.fromEntries(
     Object.entries(value).map(([key, child]) => [key, normalizeCopyObject(child)])
   );
+};
+
+const mergeFaqEntries = (candidateEntries, defaultEntries) => {
+  if (!Array.isArray(candidateEntries) || candidateEntries.length === 0) {
+    return defaultEntries;
+  }
+
+  const normalizeQuestion = (value) => String(value || '').trim().toLowerCase();
+  const defaultQuestions = new Set(
+    defaultEntries.map((entry) => normalizeQuestion(entry.question))
+  );
+  const customEntries = candidateEntries.filter(
+    (entry) => !defaultQuestions.has(normalizeQuestion(entry?.question))
+  );
+
+  return [...defaultEntries, ...customEntries];
 };
 
 const normalizeStationEmail = (value) => {
@@ -377,12 +467,18 @@ const mergeWithDefaults = (candidate = {}) => ({
     english: {
       ...DEFAULT_LANDING_CONTENT.faq.english,
       ...(candidate.faq?.english || {}),
-      faqs: candidate.faq?.english?.faqs || DEFAULT_LANDING_CONTENT.faq.english.faqs
+      title: candidate.faq?.english?.title === 'FREQUENTLY ASKED QUESTIONS'
+        ? DEFAULT_LANDING_CONTENT.faq.english.title
+        : candidate.faq?.english?.title || DEFAULT_LANDING_CONTENT.faq.english.title,
+      faqs: mergeFaqEntries(candidate.faq?.english?.faqs, DEFAULT_LANDING_CONTENT.faq.english.faqs)
     },
     tagalog: {
       ...DEFAULT_LANDING_CONTENT.faq.tagalog,
       ...(candidate.faq?.tagalog || {}),
-      faqs: candidate.faq?.tagalog?.faqs || DEFAULT_LANDING_CONTENT.faq.tagalog.faqs
+      title: candidate.faq?.tagalog?.title === 'MGA MADALAS ITANONG'
+        ? DEFAULT_LANDING_CONTENT.faq.tagalog.title
+        : candidate.faq?.tagalog?.title || DEFAULT_LANDING_CONTENT.faq.tagalog.title,
+      faqs: mergeFaqEntries(candidate.faq?.tagalog?.faqs, DEFAULT_LANDING_CONTENT.faq.tagalog.faqs)
     }
   })
 });

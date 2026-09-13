@@ -17,10 +17,9 @@ export default function FAQSection() {
     <section className="faq" id="faq">
       <div className="faq-container">
         <div className="faq-heading-row">
-          <div>
-            <p className="landing-section-eyebrow">{copy.quickAnswers}</p>
-            <h2>{normalizeDasmarinasText(currentContent.title)}</h2>
-          </div>
+          <p className="landing-section-eyebrow">{copy.quickAnswers}</p>
+          <h2>{normalizeDasmarinasText(currentContent.title)}</h2>
+          <p className="faq-intro">{copy.faqDescription}</p>
         </div>
 
         <div className="faq-list">
@@ -35,7 +34,6 @@ export default function FAQSection() {
                 onClick={() => toggleFAQ(index)}
                 aria-expanded={openIndex === index}
               >
-                <span className="faq-number">{String(index + 1).padStart(2, '0')}</span>
                 <span>{normalizeDasmarinasText(faq.question)}</span>
                 <span className="toggle-icon" aria-hidden="true">{openIndex === index ? '−' : '+'}</span>
               </button>

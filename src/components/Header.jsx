@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import './Header.css';
 import logo from '../assets/bfp_dasma-280.webp';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FiChevronDown, FiGlobe, FiLogIn, FiMenu, FiPhoneCall, FiX } from 'react-icons/fi';
+import { FiChevronDown, FiLogIn, FiMenu, FiPhoneCall, FiX } from 'react-icons/fi';
 import { useLandingContent } from '../context/LandingContentContext';
 import { getLandingUiCopy } from '../utils/landingLanguage';
 
@@ -663,8 +663,9 @@ export default function Header() {
             onClick={toggleLanguage}
             aria-label={`Language: ${copy.languageName}. Switch to ${copy.alternateLanguageName}.`}
           >
-            <FiGlobe aria-hidden="true" />
+            <span className="landing-language-flag" aria-hidden="true">🇵🇭</span>
             <span>{copy.languageCode}</span>
+            <FiChevronDown aria-hidden="true" className="landing-language-arrow" />
           </button>
 
           <Link className="landing-login-link login-btn" to="/login" onClick={() => setMenuOpen(false)}>

@@ -75,12 +75,6 @@
   font-size: 0.76rem;
 }
 
-.visitor-archive-modal-error {
-  margin: 0;
-  border-width: 1px 0 0;
-  border-radius: 0;
-}
-
 .visitor-messages-workspace-frame {
   min-width: 0;
   min-height: 0;
@@ -102,106 +96,6 @@
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 8px 24px rgba(24, 32, 51, 0.07);
-}
-
-.visitor-archive-modal-backdrop {
-  position: fixed;
-  z-index: 1200;
-  inset: 0;
-  border: 0;
-  background: rgba(15, 23, 42, 0.62);
-  cursor: default;
-}
-
-.visitor-messages-workspace-frame.is-archive-modal {
-  position: fixed;
-  z-index: 1210;
-  top: 50%;
-  left: 50%;
-  width: min(1180px, calc(100vw - 2rem));
-  height: min(760px, calc(100dvh - 2rem));
-  display: flex;
-  flex-direction: column;
-  transform: translate(-50%, -50%);
-  overflow: hidden;
-  border: 1px solid #dbe2ea;
-  border-radius: 8px;
-  background: #fff;
-  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.32);
-}
-
-.is-archive-modal .visitor-messages-workspace {
-  border: 0;
-  border-top: 1px solid #e3e7ed;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.visitor-archive-modal-header {
-  min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 0.8rem;
-  padding: 0.8rem 1rem;
-  background: #fff;
-}
-
-.visitor-archive-modal-title {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-}
-
-.visitor-archive-modal-icon {
-  width: 38px;
-  height: 38px;
-  display: inline-grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: #f7e9ea;
-  color: #991b1b;
-}
-
-.visitor-archive-modal-title > div { min-width: 0; }
-.visitor-archive-modal-title span:not(.visitor-archive-modal-icon) {
-  display: block;
-  color: #b91c1c;
-  font-size: 0.6rem;
-  font-weight: 850;
-}
-
-.visitor-archive-modal-title h2,
-.visitor-archive-modal-title p { margin: 0; }
-.visitor-archive-modal-title h2 { margin-top: 0.1rem; font-size: 1rem; }
-.visitor-archive-modal-title p {
-  margin-top: 0.15rem;
-  overflow: hidden;
-  color: #64748b;
-  font-size: 0.66rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.visitor-archive-modal-close {
-  width: 36px;
-  height: 36px;
-  display: inline-grid;
-  place-items: center;
-  border: 1px solid #dbe2ea;
-  border-radius: 50%;
-  background: #fff;
-  color: #475569;
-  font-size: 1rem;
-  cursor: pointer;
-}
-
-.visitor-archive-modal-close:hover,
-.visitor-archive-modal-close:focus-visible {
-  border-color: #b91c1c;
-  color: #991b1b;
 }
 
 .visitor-conversation-list {
@@ -779,10 +673,6 @@ body.sidebar-collapsed .visitor-messages-main { margin-left: var(--sidebar-colla
   .visitor-thread-back { display: inline-grid; }
   .visitor-thread-header { grid-template-columns: auto minmax(0, 1fr) auto; }
   .visitor-thread-header > .record-actions-trigger.record-actions-trigger { display: inline-flex; }
-  .visitor-messages-workspace-frame.is-archive-modal {
-    width: calc(100vw - 1rem);
-    height: calc(100dvh - 1rem);
-  }
 }
 
 @media (max-width: 640px) {
@@ -791,23 +681,6 @@ body.sidebar-collapsed .visitor-messages-main { margin-left: var(--sidebar-colla
   .visitor-messages-intro > div:first-child > span,
   .visitor-messages-intro > div:first-child > p { display: none; }
   .visitor-messages-intro h2 { font-size: 0.95rem; }
-  .visitor-messages-workspace-frame.is-archive-modal {
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100dvh;
-    transform: none;
-    border: 0;
-    border-radius: 0;
-  }
-  .visitor-archive-modal-header {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.55rem;
-    padding: 0.65rem 0.75rem;
-  }
-  .visitor-archive-modal-icon { width: 34px; height: 34px; }
-  .visitor-archive-modal-title p { display: none; }
-  .visitor-archive-modal-close { grid-column: 2; grid-row: 1; }
   .visitor-thread-message { max-width: 88%; }
   .visitor-thread-composer > button { width: 48px; justify-content: center; padding: 0; }
   .visitor-thread-composer > button span { display: none; }
@@ -900,16 +773,6 @@ body.sidebar-collapsed .visitor-messages-main { margin-left: var(--sidebar-colla
     -webkit-line-clamp: 2;
   }
 
-}
-
-/* Conversation dialogs use the same top layer as the rest of the workspace
-   dialogs so their close controls cannot sit underneath PageHeader. */
-.visitor-archive-modal-backdrop {
-  z-index: 2000;
-}
-
-.visitor-messages-workspace-frame.is-archive-modal {
-  z-index: 2010;
 }
 
 .visitor-delete-modal-backdrop {

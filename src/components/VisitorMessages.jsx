@@ -227,10 +227,12 @@ export default function VisitorMessages() {
     await loadConversations({ quiet: true });
   };
 
-  const handleArchiveViewToggle = () => {
-    setArchivedView((current) => !current);
+  const handleArchiveViewChange = (showArchived) => {
+    if (showArchived === archivedView) return;
+    setArchivedView(showArchived);
     setSelectedId('');
     setThread(null);
+    setSearch('');
     setReply('');
     setError('');
   };
@@ -246,45 +248,18 @@ export default function VisitorMessages() {
         <section className="visitor-messages-intro">
           <div>
             <span>PUBLIC COMMUNICATION</span>
-            <h2>Website Conversations</h2>
-            <p>Read and reply to messages sent through the public website. Visitor names and emails are shown for clear follow-up.</p>
+            <h2>{archivedView ? 'Archived Conversations' : 'Website Conversations'}</h2>
+            <p>
+              {archivedView
+                ? 'Review archived visitor messages, restore conversations, or manage scheduled deletion.'
+                : 'Read and reply to messages sent through the public website. Visitor names and emails are shown for clear follow-up.'}
+            </p>
           </div>
         </section>
 
         <ToastMessage message={error} type="error" />
 
-        {archivedView && (
-          <button
-            type="button"
-            className="visitor-archive-modal-backdrop"
-            onClick={handleArchiveViewToggle}
-            aria-label="Close archived conversations"
-          />
-        )}
-
-        <div className={`visitor-messages-workspace-frame ${archivedView ? 'is-archive-modal' : ''}`}>
-          {archivedView && (
-            <header className="visitor-archive-modal-header">
-              <div className="visitor-archive-modal-title">
-                <span className="visitor-archive-modal-icon"><FiArchive /></span>
-                <div>
-                  <span>CONVERSATION ARCHIVE</span>
-                  <h2>Archived Conversations</h2>
-                  <p>Restore a conversation or schedule permanent deletion after the 30-day recovery period.</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="visitor-archive-modal-close"
-                onClick={handleArchiveViewToggle}
-                aria-label="Close archived conversations"
-                title="Close archive"
-              >
-                <FiX />
-              </button>
-            </header>
-          )}
-
+        <div className="visitor-messages-workspace-frame">
           <section className={`visitor-messages-workspace ${selectedId ? 'has-selection' : ''}`}>
             <aside className="visitor-conversation-list" aria-label="Visitor conversations">
             <div className="visitor-conversation-tools">
@@ -302,14 +277,14 @@ export default function VisitorMessages() {
                 <button
                   type="button"
                   className={!archivedView ? 'is-active' : ''}
-                  onClick={() => { if (archivedView) handleArchiveViewToggle(); }}
+                  onClick={() => handleArchiveViewChange(false)}
                 >
                   All
                 </button>
                 <button
                   type="button"
                   className={archivedView ? 'is-active' : ''}
-                  onClick={() => { if (!archivedView) handleArchiveViewToggle(); }}
+                  onClick={() => handleArchiveViewChange(true)}
                 >
                   Archives
                 </button>

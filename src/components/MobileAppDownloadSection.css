@@ -26,17 +26,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  border-radius: 7px;
-  background: #12385e;
-}
-
-.landing-mobile-app-device::after {
-  content: '';
-  position: absolute;
-  z-index: 1;
-  inset: 0;
-  background: #ffffff;
-  clip-path: polygon(0 75%, 100% 57%, 100% 100%, 0 100%);
+  background: transparent;
 }
 
 .landing-mobile-app-phone {

@@ -33,6 +33,7 @@ const AttendanceAdmin = () => {
   const [archiveTarget, setArchiveTarget] = useState(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [archiveError, setArchiveError] = useState('');
+  const [archiveMessage, setArchiveMessage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -113,6 +114,10 @@ const AttendanceAdmin = () => {
   }, [attendanceData, dateFilter, searchPersonal, searchQuery, archiveIds, archiveView]);
 
   const attendancePages = usePagination(filteredAttendance, JSON.stringify([searchPersonal, searchQuery, dateFilter, archiveView]));
+  const archivedRecordCount = useMemo(
+    () => attendanceData.reduce((total, item) => total + (archiveIds.includes(item.id) ? 1 : 0), 0),
+    [attendanceData, archiveIds]
+  );
 
   // Any filter change makes a previous export notice stale.
   useEffect(() => {
@@ -128,8 +133,17 @@ const AttendanceAdmin = () => {
       await setAttendanceArchived(archiveTarget.id, archive);
       setArchiveIds(ids => archive ? [...new Set([...ids, archiveTarget.id])] : ids.filter(id => id !== archiveTarget.id));
       setArchiveTarget(null);
+      setArchiveMessage({
+        type: 'success',
+        text: archive
+          ? 'Attendance archived. Open Archived Attendance to view or restore it.'
+          : 'Attendance restored to Current Attendance.'
+      });
       await logAdminActivity({ actorId: currentUser?.admin_id, actorName: currentUser?.name || currentUser?.email || 'Admin', action: archive ? 'Archive Attendance' : 'Restore Attendance', actionType: archive ? 'archive' : 'edit', details: `${archive ? 'Archived' : 'Restored'} attendance for ${archiveTarget.name} on ${archiveTarget.date}.` });
-    } catch (error) { setArchiveError(error.message); }
+    } catch (error) {
+      setArchiveError(error.message);
+      setArchiveMessage({ type: 'error', text: error.message || 'Could not update the attendance archive.' });
+    }
     finally { setArchiveBusy(false); }
   };
 
@@ -238,23 +252,38 @@ const AttendanceAdmin = () => {
         />
 
         <div className="attendance-admin-actions">
-          <button className="export-csv-btn" onClick={exportToCSV}>Export CSV</button>
           <button
             type="button"
-            className="export-pdf-btn"
-            onClick={exportToPDF}
-            disabled={isExportingPdf}
+            className={`attendance-archive-view-btn ${archiveView === 'archived' ? 'is-active' : ''}`}
+            onClick={() => {
+              setArchiveView(view => view === 'current' ? 'archived' : 'current');
+              setArchiveMessage(null);
+            }}
+            aria-pressed={archiveView === 'archived'}
           >
-            {isExportingPdf ? 'Generating PDF...' : 'Export PDF'}
+            {archiveView === 'archived' ? <FiRotateCcw aria-hidden="true" /> : <FiArchive aria-hidden="true" />}
+            <span>{archiveView === 'archived' ? 'Current Attendance' : 'Archived Attendance'}</span>
+            {archiveView === 'current' && <span className="attendance-archive-count">{archivedRecordCount}</span>}
           </button>
+          <div className="attendance-export-actions">
+            <button className="export-csv-btn" onClick={exportToCSV}>Export CSV</button>
+            <button
+              type="button"
+              className="export-pdf-btn"
+              onClick={exportToPDF}
+              disabled={isExportingPdf}
+            >
+              {isExportingPdf ? 'Generating PDF...' : 'Export PDF'}
+            </button>
+          </div>
         </div>
 
         <ToastMessage message={exportMessage?.text} type={exportMessage?.type} />
+        <ToastMessage message={archiveMessage?.text} type={archiveMessage?.type} />
         <ToastMessage message={loadError} type="error" />
 
         <div className="attendance-filters-box">
           <div className="filter-row">
-            <div className="filter-item"><label htmlFor="attendance-archive-view">Records</label><select id="attendance-archive-view" className="date-picker-input" value={archiveView} onChange={event => setArchiveView(event.target.value)}><option value="current">Current</option><option value="archived">Archived</option></select></div>
             <div className="filter-item">
               <label>Search Personnel</label>
               <div className="search-input-wrapper">
@@ -287,6 +316,14 @@ const AttendanceAdmin = () => {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="attendance-view-heading" aria-live="polite">
+          <div>
+            <h2>{archiveView === 'archived' ? 'Archived Attendance' : 'Current Attendance'}</h2>
+            <p>{archiveView === 'archived' ? 'Review archived records or restore them to the current list.' : 'Review and manage active attendance records.'}</p>
+          </div>
+          <span>{filteredAttendance.length} {filteredAttendance.length === 1 ? 'record' : 'records'}</span>
         </div>
 
         <div className="attendance-table-container">

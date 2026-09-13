@@ -12,10 +12,13 @@ import { getLandingUiCopy } from '../utils/landingLanguage';
 const SCROLL_SECTION_IDS = ['home', 'mobile-app', 'announcements', 'process', 'about', 'contact', 'faq'];
 
 const PRIMARY_NAV_ITEMS = [
-  { id: 'home', labelKey: 'home' },
-  { id: 'mobile-app', labelKey: 'mobileApp' },
-  { id: 'announcements', labelKey: 'announcements' },
-  { id: 'process', labelKey: 'onlineApplication' }
+  { id: 'home', labelKey: 'home' }
+];
+
+const RESOURCE_MENU_ITEMS = [
+  { id: 'mobile-app', labelKey: 'mobileApp', type: 'section' },
+  { id: 'announcements', labelKey: 'announcements', type: 'section' },
+  { id: 'process', labelKey: 'onlineApplication', type: 'section' }
 ];
 
 const ABOUT_MENU_ITEMS = [
@@ -152,9 +155,10 @@ export default function Header() {
   const copy = getLandingUiCopy(language);
   const [menuOpen, setMenuOpen] = useState(false);
   // Single source of truth for which nav dropdown is open — only one of
-  // 'about' | 'contact' | null at a time, so opening one always closes the
+  // 'resources' | 'about' | 'contact' | null at a time, so opening one always closes the
   // other instead of letting them overlap via independent hover states.
   const [openDropdown, setOpenDropdown] = useState(null);
+  const resourcesOpen = openDropdown === 'resources';
   const aboutOpen = openDropdown === 'about';
   const contactOpen = openDropdown === 'contact';
   const location = useLocation();
@@ -174,11 +178,17 @@ export default function Header() {
     location.pathname === '/organizational-chart';
   const isContactActive =
     (isLandingPage && activeSection === 'contact') || location.pathname === '/send-message';
+  const isResourcesActive = isLandingPage
+    && ['mobile-app', 'announcements', 'process'].includes(activeSection);
   const suppressTrackingRef = useRef(false);
   const suppressTimeoutRef = useRef(null);
   // Hash present the moment this Header instance mounts — set when a
   // cross-page nav link routes here with a target section in the URL.
   const initialHashRef = useRef(location.hash);
+  const resourcesRef = useRef(null);
+  const resourcesToggleRef = useRef(null);
+  const resourcesItemRefs = useRef([]);
+  const resourcesHoverTimeoutRef = useRef(null);
   const aboutRef = useRef(null);
   const aboutToggleRef = useRef(null);
   const aboutItemRefs = useRef([]);
@@ -191,6 +201,7 @@ export default function Header() {
     typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches
   );
   const primaryNavItems = PRIMARY_NAV_ITEMS.map((item) => ({ ...item, label: copy[item.labelKey] }));
+  const resourceMenuItems = RESOURCE_MENU_ITEMS.map((item) => ({ ...item, label: copy[item.labelKey] }));
   const aboutMenuItems = ABOUT_MENU_ITEMS.map((item) => ({ ...item, label: copy[item.labelKey] }));
   const contactMenuItems = CONTACT_MENU_ITEMS.map((item) => ({ ...item, label: copy[item.labelKey] }));
 
@@ -261,6 +272,16 @@ export default function Header() {
 
   useEffect(() => () => clearTimeout(suppressTimeoutRef.current), []);
 
+  const openResources = useCallback(() => setOpenDropdown('resources'), []);
+  const closeResources = useCallback(
+    () => setOpenDropdown((current) => (current === 'resources' ? null : current)),
+    []
+  );
+  const toggleResources = useCallback(
+    () => setOpenDropdown((current) => (current === 'resources' ? null : 'resources')),
+    []
+  );
+
   const openAbout = useCallback(() => setOpenDropdown('about'), []);
   const closeAbout = useCallback(
     () => setOpenDropdown((current) => (current === 'about' ? null : current)),
@@ -282,10 +303,12 @@ export default function Header() {
   );
 
   // Close each dropdown on outside click/tap and on Escape.
+  useDropdownAutoClose(resourcesOpen, closeResources, resourcesRef, resourcesToggleRef);
   useDropdownAutoClose(aboutOpen, closeAbout, aboutRef, aboutToggleRef);
   useDropdownAutoClose(contactOpen, closeContact, contactRef, contactToggleRef);
 
   useEffect(() => () => {
+    clearTimeout(resourcesHoverTimeoutRef.current);
     clearTimeout(aboutHoverTimeoutRef.current);
     clearTimeout(contactHoverTimeoutRef.current);
   }, []);
@@ -308,6 +331,66 @@ export default function Header() {
   };
 
   const sectionHref = (sectionId) => `${isLandingPage ? '' : '/'}#${sectionId}`;
+
+  const handleResourcesSectionSelect = (event, sectionId) => {
+    handleSectionClick(event, sectionId);
+    closeResources();
+  };
+
+  const handleResourcesRouteSelect = () => {
+    closeResources();
+    setMenuOpen(false);
+  };
+
+  const handleResourcesToggleClick = () => {
+    if (supportsHoverRef.current) {
+      openResources();
+    } else {
+      toggleResources();
+    }
+  };
+
+  const handleResourcesMouseEnter = () => {
+    if (!supportsHoverRef.current) return;
+    clearTimeout(resourcesHoverTimeoutRef.current);
+    openResources();
+  };
+
+  const handleResourcesMouseLeave = () => {
+    if (!supportsHoverRef.current) return;
+    resourcesHoverTimeoutRef.current = setTimeout(closeResources, 150);
+  };
+
+  const handleResourcesBlur = (event) => {
+    if (resourcesRef.current && !resourcesRef.current.contains(event.relatedTarget)) {
+      closeResources();
+    }
+  };
+
+  const handleResourcesToggleKeyDown = (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openResources();
+      requestAnimationFrame(() => resourcesItemRefs.current[0]?.focus());
+    }
+  };
+
+  const handleResourcesItemKeyDown = (event, index) => {
+    const items = resourcesItemRefs.current;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      items[(index + 1) % items.length]?.focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[(index - 1 + items.length) % items.length]?.focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      items[0]?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      items[items.length - 1]?.focus();
+    }
+  };
 
   const handleAboutSectionSelect = (event, sectionId) => {
     handleSectionClick(event, sectionId);
@@ -501,6 +584,30 @@ export default function Header() {
               {item.label}
             </a>
           ))}
+
+          <NavDropdown
+            menuId="resources-menu"
+            ariaLabel={copy.resources}
+            toggleLabel={copy.resources}
+            toggleActive={isResourcesActive}
+            items={resourceMenuItems}
+            open={resourcesOpen}
+            containerRef={resourcesRef}
+            toggleRef={resourcesToggleRef}
+            itemRefs={resourcesItemRefs}
+            onToggleClick={handleResourcesToggleClick}
+            onToggleKeyDown={handleResourcesToggleKeyDown}
+            onMouseEnter={handleResourcesMouseEnter}
+            onMouseLeave={handleResourcesMouseLeave}
+            onBlur={handleResourcesBlur}
+            onItemKeyDown={handleResourcesItemKeyDown}
+            isLandingPage={isLandingPage}
+            activeSection={activeSection}
+            location={location}
+            sectionHref={sectionHref}
+            onItemSectionClick={handleResourcesSectionSelect}
+            onItemRouteClick={handleResourcesRouteSelect}
+          />
 
           <NavDropdown
             menuId="about-us-menu"

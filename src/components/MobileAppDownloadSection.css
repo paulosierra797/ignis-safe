@@ -1,92 +1,133 @@
 .landing-mobile-app {
+  position: relative;
   scroll-margin-top: 112px;
-  padding: 4rem 0;
+  overflow: hidden;
+  padding: 3.75rem 2rem 0;
   border-bottom: 1px solid #dfe4eb;
-  background: #ffffff;
+  background: #edf3f7;
 }
 
-.landing-mobile-app-container {
-  width: min(100%, 1320px);
+.landing-mobile-app-heading {
+  width: min(100%, 820px);
   margin: 0 auto;
-  padding: 0 2rem;
-  display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
-  align-items: center;
-  gap: 4rem;
+  text-align: center;
 }
 
-.landing-mobile-app-content {
-  min-width: 0;
-}
-
-.landing-mobile-app-wordmark {
-  width: 210px;
+.landing-mobile-app-heading > img {
+  width: 180px;
   height: auto;
-  display: block;
-  object-fit: contain;
 }
 
-.landing-mobile-app-eyebrow {
-  margin: 1.35rem 0 0.35rem;
+.landing-mobile-app-heading > p {
+  margin: 1rem 0 0.35rem;
   color: #a8171c;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 850;
   text-transform: uppercase;
 }
 
-.landing-mobile-app h2 {
-  max-width: 720px;
+.landing-mobile-app-heading h2 {
   margin: 0;
   color: #172033;
-  font-size: 2.15rem;
+  font-size: 2.25rem;
   line-height: 1.15;
   letter-spacing: 0;
 }
 
-.landing-mobile-app-description {
+.landing-mobile-app-heading > span {
+  display: block;
   max-width: 720px;
-  margin: 0.85rem 0 0;
+  margin: 0.8rem auto 0;
   color: #5f6f86;
-  font-size: 0.92rem;
-  line-height: 1.7;
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.landing-mobile-app-showcase {
+  width: min(100%, 1180px);
+  min-height: 520px;
+  margin: 2rem auto 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.82fr);
+  align-items: center;
+  gap: 4.5rem;
+}
+
+.landing-mobile-app-details {
+  min-width: 0;
+  padding-bottom: 3.5rem;
+}
+
+.landing-mobile-app-status {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #7d1015;
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.landing-mobile-app-status > span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f4b41a;
+  box-shadow: 0 0 0 4px #fff3c6;
+}
+
+.landing-mobile-app-details h3 {
+  max-width: 620px;
+  margin: 0.65rem 0 0;
+  color: #172033;
+  font-size: 1.7rem;
+  line-height: 1.2;
+}
+
+.landing-mobile-app-details > p:not(.landing-mobile-app-placeholder-note) {
+  max-width: 620px;
+  margin: 0.75rem 0 0;
+  color: #5f6f86;
+  font-size: 0.82rem;
+  line-height: 1.65;
 }
 
 .landing-mobile-app-highlights {
   margin-top: 1.35rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem 1.25rem;
+  display: grid;
+  gap: 0.65rem;
 }
 
 .landing-mobile-app-highlights span {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.55rem;
   color: #344054;
-  font-size: 0.78rem;
+  font-size: 0.77rem;
   font-weight: 700;
 }
 
 .landing-mobile-app-highlights svg {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
   color: #a8171c;
 }
 
 .landing-mobile-app-action {
-  margin-top: 1.65rem;
+  margin-top: 1.6rem;
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
 .landing-mobile-app-download {
-  min-height: 46px;
+  min-height: 48px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.7rem 1rem;
+  gap: 0.55rem;
+  padding: 0.72rem 1.05rem;
   border: 1px solid #9f151a;
   border-radius: 6px;
   background: #9f151a;
@@ -97,167 +138,367 @@
   text-decoration: none;
 }
 
+.landing-mobile-app-download svg {
+  width: 19px;
+  height: 19px;
+}
+
 .landing-mobile-app-download:disabled {
-  border-color: #cbd3dd;
-  background: #e9edf2;
-  color: #67768a;
+  border-color: #c7d0da;
+  background: #dfe5eb;
+  color: #66768a;
   cursor: not-allowed;
 }
 
-.landing-mobile-app-action > p {
-  max-width: 420px;
-  margin: 0;
-  color: #667085;
+.landing-mobile-app-release-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.landing-mobile-app-release-note strong {
+  color: #172033;
   font-size: 0.72rem;
+}
+
+.landing-mobile-app-release-note span,
+.landing-mobile-app-placeholder-note {
+  color: #667085;
+  font-size: 0.68rem;
+}
+
+.landing-mobile-app-placeholder-note {
+  max-width: 570px;
+  margin: 0.8rem 0 0;
   line-height: 1.5;
 }
 
-.landing-mobile-app-release {
+.landing-mobile-app-device-stage {
+  position: relative;
   min-width: 0;
+  height: 520px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.landing-mobile-app-device-stage::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 315px;
+  border-radius: 8px 8px 0 0;
+  background: #94161b;
+}
+
+.landing-mobile-app-phone {
+  position: relative;
+  z-index: 2;
+  width: 258px;
+  height: 500px;
+  padding: 9px;
+  border: 2px solid #0d1523;
+  border-radius: 34px;
+  background: #101827;
+  box-shadow: 0 28px 52px rgba(20, 30, 48, 0.28);
+  transform: translateY(18px) rotate(2deg);
+}
+
+.landing-mobile-app-phone-speaker {
+  position: absolute;
+  z-index: 4;
+  top: 16px;
+  left: 50%;
+  width: 64px;
+  height: 16px;
+  border-radius: 10px;
+  background: #0d1523;
+  transform: translateX(-50%);
+}
+
+.landing-mobile-app-screen {
+  height: 100%;
   overflow: hidden;
-  border: 1px solid #28354b;
-  border-radius: 8px;
-  background: #172033;
-  color: #ffffff;
-  box-shadow: 0 18px 42px rgba(23, 32, 51, 0.16);
-}
-
-.landing-mobile-app-release-heading {
   display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 1.2rem 1.25rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  flex-direction: column;
+  border-radius: 25px;
+  background: #f6f7f9;
+  color: #172033;
 }
 
-.landing-mobile-app-release-heading > span {
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: #3ddc84;
-  color: #10251a;
-  font-size: 1.35rem;
-}
-
-.landing-mobile-app-release-heading p,
-.landing-mobile-app-release-heading h3 {
-  margin: 0;
-}
-
-.landing-mobile-app-release-heading p {
-  color: #aab5c5;
-  font-size: 0.66rem;
-  font-weight: 750;
-  text-transform: uppercase;
-}
-
-.landing-mobile-app-release-heading h3 {
-  margin-top: 0.18rem;
-  font-size: 0.98rem;
-  line-height: 1.35;
-}
-
-.landing-mobile-app-release dl {
-  margin: 0;
-  padding: 0 1.25rem;
-}
-
-.landing-mobile-app-release dl > div {
-  min-height: 48px;
+.landing-mobile-app-screen > header {
+  min-height: 62px;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.landing-mobile-app-release dt {
-  color: #aab5c5;
-  font-size: 0.7rem;
-}
-
-.landing-mobile-app-release dd {
-  margin: 0;
+  padding: 18px 16px 10px;
+  background: #9f151a;
   color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 750;
-  text-align: right;
 }
 
-.landing-mobile-app-release dd.is-coming-soon {
-  display: inline-flex;
+.landing-mobile-app-screen > header span {
+  display: flex;
   align-items: center;
-  gap: 0.45rem;
-  color: #f7d266;
+  gap: 6px;
+  font-size: 0.6rem;
+  font-weight: 850;
 }
 
-.landing-mobile-app-release dd.is-coming-soon span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
+.landing-mobile-app-screen > header img {
+  width: 25px;
+  height: 25px;
+}
+
+.landing-mobile-app-screen > header svg {
+  width: 15px;
+  height: 15px;
+}
+
+.landing-mobile-app-screen-body {
+  min-height: 0;
+  flex: 1;
+  padding: 17px 14px 10px;
+}
+
+.app-preview-greeting {
+  margin: 0;
+  color: #9f151a;
+  font-size: 0.48rem;
+  font-weight: 850;
+}
+
+.landing-mobile-app-screen h4 {
+  margin: 3px 0 13px;
+  font-size: 0.9rem;
+}
+
+.app-preview-progress,
+.app-preview-module {
+  padding: 12px;
+  border: 1px solid #e1e5ea;
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.app-preview-progress {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 9px;
+}
+
+.app-preview-progress div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-preview-progress span,
+.app-preview-module > p {
+  color: #69768a;
+  font-size: 0.43rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.app-preview-progress strong {
+  font-size: 0.65rem;
+}
+
+.app-preview-progress b {
+  color: #9f151a;
+  font-size: 0.72rem;
+}
+
+.app-preview-progress i {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #e9edf2;
+}
+
+.app-preview-progress i span {
+  width: 60%;
+  height: 100%;
+  display: block;
   background: #f4b41a;
 }
 
-.landing-mobile-app-qr-placeholder {
-  margin: 1.25rem;
+.app-preview-actions {
+  margin-top: 10px;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  align-items: start;
-  gap: 0.75rem;
-  padding: 0.9rem;
-  border: 1px dashed rgba(247, 210, 102, 0.45);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.landing-mobile-app-qr-placeholder > svg {
-  width: 27px;
-  height: 27px;
+.app-preview-actions > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 11px;
+  border-radius: 7px;
+  background: #172033;
+  color: #ffffff;
+}
+
+.app-preview-actions > span:last-child {
+  background: #94161b;
+}
+
+.app-preview-actions svg {
+  width: 16px;
+  height: 16px;
+  margin-bottom: 3px;
   color: #f7d266;
 }
 
-.landing-mobile-app-qr-placeholder strong {
-  display: block;
-  font-size: 0.76rem;
+.app-preview-actions strong {
+  font-size: 0.58rem;
 }
 
-.landing-mobile-app-qr-placeholder p {
-  margin: 0.2rem 0 0;
-  color: #aab5c5;
-  font-size: 0.68rem;
-  line-height: 1.5;
+.app-preview-actions small {
+  color: #c9d0dc;
+  font-size: 0.42rem;
+}
+
+.app-preview-module {
+  margin-top: 10px;
+}
+
+.app-preview-module > p {
+  margin: 0 0 8px;
+}
+
+.app-preview-module > div {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.app-preview-module > div > span {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff1c2;
+  color: #8a5b00;
+}
+
+.app-preview-module > div div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-preview-module strong {
+  font-size: 0.58rem;
+}
+
+.app-preview-module small {
+  color: #69768a;
+  font-size: 0.45rem;
+}
+
+.app-preview-module > b {
+  margin-top: 9px;
+  min-height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 5px;
+  background: #9f151a;
+  color: #ffffff;
+  font-size: 0.52rem;
+}
+
+.landing-mobile-app-screen > nav {
+  min-height: 53px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: center;
+  border-top: 1px solid #e1e5ea;
+  background: #ffffff;
+}
+
+.landing-mobile-app-screen > nav span {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 3px;
+  color: #7a8798;
+  font-size: 0.42rem;
+}
+
+.landing-mobile-app-screen > nav svg {
+  width: 15px;
+  height: 15px;
+}
+
+.landing-mobile-app-screen > nav .is-active {
+  color: #9f151a;
+  font-weight: 800;
+}
+
+.landing-mobile-app-preview-note {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: 55px;
+  width: 150px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem;
+  border: 1px solid #dbe1e8;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #475569;
+  box-shadow: 0 12px 28px rgba(20, 30, 48, 0.16);
+  font-size: 0.62rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.landing-mobile-app-preview-note svg {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  color: #9f151a;
 }
 
 @media (max-width: 900px) {
-  .landing-mobile-app-container {
+  .landing-mobile-app-showcase {
     grid-template-columns: 1fr;
-    gap: 2rem;
+    gap: 0;
   }
 
-  .landing-mobile-app-release {
-    width: 100%;
+  .landing-mobile-app-details {
+    width: min(100%, 650px);
+    margin: 0 auto;
+  }
+
+  .landing-mobile-app-device-stage {
+    width: min(100%, 500px);
+    margin: 0 auto;
   }
 }
 
 @media (max-width: 640px) {
   .landing-mobile-app {
     scroll-margin-top: 100px;
-    padding: 3rem 0;
+    padding: 3rem 1rem 0;
   }
 
-  .landing-mobile-app-container {
-    padding: 0 1rem;
+  .landing-mobile-app-heading h2 {
+    font-size: 1.72rem;
   }
 
-  .landing-mobile-app-wordmark {
-    width: 180px;
-  }
-
-  .landing-mobile-app h2 {
-    font-size: 1.7rem;
+  .landing-mobile-app-details h3 {
+    font-size: 1.4rem;
   }
 
   .landing-mobile-app-action {
@@ -267,5 +508,30 @@
 
   .landing-mobile-app-download {
     width: 100%;
+  }
+
+  .landing-mobile-app-release-note {
+    text-align: center;
+  }
+
+  .landing-mobile-app-device-stage {
+    height: 500px;
+  }
+
+  .landing-mobile-app-phone {
+    width: 238px;
+    height: 472px;
+  }
+
+  .landing-mobile-app-preview-note {
+    right: 0;
+    bottom: 32px;
+    width: 132px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-mobile-app-phone {
+    transform: translateY(18px);
   }
 }

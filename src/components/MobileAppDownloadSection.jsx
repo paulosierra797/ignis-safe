@@ -14,47 +14,53 @@ export default function MobileAppDownloadSection() {
   return (
     <section className="landing-mobile-app" id="mobile-app" aria-labelledby="mobile-app-title">
       <div className="landing-mobile-app-container">
-        <div className="landing-mobile-app-device" aria-label={copy.mobileAppPreviewLabel}>
-          <div className="landing-mobile-app-phone" aria-hidden="true">
-            <span className="landing-mobile-app-phone-speaker" />
-            <div className="landing-mobile-app-screen">
-              <header>
-                <span><img src={appIcon} alt="" />IGNIS SAFE</span>
-                <small>PREVIEW</small>
-              </header>
-
-              <div className="landing-mobile-app-screen-body">
-                <p>GOOD DAY</p>
-                <h3>Stay ready, stay safe.</h3>
-
-                <section className="app-preview-progress">
-                  <span>LEARNING PROGRESS</span>
-                  <strong>3 of 5 modules</strong>
-                  <b>60%</b>
-                  <i><span /></i>
-                </section>
-
-                <div className="app-preview-shortcuts">
-                  <span><strong>Lessons</strong><small>Learn the basics</small></span>
-                  <span><strong>Simulation</strong><small>Practice safely</small></span>
-                </div>
-
-                <section className="app-preview-module">
-                  <p>CONTINUE LEARNING</p>
-                  <div>
-                    <span>03</span>
-                    <div><strong>Electrical Fire Safety</strong><small>Module 3</small></div>
+        <div className="landing-mobile-app-device" role="img" aria-label={copy.mobileAppPreviewLabel}>
+          <div className="landing-mobile-app-phone-scene" aria-hidden="true">
+            <div className="landing-mobile-app-mock-phone is-dashboard">
+              <span className="landing-mobile-app-mock-speaker" />
+              <div className="landing-mobile-app-mock-screen">
+                <header><span><img src={appIcon} alt="" />IGNIS SAFE</span><small>HOME</small></header>
+                <div className="app-dashboard-preview">
+                  <p>GOOD DAY</p>
+                  <h3>Stay ready, stay safe.</h3>
+                  <section>
+                    <span>LEARNING PROGRESS</span>
+                    <strong>3 of 5 modules</strong>
+                    <b>60%</b>
+                    <i><span /></i>
+                  </section>
+                  <div className="app-dashboard-shortcuts">
+                    <span><strong>Lessons</strong><small>Learn</small></span>
+                    <span><strong>Simulation</strong><small>Practice</small></span>
                   </div>
-                  <b>Continue</b>
-                </section>
+                  <article>
+                    <span>03</span>
+                    <div><strong>Electrical Fire Safety</strong><small>Continue module</small></div>
+                  </article>
+                </div>
+                <nav><span className="is-active">Home</span><span>Learn</span><span>Badges</span></nav>
               </div>
+            </div>
 
-              <nav>
-                <span className="is-active">Home</span>
-                <span>Learn</span>
-                <span>Badges</span>
-                <span>Profile</span>
-              </nav>
+            <div className="landing-mobile-app-mock-phone is-login">
+              <span className="landing-mobile-app-mock-speaker" />
+              <div className="landing-mobile-app-mock-screen app-login-preview">
+                <div className="app-login-brand">
+                  <img src={appIcon} alt="" />
+                  <strong>IGNIS SAFE</strong>
+                  <span>Fire safety starts with readiness.</span>
+                </div>
+                <div className="app-login-form">
+                  <label>Email address</label>
+                  <span />
+                  <label>Password</label>
+                  <span />
+                  <b>Sign in</b>
+                  <small>Forgot password?</small>
+                </div>
+                <p>New to IGNIS SAFE?</p>
+                <b className="app-login-create">Create an account</b>
+              </div>
             </div>
           </div>
         </div>

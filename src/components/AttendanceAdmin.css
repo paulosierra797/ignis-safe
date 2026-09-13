@@ -35,62 +35,23 @@
 .attendance-admin-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   margin-bottom: 20px;
 }
 
 .attendance-export-actions {
   display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-.attendance-archive-view-btn {
+.export-csv-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
   min-height: 44px;
-  padding: 9px 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  background: #ffffff;
-  color: #334155;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.attendance-archive-view-btn svg {
-  flex: 0 0 auto;
-  font-size: 18px;
-}
-
-.attendance-archive-view-btn:hover,
-.attendance-archive-view-btn.is-active {
-  border-color: #dc3545;
-  background: #fff5f5;
-  color: #b91c1c;
-  box-shadow: 0 4px 12px rgba(185, 28, 28, 0.12);
-  transform: translateY(-1px);
-}
-
-.attendance-archive-count {
-  display: inline-grid;
-  place-items: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: #b91c1c;
-  color: #ffffff;
-  font-size: 12px;
-  line-height: 1;
-}
-
-.export-csv-btn {
+  box-sizing: border-box;
   padding: 10px 25px;
   background-color: #28a745;
   color: white;
@@ -107,6 +68,11 @@
 }
 
 .export-pdf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  box-sizing: border-box;
   padding: 10px 25px;
   background-color: #dc3545;
   color: white;
@@ -692,8 +658,8 @@
     width: 100%;
   }
 
-  .attendance-export-actions > button,
-  .attendance-archive-view-btn {
+  .attendance-export-actions > .export-csv-btn,
+  .attendance-export-actions > .export-pdf-btn {
     flex: 1 1 0;
   }
 
@@ -743,10 +709,6 @@
 }
 
 @media (max-width: 480px) {
-  .attendance-export-actions {
-    flex-direction: column;
-  }
-
   .attendance-card-verification {
     align-items: stretch;
     flex-direction: column;

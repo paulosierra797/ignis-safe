@@ -3,10 +3,11 @@ import Sidebar from './Sidebar';
 import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
 import RecordActions from './RecordActions';
+import ArchiveButton from './ArchiveButton';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import ToastMessage from './ToastMessage';
-import { FiArchive, FiRotateCcw } from 'react-icons/fi';
+import { FiRotateCcw } from 'react-icons/fi';
 import { getAttendanceArchiveIds, setAttendanceArchived } from '../utils/attendanceArchiveService';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -252,19 +253,6 @@ const AttendanceAdmin = () => {
         />
 
         <div className="attendance-admin-actions">
-          <button
-            type="button"
-            className={`attendance-archive-view-btn ${archiveView === 'archived' ? 'is-active' : ''}`}
-            onClick={() => {
-              setArchiveView(view => view === 'current' ? 'archived' : 'current');
-              setArchiveMessage(null);
-            }}
-            aria-pressed={archiveView === 'archived'}
-          >
-            {archiveView === 'archived' ? <FiRotateCcw aria-hidden="true" /> : <FiArchive aria-hidden="true" />}
-            <span>{archiveView === 'archived' ? 'Current Attendance' : 'Archived Attendance'}</span>
-            {archiveView === 'current' && <span className="attendance-archive-count">{archivedRecordCount}</span>}
-          </button>
           <div className="attendance-export-actions">
             <button className="export-csv-btn" onClick={exportToCSV}>Export CSV</button>
             <button
@@ -275,6 +263,17 @@ const AttendanceAdmin = () => {
             >
               {isExportingPdf ? 'Generating PDF...' : 'Export PDF'}
             </button>
+            <ArchiveButton
+              icon={archiveView === 'archived' ? <FiRotateCcw aria-hidden="true" /> : undefined}
+              label={archiveView === 'archived'
+                ? 'Return to current attendance'
+                : `View archived attendance (${archivedRecordCount})`}
+              onClick={() => {
+                setArchiveView(view => view === 'current' ? 'archived' : 'current');
+                setArchiveMessage(null);
+              }}
+              aria-pressed={archiveView === 'archived'}
+            />
           </div>
         </div>
 
@@ -371,7 +370,11 @@ const AttendanceAdmin = () => {
                       >
                         View Details
                       </button>
-                      <button onClick={() => { setArchiveError(''); setArchiveTarget(item); }}>{archiveView === 'archived' ? <FiRotateCcw /> : <FiArchive />}{archiveView === 'archived' ? 'Restore' : 'Archive'}</button>
+                      {archiveView === 'archived' ? (
+                        <button onClick={() => { setArchiveError(''); setArchiveTarget(item); }}><FiRotateCcw />Restore</button>
+                      ) : (
+                        <ArchiveButton label="Archive" onClick={() => { setArchiveError(''); setArchiveTarget(item); }} />
+                      )}
                       </RecordActions>
                     </td>
                   </tr>
@@ -433,7 +436,11 @@ const AttendanceAdmin = () => {
             >
               View Verification Details
             </button>
-            <button onClick={() => { setArchiveError(''); setArchiveTarget(item); }}>{archiveView === 'archived' ? <FiRotateCcw /> : <FiArchive />}{archiveView === 'archived' ? 'Restore' : 'Archive'}</button>
+            {archiveView === 'archived' ? (
+              <button onClick={() => { setArchiveError(''); setArchiveTarget(item); }}><FiRotateCcw />Restore</button>
+            ) : (
+              <ArchiveButton label="Archive" onClick={() => { setArchiveError(''); setArchiveTarget(item); }} />
+            )}
             </RecordActions>
           </div>
         </div>
@@ -448,7 +455,14 @@ const AttendanceAdmin = () => {
             <header className="attendance-details-header"><h2 id="attendanceArchiveTitle">{archiveIds.includes(archiveTarget.id) ? 'Restore' : 'Archive'} attendance?</h2><CloseButton label="Close archive confirmation" disabled={archiveBusy} onClick={() => setArchiveTarget(null)} /></header>
             <div style={{padding: 24}}><p><strong>{archiveTarget.name}</strong> · {archiveTarget.date}</p><p>The original attendance and verification details will be kept. Archived records can be restored.</p>
               {archiveError && <p role="alert">{archiveError}</p>}
-              <div className="attendance-archive-confirm-actions"><button type="button" disabled={archiveBusy} onClick={() => setArchiveTarget(null)}>Cancel</button><button type="button" disabled={archiveBusy} onClick={confirmArchive}>{archiveBusy ? 'Saving...' : archiveIds.includes(archiveTarget.id) ? 'Restore' : 'Archive'}</button></div>
+              <div className="attendance-archive-confirm-actions">
+                <button type="button" disabled={archiveBusy} onClick={() => setArchiveTarget(null)}>Cancel</button>
+                {archiveIds.includes(archiveTarget.id) ? (
+                  <button type="button" disabled={archiveBusy} onClick={confirmArchive}>{archiveBusy ? 'Saving...' : 'Restore'}</button>
+                ) : (
+                  <ArchiveButton showLabel label="Archive" busy={archiveBusy} onClick={confirmArchive} />
+                )}
+              </div>
             </div>
           </section>
         </div>}

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import './Header.css';
 import logo from '../assets/bfp_dasma-280.webp';
+import englishFlag from '../assets/flag-us.svg';
+import filipinoFlag from '../assets/flag-ph.svg';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiChevronDown, FiLogIn, FiMenu, FiPhoneCall, FiX } from 'react-icons/fi';
 import { useLandingContent } from '../context/LandingContentContext';
@@ -30,6 +32,11 @@ const ABOUT_MENU_ITEMS = [
 const CONTACT_MENU_ITEMS = [
   { id: 'contact', labelKey: 'contactUs', type: 'section' },
   { id: 'send-message', labelKey: 'sendMessage', type: 'route', to: '/send-message' }
+];
+
+const LANGUAGE_OPTIONS = [
+  { value: 'english', code: 'EN', label: 'English', flag: englishFlag },
+  { value: 'tagalog', code: 'TL', label: 'Filipino', flag: filipinoFlag }
 ];
 
 // Sets up the shared outside-click / Escape-to-close behavior for a hover-or-click
@@ -151,7 +158,7 @@ function NavDropdown({
 }
 
 export default function Header() {
-  const { language, toggleLanguage } = useLandingContent();
+  const { language, setLanguage } = useLandingContent();
   const copy = getLandingUiCopy(language);
   const [menuOpen, setMenuOpen] = useState(false);
   // Single source of truth for which nav dropdown is open — only one of
@@ -161,6 +168,7 @@ export default function Header() {
   const resourcesOpen = openDropdown === 'resources';
   const aboutOpen = openDropdown === 'about';
   const contactOpen = openDropdown === 'contact';
+  const languageOpen = openDropdown === 'language';
   const location = useLocation();
   const [activeSection, setActiveSection] = useState(() => {
     // Seed the indicator from the URL hash on first render so a cross-page
@@ -197,6 +205,9 @@ export default function Header() {
   const contactToggleRef = useRef(null);
   const contactItemRefs = useRef([]);
   const contactHoverTimeoutRef = useRef(null);
+  const languageRef = useRef(null);
+  const languageToggleRef = useRef(null);
+  const languageItemRefs = useRef([]);
   const supportsHoverRef = useRef(
     typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches
   );
@@ -204,6 +215,7 @@ export default function Header() {
   const resourceMenuItems = RESOURCE_MENU_ITEMS.map((item) => ({ ...item, label: copy[item.labelKey] }));
   const aboutMenuItems = ABOUT_MENU_ITEMS.map((item) => ({ ...item, label: copy[item.labelKey] }));
   const contactMenuItems = CONTACT_MENU_ITEMS.map((item) => ({ ...item, label: copy[item.labelKey] }));
+  const activeLanguage = LANGUAGE_OPTIONS.find((option) => option.value === language) || LANGUAGE_OPTIONS[0];
 
   const suppressTrackingUntilScrollEnd = useCallback(() => {
     suppressTrackingRef.current = true;
@@ -302,10 +314,20 @@ export default function Header() {
     []
   );
 
+  const closeLanguage = useCallback(
+    () => setOpenDropdown((current) => (current === 'language' ? null : current)),
+    []
+  );
+  const toggleLanguageMenu = useCallback(
+    () => setOpenDropdown((current) => (current === 'language' ? null : 'language')),
+    []
+  );
+
   // Close each dropdown on outside click/tap and on Escape.
   useDropdownAutoClose(resourcesOpen, closeResources, resourcesRef, resourcesToggleRef);
   useDropdownAutoClose(aboutOpen, closeAbout, aboutRef, aboutToggleRef);
   useDropdownAutoClose(contactOpen, closeContact, contactRef, contactToggleRef);
+  useDropdownAutoClose(languageOpen, closeLanguage, languageRef, languageToggleRef);
 
   useEffect(() => () => {
     clearTimeout(resourcesHoverTimeoutRef.current);
@@ -517,6 +539,20 @@ export default function Header() {
     }
   };
 
+  const handleLanguageToggleKeyDown = (event) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setOpenDropdown('language');
+      requestAnimationFrame(() => languageItemRefs.current[0]?.focus());
+    }
+  };
+
+  const handleLanguageSelect = (nextLanguage) => {
+    setLanguage(nextLanguage);
+    closeLanguage();
+    setMenuOpen(false);
+  };
+
   return (
     <header className="header">
       <a className="landing-skip-link" href="#main-content">Skip to main content</a>
@@ -657,16 +693,50 @@ export default function Header() {
             onItemRouteClick={handleContactRouteSelect}
           />
 
-          <button
-            type="button"
-            className="landing-language-toggle"
-            onClick={toggleLanguage}
-            aria-label={`Language: ${copy.languageName}. Switch to ${copy.alternateLanguageName}.`}
-          >
-            <span className="landing-language-flag" aria-hidden="true">🇵🇭</span>
-            <span>{copy.languageCode}</span>
-            <FiChevronDown aria-hidden="true" className="landing-language-arrow" />
-          </button>
+          <div className="landing-language-selector" ref={languageRef}>
+            <button
+              type="button"
+              ref={languageToggleRef}
+              className="landing-language-toggle"
+              onClick={toggleLanguageMenu}
+              onKeyDown={handleLanguageToggleKeyDown}
+              aria-label={`Current language: ${activeLanguage.label}`}
+              aria-haspopup="true"
+              aria-expanded={languageOpen}
+              aria-controls="landing-language-menu"
+            >
+              <img src={activeLanguage.flag} alt="" className="landing-language-flag" />
+              <span>{activeLanguage.code}</span>
+              <FiChevronDown
+                aria-hidden="true"
+                className={`landing-language-arrow ${languageOpen ? 'open' : ''}`}
+              />
+            </button>
+
+            <ul
+              id="landing-language-menu"
+              className={`landing-language-menu ${languageOpen ? 'open' : ''}`}
+              role="menu"
+              aria-label="Choose language"
+            >
+              {LANGUAGE_OPTIONS.map((option, index) => (
+                <li key={option.value} role="none">
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={language === option.value}
+                    ref={(element) => { languageItemRefs.current[index] = element; }}
+                    className={language === option.value ? 'is-active' : ''}
+                    onClick={() => handleLanguageSelect(option.value)}
+                  >
+                    <img src={option.flag} alt="" />
+                    <span>{option.label}</span>
+                    <small>{option.code}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
 
           <Link className="landing-login-link login-btn" to="/login" onClick={() => setMenuOpen(false)}>
             <FiLogIn aria-hidden="true" />

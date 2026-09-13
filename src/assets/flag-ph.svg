@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 20" role="img" aria-label="Philippine flag">
+  <path fill="#174ea6" d="M0 0h28v10H0z"/>
+  <path fill="#c91f37" d="M0 10h28v10H0z"/>
+  <path fill="#fff" d="M0 0v20l13-10z"/>
+  <g fill="#f4c430">
+    <circle cx="5" cy="10" r="2"/>
+    <circle cx="2" cy="3" r=".8"/><circle cx="2" cy="17" r=".8"/><circle cx="10.5" cy="10" r=".8"/>
+  </g>
+</svg>

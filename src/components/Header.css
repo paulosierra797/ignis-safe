@@ -2,9 +2,9 @@
   position: sticky;
   top: 0;
   z-index: 1000;
-  background: #17191d;
-  border-bottom: 1px solid #2d3138;
-  box-shadow: 0 8px 24px rgba(7, 10, 15, 0.16);
+  background: #ffffff;
+  border-bottom: 1px solid #e2e7ee;
+  box-shadow: 0 8px 24px rgba(20, 33, 58, 0.08);
 }
 
 .landing-skip-link {
@@ -73,29 +73,28 @@
 }
 
 .header-container {
-  width: min(100%, 1360px);
-  min-height: 70px;
+  width: min(100%, 1440px);
+  min-height: 78px;
   margin: 0 auto;
   padding: 0.5rem 2rem;
-  display: grid;
-  grid-template-columns: minmax(250px, 1fr) auto minmax(250px, 1fr);
+  display: flex;
   align-items: center;
-  gap: clamp(1rem, 2vw, 2rem);
+  justify-content: space-between;
+  gap: clamp(1rem, 2.3vw, 2.5rem);
 }
 
 .landing-brand {
-  min-width: 0;
+  min-width: 220px;
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  justify-self: start;
-  color: #ffffff;
+  color: #172033;
   text-decoration: none;
 }
 
 .landing-brand-logo-frame {
   position: relative;
-  width: 46px;
+  width: 54px;
   aspect-ratio: 234 / 298;
   overflow: hidden;
   display: block;
@@ -119,8 +118,8 @@
 
 .landing-brand-text h4 {
   margin: 0;
-  color: #ffffff;
-  font-size: 0.68rem;
+  color: #172033;
+  font-size: 0.72rem;
   font-weight: 800;
   line-height: 1.25;
   letter-spacing: 0;
@@ -130,28 +129,28 @@
 .nav {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
+  justify-content: flex-end;
+  gap: 0.15rem;
 }
 
-.nav > .landing-language-toggle {
-  margin-left: clamp(1.25rem, 3vw, 3rem);
+.nav > .landing-language-selector {
+  margin-left: clamp(0.75rem, 2vw, 1.75rem);
 }
 
 .nav-link {
   position: relative;
-  min-height: 40px;
+  min-height: 42px;
   display: inline-flex;
   align-items: center;
   gap: 0.32rem;
-  padding: 0.5rem 0.7rem;
+  padding: 0.55rem 0.65rem;
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: #d6d9df;
+  color: #344054;
   font: inherit;
-  font-size: 0.74rem;
-  font-weight: 550;
+  font-size: 0.77rem;
+  font-weight: 650;
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
@@ -161,9 +160,9 @@
 .nav-link::after {
   content: '';
   position: absolute;
-  right: 0.7rem;
-  bottom: -0.55rem;
-  left: 0.7rem;
+  right: 0.65rem;
+  bottom: 0;
+  left: 0.65rem;
   height: 2px;
   background: #f4b41a;
   transform: scaleX(0);
@@ -173,14 +172,13 @@
 
 .nav-link:hover,
 .nav-link:focus-visible {
-  color: #ffffff;
+  color: #8f1519;
   background: transparent;
   outline: none;
 }
 
 .nav-link.is-active {
-  color: #ffffff;
-  font-weight: 750;
+  color: #8f1519;
 }
 
 .nav-link.is-active::after {
@@ -204,17 +202,17 @@
 
 .nav-dropdown-menu {
   position: absolute;
-  top: calc(100% + 0.8rem);
+  top: calc(100% + 0.45rem);
   left: 0;
   z-index: 1100;
   min-width: 220px;
   margin: 0;
   padding: 0.45rem;
   list-style: none;
-  background: #202329;
-  border: 1px solid #373c45;
+  background: #ffffff;
+  border: 1px solid #e2e7ee;
   border-radius: 7px;
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 16px 34px rgba(20, 33, 58, 0.16);
   opacity: 0;
   visibility: hidden;
   transform: translateY(-6px);
@@ -235,7 +233,7 @@
   display: block;
   padding: 0.65rem 0.75rem;
   border-radius: 5px;
-  color: #e4e7ec;
+  color: #344054;
   font-size: 0.82rem;
   font-weight: 650;
   white-space: nowrap;
@@ -245,14 +243,18 @@
 .nav-dropdown-menu a:hover,
 .nav-dropdown-menu a:focus-visible,
 .nav-dropdown-menu a.is-active {
-  color: #ffffff;
-  background: #30343c;
+  color: #8f1519;
+  background: #fff1f1;
   outline: none;
 }
 
 .landing-login-link {
   margin-left: 0.15rem;
   text-decoration: none;
+}
+
+.landing-language-selector {
+  position: relative;
 }
 
 .landing-language-toggle {
@@ -266,7 +268,7 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: #ffffff;
+  color: #344054;
   font: inherit;
   font-size: 0.72rem;
   font-weight: 700;
@@ -276,27 +278,104 @@
 .landing-language-flag {
   width: 22px;
   height: 22px;
-  display: grid;
-  place-items: center;
+  display: block;
   flex: 0 0 auto;
-  border: 1px solid #565c67;
+  border: 1px solid #d7dde6;
   border-radius: 50%;
   overflow: hidden;
   background: #ffffff;
-  font-size: 0.8rem;
-  line-height: 1;
+  object-fit: cover;
 }
 
 .landing-language-arrow {
   width: 12px;
   height: 12px;
+  transition: transform 0.18s ease;
+}
+
+.landing-language-arrow.open {
+  transform: rotate(180deg);
 }
 
 .landing-language-toggle:hover,
 .landing-language-toggle:focus-visible {
-  color: #f4c54d;
+  color: #8f1519;
   background: transparent;
   outline: none;
+}
+
+.landing-language-menu {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  z-index: 1100;
+  min-width: 190px;
+  margin: 0;
+  padding: 0.4rem;
+  list-style: none;
+  border: 1px solid #e2e7ee;
+  border-radius: 7px;
+  background: #ffffff;
+  box-shadow: 0 16px 34px rgba(20, 33, 58, 0.16);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+}
+
+.landing-language-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.landing-language-menu li {
+  list-style: none;
+}
+
+.landing-language-menu button {
+  width: 100%;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #344054;
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.landing-language-menu button:hover,
+.landing-language-menu button:focus-visible,
+.landing-language-menu button.is-active {
+  background: #fff1f1;
+  color: #8f1519;
+  outline: none;
+}
+
+.landing-language-menu img {
+  width: 24px;
+  height: 18px;
+  display: block;
+  border: 1px solid #d7dde6;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.landing-language-menu span {
+  font-weight: 700;
+}
+
+.landing-language-menu small {
+  color: #7a8798;
+  font-size: 0.66rem;
+  font-weight: 750;
 }
 
 .login-btn {
@@ -309,7 +388,7 @@
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: #ffffff;
+  color: #344054;
   font-size: 0.74rem;
   font-weight: 700;
   cursor: pointer;
@@ -320,7 +399,7 @@
 .login-btn:hover,
 .login-btn:focus-visible {
   background: transparent;
-  color: #f4c54d;
+  color: #8f1519;
   transform: none;
   outline: none;
 }
@@ -332,10 +411,10 @@
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1px solid #474c55;
+  border: 1px solid #d7dde6;
   border-radius: 6px;
-  background: #202329;
-  color: #ffffff;
+  background: #ffffff;
+  color: #8f1519;
   font-size: 1.35rem;
 }
 
@@ -379,9 +458,9 @@
     justify-content: flex-start;
     gap: 0.35rem;
     overflow-y: auto;
-    background: #17191d;
-    border-left: 1px solid #30343c;
-    box-shadow: -20px 0 40px rgba(0, 0, 0, 0.34);
+    background: #ffffff;
+    border-left: 1px solid #e2e7ee;
+    box-shadow: -20px 0 40px rgba(20, 33, 58, 0.22);
     transform: translateX(105%);
     visibility: hidden;
     pointer-events: none;
@@ -410,7 +489,7 @@
     min-height: 48px;
     justify-content: flex-start;
     padding: 0.8rem 0.9rem;
-    border-bottom: 1px solid #30343c;
+    border-bottom: 1px solid #edf0f4;
     font-size: 0.93rem;
   }
 
@@ -461,15 +540,38 @@
     margin: 0.65rem 0 0;
   }
 
+  .landing-language-selector {
+    width: 100%;
+    margin-top: 0.45rem;
+  }
+
   .landing-language-toggle {
     width: 100%;
     min-height: 46px;
-    margin-top: 0.45rem;
     justify-content: flex-start;
   }
 
-  .nav > .landing-language-toggle {
+  .nav > .landing-language-selector {
     margin-left: 0;
+  }
+
+  .landing-language-menu {
+    position: static;
+    min-width: 0;
+    max-height: 0;
+    padding: 0 0 0 0.75rem;
+    overflow: hidden;
+    border: 0;
+    box-shadow: none;
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition: max-height 0.22s ease;
+  }
+
+  .landing-language-menu.open {
+    max-height: 120px;
+    margin-top: 0.1rem;
   }
 
   .login-btn {

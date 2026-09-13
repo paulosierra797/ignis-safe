@@ -1861,6 +1861,10 @@
   backdrop-filter: blur(3px);
 }
 
+.announcement-confirm-modal-overlay {
+  z-index: 2800;
+}
+
 /* All announcement dialogs must remain above the shared sticky header and
    mobile navigation drawer. */
 .archive-list-modal-overlay,
@@ -2047,4 +2051,13 @@
   .announcement-manage-modal-actions > button {
     width: 100%;
   }
+}
+
+.announcement-confirm-modal-overlay {
+  z-index: 2800;
+}
+
+.shared-archive-body > .archived-panel {
+  overflow: visible;
+  padding: 14px 0 0;
 }

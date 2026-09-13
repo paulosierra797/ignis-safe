@@ -4,10 +4,11 @@ import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
 import RecordActions from './RecordActions';
 import ArchiveButton from './ArchiveButton';
+import ArchiveListModal from './ArchiveListModal';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import ToastMessage from './ToastMessage';
-import { FiRotateCcw } from 'react-icons/fi';
+import { FiRotateCcw, FiSearch } from 'react-icons/fi';
 import { getAttendanceArchiveIds, setAttendanceArchived } from '../utils/attendanceArchiveService';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
@@ -30,7 +31,8 @@ const AttendanceAdmin = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [attendanceData, setAttendanceData] = useState([]);
   const [archiveIds, setArchiveIds] = useState([]);
-  const [archiveView, setArchiveView] = useState('current');
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveSearch, setArchiveSearch] = useState('');
   const [archiveTarget, setArchiveTarget] = useState(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
   const [archiveError, setArchiveError] = useState('');
@@ -109,16 +111,25 @@ const AttendanceAdmin = () => {
         return item.dateIso === localDateIso;
       })();
 
-      const matchesArchive = archiveIds.includes(item.id) === (archiveView === 'archived');
-      return matchesPersonnel && matchesHeaderSearch && matchesDate && matchesArchive;
+      const isCurrent = !archiveIds.includes(item.id);
+      return matchesPersonnel && matchesHeaderSearch && matchesDate && isCurrent;
     });
-  }, [attendanceData, dateFilter, searchPersonal, searchQuery, archiveIds, archiveView]);
+  }, [attendanceData, dateFilter, searchPersonal, searchQuery, archiveIds]);
 
-  const attendancePages = usePagination(filteredAttendance, JSON.stringify([searchPersonal, searchQuery, dateFilter, archiveView]));
+  const attendancePages = usePagination(filteredAttendance, JSON.stringify([searchPersonal, searchQuery, dateFilter]));
   const archivedRecordCount = useMemo(
     () => attendanceData.reduce((total, item) => total + (archiveIds.includes(item.id) ? 1 : 0), 0),
     [attendanceData, archiveIds]
   );
+  const archivedAttendance = useMemo(() => {
+    const query = archiveSearch.trim().toLowerCase();
+    return attendanceData.filter((item) => {
+      if (!archiveIds.includes(item.id)) return false;
+      if (!query) return true;
+      return `${item.name || ''} ${item.rank || ''} ${item.date || ''}`.toLowerCase().includes(query);
+    });
+  }, [archiveIds, archiveSearch, attendanceData]);
+  const archivedAttendancePages = usePagination(archivedAttendance, archiveSearch);
 
   // Any filter change makes a previous export notice stale.
   useEffect(() => {
@@ -264,15 +275,13 @@ const AttendanceAdmin = () => {
               {isExportingPdf ? 'Generating PDF...' : 'Export PDF'}
             </button>
             <ArchiveButton
-              icon={archiveView === 'archived' ? <FiRotateCcw aria-hidden="true" /> : undefined}
-              label={archiveView === 'archived'
-                ? 'Return to current attendance'
-                : `View archived attendance (${archivedRecordCount})`}
+              label={`View archived attendance (${archivedRecordCount})`}
               onClick={() => {
-                setArchiveView(view => view === 'current' ? 'archived' : 'current');
+                setArchiveOpen(true);
                 setArchiveMessage(null);
               }}
-              aria-pressed={archiveView === 'archived'}
+              aria-expanded={archiveOpen}
+              aria-controls="attendanceArchiveList"
             />
           </div>
         </div>
@@ -319,8 +328,8 @@ const AttendanceAdmin = () => {
 
         <div className="attendance-view-heading" aria-live="polite">
           <div>
-            <h2>{archiveView === 'archived' ? 'Archived Attendance' : 'Current Attendance'}</h2>
-            <p>{archiveView === 'archived' ? 'Review archived records or restore them to the current list.' : 'Review and manage active attendance records.'}</p>
+            <h2>Current Attendance</h2>
+            <p>Review and manage active attendance records.</p>
           </div>
           <span>{filteredAttendance.length} {filteredAttendance.length === 1 ? 'record' : 'records'}</span>
         </div>
@@ -370,11 +379,7 @@ const AttendanceAdmin = () => {
                       >
                         View Details
                       </button>
-                      {archiveView === 'archived' ? (
-                        <button onClick={() => { setArchiveError(''); setArchiveTarget(item); }}><FiRotateCcw />Restore</button>
-                      ) : (
-                        <ArchiveButton label="Archive" onClick={() => { setArchiveError(''); setArchiveTarget(item); }} />
-                      )}
+                      <ArchiveButton label="Archive" onClick={() => { setArchiveError(''); setArchiveTarget(item); }} />
                       </RecordActions>
                     </td>
                   </tr>
@@ -436,11 +441,7 @@ const AttendanceAdmin = () => {
             >
               View Verification Details
             </button>
-            {archiveView === 'archived' ? (
-              <button onClick={() => { setArchiveError(''); setArchiveTarget(item); }}><FiRotateCcw />Restore</button>
-            ) : (
-              <ArchiveButton label="Archive" onClick={() => { setArchiveError(''); setArchiveTarget(item); }} />
-            )}
+            <ArchiveButton label="Archive" onClick={() => { setArchiveError(''); setArchiveTarget(item); }} />
             </RecordActions>
           </div>
         </div>
@@ -450,7 +451,66 @@ const AttendanceAdmin = () => {
 </div>
 
         <Pagination {...attendancePages} label="Attendance pages" />
-        {archiveTarget && <div className="attendance-details-overlay">
+        <ArchiveListModal
+          open={archiveOpen}
+          id="attendanceArchiveList"
+          title="Attendance Archive"
+          description="Review archived attendance records and restore them when needed."
+          count={archivedRecordCount}
+          onClose={() => {
+            setArchiveOpen(false);
+            setArchiveSearch('');
+          }}
+          busy={archiveBusy || Boolean(selectedRecord) || Boolean(archiveTarget)}
+        >
+          <label className="attendance-archive-search">
+            <FiSearch aria-hidden="true" />
+            <input
+              type="search"
+              value={archiveSearch}
+              onChange={(event) => setArchiveSearch(event.target.value)}
+              placeholder="Search archived attendance"
+              aria-label="Search archived attendance"
+            />
+          </label>
+
+          {isLoading ? (
+            <p className="attendance-archive-empty">Loading archived attendance...</p>
+          ) : archivedAttendance.length === 0 ? (
+            <p className="attendance-archive-empty">
+              {archivedRecordCount === 0 ? 'No archived attendance records.' : 'No archived attendance matches your search.'}
+            </p>
+          ) : (
+            <>
+              <div className="attendance-archive-list">
+                {archivedAttendancePages.items.map((item) => (
+                  <article className="attendance-archive-item" key={item.id}>
+                    <div className="attendance-archive-personnel">
+                      <strong>{item.name}</strong>
+                      <span>{item.rank}</span>
+                    </div>
+                    <div className="attendance-archive-date">
+                      <strong>{item.date}</strong>
+                      <span>{item.timeIn || '--'} to {item.timeOut || '--'}</span>
+                    </div>
+                    <span className={`attendance-verification-badge ${item.verificationStatus}`}>
+                      {getVerificationLabel(item.verificationStatus)}
+                    </span>
+                    <RecordActions label={`Actions for archived attendance of ${item.name}`}>
+                      <button type="button" onClick={() => setSelectedRecord(item)}>View Details</button>
+                      <button type="button" onClick={() => { setArchiveError(''); setArchiveTarget(item); }}>
+                        <FiRotateCcw aria-hidden="true" />Restore
+                      </button>
+                    </RecordActions>
+                  </article>
+                ))}
+              </div>
+              <Pagination {...archivedAttendancePages} label="Archived attendance pages" />
+            </>
+          )}
+        </ArchiveListModal>
+
+        {archiveTarget && <div className="attendance-details-overlay attendance-archive-confirm-overlay">
           <section className="attendance-details-modal attendance-archive-dialog" role="alertdialog" aria-modal="true" aria-labelledby="attendanceArchiveTitle">
             <header className="attendance-details-header"><h2 id="attendanceArchiveTitle">{archiveIds.includes(archiveTarget.id) ? 'Restore' : 'Archive'} attendance?</h2><CloseButton label="Close archive confirmation" disabled={archiveBusy} onClick={() => setArchiveTarget(null)} /></header>
             <div style={{padding: 24}}><p><strong>{archiveTarget.name}</strong> · {archiveTarget.date}</p><p>The original attendance and verification details will be kept. Archived records can be restored.</p>
@@ -468,7 +528,7 @@ const AttendanceAdmin = () => {
         </div>}
         {selectedRecord && (
           <div
-            className="attendance-details-overlay"
+            className={`attendance-details-overlay${archiveOpen ? ' attendance-archive-detail-overlay' : ''}`}
             role="presentation"
             onMouseDown={(event) => {
               if (event.target === event.currentTarget) setSelectedRecord(null);

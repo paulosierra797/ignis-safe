@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import { useBlocker, useLocation } from 'react-router-dom';
 import { FiBell, FiFileText, FiCheckCircle, FiClock, FiEdit2, FiSearch, FiTrash2 } from 'react-icons/fi';
 import ArchiveButton from './ArchiveButton';
+import ArchiveListModal from './ArchiveListModal';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
@@ -1578,34 +1579,16 @@ export default function Announcements() {
       </div>
 
       {(isAdmin ? isAnnouncementTab : true) && archivedOpen && (
-        <div
-          className="archive-list-modal-overlay"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setArchivedOpen(false);
-          }}
+        <ArchiveListModal
+          open={archivedOpen}
+          id="announcementArchiveList"
+          title={isAdmin ? 'Announcement Archive' : 'Archived Announcements'}
+          description="Review archived announcements and restore them to the active list."
+          count={archivedLoaded ? archivedAnnouncements.length : 0}
+          onClose={toggleArchivedPanel}
+          busy={Boolean(restoringId) || Boolean(deleteAnnouncementId)}
+          size="regular"
         >
-          <section
-            id="announcementArchiveList"
-            className="archive-list-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="announcementArchiveTitle"
-          >
-            <div className="archived-panel-header">
-              <div>
-                <span>Announcement records</span>
-                <h2 id="announcementArchiveTitle">
-                  {isAdmin ? 'Archive List' : 'Archived Announcements'}
-                  {archivedLoaded ? ` (${archivedAnnouncements.length})` : ''}
-                </h2>
-              </div>
-              <CloseButton
-                className="archived-panel-close"
-                onClick={toggleArchivedPanel}
-                label="Close archive list"
-              />
-            </div>
-
             {!archivedLoading && archivedAnnouncements.length > 0 && (
               <>
                 {isAdmin && (
@@ -1759,8 +1742,7 @@ export default function Announcements() {
                   </>
                 )}
             </div>
-          </section>
-        </div>
+        </ArchiveListModal>
       )}
 
       {archiveModalId && (

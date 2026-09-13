@@ -1,6 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import RecordActions from './RecordActions';
-import { FiAlertTriangle, FiCheckCircle, FiEye, FiX, FiXCircle } from 'react-icons/fi';
+import ArchiveButton from './ArchiveButton';
+import ArchiveListModal from './ArchiveListModal';
+import CloseButton from './CloseButton';
+import { FiAlertTriangle, FiArchive, FiCheckCircle, FiEye, FiRotateCcw, FiSearch, FiX, FiXCircle } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
@@ -9,7 +12,9 @@ import ToastMessage from './ToastMessage';
 import { formatStatusLabel } from '../utils/statusUtils';
 import {
   getReportAttachments,
+  getAdminArchivedReports,
   getAdminSubmittedReports,
+  restoreArchivedReport,
   updateReportStatus
 } from '../utils/reportsService';
 import './AdminReports.css';
@@ -24,7 +29,8 @@ const STATUS_OPTIONS = [
 const REPORT_ACTIONS = [
   { value: 'under_review', label: 'Review', icon: FiEye, tone: 'review' },
   { value: 'approved', label: 'Approve', icon: FiCheckCircle, tone: 'approve' },
-  { value: 'rejected', label: 'Reject', icon: FiXCircle, tone: 'reject' }
+  { value: 'rejected', label: 'Reject', icon: FiXCircle, tone: 'reject' },
+  { value: 'archived', label: 'Archive', icon: FiArchive, tone: 'archive' }
 ];
 
 
@@ -219,6 +225,12 @@ export default function AdminReports() {
   const [rejectNotes, setRejectNotes] = useState('');
   const [selectedReport, setSelectedReport] = useState(null);
   const [filesModalReport, setFilesModalReport] = useState(null);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archivedReports, setArchivedReports] = useState([]);
+  const [archiveSearch, setArchiveSearch] = useState('');
+  const [archiveError, setArchiveError] = useState('');
+  const [archiveReport, setArchiveReport] = useState(null);
 
   const loadReports = async () => {
     setLoading(true);
@@ -243,6 +255,12 @@ export default function AdminReports() {
 
   const handleStatusChange = async (report, nextStatus) => {
     if (!report?.report_id || !nextStatus) return;
+
+    if (nextStatus === 'archived') {
+      setArchiveError('');
+      setArchiveReport(report);
+      return;
+    }
 
     if (nextStatus === 'rejected') {
       setSelectedReport(report);
@@ -313,6 +331,56 @@ export default function AdminReports() {
     setSelectedReport(null);
   };
 
+  const openReportArchive = async () => {
+    setArchiveOpen(true);
+    setArchiveLoading(true);
+    setArchiveError('');
+    const { data, error } = await getAdminArchivedReports();
+    if (error) {
+      setArchivedReports([]);
+      setArchiveError(`Failed to load archived reports: ${error}`);
+    } else {
+      setArchivedReports(data || []);
+    }
+    setArchiveLoading(false);
+  };
+
+  const confirmArchiveReport = async () => {
+    if (!archiveReport?.report_id || processingId) return;
+    setProcessingId(archiveReport.report_id);
+    const { data, error } = await updateReportStatus(archiveReport.report_id, 'archived');
+
+    if (error) {
+      setArchiveError(`Failed to archive report: ${error}`);
+      setProcessingId('');
+      return;
+    }
+
+    setReports((current) => current.filter((report) => report.report_id !== archiveReport.report_id));
+    if (data) setArchivedReports((current) => [data, ...current.filter((report) => report.report_id !== data.report_id)]);
+    setMessage({ type: 'success', text: 'Report archived. Open the report archive to view or restore it.' });
+    setArchiveReport(null);
+    setProcessingId('');
+  };
+
+  const handleRestoreReport = async (report) => {
+    if (!report?.report_id || processingId) return;
+    setProcessingId(report.report_id);
+    setArchiveError('');
+    const { data, error } = await restoreArchivedReport(report.report_id);
+
+    if (error) {
+      setArchiveError(`Failed to restore report: ${error}`);
+      setProcessingId('');
+      return;
+    }
+
+    setArchivedReports((current) => current.filter((item) => item.report_id !== report.report_id));
+    if (data) setReports((current) => [data, ...current.filter((item) => item.report_id !== data.report_id)]);
+    setMessage({ type: 'success', text: 'Report restored to Submitted Reports.' });
+    setProcessingId('');
+  };
+
   const filteredReports = reports.filter((report) => {
     const statusOk = statusFilter === 'all' || String(report.status || '').toLowerCase() === statusFilter;
     const text = `${report.title || ''} ${report.created_by_name || ''} ${report.category || ''}`.toLowerCase();
@@ -321,6 +389,12 @@ export default function AdminReports() {
   });
 
   const reportPages = usePagination(filteredReports, searchQuery + statusFilter);
+  const filteredArchivedReports = archivedReports.filter((report) => {
+    const query = archiveSearch.trim().toLowerCase();
+    if (!query) return true;
+    return `${report.title || ''} ${report.created_by_name || ''} ${report.category || ''}`.toLowerCase().includes(query);
+  });
+  const archivedReportPages = usePagination(filteredArchivedReports, archiveSearch);
 
   const submittedCount = reports.filter((report) => String(report.status || '').toLowerCase() === 'submitted').length;
   const reviewCount = reports.filter((report) => String(report.status || '').toLowerCase() === 'under_review').length;
@@ -354,6 +428,12 @@ export default function AdminReports() {
             </div>
             <div className="admin-reports-toolbar-right">
               <button type="button" onClick={loadReports}>Refresh</button>
+              <ArchiveButton
+                label="View archived reports"
+                onClick={openReportArchive}
+                aria-expanded={archiveOpen}
+                aria-controls="reportArchiveList"
+              />
             </div>
           </div>
 
@@ -573,6 +653,86 @@ export default function AdminReports() {
               report={filesModalReport}
               onClose={() => setFilesModalReport(null)}
             />
+          )}
+
+          <ArchiveListModal
+            open={archiveOpen}
+            id="reportArchiveList"
+            title="Report Archive"
+            description="Review archived reports and restore them to the submitted report list."
+            count={archivedReports.length}
+            onClose={() => {
+              setArchiveOpen(false);
+              setArchiveSearch('');
+              setArchiveError('');
+            }}
+            busy={Boolean(processingId) || Boolean(filesModalReport)}
+          >
+            <label className="report-archive-search">
+              <FiSearch aria-hidden="true" />
+              <input
+                type="search"
+                value={archiveSearch}
+                onChange={(event) => setArchiveSearch(event.target.value)}
+                placeholder="Search archived reports"
+                aria-label="Search archived reports"
+              />
+            </label>
+
+            {archiveError && <p className="report-archive-message" role="alert">{archiveError}</p>}
+            {archiveLoading ? (
+              <p className="report-archive-empty">Loading archived reports...</p>
+            ) : filteredArchivedReports.length === 0 ? (
+              <p className="report-archive-empty">
+                {archivedReports.length === 0 ? 'No archived reports.' : 'No archived reports match your search.'}
+              </p>
+            ) : (
+              <>
+                <div className="report-archive-list">
+                  {archivedReportPages.items.map((report) => (
+                    <article className="report-archive-item" key={report.report_id}>
+                      <div className="report-archive-main">
+                        <strong>{report.title || 'Untitled report'}</strong>
+                        <span>{report.created_by_name || 'Unknown personnel'} · Archived {formatDateTime(report.updated_at)}</span>
+                      </div>
+                      <span className="report-archive-category">{report.category || 'Uncategorized'}</span>
+                      <ReportFileAction report={report} onViewFiles={setFilesModalReport} />
+                      <RecordActions label={`Actions for archived report ${report.title || ''}`} disabled={processingId === report.report_id}>
+                        <button type="button" onClick={() => handleRestoreReport(report)}>
+                          <FiRotateCcw aria-hidden="true" />
+                          {processingId === report.report_id ? 'Restoring...' : 'Restore'}
+                        </button>
+                      </RecordActions>
+                    </article>
+                  ))}
+                </div>
+                <Pagination {...archivedReportPages} label="Archived report pages" />
+              </>
+            )}
+          </ArchiveListModal>
+
+          {archiveReport && (
+            <div className="report-archive-confirm-overlay">
+              <section className="report-archive-confirm" role="alertdialog" aria-modal="true" aria-labelledby="archiveReportTitle">
+                <div className="report-archive-confirm-heading">
+                  <div>
+                    <span>Archive report</span>
+                    <h3 id="archiveReportTitle">Move this report to the archive?</h3>
+                  </div>
+                  <CloseButton
+                    label="Close archive confirmation"
+                    onClick={() => { setArchiveReport(null); setArchiveError(''); }}
+                    disabled={Boolean(processingId)}
+                  />
+                </div>
+                <p><strong>{archiveReport.title || 'Untitled report'}</strong> will leave the current report list and can be restored later.</p>
+                {archiveError && <p className="report-archive-confirm-error" role="alert">{archiveError}</p>}
+                <div className="report-archive-confirm-actions">
+                  <button type="button" onClick={() => { setArchiveReport(null); setArchiveError(''); }} disabled={Boolean(processingId)}>Cancel</button>
+                  <ArchiveButton showLabel label="Archive" busy={processingId === archiveReport.report_id} onClick={confirmArchiveReport} />
+                </div>
+              </section>
+            </div>
           )}
         </div>
       </div>

@@ -91,6 +91,8 @@
 }
 
 .admin-reports-toolbar-right button {
+  min-height: 44px;
+  box-sizing: border-box;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   padding: 0.45rem 0.7rem;
@@ -523,7 +525,220 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  z-index: 1000;
+  z-index: 2900;
+}
+
+.report-archive-search {
+  position: relative;
+  display: block;
+  margin-bottom: 14px;
+}
+
+.report-archive-search svg {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 18px;
+  height: 18px;
+  color: #64748b;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.report-archive-search input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 14px 9px 42px;
+  border: 1px solid #d7dee7;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #172033;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.report-archive-search input:focus {
+  outline: 2px solid rgba(185, 28, 28, 0.14);
+  border-color: #b91c1c;
+}
+
+.report-archive-list {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.report-archive-item {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.6fr) minmax(130px, 0.8fr) auto 44px;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #e8edf2;
+  background: #ffffff;
+  box-sizing: border-box;
+  transition: background-color 0.18s ease;
+}
+
+.report-archive-item:last-child {
+  border-bottom: 0;
+}
+
+.report-archive-item:hover {
+  background: #fff8f8;
+}
+
+.report-archive-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 3px;
+}
+
+.report-archive-main strong {
+  overflow: hidden;
+  color: #172033;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-archive-main span,
+.report-archive-category {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.report-archive-category {
+  overflow-wrap: anywhere;
+}
+
+.report-archive-empty {
+  margin: 0;
+  padding: 36px 16px;
+  color: #64748b;
+  text-align: center;
+}
+
+.report-archive-message {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+}
+
+.report-archive-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2800;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.report-archive-confirm {
+  width: min(480px, 100%);
+  padding: 22px;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  box-sizing: border-box;
+}
+
+.report-archive-confirm span {
+  color: #b91c1c;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.report-archive-confirm-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.report-archive-confirm-heading > div {
+  min-width: 0;
+}
+
+.report-archive-confirm h3 {
+  margin: 4px 0 8px;
+  color: #172033;
+  font-size: 19px;
+}
+
+.report-archive-confirm p {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.report-archive-confirm .report-archive-confirm-error {
+  margin-top: 12px;
+  padding: 9px 11px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 12px;
+}
+
+.report-archive-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.report-archive-confirm-actions > button:not(.archive-control) {
+  min-height: 44px;
+  padding: 9px 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .admin-reports-toolbar-right {
+    flex-direction: row;
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  .admin-reports-toolbar-right > button:not(.archive-control) {
+    width: auto;
+  }
+
+  .report-archive-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 14px;
+  }
+
+  .report-archive-category,
+  .report-archive-item > .action-open-file {
+    grid-column: 1;
+    width: fit-content;
+  }
+
+  .report-archive-item > .record-actions-trigger {
+    grid-column: 2;
+    grid-row: 1 / span 3;
+  }
 }
 
 .attached-files-modal-box {

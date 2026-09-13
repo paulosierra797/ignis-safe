@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useBlocker, useSearchParams } from 'react-router-dom';
 import { FaCheckCircle, FaChevronDown, FaEye, FaSearch, FaTimes, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import ArchiveButton from './ArchiveButton';
+import ArchiveListModal from './ArchiveListModal';
 import RecordActions from './RecordActions';
 import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
@@ -5520,31 +5521,21 @@ const permissions = getDefaultPermissions(formData.role);
         )}
 
         {requestArchiveType && (
-          <div
-            className="accounts-modal-overlay request-archive-overlay"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="requestArchiveTitle"
+          <ArchiveListModal
+            open={Boolean(requestArchiveType)}
+            id="requestArchiveList"
+            title={requestArchiveType === 'leave'
+              ? 'Leave Request Archive'
+              : 'Profile Change Request Archive'}
+            description="Review archived requests and restore them to their history list."
+            count={(requestArchiveType === 'leave'
+              ? archivedLeaveRequests
+              : archivedProfileChangeRequests).length}
+            onClose={closeRequestArchive}
+            busy={Boolean(processingArchiveRequestId)}
+            size="regular"
           >
-            <div className="accounts-modal request-archive-modal">
-              <div className="accounts-modal-header">
-                <div>
-                  <span className="request-archive-eyebrow">Archived history</span>
-                  <h3 id="requestArchiveTitle">
-                    {requestArchiveType === 'leave'
-                      ? 'Leave Request Archive'
-                      : 'Profile Change Request Archive'}
-                  </h3>
-                </div>
-                <CloseButton
-                  className="accounts-modal-close"
-                  onClick={closeRequestArchive}
-                  label="Close request archive"
-                  disabled={Boolean(processingArchiveRequestId)}
-                />
-              </div>
-
-              <div className="accounts-modal-body request-archive-body">
+              <div className="request-archive-body">
                 <ToastMessage message={requestArchiveMessage} type="error" />
 
                 {requestArchiveLoading ? (
@@ -5601,8 +5592,7 @@ const permissions = getDefaultPermissions(formData.role);
                 )}
                 <Pagination {...archivePages} label="Archived request pages" />
               </div>
-            </div>
-          </div>
+          </ArchiveListModal>
         )}
 
         {isDeleteUserModalOpen && (

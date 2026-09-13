@@ -457,7 +457,7 @@ export const getAdminArchivedReports = async () => {
   try {
     const { data, error } = await supabase
       .from(REPORTS_TABLE)
-      .select('report_id, report_no, title, category, status, submitted_at, updated_at, created_by_name, pdf_url')
+      .select('report_id, report_no, title, category, status, submitted_at, updated_at, created_by_name, pdf_url, pdf_file_name, report_payload')
       .eq('status', 'archived')
       .order('updated_at', { ascending: false });
 

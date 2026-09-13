@@ -1,0 +1,271 @@
+.landing-mobile-app {
+  scroll-margin-top: 112px;
+  padding: 4rem 0;
+  border-bottom: 1px solid #dfe4eb;
+  background: #ffffff;
+}
+
+.landing-mobile-app-container {
+  width: min(100%, 1320px);
+  margin: 0 auto;
+  padding: 0 2rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  align-items: center;
+  gap: 4rem;
+}
+
+.landing-mobile-app-content {
+  min-width: 0;
+}
+
+.landing-mobile-app-wordmark {
+  width: 210px;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+.landing-mobile-app-eyebrow {
+  margin: 1.35rem 0 0.35rem;
+  color: #a8171c;
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.landing-mobile-app h2 {
+  max-width: 720px;
+  margin: 0;
+  color: #172033;
+  font-size: 2.15rem;
+  line-height: 1.15;
+  letter-spacing: 0;
+}
+
+.landing-mobile-app-description {
+  max-width: 720px;
+  margin: 0.85rem 0 0;
+  color: #5f6f86;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.landing-mobile-app-highlights {
+  margin-top: 1.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.25rem;
+}
+
+.landing-mobile-app-highlights span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #344054;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.landing-mobile-app-highlights svg {
+  width: 17px;
+  height: 17px;
+  color: #a8171c;
+}
+
+.landing-mobile-app-action {
+  margin-top: 1.65rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.landing-mobile-app-download {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid #9f151a;
+  border-radius: 6px;
+  background: #9f151a;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.landing-mobile-app-download:disabled {
+  border-color: #cbd3dd;
+  background: #e9edf2;
+  color: #67768a;
+  cursor: not-allowed;
+}
+
+.landing-mobile-app-action > p {
+  max-width: 420px;
+  margin: 0;
+  color: #667085;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.landing-mobile-app-release {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #28354b;
+  border-radius: 8px;
+  background: #172033;
+  color: #ffffff;
+  box-shadow: 0 18px 42px rgba(23, 32, 51, 0.16);
+}
+
+.landing-mobile-app-release-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.2rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.landing-mobile-app-release-heading > span {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #3ddc84;
+  color: #10251a;
+  font-size: 1.35rem;
+}
+
+.landing-mobile-app-release-heading p,
+.landing-mobile-app-release-heading h3 {
+  margin: 0;
+}
+
+.landing-mobile-app-release-heading p {
+  color: #aab5c5;
+  font-size: 0.66rem;
+  font-weight: 750;
+  text-transform: uppercase;
+}
+
+.landing-mobile-app-release-heading h3 {
+  margin-top: 0.18rem;
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+.landing-mobile-app-release dl {
+  margin: 0;
+  padding: 0 1.25rem;
+}
+
+.landing-mobile-app-release dl > div {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.landing-mobile-app-release dt {
+  color: #aab5c5;
+  font-size: 0.7rem;
+}
+
+.landing-mobile-app-release dd {
+  margin: 0;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-align: right;
+}
+
+.landing-mobile-app-release dd.is-coming-soon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #f7d266;
+}
+
+.landing-mobile-app-release dd.is-coming-soon span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f4b41a;
+}
+
+.landing-mobile-app-qr-placeholder {
+  margin: 1.25rem;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.9rem;
+  border: 1px dashed rgba(247, 210, 102, 0.45);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.landing-mobile-app-qr-placeholder > svg {
+  width: 27px;
+  height: 27px;
+  color: #f7d266;
+}
+
+.landing-mobile-app-qr-placeholder strong {
+  display: block;
+  font-size: 0.76rem;
+}
+
+.landing-mobile-app-qr-placeholder p {
+  margin: 0.2rem 0 0;
+  color: #aab5c5;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .landing-mobile-app-container {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .landing-mobile-app-release {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-mobile-app {
+    scroll-margin-top: 100px;
+    padding: 3rem 0;
+  }
+
+  .landing-mobile-app-container {
+    padding: 0 1rem;
+  }
+
+  .landing-mobile-app-wordmark {
+    width: 180px;
+  }
+
+  .landing-mobile-app h2 {
+    font-size: 1.7rem;
+  }
+
+  .landing-mobile-app-action {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .landing-mobile-app-download {
+    width: 100%;
+  }
+}

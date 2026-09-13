@@ -71,6 +71,7 @@ const ContactSection = lazy(() => import('./components/ContactSection'));
 const FAQSection = lazy(() => import('./components/FAQSection'));
 const FloatingContactButton = lazy(() => import('./components/FloatingContactButton'));
 const TrustAccessibilitySection = lazy(() => import('./components/TrustAccessibilitySection'));
+const MobileAppDownloadSection = lazy(() => import('./components/MobileAppDownloadSection'));
 const Footer = lazy(() => import('./components/Footer'));
 
 const ROUTE_PRELOADERS = {
@@ -225,6 +226,7 @@ function LandingPage() {
         {/* Reserve approximate section heights so the lazy chunks loading in
             don't shove the footer down (CLS). */}
         <Suspense fallback={<div style={{ minHeight: 320 }} aria-hidden="true" />}><TrustAccessibilitySection /></Suspense>
+        <Suspense fallback={<div style={{ minHeight: 480 }} aria-hidden="true" />}><MobileAppDownloadSection /></Suspense>
         <Suspense fallback={<div style={{ minHeight: 420 }} aria-hidden="true" />}><LandingAnnouncements /></Suspense>
         <Suspense fallback={<div style={{ minHeight: 640 }} aria-hidden="true" />}><ProcessSection /></Suspense>
         <Suspense fallback={<div style={{ minHeight: 520 }} aria-hidden="true" />}><AboutSection /></Suspense>

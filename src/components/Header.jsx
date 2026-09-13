@@ -9,10 +9,11 @@ import { getLandingUiCopy } from '../utils/landingLanguage';
 // Order matches the actual DOM order of sections on the landing page — the
 // scroll-spy loop below relies on this order, which is independent of the
 // order these ids are presented in the nav.
-const SCROLL_SECTION_IDS = ['home', 'announcements', 'process', 'about', 'contact', 'faq'];
+const SCROLL_SECTION_IDS = ['home', 'mobile-app', 'announcements', 'process', 'about', 'contact', 'faq'];
 
 const PRIMARY_NAV_ITEMS = [
   { id: 'home', labelKey: 'home' },
+  { id: 'mobile-app', labelKey: 'mobileApp' },
   { id: 'announcements', labelKey: 'announcements' },
   { id: 'process', labelKey: 'onlineApplication' }
 ];

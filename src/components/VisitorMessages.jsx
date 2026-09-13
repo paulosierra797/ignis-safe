@@ -8,8 +8,6 @@ import {
   FiArrowLeft,
   FiArchive,
   FiAlertTriangle,
-  FiCheckCircle,
-  FiClock,
   FiMail,
   FiMessageCircle,
   FiRefreshCw,
@@ -17,7 +15,6 @@ import {
   FiSearch,
   FiSend,
   FiTrash2,
-  FiUser,
   FiX,
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
@@ -29,7 +26,6 @@ import {
   replyToVisitorConversation,
   restoreVisitorConversation,
   scheduleVisitorConversationDeletion,
-  setVisitorConversationStatus,
   VISITOR_CHAT_MAX_LENGTH,
 } from '../utils/visitorChatService';
 import './VisitorMessages.css';
@@ -54,30 +50,16 @@ const formatListTime = (value) => {
     : date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
 };
 
-const getConversationState = (conversation) => {
-  if (conversation.delete_after) return { key: 'deletion', label: 'For deletion' };
-  if (conversation.is_archived) {
-    return {
-      key: 'archived',
-      label: conversation.status === 'resolved' ? 'Resolved / Archived' : 'Archived',
-    };
-  }
-  if (conversation.unread) return { key: 'new', label: 'New' };
-  return { key: 'open', label: 'Open' };
-};
-
 export default function VisitorMessages() {
   const [conversations, setConversations] = useState([]);
   const [selectedId, setSelectedId] = useState('');
   const [thread, setThread] = useState(null);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [archivedView, setArchivedView] = useState(false);
   const [reply, setReply] = useState('');
   const [loadingList, setLoadingList] = useState(true);
   const [loadingThread, setLoadingThread] = useState(false);
   const [sending, setSending] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updatingArchive, setUpdatingArchive] = useState(false);
   const [pendingDeletion, setPendingDeletion] = useState(null);
   const [error, setError] = useState('');
@@ -139,52 +121,17 @@ export default function VisitorMessages() {
     if (list) list.scrollTop = list.scrollHeight;
   }, [thread?.messages?.length, selectedId]);
 
-  const conversationSummary = useMemo(() => {
-    if (archivedView) {
-      return {
-        new: 0,
-        open: 0,
-        archived: conversations.filter((item) => !item.delete_after).length,
-        deletion: conversations.filter((item) => item.delete_after).length,
-        total: conversations.length,
-      };
-    }
-
-    return {
-      new: conversations.filter((item) => item.unread).length,
-      open: conversations.filter((item) => item.status === 'open' && !item.unread).length,
-      archived: 0,
-      deletion: 0,
-      total: conversations.length,
-    };
-  }, [archivedView, conversations]);
-
-  const filterOptions = archivedView
-    ? [
-      { value: 'all', label: 'All', count: conversationSummary.total },
-      { value: 'archived', label: 'Archived', count: conversationSummary.archived },
-      { value: 'deletion', label: 'For deletion', count: conversationSummary.deletion },
-    ]
-    : [
-      { value: 'all', label: 'All', count: conversationSummary.total },
-      { value: 'new', label: 'New', count: conversationSummary.new },
-      { value: 'open', label: 'Open', count: conversationSummary.open },
-    ];
-
   const filteredConversations = useMemo(() => {
     const term = search.trim().toLowerCase();
     return conversations.filter((conversation) => {
-      const state = getConversationState(conversation).key;
-      const matchesStatus = statusFilter === 'all' || state === statusFilter;
       const matchesSearch = !term || [
         conversation.visitor_name,
         conversation.visitor_email,
-        conversation.visitor_label,
         conversation.last_message_preview,
       ].some((value) => String(value || '').toLowerCase().includes(term));
-      return matchesStatus && matchesSearch;
+      return matchesSearch;
     });
-  }, [conversations, search, statusFilter]);
+  }, [conversations, search]);
 
   const handleReply = async (event) => {
     event.preventDefault();
@@ -208,54 +155,39 @@ export default function VisitorMessages() {
     await loadConversations({ quiet: true });
   };
 
-  const handleStatusChange = async () => {
-    if (!thread?.conversation || updatingStatus) return;
-    const nextStatus = thread.conversation.status === 'resolved' ? 'open' : 'resolved';
-    setUpdatingStatus(true);
-    setError('');
-    const result = await setVisitorConversationStatus({
-      conversationId: thread.conversation.id,
-      status: nextStatus,
-    });
-    setUpdatingStatus(false);
-    if (result.error) {
-      setError(result.error);
-      return;
-    }
-    // Resolving auto-archives the conversation and reopening returns it to the
-    // active inbox, so either way it leaves the current list. Drop the thread.
-    setThread(null);
-    setSelectedId('');
-    await loadConversations({ quiet: true });
-  };
-
-  const handleArchive = async () => {
-    if (!thread?.conversation || updatingArchive) return;
+  const handleArchive = async (conversation = thread?.conversation) => {
+    if (!conversation || updatingArchive) return;
     setUpdatingArchive(true);
     setError('');
-    const result = await archiveVisitorConversation(thread.conversation.id);
+    const result = await archiveVisitorConversation(conversation.id);
     setUpdatingArchive(false);
     if (result.error) {
       setError(result.error);
       return;
     }
-    setThread(null);
-    setSelectedId('');
+    setConversations((current) => current.filter((item) => item.id !== conversation.id));
+    if (selectedId === conversation.id) {
+      setThread(null);
+      setSelectedId('');
+    }
     await loadConversations({ quiet: true });
   };
 
-  const handleRestore = async () => {
-    if (!thread?.conversation || updatingArchive) return;
+  const handleRestore = async (conversation = thread?.conversation) => {
+    if (!conversation || updatingArchive) return;
     setUpdatingArchive(true);
     setError('');
-    const result = await restoreVisitorConversation(thread.conversation.id);
+    const result = await restoreVisitorConversation(conversation.id);
     setUpdatingArchive(false);
     if (result.error) {
       setError(result.error);
       return;
     }
-    setThread(null);
-    setSelectedId('');
+    setConversations((current) => current.filter((item) => item.id !== conversation.id));
+    if (selectedId === conversation.id) {
+      setThread(null);
+      setSelectedId('');
+    }
     await loadConversations({ quiet: true });
   };
 
@@ -263,6 +195,15 @@ export default function VisitorMessages() {
     if (!pendingDeletion || updatingArchive) return;
     setUpdatingArchive(true);
     setError('');
+    if (!pendingDeletion.is_archived) {
+      const archiveResult = await archiveVisitorConversation(pendingDeletion.id);
+      if (archiveResult.error) {
+        setUpdatingArchive(false);
+        setError(archiveResult.error);
+        setPendingDeletion(null);
+        return;
+      }
+    }
     const result = await scheduleVisitorConversationDeletion(pendingDeletion.id);
     setUpdatingArchive(false);
     if (result.error) {
@@ -270,18 +211,26 @@ export default function VisitorMessages() {
       setPendingDeletion(null);
       return;
     }
-    setThread((current) => ({ ...current, conversation: result.data.conversation }));
-    setConversations((current) => current.map((item) => (
-      item.id === pendingDeletion.id ? { ...item, ...result.data.conversation } : item
-    )));
+    if (archivedView) {
+      setThread((current) => current ? { ...current, conversation: result.data.conversation } : current);
+      setConversations((current) => current.map((item) => (
+        item.id === pendingDeletion.id ? { ...item, ...result.data.conversation } : item
+      )));
+    } else {
+      setConversations((current) => current.filter((item) => item.id !== pendingDeletion.id));
+      if (selectedId === pendingDeletion.id) {
+        setThread(null);
+        setSelectedId('');
+      }
+    }
     setPendingDeletion(null);
+    await loadConversations({ quiet: true });
   };
 
   const handleArchiveViewToggle = () => {
     setArchivedView((current) => !current);
     setSelectedId('');
     setThread(null);
-    setStatusFilter('all');
     setReply('');
     setError('');
   };
@@ -300,20 +249,9 @@ export default function VisitorMessages() {
             <h2>Website Conversations</h2>
             <p>Read and reply to messages sent through the public website. Visitor names and emails are shown for clear follow-up.</p>
           </div>
-          <div className="visitor-messages-intro-actions">
-            <div className="visitor-messages-summary">
-              <span><strong>{conversationSummary.total}</strong> Active</span>
-              <span><strong>{conversationSummary.new}</strong> New</span>
-              <span><strong>{conversationSummary.open}</strong> Open</span>
-            </div>
-            <ArchiveButton
-              onClick={handleArchiveViewToggle}
-              label="View archived conversations"
-            />
-          </div>
         </section>
 
-        {!archivedView && <ToastMessage message={error} type="error" />}
+        <ToastMessage message={error} type="error" />
 
         {archivedView && (
           <button
@@ -335,11 +273,6 @@ export default function VisitorMessages() {
                   <p>Restore a conversation or schedule permanent deletion after the 30-day recovery period.</p>
                 </div>
               </div>
-              <div className="visitor-archive-modal-summary">
-                <span><strong>{conversationSummary.total}</strong> Total</span>
-                <span><strong>{conversationSummary.archived}</strong> Archived</span>
-                <span><strong>{conversationSummary.deletion}</strong> For deletion</span>
-              </div>
               <button
                 type="button"
                 className="visitor-archive-modal-close"
@@ -351,8 +284,6 @@ export default function VisitorMessages() {
               </button>
             </header>
           )}
-
-          {archivedView && <ToastMessage message={error} type="error" />}
 
           <section className={`visitor-messages-workspace ${selectedId ? 'has-selection' : ''}`}>
             <aside className="visitor-conversation-list" aria-label="Visitor conversations">
@@ -367,18 +298,21 @@ export default function VisitorMessages() {
                   placeholder="Search name, email, or message"
                 />
               </label>
-              <div className="visitor-conversation-filters" aria-label="Conversation status">
-                {filterOptions.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={statusFilter === option.value ? 'is-active' : ''}
-                    onClick={() => setStatusFilter(option.value)}
-                  >
-                    <span>{option.label}</span>
-                    <strong>{option.count}</strong>
-                  </button>
-                ))}
+              <div className="visitor-conversation-filters" aria-label="Conversation lists">
+                <button
+                  type="button"
+                  className={!archivedView ? 'is-active' : ''}
+                  onClick={() => { if (archivedView) handleArchiveViewToggle(); }}
+                >
+                  All
+                </button>
+                <button
+                  type="button"
+                  className={archivedView ? 'is-active' : ''}
+                  onClick={() => { if (!archivedView) handleArchiveViewToggle(); }}
+                >
+                  Archives
+                </button>
               </div>
             </div>
 
@@ -387,37 +321,57 @@ export default function VisitorMessages() {
                 <div className="visitor-conversation-empty"><FiRefreshCw className="is-spinning" /> Loading conversations...</div>
               ) : filteredConversations.length === 0 ? (
                 <div className="visitor-conversation-empty"><FiMessageCircle /> No conversations found.</div>
-              ) : conversationPages.items.map((conversation) => {
-                const conversationState = getConversationState(conversation);
-                return <button
+              ) : conversationPages.items.map((conversation) => (
+                <article
                   key={conversation.id}
-                  type="button"
                   className={`visitor-conversation-item ${selectedId === conversation.id ? 'is-selected' : ''} ${conversation.unread ? 'is-unread' : ''}`}
-                  onClick={() => {
-                    setSelectedId(conversation.id);
-                    setThread(null);
-                    setReply('');
-                    setError('');
-                  }}
                 >
-                  <span className="visitor-conversation-avatar"><FiUser /></span>
-                  <span className="visitor-conversation-copy">
+                  <button
+                    type="button"
+                    className="visitor-conversation-select"
+                    onClick={() => {
+                      setSelectedId(conversation.id);
+                      setThread(null);
+                      setReply('');
+                      setError('');
+                    }}
+                  >
+                    <span className="visitor-conversation-copy">
                     <span className="visitor-conversation-name">
-                      <strong>{conversation.visitor_name}</strong>
-                      <time>{formatListTime(conversation.last_message_at)}</time>
+                      <strong>
+                        {conversation.unread && <span className="visitor-conversation-unread-dot" aria-label="New message" title="New message" />}
+                        {conversation.visitor_name}
+                      </strong>
                     </span>
                     <span className="visitor-conversation-preview">{conversation.last_message_preview}</span>
-                    <span className="visitor-conversation-meta">
-                      <span className={`visitor-conversation-status is-${conversationState.key}`}>
-                        {conversationState.label}
-                      </span>
-                      {conversation.delete_after && (
-                        <span className="visitor-conversation-delete-status">Scheduled {formatListTime(conversation.delete_after)}</span>
-                      )}
+                    {conversation.delete_after && (
+                      <span className="visitor-conversation-delete-status">Scheduled for deletion {formatListTime(conversation.delete_after)}</span>
+                    )}
                     </span>
-                  </span>
-                </button>;
-              })}
+                  </button>
+                  <div className="visitor-conversation-side">
+                    <time>{formatListTime(conversation.last_message_at)}</time>
+                    <RecordActions label={`Actions for conversation with ${conversation.visitor_name}`}>
+                      {archivedView ? (
+                        <button type="button" onClick={() => handleRestore(conversation)} disabled={updatingArchive}>
+                          <FiRotateCcw aria-hidden="true" />Restore
+                        </button>
+                      ) : (
+                        <ArchiveButton label="Archive" onClick={() => handleArchive(conversation)} disabled={updatingArchive} />
+                      )}
+                      <button
+                        type="button"
+                        className="visitor-thread-delete-action"
+                        onClick={() => setPendingDeletion(conversation)}
+                        disabled={updatingArchive || Boolean(conversation.delete_after)}
+                      >
+                        <FiTrash2 aria-hidden="true" />
+                        {conversation.delete_after ? 'Scheduled for deletion' : 'Delete conversation'}
+                      </button>
+                    </RecordActions>
+                  </div>
+                </article>
+              ))}
             </div>
             <Pagination {...conversationPages} label="Conversation pages" />
             </aside>
@@ -437,7 +391,6 @@ export default function VisitorMessages() {
                   <button type="button" className="visitor-thread-back" onClick={() => setSelectedId('')} aria-label="Back to conversations">
                     <FiArrowLeft />
                   </button>
-                  <span className="visitor-thread-avatar"><FiUser /></span>
                   <div className="visitor-thread-person">
                     <h3>{thread.conversation.visitor_name}</h3>
                     {thread.conversation.visitor_email ? (
@@ -445,25 +398,10 @@ export default function VisitorMessages() {
                     ) : (
                       <span><FiMail /> No email provided</span>
                     )}
-                    <span>{thread.conversation.visitor_label}</span>
-                    <span className={`visitor-thread-state is-${getConversationState(thread.conversation).key}`}>
-                      {getConversationState(thread.conversation).label}
-                    </span>
                   </div>
                   <RecordActions label="Conversation actions">
                     {archivedView ? (
                       <>
-                        {thread.conversation.status === 'resolved' && (
-                          <button
-                            type="button"
-                            className="visitor-thread-status-action is-resolved"
-                            onClick={handleStatusChange}
-                            disabled={updatingStatus}
-                          >
-                            <FiClock />
-                            {updatingStatus ? 'Updating...' : 'Reopen'}
-                          </button>
-                        )}
                         <button
                           type="button"
                           className="visitor-thread-restore-action"
@@ -480,26 +418,26 @@ export default function VisitorMessages() {
                           disabled={updatingArchive || Boolean(thread.conversation.delete_after)}
                         >
                           <FiTrash2 />
-                          {thread.conversation.delete_after ? 'Scheduled for deletion' : 'Schedule deletion'}
+                          {thread.conversation.delete_after ? 'Scheduled for deletion' : 'Delete conversation'}
                         </button>
                       </>
                     ) : (
                       <>
-                        <button
-                          type="button"
-                          className={`visitor-thread-status-action is-${thread.conversation.status}`}
-                          onClick={handleStatusChange}
-                          disabled={updatingStatus}
-                        >
-                          {thread.conversation.status === 'resolved' ? <FiClock /> : <FiCheckCircle />}
-                          {updatingStatus ? 'Updating...' : thread.conversation.status === 'resolved' ? 'Reopen' : 'Mark Resolved'}
-                        </button>
                         <ArchiveButton
-                          label="Archive conversation"
+                          label="Archive"
                           onClick={handleArchive}
                           disabled={updatingArchive}
                           busy={updatingArchive}
                         />
+                        <button
+                          type="button"
+                          className="visitor-thread-delete-action"
+                          onClick={() => setPendingDeletion(thread.conversation)}
+                          disabled={updatingArchive}
+                        >
+                          <FiTrash2 />
+                          Delete conversation
+                        </button>
                       </>
                     )}
                   </RecordActions>
@@ -558,7 +496,7 @@ export default function VisitorMessages() {
                   </button>
                 </form> : (
                   <div className="visitor-thread-archived-note">
-                    <FiArchive /> Reopen or restore this conversation before replying.
+                    <FiArchive /> Restore this conversation before replying.
                   </div>
                 )}
               </>
@@ -592,10 +530,6 @@ export default function VisitorMessages() {
               The conversation with <strong>{pendingDeletion.visitor_name}</strong> will remain in the archive for 30 days.
               You can restore it during that period. Afterward, the conversation and all of its messages will be permanently deleted.
             </p>
-            <div className="visitor-delete-modal-preview">
-              <span>{pendingDeletion.visitor_name}</span>
-              <small>{pendingDeletion.visitor_email || 'No email provided'}</small>
-            </div>
             <div className="visitor-delete-modal-actions">
               <button type="button" onClick={() => setPendingDeletion(null)} disabled={updatingArchive}>Cancel</button>
               <button type="button" onClick={handleScheduleDeletion} disabled={updatingArchive}>

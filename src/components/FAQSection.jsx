@@ -8,6 +8,9 @@ export default function FAQSection() {
   const { content, language } = useLandingContent();
   const copy = getLandingUiCopy(language);
   const currentContent = content.faq[language] || content.faq.english;
+  const faqItems = Array.isArray(currentContent.faqs) ? currentContent.faqs : [];
+  const splitIndex = Math.ceil(faqItems.length / 2);
+  const faqColumns = [faqItems.slice(0, splitIndex), faqItems.slice(splitIndex)];
 
   const toggleFAQ = (index) => {
     setOpenIndex(openIndex === index ? null : index)
@@ -23,34 +26,41 @@ export default function FAQSection() {
         </div>
 
         <div className="faq-list">
-          {currentContent.faqs.map((faq, index) => (
-            <div
-              key={index}
-              className={`faq-item ${openIndex === index ? 'open' : ''}`}
-            >
-              <button
-                type="button"
-                className="faq-question"
-                onClick={() => toggleFAQ(index)}
-                aria-expanded={openIndex === index}
-              >
-                <span>{normalizeDasmarinasText(faq.question)}</span>
-                <span className="toggle-icon" aria-hidden="true">{openIndex === index ? '−' : '+'}</span>
-              </button>
-              
-              {openIndex === index && (
-                <div className="faq-answer">
-                  {Array.isArray(faq.answer) ? (
-                    <ul>
-                      {faq.answer.map((item, i) => (
-                        <li key={i}>{normalizeDasmarinasText(item)}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>{normalizeDasmarinasText(faq.answer)}</p>
-                  )}
-                </div>
-              )}
+          {faqColumns.map((column, columnIndex) => (
+            <div className="faq-column" key={columnIndex}>
+              {column.map((faq, itemIndex) => {
+                const index = columnIndex === 0 ? itemIndex : splitIndex + itemIndex;
+                return (
+                  <div
+                    key={`${index}-${faq.question}`}
+                    className={`faq-item ${openIndex === index ? 'open' : ''}`}
+                  >
+                    <button
+                      type="button"
+                      className="faq-question"
+                      onClick={() => toggleFAQ(index)}
+                      aria-expanded={openIndex === index}
+                    >
+                      <span>{normalizeDasmarinasText(faq.question)}</span>
+                      <span className="toggle-icon" aria-hidden="true">{openIndex === index ? '−' : '+'}</span>
+                    </button>
+
+                    {openIndex === index && (
+                      <div className="faq-answer">
+                        {Array.isArray(faq.answer) ? (
+                          <ul>
+                            {faq.answer.map((item, answerIndex) => (
+                              <li key={answerIndex}>{normalizeDasmarinasText(item)}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p>{normalizeDasmarinasText(faq.answer)}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ))}
         </div>

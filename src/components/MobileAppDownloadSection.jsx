@@ -86,11 +86,6 @@ export default function MobileAppDownloadSection() {
             </div>
           </div>
 
-          <details className="landing-mobile-app-checksum">
-            <summary data-landing-edit-path={`copy.${language}.mobileAppChecksum`} data-landing-edit-label="Checksum label">{copy.mobileAppChecksum}</summary>
-            <code data-landing-edit-path="mobileRelease.checksum" data-landing-edit-label="APK SHA-256 checksum" data-landing-edit-multiline="true">{release.checksum}</code>
-          </details>
-
           <small className="landing-mobile-app-note" data-landing-edit-path={`copy.${language}.mobileAppReleaseNote`} data-landing-edit-label="APK safety note" data-landing-edit-multiline="true">{copy.mobileAppReleaseNote}</small>
         </div>
       </div>

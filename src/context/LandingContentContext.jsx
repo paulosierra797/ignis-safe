@@ -358,13 +358,12 @@ export const DEFAULT_LANDING_CONTENT = {
     mobileSplashPhoto: null
   },
   mobileRelease: {
-    version: '1.0.0 (build 1)',
+    version: '1.0.0',
     size: '223.91 MB',
     compatibility: 'Android 7.1+',
     architecture: '64-bit ARM',
     format: 'APK',
-    releaseDate: 'September 1, 2026',
-    checksum: '5BA0AE8C9BCEEE54F177CD29ED69291E2CA80F1065633339D9FFAE36CE6CEA56'
+    releaseDate: 'September 1, 2026'
   },
   copy: {
     english: {
@@ -539,7 +538,10 @@ const mergeWithDefaults = (candidate = {}) => ({
   },
   mobileRelease: normalizeCopyObject({
     ...DEFAULT_LANDING_CONTENT.mobileRelease,
-    ...(candidate.mobileRelease || {})
+    ...(candidate.mobileRelease || {}),
+    version: candidate.mobileRelease?.version === '1.0.0 (build 1)'
+      ? '1.0.0'
+      : candidate.mobileRelease?.version || DEFAULT_LANDING_CONTENT.mobileRelease.version
   }),
   copy: normalizeCopyObject({
     english: {

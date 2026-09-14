@@ -249,28 +249,6 @@
   margin-top: 0.2rem;
 }
 
-.landing-mobile-app-checksum {
-  margin-top: 1rem;
-  color: #536176;
-  font-size: 0.65rem;
-}
-
-.landing-mobile-app-checksum summary {
-  width: fit-content;
-  cursor: pointer;
-  font-weight: 750;
-}
-
-.landing-mobile-app-checksum code {
-  max-width: 100%;
-  margin-top: 0.5rem;
-  display: block;
-  color: #344054;
-  font-size: 0.58rem;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
 .landing-mobile-app-note {
   max-width: 620px;
   margin-top: 0.8rem;

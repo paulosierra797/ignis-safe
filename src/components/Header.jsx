@@ -98,7 +98,8 @@ function NavDropdown({
   location,
   sectionHref,
   onItemSectionClick,
-  onItemRouteClick
+  onItemRouteClick,
+  language
 }) {
   return (
     <div
@@ -118,7 +119,7 @@ function NavDropdown({
         onClick={onToggleClick}
         onKeyDown={onToggleKeyDown}
       >
-        {toggleLabel}
+        <span data-landing-edit-path={`copy.${language}.${items[0]?.labelKey === 'mobileApp' ? 'resources' : items[0]?.labelKey === 'aboutUs' ? 'aboutUs' : 'contactUs'}`} data-landing-edit-label={`${toggleLabel} navigation label`}>{toggleLabel}</span>
         <FiChevronDown aria-hidden="true" className={`nav-dropdown-arrow ${open ? 'open' : ''}`} />
       </button>
 
@@ -135,7 +136,7 @@ function NavDropdown({
                 onClick={onItemRouteClick}
                 onKeyDown={(event) => onItemKeyDown(event, index)}
               >
-                {item.label}
+                <span data-landing-edit-path={`copy.${language}.${item.labelKey}`} data-landing-edit-label={`${item.label} navigation label`}>{item.label}</span>
               </Link>
             ) : (
               <a
@@ -147,7 +148,7 @@ function NavDropdown({
                 onClick={(event) => onItemSectionClick(event, item.id)}
                 onKeyDown={(event) => onItemKeyDown(event, index)}
               >
-                {item.label}
+                <span data-landing-edit-path={`copy.${language}.${item.labelKey}`} data-landing-edit-label={`${item.label} navigation label`}>{item.label}</span>
               </a>
             )}
           </li>
@@ -158,8 +159,8 @@ function NavDropdown({
 }
 
 export default function Header() {
-  const { language, setLanguage } = useLandingContent();
-  const copy = getLandingUiCopy(language);
+  const { content, language, setLanguage } = useLandingContent();
+  const copy = { ...getLandingUiCopy(language), ...(content.copy?.[language] || {}) };
   const [menuOpen, setMenuOpen] = useState(false);
   // Single source of truth for which nav dropdown is open — only one of
   // 'resources' | 'about' | 'contact' | null at a time, so opening one always closes the
@@ -560,25 +561,33 @@ export default function Header() {
         <div className="landing-emergency-content">
           <a href="tel:911" className="landing-emergency-call">
             <FiPhoneCall aria-hidden="true" />
-            <span>{copy.emergencyMessage}</span>
+            <span data-landing-edit-path={`copy.${language}.emergencyMessage`} data-landing-edit-label="Emergency message">{copy.emergencyMessage}</span>
           </a>
           <a
             href={sectionHref('contact')}
             className="landing-hotline-link"
             onClick={(event) => handleSectionClick(event, 'contact')}
           >
-            {copy.stationHotlines}
+            <span data-landing-edit-path={`copy.${language}.stationHotlines`} data-landing-edit-label="Station hotlines link">{copy.stationHotlines}</span>
           </a>
         </div>
       </div>
       <div className="header-container">
         <a className="landing-brand" href={sectionHref('home')} onClick={(event) => handleSectionClick(event, 'home')}>
           <span className="landing-brand-logo-frame">
-            <img src={logo} alt="BFP Dasmariñas City Fire Station seal" className="landing-brand-logo" width="280" height="234" />
+            <img
+              src={content.media?.brandLogo?.url || logo}
+              alt="BFP Dasmariñas City Fire Station seal"
+              className="landing-brand-logo"
+              width="280"
+              height="234"
+              data-landing-edit-image="media.brandLogo"
+              data-landing-edit-label="Station logo"
+            />
           </span>
           <div className="landing-brand-text">
-            <h4>BUREAU OF FIRE PROTECTION</h4>
-            <h4>DASMARIÑAS CITY FIRE STATION</h4>
+            <h4 data-landing-edit-path={`copy.${language}.brandAgency`} data-landing-edit-label="Agency name">{copy.brandAgency}</h4>
+            <h4 data-landing-edit-path={`copy.${language}.brandStation`} data-landing-edit-label="Station name">{copy.brandStation}</h4>
           </div>
         </a>
 
@@ -617,7 +626,7 @@ export default function Header() {
               aria-current={isLandingPage && activeSection === item.id ? 'location' : undefined}
               onClick={(event) => handleSectionClick(event, item.id)}
             >
-              {item.label}
+              <span data-landing-edit-path={`copy.${language}.${item.labelKey}`} data-landing-edit-label={`${item.label} navigation label`}>{item.label}</span>
             </a>
           ))}
 
@@ -643,6 +652,7 @@ export default function Header() {
             sectionHref={sectionHref}
             onItemSectionClick={handleResourcesSectionSelect}
             onItemRouteClick={handleResourcesRouteSelect}
+            language={language}
           />
 
           <NavDropdown
@@ -667,6 +677,7 @@ export default function Header() {
             sectionHref={sectionHref}
             onItemSectionClick={handleAboutSectionSelect}
             onItemRouteClick={handleAboutRouteSelect}
+            language={language}
           />
 
           <NavDropdown
@@ -691,6 +702,7 @@ export default function Header() {
             sectionHref={sectionHref}
             onItemSectionClick={handleContactSectionSelect}
             onItemRouteClick={handleContactRouteSelect}
+            language={language}
           />
 
           <div className="landing-language-selector" ref={languageRef}>
@@ -704,6 +716,7 @@ export default function Header() {
               aria-haspopup="true"
               aria-expanded={languageOpen}
               aria-controls="landing-language-menu"
+              data-landing-editor-control="true"
             >
               <img src={activeLanguage.flag} alt="" className="landing-language-flag" />
               <span>{activeLanguage.code}</span>
@@ -728,6 +741,7 @@ export default function Header() {
                     ref={(element) => { languageItemRefs.current[index] = element; }}
                     className={language === option.value ? 'is-active' : ''}
                     onClick={() => handleLanguageSelect(option.value)}
+                    data-landing-editor-control="true"
                   >
                     <img src={option.flag} alt="" />
                     <span>{option.label}</span>
@@ -740,7 +754,7 @@ export default function Header() {
 
           <Link className="landing-login-link login-btn" to="/login" onClick={() => setMenuOpen(false)}>
             <FiLogIn aria-hidden="true" />
-            {copy.login}
+            <span data-landing-edit-path={`copy.${language}.login`} data-landing-edit-label="Login link label">{copy.login}</span>
           </Link>
         </nav>
       </div>

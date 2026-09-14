@@ -11,7 +11,6 @@ import { LandingContentProvider } from './context/LandingContentContext';
 import { LayoutProvider } from './context/LayoutContext';
 import useDocumentMeta from './hooks/useDocumentMeta';
 import Header from './components/Header';
-import HeroSection from './components/HeroSection';
 
 const loadDashboard = () => import('./components/Dashboard');
 const loadAnalytics = () => import('./components/Analytics');
@@ -66,14 +65,8 @@ const SendMessagePage = lazy(() => import('./components/SendMessagePage'));
 const VisitorMessages = lazy(loadVisitorMessages);
 const LandingPageEditorView = lazy(loadLandingPageEditor);
 const AppSessionTracker = lazy(() => import('./components/AppSessionTracker'));
-const LandingAnnouncements = lazy(() => import('./components/LandingAnnouncements'));
-const AboutSection = lazy(() => import('./components/AboutSection'));
-const ProcessSection = lazy(() => import('./components/ProcessSection'));
-const ContactSection = lazy(() => import('./components/ContactSection'));
-const FAQSection = lazy(() => import('./components/FAQSection'));
+const LandingPageSections = lazy(() => import('./components/LandingPageSections'));
 const FloatingContactButton = lazy(() => import('./components/FloatingContactButton'));
-const TrustAccessibilitySection = lazy(() => import('./components/TrustAccessibilitySection'));
-const MobileAppDownloadSection = lazy(() => import('./components/MobileAppDownloadSection'));
 const Footer = lazy(() => import('./components/Footer'));
 
 const ROUTE_PRELOADERS = {
@@ -225,16 +218,9 @@ function LandingPage() {
     <>
       <Header />
       <main id="main-content" ref={landingMain}>
-        <HeroSection />
-        {/* Reserve approximate section heights so the lazy chunks loading in
-            don't shove the footer down (CLS). */}
-        <Suspense fallback={<div style={{ minHeight: 320 }} aria-hidden="true" />}><TrustAccessibilitySection /></Suspense>
-        <Suspense fallback={<div style={{ minHeight: 480 }} aria-hidden="true" />}><MobileAppDownloadSection /></Suspense>
-        <Suspense fallback={<div style={{ minHeight: 420 }} aria-hidden="true" />}><LandingAnnouncements /></Suspense>
-        <Suspense fallback={<div style={{ minHeight: 640 }} aria-hidden="true" />}><ProcessSection /></Suspense>
-        <Suspense fallback={<div style={{ minHeight: 520 }} aria-hidden="true" />}><AboutSection /></Suspense>
-        <Suspense fallback={<div style={{ minHeight: 520 }} aria-hidden="true" />}><ContactSection /></Suspense>
-        <Suspense fallback={<div style={{ minHeight: 420 }} aria-hidden="true" />}><FAQSection /></Suspense>
+        <Suspense fallback={<div style={{ minHeight: 640 }} aria-hidden="true" />}>
+          <LandingPageSections />
+        </Suspense>
       </main>
       <Footer />
       <Suspense fallback={null}><FloatingContactButton /></Suspense>

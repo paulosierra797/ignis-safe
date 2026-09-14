@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useUser } from './UserContext';
-import { LANDING_LANGUAGE_STORAGE_KEY, normalizeDasmarinasText } from '../utils/landingLanguage';
+import { getLandingUiCopy, LANDING_LANGUAGE_STORAGE_KEY, normalizeDasmarinasText } from '../utils/landingLanguage';
 import { getPublicLandingContent } from '../utils/publicContentService';
 
 const STORAGE_KEY = 'ignis_landing_content_v1';
@@ -345,6 +345,38 @@ export const DEFAULT_LANDING_CONTENT = {
         }
       ]
     }
+  },
+  layout: {
+    sections: ['hero', 'trust', 'mobile-app', 'announcements', 'process', 'about', 'contact', 'faq'],
+    hidden: []
+  },
+  media: {
+    brandLogo: null,
+    aboutPhoto: null,
+    contactPhoto: null,
+    mobileLearningPhoto: null,
+    mobileSplashPhoto: null
+  },
+  mobileRelease: {
+    version: '1.0.0 (build 1)',
+    size: '223.91 MB',
+    compatibility: 'Android 7.1+',
+    architecture: '64-bit ARM',
+    format: 'APK',
+    releaseDate: 'September 1, 2026',
+    checksum: '5BA0AE8C9BCEEE54F177CD29ED69291E2CA80F1065633339D9FFAE36CE6CEA56'
+  },
+  copy: {
+    english: {
+      ...getLandingUiCopy('english'),
+      brandAgency: 'Bureau of Fire Protection',
+      brandStation: 'Dasmariñas City Fire Station'
+    },
+    tagalog: {
+      ...getLandingUiCopy('tagalog'),
+      brandAgency: 'Bureau of Fire Protection',
+      brandStation: 'Dasmariñas City Fire Station'
+    }
   }
 };
 
@@ -399,6 +431,25 @@ const normalizeStationEmail = (value) => {
   return email.toLowerCase() === 'dasmariasfire@gmail.com'
     ? DEFAULT_LANDING_CONTENT.contact.email
     : email;
+};
+
+const LANDING_SECTION_IDS = DEFAULT_LANDING_CONTENT.layout.sections;
+
+const normalizeLandingLayout = (layout) => {
+  const requestedSections = Array.isArray(layout?.sections) ? layout.sections : [];
+  const sections = [
+    ...requestedSections.filter((id, index) => (
+      LANDING_SECTION_IDS.includes(id) && requestedSections.indexOf(id) === index
+    )),
+    ...LANDING_SECTION_IDS.filter((id) => !requestedSections.includes(id))
+  ];
+
+  return {
+    sections,
+    hidden: Array.isArray(layout?.hidden)
+      ? layout.hidden.filter((id) => LANDING_SECTION_IDS.includes(id))
+      : []
+  };
 };
 
 const mergeWithDefaults = (candidate = {}) => ({
@@ -480,6 +531,25 @@ const mergeWithDefaults = (candidate = {}) => ({
         : candidate.faq?.tagalog?.title || DEFAULT_LANDING_CONTENT.faq.tagalog.title,
       faqs: mergeFaqEntries(candidate.faq?.tagalog?.faqs, DEFAULT_LANDING_CONTENT.faq.tagalog.faqs)
     }
+  }),
+  layout: normalizeLandingLayout(candidate.layout),
+  media: {
+    ...DEFAULT_LANDING_CONTENT.media,
+    ...(candidate.media || {})
+  },
+  mobileRelease: normalizeCopyObject({
+    ...DEFAULT_LANDING_CONTENT.mobileRelease,
+    ...(candidate.mobileRelease || {})
+  }),
+  copy: normalizeCopyObject({
+    english: {
+      ...DEFAULT_LANDING_CONTENT.copy.english,
+      ...(candidate.copy?.english || {})
+    },
+    tagalog: {
+      ...DEFAULT_LANDING_CONTENT.copy.tagalog,
+      ...(candidate.copy?.tagalog || {})
+    }
   })
 });
 
@@ -519,7 +589,8 @@ export const LandingContentProvider = ({ children }) => {
   const location = useLocation();
   const shouldSyncContent = location.pathname === '/'
     || location.pathname === '/organizational-chart'
-    || location.pathname.endsWith('/announcements');
+    || location.pathname.endsWith('/announcements')
+    || location.pathname === '/dashboard/landing-page-editor';
   const [content, setContentState] = useState(() => readStoredContent());
   const [loadingContent, setLoadingContent] = useState(shouldSyncContent);
   const [language, setLanguageState] = useState(() => readStoredLanguage());
@@ -630,9 +701,8 @@ export const LandingContentProvider = ({ children }) => {
   return <LandingContentContext.Provider value={value}>{children}</LandingContentContext.Provider>;
 };
 
-// Lets admin preview screens (e.g. the Quick Preview) feed unsaved draft
-// content into the real landing-page components without touching the
-// live saved content or triggering a database write.
+// Lets the admin's visual editor feed an unpublished draft into the real
+// landing-page components without touching saved public content.
 export const LandingContentPreviewProvider = ({ content, children }) => {
   const [language, setLanguageState] = useState('english');
   const value = useMemo(

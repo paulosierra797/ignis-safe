@@ -6,7 +6,7 @@ import { getLandingUiCopy, normalizeDasmarinasText } from '../utils/landingLangu
 export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState(null)
   const { content, language } = useLandingContent();
-  const copy = getLandingUiCopy(language);
+  const copy = { ...getLandingUiCopy(language), ...(content.copy?.[language] || {}) };
   const currentContent = content.faq[language] || content.faq.english;
   const faqItems = Array.isArray(currentContent.faqs) ? currentContent.faqs : [];
   const splitIndex = Math.ceil(faqItems.length / 2);
@@ -20,9 +20,9 @@ export default function FAQSection() {
     <section className="faq" id="faq">
       <div className="faq-container">
         <div className="faq-heading-row">
-          <p className="landing-section-eyebrow">{copy.quickAnswers}</p>
-          <h2>{normalizeDasmarinasText(currentContent.title)}</h2>
-          <p className="faq-intro">{copy.faqDescription}</p>
+          <p className="landing-section-eyebrow" data-landing-edit-path={`copy.${language}.quickAnswers`} data-landing-edit-label="FAQ section eyebrow">{copy.quickAnswers}</p>
+          <h2 data-landing-edit-path={`faq.${language}.title`} data-landing-edit-label="FAQ section heading">{normalizeDasmarinasText(currentContent.title)}</h2>
+          <p className="faq-intro" data-landing-edit-path={`copy.${language}.faqDescription`} data-landing-edit-label="FAQ section description" data-landing-edit-multiline="true">{copy.faqDescription}</p>
         </div>
 
         <div className="faq-list">
@@ -41,12 +41,17 @@ export default function FAQSection() {
                       onClick={() => toggleFAQ(index)}
                       aria-expanded={openIndex === index}
                     >
-                      <span>{normalizeDasmarinasText(faq.question)}</span>
+                      <span data-landing-edit-path={`faq.${language}.faqs.${index}.question`} data-landing-edit-label={`FAQ question ${index + 1}`}>{normalizeDasmarinasText(faq.question)}</span>
                       <span className="toggle-icon" aria-hidden="true">{openIndex === index ? '−' : '+'}</span>
                     </button>
 
-                    {openIndex === index && (
-                      <div className="faq-answer">
+                    <div
+                      className="faq-answer"
+                      hidden={openIndex !== index}
+                      data-landing-edit-path={`faq.${language}.faqs.${index}.answer`}
+                      data-landing-edit-label={`FAQ answer ${index + 1}`}
+                      data-landing-edit-lines="true"
+                    >
                         {Array.isArray(faq.answer) ? (
                           <ul>
                             {faq.answer.map((item, answerIndex) => (
@@ -56,8 +61,7 @@ export default function FAQSection() {
                         ) : (
                           <p>{normalizeDasmarinasText(faq.answer)}</p>
                         )}
-                      </div>
-                    )}
+                    </div>
                   </div>
                 );
               })}

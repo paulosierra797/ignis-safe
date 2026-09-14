@@ -68,8 +68,8 @@ function ExpandableAnnouncementMessage({ content, copy }) {
 }
 
 export default function LandingAnnouncements() {
-  const { language } = useLandingContent();
-  const copy = getLandingUiCopy(language);
+  const { content, language } = useLandingContent();
+  const copy = { ...getLandingUiCopy(language), ...(content.copy?.[language] || {}) };
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -114,10 +114,10 @@ export default function LandingAnnouncements() {
       <div className="landing-announcements-container">
         <div className="landing-announcements-header">
           <div>
-            <p className="landing-announcements-eyebrow">{copy.publicNotice}</p>
-            <h2>{copy.latestAnnouncements}</h2>
+            <p className="landing-announcements-eyebrow" data-landing-edit-path={`copy.${language}.publicNotice`} data-landing-edit-label="Announcements section eyebrow">{copy.publicNotice}</p>
+            <h2 data-landing-edit-path={`copy.${language}.latestAnnouncements`} data-landing-edit-label="Announcements section title">{copy.latestAnnouncements}</h2>
           </div>
-          <p className="landing-announcements-note">
+          <p className="landing-announcements-note" data-landing-edit-path={`copy.${language}.announcementNote`} data-landing-edit-label="Announcements section description" data-landing-edit-multiline="true">
             {copy.announcementNote}
           </p>
         </div>

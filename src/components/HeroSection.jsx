@@ -17,7 +17,7 @@ const FSIS_APPLICATION_URL = 'https://fsis.e-bfp.com/';
 
 export default function HeroSection() {
   const { content, language } = useLandingContent();
-  const copy = getLandingUiCopy(language);
+  const copy = { ...getLandingUiCopy(language), ...(content.copy?.[language] || {}) };
   const heroContent = getLocalizedSection(content.hero, language);
   const touchStartXRef = useRef(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
@@ -96,16 +96,35 @@ export default function HeroSection() {
           className={`hero-image-img hero-carousel-photo is-${slideDirection}${hasChangedPhoto ? '' : ' is-initial'}`}
           loading={safeActivePhotoIndex === 0 ? 'eager' : 'lazy'}
           fetchPriority={safeActivePhotoIndex === 0 ? 'high' : 'auto'}
+          data-landing-edit-image="hero.photos"
+          data-landing-edit-label="Main banner photos"
         />
         <div className="hero-image-overlay" aria-hidden="true" />
 
         <div className="hero-container">
           <div className="hero-content">
-            <span className="hero-eyebrow">{copy.heroEyebrow}</span>
-            <h1>{normalizeDasmarinasText(heroContent.title)}</h1>
+            <span className="hero-eyebrow" data-landing-edit-path={`copy.${language}.heroEyebrow`} data-landing-edit-label="Main banner eyebrow">{copy.heroEyebrow}</span>
+            <h1
+              data-landing-edit-path={language === 'tagalog' ? 'hero.tagalog.title' : 'hero.title'}
+              data-landing-edit-label="Main page title"
+            >
+              {normalizeDasmarinasText(heroContent.title)}
+            </h1>
             <p>
-              <span className="hero-lead">{normalizeDasmarinasText(heroContent.lead)}</span>
-              {normalizeDasmarinasText(heroContent.description)}
+              <span
+                className="hero-lead"
+                data-landing-edit-path={language === 'tagalog' ? 'hero.tagalog.lead' : 'hero.lead'}
+                data-landing-edit-label="Welcome message"
+              >
+                {normalizeDasmarinasText(heroContent.lead)}
+              </span>
+              <span
+                data-landing-edit-path={language === 'tagalog' ? 'hero.tagalog.description' : 'hero.description'}
+                data-landing-edit-label="Supporting description"
+                data-landing-edit-multiline="true"
+              >
+                {normalizeDasmarinasText(heroContent.description)}
+              </span>
             </p>
             <div className="hero-actions">
               <a
@@ -114,18 +133,18 @@ export default function HeroSection() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                {copy.startApplication}
+                <span data-landing-edit-path={`copy.${language}.startApplication`} data-landing-edit-label="Application button label">{copy.startApplication}</span>
                 <FiExternalLink aria-hidden="true" />
               </a>
               <a className="hero-secondary-action" href="#process">
-                {copy.viewRequirements}
+                <span data-landing-edit-path={`copy.${language}.viewRequirements`} data-landing-edit-label="Requirements button label">{copy.viewRequirements}</span>
               </a>
             </div>
           </div>
 
           <div className="hero-service-status">
             <FiCheckCircle aria-hidden="true" />
-            <span>{copy.servicesAvailable}</span>
+            <span data-landing-edit-path={`copy.${language}.servicesAvailable`} data-landing-edit-label="Service status text">{copy.servicesAvailable}</span>
           </div>
         </div>
 
@@ -166,17 +185,17 @@ export default function HeroSection() {
       <div className="hero-services" aria-label="Common public services">
         <a href="#process" className="hero-service-link">
           <FiFileText aria-hidden="true" />
-          <span><strong>{copy.fsicFsec}</strong><small>{copy.requirementsProcess}</small></span>
+          <span><strong data-landing-edit-path={`copy.${language}.fsicFsec`} data-landing-edit-label="Service link title">{copy.fsicFsec}</strong><small data-landing-edit-path={`copy.${language}.requirementsProcess`} data-landing-edit-label="Service link description">{copy.requirementsProcess}</small></span>
           <FiArrowRight aria-hidden="true" />
         </a>
         <a href="#announcements" className="hero-service-link">
           <FiBell aria-hidden="true" />
-          <span><strong>{copy.publicAdvisories}</strong><small>{copy.latestUpdates}</small></span>
+          <span><strong data-landing-edit-path={`copy.${language}.publicAdvisories`} data-landing-edit-label="Advisories link title">{copy.publicAdvisories}</strong><small data-landing-edit-path={`copy.${language}.latestUpdates`} data-landing-edit-label="Advisories link description">{copy.latestUpdates}</small></span>
           <FiArrowRight aria-hidden="true" />
         </a>
         <a href="#contact" className="hero-service-link">
           <FiPhoneCall aria-hidden="true" />
-          <span><strong>{copy.contactStation}</strong><small>{copy.hotlinesChannels}</small></span>
+          <span><strong data-landing-edit-path={`copy.${language}.contactStation`} data-landing-edit-label="Contact link title">{copy.contactStation}</strong><small data-landing-edit-path={`copy.${language}.hotlinesChannels`} data-landing-edit-label="Contact link description">{copy.hotlinesChannels}</small></span>
           <FiArrowRight aria-hidden="true" />
         </a>
       </div>

@@ -6,7 +6,7 @@ import LandingPreview from './LandingPreview';
 import ToastMessage from './ToastMessage';
 import { useLandingContent } from '../context/LandingContentContext';
 import { useUser } from '../context/UserContext';
-import { FiArrowDown, FiArrowLeft, FiArrowUp, FiExternalLink, FiMove, FiPlus, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
+import { FiArrowDown, FiArrowLeft, FiArrowUp, FiEdit3, FiExternalLink, FiEye, FiImage, FiMove, FiPlus, FiRefreshCw, FiTrash2, FiX } from 'react-icons/fi';
 import { deleteBannerPhotoPaths, MAX_BANNER_PHOTOS, uploadBannerPhoto } from '../utils/bannerPhotoService';
 import './LandingContentEditor.css';
 import './AppDialog.css';
@@ -47,6 +47,22 @@ const isValidLandingDraftShape = (value) => Boolean(
 );
 
 const deepClone = (value) => JSON.parse(JSON.stringify(value));
+const getValueAtPath = (source, path) => String(path || '').split('.').reduce(
+  (value, key) => value?.[Number.isNaN(Number(key)) ? key : Number(key)],
+  source
+);
+const setValueAtPath = (source, path, value) => {
+  const next = deepClone(source);
+  const keys = String(path || '').split('.');
+  let cursor = next;
+
+  keys.slice(0, -1).forEach((key) => {
+    cursor = cursor[Number.isNaN(Number(key)) ? key : Number(key)];
+  });
+  const finalKey = keys[keys.length - 1];
+  cursor[Number.isNaN(Number(finalKey)) ? finalKey : Number(finalKey)] = value;
+  return next;
+};
 const toLines = (value) => (Array.isArray(value) ? value : [String(value || '')]).join('\n');
 const fromLines = (value) => String(value || '').split('\n').map((line) => line.trim()).filter(Boolean);
 const mobileNumberRegex = /^09\d{9}$/;
@@ -89,7 +105,18 @@ const LANDING_FIELD_MAP = [
   { label: 'Email Address', get: (c) => c.contact.email },
   { label: 'Facebook Page Name', get: (c) => c.contact.facebookLabel },
   { label: 'Facebook Page Link', get: (c) => c.contact.facebookUrl },
+  { label: 'Landing Page Section Order', get: (c) => c.layout?.sections || [] },
+  { label: 'Hidden Landing Page Sections', get: (c) => c.layout?.hidden || [] },
+  { label: 'Station Logo', get: (c) => c.media?.brandLogo?.fileName || c.media?.brandLogo?.url || 'Default image' },
+  { label: 'About Us Photo', get: (c) => c.media?.aboutPhoto?.fileName || c.media?.aboutPhoto?.url || 'Default image' },
+  { label: 'Contact Photo', get: (c) => c.media?.contactPhoto?.fileName || c.media?.contactPhoto?.url || 'Default image' },
+  { label: 'Mobile App Learning Screen', get: (c) => c.media?.mobileLearningPhoto?.fileName || c.media?.mobileLearningPhoto?.url || 'Default image' },
+  { label: 'Mobile App Splash Screen', get: (c) => c.media?.mobileSplashPhoto?.fileName || c.media?.mobileSplashPhoto?.url || 'Default image' },
 ];
+
+const humanizeFieldName = (value) => String(value || '')
+  .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+  .replace(/^./, (letter) => letter.toUpperCase());
 
 const getChangedFields = (oldContent, newContent) => {
   const changes = [];
@@ -187,6 +214,28 @@ const getChangedFields = (oldContent, newContent) => {
         });
       }
     });
+
+    Object.entries(newContent.copy?.[locale] || {}).forEach(([key, newValue]) => {
+      const oldValue = oldContent.copy?.[locale]?.[key];
+      if (String(oldValue ?? '') !== String(newValue ?? '')) {
+        changes.push({
+          label: `${localeLabel} ${humanizeFieldName(key)}`,
+          oldValue: displayValue(oldValue),
+          newValue: displayValue(newValue),
+        });
+      }
+    });
+  });
+
+  Object.entries(newContent.mobileRelease || {}).forEach(([key, newValue]) => {
+    const oldValue = oldContent.mobileRelease?.[key];
+    if (String(oldValue ?? '') !== String(newValue ?? '')) {
+      changes.push({
+        label: `Mobile App ${humanizeFieldName(key)}`,
+        oldValue: displayValue(oldValue),
+        newValue: displayValue(newValue),
+      });
+    }
   });
 
   return changes;
@@ -277,6 +326,13 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   const previewSectionRef = useRef(null);
   const contentSectionRef = useRef(null);
   const [activeNavSection, setActiveNavSection] = useState('preview');
+  const [pageMode, setPageMode] = useState('view');
+  const [selectedEdit, setSelectedEdit] = useState(null);
+  const [selectedEditValue, setSelectedEditValue] = useState('');
+  const [selectedEditSecondaryValue, setSelectedEditSecondaryValue] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [singleImageUploading, setSingleImageUploading] = useState(false);
+  const singleImageInputRef = useRef(null);
 
   React.useEffect(() => {
     if (isFirstContentSync.current) {
@@ -308,8 +364,8 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
   }, [hasChanges, draft]);
 
   React.useEffect(() => {
-    onDirtyChange?.(hasChanges);
-  }, [hasChanges, onDirtyChange]);
+    onDirtyChange?.(hasChanges || Boolean(selectedEdit));
+  }, [hasChanges, onDirtyChange, selectedEdit]);
 
   React.useEffect(() => {
     onActiveSectionChange?.(activeNavSection);
@@ -429,8 +485,11 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       syncedContentRef.current = content;
       setDraft(deepClone(content));
       setPendingRemovedBannerPaths([]);
+      setSelectedEdit(null);
+      setSelectedEditValue('');
+      setSelectedEditSecondaryValue('');
     },
-    hasUnsavedChanges: () => JSON.stringify(draft) !== JSON.stringify(content),
+    hasUnsavedChanges: () => JSON.stringify(draft) !== JSON.stringify(content) || Boolean(selectedEdit),
     saveChanges: async () => {
       const mobileNumber = String(draft?.contact?.mobile || '').trim();
       const normalizedMobileNumber = mobileNumber.replace(/\D/g, '');
@@ -451,7 +510,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       await performSave(nextDraft);
       return true;
     }
-  }), [content, draft, performSave, scrollToNavSection]);
+  }), [content, draft, performSave, scrollToNavSection, selectedEdit]);
 
   const updateField = (section, field, value) => {
     setDraft((prev) => ({
@@ -738,6 +797,104 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
     }));
   };
 
+  const openInlineTextEditor = ({ path, label, multiline, lines, secondaryPath, secondaryLabel }) => {
+    const currentValue = getValueAtPath(draft, path);
+    setSelectedEdit({ path, label, multiline, lines, secondaryPath, secondaryLabel });
+    setSelectedEditValue(lines ? toLines(currentValue) : String(currentValue ?? ''));
+    setSelectedEditSecondaryValue(secondaryPath ? String(getValueAtPath(draft, secondaryPath) ?? '') : '');
+  };
+
+  const applyInlineTextEdit = () => {
+    if (!selectedEdit) return;
+
+    let nextValue = selectedEditValue;
+    if (selectedEdit.lines) {
+      const lines = fromLines(selectedEditValue);
+      nextValue = lines.length <= 1 ? (lines[0] || '') : lines;
+    }
+
+    setDraft((previous) => {
+      const withPrimaryValue = setValueAtPath(previous, selectedEdit.path, nextValue);
+      return selectedEdit.secondaryPath
+        ? setValueAtPath(withPrimaryValue, selectedEdit.secondaryPath, selectedEditSecondaryValue)
+        : withPrimaryValue;
+    });
+    setSelectedEdit(null);
+    setSelectedEditValue('');
+    setSelectedEditSecondaryValue('');
+  };
+
+  const openInlineImageEditor = ({ path, label }) => {
+    setSelectedImage({ path, label });
+  };
+
+  const handleSingleImageChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !selectedImage || selectedImage.path === 'hero.photos') return;
+
+    setSingleImageUploading(true);
+    const currentImage = getValueAtPath(draft, selectedImage.path);
+    const { data, error } = await uploadBannerPhoto({
+      adminId: currentUser?.admin_id,
+      file,
+      position: 0,
+    });
+    setSingleImageUploading(false);
+
+    if (error) {
+      showTemporaryMessage(`Failed to upload image: ${error}`);
+      return;
+    }
+
+    queueBannerPathRemoval(currentImage?.path);
+    setDraft((previous) => setValueAtPath(previous, selectedImage.path, {
+      ...data,
+      alt: selectedImage.label,
+    }));
+    setSelectedImage(null);
+    showTemporaryMessage('Image updated. Review and save to publish it.');
+  };
+
+  const restoreDefaultInlineImage = () => {
+    if (!selectedImage || selectedImage.path === 'hero.photos') return;
+    const currentImage = getValueAtPath(draft, selectedImage.path);
+    queueBannerPathRemoval(currentImage?.path);
+    setDraft((previous) => setValueAtPath(previous, selectedImage.path, null));
+    setSelectedImage(null);
+    showTemporaryMessage('Default image restored. Review and save to publish it.');
+  };
+
+  const moveLandingSection = (sectionId, direction) => {
+    setDraft((previous) => {
+      const sections = [...(previous.layout?.sections || [])];
+      const fromIndex = sections.indexOf(sectionId);
+      const toIndex = fromIndex + direction;
+      if (fromIndex < 0 || toIndex < 0 || toIndex >= sections.length) return previous;
+      const [moved] = sections.splice(fromIndex, 1);
+      sections.splice(toIndex, 0, moved);
+      return {
+        ...previous,
+        layout: { ...previous.layout, sections },
+      };
+    });
+  };
+
+  const toggleLandingSection = (sectionId) => {
+    setDraft((previous) => {
+      const hidden = previous.layout?.hidden || [];
+      return {
+        ...previous,
+        layout: {
+          ...previous.layout,
+          hidden: hidden.includes(sectionId)
+            ? hidden.filter((id) => id !== sectionId)
+            : [...hidden, sectionId],
+        },
+      };
+    });
+  };
+
   const handleSave = async () => {
     if (saving) {
       return;
@@ -799,9 +956,11 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
 
     setSaving(true);
     try {
-      const resetPhotoPaths = (Array.isArray(draft.hero.photos) ? draft.hero.photos : [])
-        .map((photo) => photo.path)
-        .filter(Boolean);
+      const resetPhotoPaths = [
+        ...(Array.isArray(draft.hero.photos) ? draft.hero.photos : []),
+        ...Object.values(draft.media || {}).filter(Boolean),
+        ...pendingRemovedBannerPaths.map((path) => ({ path })),
+      ].map((photo) => photo?.path).filter(Boolean);
       const { error } = await resetContent();
       syncedContentRef.current = defaults;
       setDraft(deepClone(defaults));
@@ -818,6 +977,213 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       setResetModalOpen(false);
     }
   };
+
+  if (visualMode) {
+    const selectedImageValue = selectedImage?.path && selectedImage.path !== 'hero.photos'
+      ? getValueAtPath(draft, selectedImage.path)
+      : null;
+
+    return (
+      <div className="landing-editor-embedded landing-visual-editor">
+        <div className="landing-editor-visual-toolbar">
+          <div className="landing-editor-visual-toolbar-copy">
+            <button
+              type="button"
+              className="landing-editor-back-button"
+              onClick={() => navigate('/dashboard/announcements')}
+              aria-label="Back to Content Management"
+              title="Back to Content Management"
+            >
+              <FiArrowLeft aria-hidden="true" />
+            </button>
+            <div>
+              <h2>Landing Page</h2>
+              <p>{pageMode === 'edit' ? 'Select any outlined text or image to edit it.' : 'Viewing the current landing page inside the admin account.'}</p>
+            </div>
+            {hasChanges && <span className="landing-editor-unsaved-badge">Unpublished changes</span>}
+          </div>
+
+          <div className="landing-editor-mode-switch" role="group" aria-label="Landing page mode">
+            <button type="button" className={pageMode === 'view' ? 'is-active' : ''} onClick={() => setPageMode('view')} aria-pressed={pageMode === 'view'}>
+              <FiEye aria-hidden="true" /> View Mode
+            </button>
+            <button type="button" className={pageMode === 'edit' ? 'is-active' : ''} onClick={() => setPageMode('edit')} aria-pressed={pageMode === 'edit'}>
+              <FiEdit3 aria-hidden="true" /> Edit Mode
+            </button>
+          </div>
+
+          <div className="landing-editor-actions">
+            <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges || saving}>Discard</button>
+            <button type="button" className="btn btn-danger" onClick={handleResetDefaults} disabled={saving}>Reset</button>
+            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!hasChanges || saving}>
+              {saving ? 'Saving...' : 'Review and save'}
+            </button>
+          </div>
+        </div>
+
+        {loadingContent && <div className="landing-editor-alert">Loading latest landing content...</div>}
+        <ToastMessage message={saveMessage} type={/fail|error|unable/i.test(saveMessage || '') ? 'error' : 'success'} />
+
+        <input ref={bannerPhotoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="banner-photo-file-input" onChange={handleReplacePhotoChange} />
+        <input ref={bannerPhotoAddInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="banner-photo-file-input" onChange={handleAddPhotoChange} />
+        <input ref={singleImageInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="banner-photo-file-input" onChange={handleSingleImageChange} />
+
+        <LandingPreview
+          content={draft}
+          editorMode={pageMode === 'edit'}
+          onEditItem={openInlineTextEditor}
+          onEditImage={openInlineImageEditor}
+          onMoveSection={moveLandingSection}
+          onToggleSection={toggleLandingSection}
+          onManageSection={() => navigate('/dashboard/announcements')}
+        />
+
+        {selectedEdit && (
+          <div className="modal-overlay landing-inline-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="landing-inline-edit-title">
+            <form className="landing-inline-edit-modal" onSubmit={(event) => { event.preventDefault(); applyInlineTextEdit(); }}>
+              <div className="landing-inline-edit-header">
+                <div>
+                  <span>Edit landing page content</span>
+                  <h3 id="landing-inline-edit-title">{selectedEdit.label}</h3>
+                </div>
+                <button type="button" onClick={() => setSelectedEdit(null)} aria-label="Close editor"><FiX aria-hidden="true" /></button>
+              </div>
+              <label>
+                <span>{selectedEdit.lines ? 'Enter one item per line' : 'Content'}</span>
+                {selectedEdit.multiline || selectedEdit.lines ? (
+                  <textarea autoFocus rows={selectedEdit.lines ? 8 : 5} value={selectedEditValue} onChange={(event) => setSelectedEditValue(event.target.value)} />
+                ) : (
+                  <input autoFocus type="text" value={selectedEditValue} onChange={(event) => setSelectedEditValue(event.target.value)} />
+                )}
+              </label>
+              {selectedEdit.secondaryPath && (
+                <label>
+                  <span>{selectedEdit.secondaryLabel}</span>
+                  <input type="url" value={selectedEditSecondaryValue} onChange={(event) => setSelectedEditSecondaryValue(event.target.value)} required />
+                </label>
+              )}
+              <div className="landing-inline-edit-actions">
+                <button type="button" className="cancel-btn" onClick={() => setSelectedEdit(null)}>Cancel</button>
+                <button type="submit" className="save-btn">Apply to draft</button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {selectedImage && selectedImage.path !== 'hero.photos' && (
+          <div className="modal-overlay landing-inline-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="landing-image-edit-title">
+            <div className="landing-inline-edit-modal">
+              <div className="landing-inline-edit-header">
+                <div>
+                  <span>Edit landing page image</span>
+                  <h3 id="landing-image-edit-title">{selectedImage.label}</h3>
+                </div>
+                <button type="button" onClick={() => setSelectedImage(null)} aria-label="Close image editor"><FiX aria-hidden="true" /></button>
+              </div>
+              {selectedImageValue?.url && <img className="landing-inline-image-preview" src={selectedImageValue.url} alt={selectedImage.label} />}
+              <p className="landing-inline-image-help">Upload a JPG, PNG, or WebP image. It will remain unpublished until the landing page is saved.</p>
+              <div className="landing-inline-edit-actions">
+                <button type="button" className="cancel-btn" onClick={() => setSelectedImage(null)}>Cancel</button>
+                {selectedImageValue?.url && <button type="button" className="cancel-btn" onClick={restoreDefaultInlineImage}>Use default image</button>}
+                <button type="button" className="save-btn" onClick={() => singleImageInputRef.current?.click()} disabled={singleImageUploading}>
+                  <FiImage aria-hidden="true" /> {singleImageUploading ? 'Uploading...' : 'Choose replacement'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedImage?.path === 'hero.photos' && (
+          <div className="modal-overlay landing-inline-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="landing-banner-edit-title">
+            <div className="landing-inline-edit-modal landing-banner-inline-modal">
+              <div className="landing-inline-edit-header">
+                <div>
+                  <span>Edit landing page images</span>
+                  <h3 id="landing-banner-edit-title">Main banner photos</h3>
+                </div>
+                <button type="button" onClick={() => setSelectedImage(null)} aria-label="Close banner editor"><FiX aria-hidden="true" /></button>
+              </div>
+              <div className="landing-inline-banner-list">
+                {heroPhotos.map((photo, index) => (
+                  <article key={photo.id || photo.url}>
+                    <img src={photo.url} alt={photo.alt || `Main banner photo ${index + 1}`} />
+                    <label>
+                      <span>Photo description</span>
+                      <input value={photo.alt || ''} onChange={(event) => updateBannerPhotoAlt(index, event.target.value)} />
+                    </label>
+                    <div>
+                      <button type="button" onClick={() => moveBannerPhoto(index, -1)} disabled={index === 0} aria-label="Move photo earlier"><FiArrowUp aria-hidden="true" /></button>
+                      <button type="button" onClick={() => moveBannerPhoto(index, 1)} disabled={index === heroPhotos.length - 1} aria-label="Move photo later"><FiArrowDown aria-hidden="true" /></button>
+                      <button type="button" onClick={() => openReplacePhotoPicker(index)} disabled={uploadingBannerPhoto !== null} aria-label="Replace photo"><FiRefreshCw aria-hidden="true" /></button>
+                      <button type="button" onClick={() => deleteBannerPhoto(index)} disabled={uploadingBannerPhoto !== null} aria-label="Delete photo"><FiTrash2 aria-hidden="true" /></button>
+                    </div>
+                  </article>
+                ))}
+                {heroPhotos.length < MAX_BANNER_PHOTOS && (
+                  <button type="button" className="landing-inline-add-image" onClick={openAddPhotoPicker} disabled={uploadingBannerPhoto !== null}>
+                    <FiPlus aria-hidden="true" /> {uploadingBannerPhoto === 'new' ? 'Uploading...' : 'Add banner photo'}
+                  </button>
+                )}
+              </div>
+              <div className="landing-inline-edit-actions">
+                <button type="button" className="save-btn" onClick={() => setSelectedImage(null)}>Done</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {confirmModal.open && (
+          <div className="modal-overlay" role="dialog" aria-modal="true">
+            <div className="modal confirm-changes-modal">
+              <h3>Confirm Changes</h3>
+              <p>Are you sure you want to publish these landing-page changes?</p>
+              <div className="confirm-changes-table">
+                <div className="confirm-changes-table-header"><span className="confirm-changes-col-heading confirm-changes-col-heading--before">Before</span><span className="confirm-changes-col-heading confirm-changes-col-heading--after">After</span></div>
+                {confirmModal.changes.map((change) => (
+                  <div className="confirm-changes-row" key={change.label}>
+                    <div className="confirm-changes-col confirm-changes-col--before"><span className="confirm-changes-field-name">{change.label}</span><span className="confirm-changes-value">{change.oldValue}</span></div>
+                    <div className="confirm-changes-col confirm-changes-col--after"><span className="confirm-changes-field-name">{change.label}</span><span className="confirm-changes-value">{change.newValue}</span></div>
+                  </div>
+                ))}
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="cancel-btn" onClick={() => setConfirmModal({ open: false, changes: [], onConfirm: null })}>Cancel</button>
+                <button type="button" className="save-btn" onClick={() => { const { onConfirm } = confirmModal; setConfirmModal({ open: false, changes: [], onConfirm: null }); onConfirm?.(); }}>Publish Changes</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {resetModalOpen && (
+          <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="resetDefaultsTitle" aria-describedby="resetDefaultsMessage">
+            <div className="modal reset-defaults-modal">
+              <div className="reset-defaults-icon" aria-hidden="true">!</div>
+              <h3 id="resetDefaultsTitle" className="reset-defaults-title">Reset Landing Page to Defaults?</h3>
+              <p id="resetDefaultsMessage" className="reset-defaults-message">This will replace all currently saved landing-page content and structure with the default values. This action cannot be undone.</p>
+              <div className="modal-actions">
+                <button type="button" className="cancel-btn" onClick={() => setResetModalOpen(false)} disabled={saving}>Cancel</button>
+                <button type="button" className="save-btn" onClick={confirmResetDefaults} disabled={saving}>{saving ? 'Working...' : 'Reset Defaults'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {discardModalOpen && (
+          <div className="modal-overlay app-unsaved-overlay" role="dialog" aria-modal="true" aria-labelledby="discardChangesTitle" aria-describedby="discardChangesMessage">
+            <div className="modal reset-defaults-modal app-unsaved-dialog">
+              <div className="reset-defaults-icon app-unsaved-icon" aria-hidden="true">!</div>
+              <h3 id="discardChangesTitle" className="reset-defaults-title app-unsaved-title">Discard Unsaved Changes?</h3>
+              <p id="discardChangesMessage" className="reset-defaults-message app-unsaved-message">Your unsaved landing-page changes will be removed and the last published page will be restored.</p>
+              <div className="modal-actions app-unsaved-actions">
+                <button type="button" className="cancel-btn app-unsaved-button app-unsaved-button--cancel" onClick={() => setDiscardModalOpen(false)}>Cancel</button>
+                <button type="button" className="save-btn app-unsaved-button app-unsaved-button--discard" onClick={confirmDiscard}>Discard Changes</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const editorContent = (
     <>

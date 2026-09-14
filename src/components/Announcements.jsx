@@ -167,9 +167,7 @@ export default function Announcements() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState(() => (
-    new URLSearchParams(location.search).get('tab') === 'landing' ? 'landing' : 'announcements'
-  ));
+  const [activeTab, setActiveTab] = useState('announcements');
   const [announcements, setAnnouncements] = useState([]);
   const [recipients, setRecipients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -288,6 +286,12 @@ export default function Announcements() {
   const hasPendingAnnouncementExit = exitModalContext !== null || announcementBlocker.state === 'blocked';
 
   useEffect(() => {
+    if (isAdmin && new URLSearchParams(location.search).get('tab') === 'landing') {
+      navigate('/dashboard/landing-page-editor', { replace: true });
+    }
+  }, [isAdmin, location.search, navigate]);
+
+  useEffect(() => {
     if (announcementBlocker.state === 'blocked' && exitModalContext === null) {
       setExitModalContext('announcement');
     }
@@ -364,6 +368,18 @@ export default function Announcements() {
 
   const handleContentTabClick = (tabId) => {
     if (tabId === activeTab) return;
+
+    if (tabId === 'landing') {
+      const navigation = { action: () => navigate('/dashboard/landing-page-editor') };
+      if (!isAnyFormDirty) {
+        navigation.action();
+        return;
+      }
+
+      pendingNavigationRef.current = { type: 'manual', navigation };
+      setExitModalContext('announcement');
+      return;
+    }
 
     if (!isAnyFormDirty) {
       setActiveTab(tabId);
@@ -1307,33 +1323,7 @@ export default function Announcements() {
           </div>
         )}
 
-        {isAdmin && activeTab === 'landing' ? (
-          <section className="announcement-card landing-editor-launch" aria-labelledby="landing-editor-launch-title">
-            <div className="landing-editor-launch-copy">
-              <span className="landing-editor-launch-icon" aria-hidden="true"><FiEdit2 /></span>
-              <div>
-                <h2 id="landing-editor-launch-title">Landing Page Editor</h2>
-                <p>
-                  Open the live landing page in edit mode to update its text, banner photos,
-                  public information, process guide, contact details, and FAQs.
-                </p>
-              </div>
-            </div>
-            <div className="landing-editor-launch-actions">
-              <button
-                type="button"
-                className="landing-editor-launch-primary"
-                onClick={() => navigate('/dashboard/landing-page-editor')}
-              >
-                Open Landing Page Editor
-              </button>
-              <a className="landing-editor-launch-secondary" href="/" target="_blank" rel="noreferrer">
-                View Public Landing Page
-              </a>
-            </div>
-          </section>
-        ) : (
-          <div className={`announcement-card list-card${isAdmin ? ' sent-announcement-history' : ''}`}>
+        <div className={`announcement-card list-card${isAdmin ? ' sent-announcement-history' : ''}`}>
           <div className="list-card-header">
             <h2>{isAdmin ? 'Sent Announcements' : 'Announcement Feed'}</h2>
             <div className="list-card-header-actions">
@@ -1568,7 +1558,6 @@ export default function Announcements() {
             </>
           )}
           </div>
-        )}
 
       </div>
 

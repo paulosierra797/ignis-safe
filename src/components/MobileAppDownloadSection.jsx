@@ -8,18 +8,15 @@ const MOBILE_APP_RELEASE = {
   learningImagePath: `${import.meta.env.BASE_URL}mobile-app/learning-materials.jpg`,
   splashImagePath: `${import.meta.env.BASE_URL}mobile-app/ignis-safe-splash.png`,
   fileName: 'ignis-safe.apk',
-  version: '1.0.0 (build 1)',
-  size: '223.91 MB',
-  compatibility: 'Android 7.1+',
-  architecture: '64-bit ARM',
-  releaseDate: 'September 1, 2026',
-  checksum: '5BA0AE8C9BCEEE54F177CD29ED69291E2CA80F1065633339D9FFAE36CE6CEA56',
 };
 
 export default function MobileAppDownloadSection() {
-  const { language } = useLandingContent();
-  const copy = getLandingUiCopy(language);
+  const { content, language } = useLandingContent();
+  const copy = { ...getLandingUiCopy(language), ...(content.copy?.[language] || {}) };
   const downloadUrl = new URL(MOBILE_APP_RELEASE.downloadPath, window.location.origin).href;
+  const learningImage = content.media?.mobileLearningPhoto?.url || MOBILE_APP_RELEASE.learningImagePath;
+  const splashImage = content.media?.mobileSplashPhoto?.url || MOBILE_APP_RELEASE.splashImagePath;
+  const release = content.mobileRelease || {};
 
   return (
     <section className="landing-mobile-app" id="mobile-app" aria-labelledby="mobile-app-title">
@@ -29,22 +26,22 @@ export default function MobileAppDownloadSection() {
             <div className="landing-mobile-app-mock-phone is-learning">
               <span className="landing-mobile-app-mock-speaker" />
               <div className="landing-mobile-app-mock-screen">
-                <img src={MOBILE_APP_RELEASE.learningImagePath} alt="" />
+                <img src={learningImage} alt="" data-landing-edit-image="media.mobileLearningPhoto" data-landing-edit-label="Learning screen image" />
               </div>
             </div>
 
             <div className="landing-mobile-app-mock-phone is-splash">
               <span className="landing-mobile-app-mock-speaker" />
               <div className="landing-mobile-app-mock-screen">
-                <img src={MOBILE_APP_RELEASE.splashImagePath} alt="" />
+                <img src={splashImage} alt="" data-landing-edit-image="media.mobileSplashPhoto" data-landing-edit-label="Splash screen image" />
               </div>
             </div>
           </div>
         </div>
 
         <div className="landing-mobile-app-content">
-          <h2 id="mobile-app-title">{copy.mobileAppDownloadTitle}</h2>
-          <p>{copy.mobileAppDownloadIntro}</p>
+          <h2 id="mobile-app-title" data-landing-edit-path={`copy.${language}.mobileAppDownloadTitle`} data-landing-edit-label="Mobile app section title">{copy.mobileAppDownloadTitle}</h2>
+          <p data-landing-edit-path={`copy.${language}.mobileAppDownloadIntro`} data-landing-edit-label="Mobile app section introduction" data-landing-edit-multiline="true">{copy.mobileAppDownloadIntro}</p>
 
           <div className="landing-mobile-app-download-row">
             <a
@@ -52,16 +49,16 @@ export default function MobileAppDownloadSection() {
               className="landing-mobile-app-download"
               download={MOBILE_APP_RELEASE.fileName}
             >
-              {copy.downloadApk}
+              <span data-landing-edit-path={`copy.${language}.downloadApk`} data-landing-edit-label="APK download button label">{copy.downloadApk}</span>
             </a>
 
             <dl className="landing-mobile-app-file-info">
-              <div><dt>{copy.mobileAppVersion}</dt><dd>{MOBILE_APP_RELEASE.version}</dd></div>
-              <div><dt>{copy.mobileAppSize}</dt><dd>{MOBILE_APP_RELEASE.size}</dd></div>
-              <div><dt>{copy.mobileAppPlatform}</dt><dd>{MOBILE_APP_RELEASE.compatibility}</dd></div>
-              <div><dt>{copy.mobileAppArchitecture}</dt><dd>{MOBILE_APP_RELEASE.architecture}</dd></div>
-              <div><dt>{copy.mobileAppFormat}</dt><dd>APK</dd></div>
-              <div><dt>{copy.mobileAppReleaseDate}</dt><dd>{MOBILE_APP_RELEASE.releaseDate}</dd></div>
+              <div><dt data-landing-edit-path={`copy.${language}.mobileAppVersion`} data-landing-edit-label="Version label">{copy.mobileAppVersion}</dt><dd data-landing-edit-path="mobileRelease.version" data-landing-edit-label="Mobile app version">{release.version}</dd></div>
+              <div><dt data-landing-edit-path={`copy.${language}.mobileAppSize`} data-landing-edit-label="Download size label">{copy.mobileAppSize}</dt><dd data-landing-edit-path="mobileRelease.size" data-landing-edit-label="APK download size">{release.size}</dd></div>
+              <div><dt data-landing-edit-path={`copy.${language}.mobileAppPlatform`} data-landing-edit-label="Platform label">{copy.mobileAppPlatform}</dt><dd data-landing-edit-path="mobileRelease.compatibility" data-landing-edit-label="Android compatibility">{release.compatibility}</dd></div>
+              <div><dt data-landing-edit-path={`copy.${language}.mobileAppArchitecture`} data-landing-edit-label="Device type label">{copy.mobileAppArchitecture}</dt><dd data-landing-edit-path="mobileRelease.architecture" data-landing-edit-label="Supported device type">{release.architecture}</dd></div>
+              <div><dt data-landing-edit-path={`copy.${language}.mobileAppFormat`} data-landing-edit-label="File format label">{copy.mobileAppFormat}</dt><dd data-landing-edit-path="mobileRelease.format" data-landing-edit-label="Application file format">{release.format}</dd></div>
+              <div><dt data-landing-edit-path={`copy.${language}.mobileAppReleaseDate`} data-landing-edit-label="Release date label">{copy.mobileAppReleaseDate}</dt><dd data-landing-edit-path="mobileRelease.releaseDate" data-landing-edit-label="Application release date">{release.releaseDate}</dd></div>
             </dl>
           </div>
 
@@ -75,26 +72,26 @@ export default function MobileAppDownloadSection() {
                 role="img"
                 aria-label={copy.mobileAppQrTitle}
               />
-              <figcaption>{copy.mobileAppQrScan}</figcaption>
+              <figcaption data-landing-edit-path={`copy.${language}.mobileAppQrScan`} data-landing-edit-label="QR code caption">{copy.mobileAppQrScan}</figcaption>
             </figure>
 
             <div className="landing-mobile-app-instructions">
-              <h3>{copy.mobileAppInstallTitle}</h3>
+              <h3 data-landing-edit-path={`copy.${language}.mobileAppInstallTitle`} data-landing-edit-label="Installation instructions title">{copy.mobileAppInstallTitle}</h3>
               <ol>
-                <li>{copy.mobileAppInstallStepOne}</li>
-                <li>{copy.mobileAppInstallStepTwo}</li>
-                <li>{copy.mobileAppInstallStepThree}</li>
-                <li>{copy.mobileAppInstallStepFour}</li>
+                <li data-landing-edit-path={`copy.${language}.mobileAppInstallStepOne`} data-landing-edit-label="Installation step 1">{copy.mobileAppInstallStepOne}</li>
+                <li data-landing-edit-path={`copy.${language}.mobileAppInstallStepTwo`} data-landing-edit-label="Installation step 2">{copy.mobileAppInstallStepTwo}</li>
+                <li data-landing-edit-path={`copy.${language}.mobileAppInstallStepThree`} data-landing-edit-label="Installation step 3">{copy.mobileAppInstallStepThree}</li>
+                <li data-landing-edit-path={`copy.${language}.mobileAppInstallStepFour`} data-landing-edit-label="Installation step 4">{copy.mobileAppInstallStepFour}</li>
               </ol>
             </div>
           </div>
 
           <details className="landing-mobile-app-checksum">
-            <summary>{copy.mobileAppChecksum}</summary>
-            <code>{MOBILE_APP_RELEASE.checksum}</code>
+            <summary data-landing-edit-path={`copy.${language}.mobileAppChecksum`} data-landing-edit-label="Checksum label">{copy.mobileAppChecksum}</summary>
+            <code data-landing-edit-path="mobileRelease.checksum" data-landing-edit-label="APK SHA-256 checksum" data-landing-edit-multiline="true">{release.checksum}</code>
           </details>
 
-          <small className="landing-mobile-app-note">{copy.mobileAppReleaseNote}</small>
+          <small className="landing-mobile-app-note" data-landing-edit-path={`copy.${language}.mobileAppReleaseNote`} data-landing-edit-label="APK safety note" data-landing-edit-multiline="true">{copy.mobileAppReleaseNote}</small>
         </div>
       </div>
     </section>

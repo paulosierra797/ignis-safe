@@ -87,14 +87,14 @@ export const THRESHOLDS = {
   neutralBlinkMax: 0.35
 };
 
-export const isNeutralPose = (smoothed, baseline) => {
+export const isNeutralPose = (smoothed, baseline, thresholds = THRESHOLDS) => {
   if (!smoothed || !baseline) return false;
   const yawDelta = Math.abs(smoothed.yawDeg - baseline.yawDeg);
   const pitchDelta = Math.abs(smoothed.pitchDeg - baseline.pitchDeg);
   return (
-    yawDelta <= THRESHOLDS.neutralYawToleranceDeg &&
-    pitchDelta <= THRESHOLDS.neutralPitchToleranceDeg &&
-    smoothed.blinkScore <= THRESHOLDS.neutralBlinkMax
+    yawDelta <= thresholds.neutralYawToleranceDeg &&
+    pitchDelta <= thresholds.neutralPitchToleranceDeg &&
+    smoothed.blinkScore <= thresholds.neutralBlinkMax
   );
 };
 
@@ -104,73 +104,87 @@ export const isNeutralPose = (smoothed, baseline) => {
 // while the step is active; `now` is a performance.now() timestamp used for
 // sustain windows (a threshold must be genuinely held, not just brushed).
 
-const makeTurnAction = (id, instruction, isPastThreshold) => ({
+const makeTurnAction = (id, instruction, direction, thresholds = THRESHOLDS) => ({
   id,
   instruction,
   // Exposed so the UI can render a smooth in-step progress fraction
   // (elapsed sustain hold / sustainMs) - display only, doesn't affect
   // evaluate()'s pass/fail decision below.
-  sustainMs: THRESHOLDS.turnSustainMs,
+  sustainMs: thresholds.turnSustainMs,
   createState: () => ({ sustainSince: null }),
   evaluate: (state, smoothed, baseline, now) => {
     const relativeYaw = TURN_YAW_SIGN * (smoothed.yawDeg - baseline.yawDeg);
-    if (!isPastThreshold(relativeYaw)) {
+    const isPastThreshold = direction === 'left'
+      ? relativeYaw < -thresholds.turnYawDeg
+      : relativeYaw > thresholds.turnYawDeg;
+    if (!isPastThreshold) {
       state.sustainSince = null;
       return false;
     }
     if (state.sustainSince == null) state.sustainSince = now;
-    return now - state.sustainSince >= THRESHOLDS.turnSustainMs;
+    return now - state.sustainSince >= thresholds.turnSustainMs;
   }
 });
 
 export const TURN_LEFT_ACTION = makeTurnAction(
   'turn_left',
   'Turn head LEFT',
-  (relativeYaw) => relativeYaw < -THRESHOLDS.turnYawDeg
+  'left'
 );
 
 export const TURN_RIGHT_ACTION = makeTurnAction(
   'turn_right',
   'Turn head RIGHT',
-  (relativeYaw) => relativeYaw > THRESHOLDS.turnYawDeg
+  'right'
 );
 
-// Not inserted into CHALLENGE_SEQUENCE as a visible step (see below) - instead
-// useLivenessCheck reuses this directly, invisibly, after Turn Right hits
-// 100% to wait for the face to settle back to center before the match frame
-// is captured, so identity matching never runs on the side-angle turn frame.
-export const RETURN_CENTER_ACTION = {
-  id: 'return_center',
-  instruction: 'Return to center',
-  timeLimitMs: 5000,
-  sustainMs: THRESHOLDS.centerSustainMs,
-  createState: () => ({ sustainSince: null }),
-  evaluate: (state, smoothed, baseline, now) => {
-    if (!isNeutralPose(smoothed, baseline)) {
-      state.sustainSince = null;
-      return false;
+// Not inserted into CHALLENGE_SEQUENCE because it is a capture-preparation
+// phase rather than a randomized challenge action. useLivenessCheck presents
+// it to the user after Turn Right so the match frame is never captured at a
+// side angle.
+export const createReturnCenterAction = (thresholdOverrides = {}) => {
+  const thresholds = { ...THRESHOLDS, ...thresholdOverrides };
+
+  return {
+    id: 'return_center',
+    instruction: 'Return to center',
+    timeLimitMs: 5000,
+    sustainMs: thresholds.centerSustainMs,
+    createState: () => ({ sustainSince: null }),
+    evaluate: (state, smoothed, baseline, now) => {
+      if (!isNeutralPose(smoothed, baseline, thresholds)) {
+        state.sustainSince = null;
+        return false;
+      }
+      if (state.sustainSince == null) state.sustainSince = now;
+      return now - state.sustainSince >= thresholds.centerSustainMs;
     }
-    if (state.sustainSince == null) state.sustainSince = now;
-    return now - state.sustainSince >= THRESHOLDS.centerSustainMs;
-  }
+  };
 };
+
+export const RETURN_CENTER_ACTION = createReturnCenterAction();
 
 // Fixed order, every attempt: Turn Left -> Turn Right. Each turn action
 // already requires a sustained hold past turnYawDeg (see makeTurnAction)
 // before it counts as done, so a quick pass-through on the way to the other
 // side can't satisfy either step - that sustain gate is what keeps this
 // spoof-resistant without an explicit "return to center" step in between.
-// The final Turn Right step's own sustain hold is what gates the visible
-// 100% completion; useLivenessCheck then waits (invisibly, no extra step
-// shown) for RETURN_CENTER_ACTION to settle before capturing the match frame.
+// After the final Turn Right hold, useLivenessCheck visibly asks the user to
+// return to center before capturing the match frame.
 export const CHALLENGE_SEQUENCE = [TURN_LEFT_ACTION, TURN_RIGHT_ACTION];
 
-export const generateChallengeSequence = () => [...CHALLENGE_SEQUENCE];
+export const generateChallengeSequence = (thresholdOverrides = {}) => {
+  const thresholds = { ...THRESHOLDS, ...thresholdOverrides };
+  return [
+    makeTurnAction('turn_left', 'Turn head LEFT', 'left', thresholds),
+    makeTurnAction('turn_right', 'Turn head RIGHT', 'right', thresholds)
+  ];
+};
 
-export const createChallengeSession = (qrSessionId) => ({
+export const createChallengeSession = (qrSessionId, thresholdOverrides = {}) => ({
   challengeId: crypto.randomUUID(),
   qrSessionId,
-  sequence: generateChallengeSequence(),
+  sequence: generateChallengeSequence(thresholdOverrides),
   createdAt: Date.now()
 });
 

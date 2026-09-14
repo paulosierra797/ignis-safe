@@ -2,22 +2,19 @@
 // Drives the MediaPipe Face Landmarker inference loop and the liveness phase
 // state machine: centering -> calibrating (neutral baseline) -> challenge
 // (turn left -> turn right, fixed order) -> passed. The final Turn Right
-// step's own sustain hold gates the visible 100%/"passed" state, but the
-// match frame isn't captured yet at that point - the exposed `phase` flips to
-// 'passed' immediately (no new instruction/step shown) while internally the
-// loop keeps running and waits for the face to settle back to center
-// (RETURN_CENTER_ACTION) before grabbing the frame used for identity
-// matching, so a side-angle turn frame is never sent to face match. Inference
-// is throttled (~12fps) since detectForVideo() is synchronous and blocks the
-// UI thread if run every requestAnimationFrame tick.
+// step is followed by a visible re-centering phase before the match frame is
+// captured, so users are never told they passed while the state machine is
+// still waiting for another action. Inference is throttled (~12fps) since
+// detectForVideo() is synchronous and blocks the UI thread if run every
+// requestAnimationFrame tick.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadFaceLandmarker } from '../utils/faceLandmarker';
 import {
   decomposeYawPitchRoll,
   getBlinkScore,
   createChallengeSession,
+  createReturnCenterAction,
   isChallengeValidForSession,
-  RETURN_CENTER_ACTION,
   THRESHOLDS
 } from '../utils/livenessChallenge';
 
@@ -37,6 +34,40 @@ const BBOX_WIDTH_RANGE = [0.15, 0.8];
 const CALIBRATION_SUSTAIN_MS = 600;
 const CALIBRATION_TIMEOUT_MS = 7000;
 const CALIBRATION_STABILITY_DEG = 5;
+
+const VERIFICATION_PROFILE = {
+  noFaceFailMs: NO_FACE_FAIL_MS,
+  multiFaceFailMs: MULTI_FACE_FAIL_MS,
+  centeringTimeoutMs: CENTERING_TIMEOUT_MS,
+  calibrationTimeoutMs: CALIBRATION_TIMEOUT_MS,
+  bboxCenterXRange: BBOX_CENTER_X_RANGE,
+  bboxCenterYRange: BBOX_CENTER_Y_RANGE,
+  bboxWidthRange: BBOX_WIDTH_RANGE,
+  returnCenterTimeoutMs: 5000,
+  thresholdOverrides: {}
+};
+
+// Registration happens less frequently than attendance verification and must
+// work across a wider range of front cameras. The actions stay identical, but
+// normal tracking gaps and less precise head-pose estimates receive more room.
+const ENROLLMENT_PROFILE = {
+  noFaceFailMs: 2200,
+  multiFaceFailMs: 1000,
+  centeringTimeoutMs: 18000,
+  calibrationTimeoutMs: 12000,
+  bboxCenterXRange: [0.24, 0.76],
+  bboxCenterYRange: [0.16, 0.84],
+  bboxWidthRange: [0.12, 0.86],
+  returnCenterTimeoutMs: 8000,
+  thresholdOverrides: {
+    turnYawDeg: 19,
+    turnSustainMs: 300,
+    centerSustainMs: 250,
+    neutralYawToleranceDeg: 12,
+    neutralPitchToleranceDeg: 12,
+    neutralBlinkMax: 0.75
+  }
+};
 
 const FAILURE_REASON_LABELS = {
   tracking_lost: 'No face detected.',
@@ -67,15 +98,24 @@ const computeBBox = (landmarks) => {
   };
 };
 
-const isBBoxCentered = (bbox) =>
-  bbox.centerX > BBOX_CENTER_X_RANGE[0] &&
-  bbox.centerX < BBOX_CENTER_X_RANGE[1] &&
-  bbox.centerY > BBOX_CENTER_Y_RANGE[0] &&
-  bbox.centerY < BBOX_CENTER_Y_RANGE[1] &&
-  bbox.width > BBOX_WIDTH_RANGE[0] &&
-  bbox.width < BBOX_WIDTH_RANGE[1];
+const isBBoxCentered = (bbox, profile) =>
+  bbox.centerX > profile.bboxCenterXRange[0] &&
+  bbox.centerX < profile.bboxCenterXRange[1] &&
+  bbox.centerY > profile.bboxCenterYRange[0] &&
+  bbox.centerY < profile.bboxCenterYRange[1] &&
+  bbox.width > profile.bboxWidthRange[0] &&
+  bbox.width < profile.bboxWidthRange[1];
 
-export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, onDebug }) => {
+export const useLivenessCheck = ({
+  videoRef,
+  active,
+  qrSessionId,
+  onComplete,
+  onDebug,
+  mode = 'verification'
+}) => {
+  const profile = mode === 'enrollment' ? ENROLLMENT_PROFILE : VERIFICATION_PROFILE;
+  const returnCenterAction = createReturnCenterAction(profile.thresholdOverrides);
   const [phase, setPhase] = useState('idle');
   const [instruction, setInstruction] = useState('');
   const [stepIndex, setStepIndex] = useState(0);
@@ -177,31 +217,28 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
   };
 
   const advanceToChallenge = (now) => {
-    const session = createChallengeSession(qrSessionIdRef.current);
+    const session = createChallengeSession(qrSessionIdRef.current, profile.thresholdOverrides);
     challengeSessionRef.current = session;
     sequenceRef.current = session.sequence;
     stepIndexRef.current = 0;
     startStep(now);
   };
 
-  // Turn Right's sustain hold just completed: snap the visible UI straight to
-  // 100%/"passed" (no new instruction or step is ever shown), but don't
-  // capture the match frame yet - keep the inference loop running and wait
-  // for the face to settle back to center first, so identity matching never
-  // runs on the side-angle turn frame.
+  // Turn Right's sustain hold just completed. Keep the user informed while
+  // the final centered frame is acquired; only capture completion is a pass.
   const enterAwaitingCenter = (now) => {
     if (!isChallengeValidForSession(challengeSessionRef.current, qrSessionIdRef.current)) {
       fail('session_mismatch');
       return;
     }
-    setProgressPercent(100);
-    phaseRef.current = 'passed';
-    setPhase('passed');
-    setInstruction('');
+    setProgressPercent(90);
+    phaseRef.current = 'recentering';
+    setPhase('recentering');
+    setInstruction('Return to center and hold still');
     awaitingCenterRef.current = true;
-    centerActionStateRef.current = RETURN_CENTER_ACTION.createState();
+    centerActionStateRef.current = returnCenterAction.createState();
     awaitingCenterStartRef.current = now;
-    pushDebug('challenge complete (100%), waiting for face to re-center before capture');
+    pushDebug('challenge complete, waiting for face to re-center before capture');
   };
 
   const captureAndFinish = (now, video) => {
@@ -220,12 +257,12 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
   };
 
   const handleAwaitingCenter = (smoothed, now, video) => {
-    const done = RETURN_CENTER_ACTION.evaluate(centerActionStateRef.current, smoothed, baselineRef.current, now);
+    const done = returnCenterAction.evaluate(centerActionStateRef.current, smoothed, baselineRef.current, now);
     if (done) {
       captureAndFinish(now, video);
       return;
     }
-    if (now - awaitingCenterStartRef.current > RETURN_CENTER_ACTION.timeLimitMs) {
+    if (now - awaitingCenterStartRef.current > profile.returnCenterTimeoutMs) {
       fail('recenter_timeout');
     }
   };
@@ -245,9 +282,9 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     if (centeringStartRef.current == null) centeringStartRef.current = now;
     setInstruction('Center your face in the circle');
 
-    if (!isBBoxCentered(bbox)) {
+    if (!isBBoxCentered(bbox, profile)) {
       centeringSustainStartRef.current = null;
-      if (now - centeringStartRef.current > CENTERING_TIMEOUT_MS) {
+      if (now - centeringStartRef.current > profile.centeringTimeoutMs) {
         fail('centering_timeout');
       }
       return;
@@ -273,7 +310,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
       return;
     }
 
-    if (now - calibratingStartRef.current > CALIBRATION_TIMEOUT_MS) {
+    if (now - calibratingStartRef.current > profile.calibrationTimeoutMs) {
       fail('calibration_timeout');
     }
   };
@@ -310,14 +347,14 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
     if (faceCount === 0) {
       if (noFaceSinceRef.current == null) noFaceSinceRef.current = now;
       multiFaceSinceRef.current = null;
-      if (now - noFaceSinceRef.current > NO_FACE_FAIL_MS) fail('tracking_lost');
+      if (now - noFaceSinceRef.current > profile.noFaceFailMs) fail('tracking_lost');
       return;
     }
     noFaceSinceRef.current = null;
 
     if (faceCount >= 2) {
       if (multiFaceSinceRef.current == null) multiFaceSinceRef.current = now;
-      if (now - multiFaceSinceRef.current > MULTI_FACE_FAIL_MS) fail('multiple_faces');
+      if (now - multiFaceSinceRef.current > profile.multiFaceFailMs) fail('multiple_faces');
       return;
     }
     multiFaceSinceRef.current = null;
@@ -340,7 +377,7 @@ export const useLivenessCheck = ({ videoRef, active, qrSessionId, onComplete, on
 
     if (phaseRef.current === 'calibrating') handleCalibrating(smoothed, now);
     else if (phaseRef.current === 'challenge') handleChallenge(smoothed, now);
-    else if (phaseRef.current === 'passed' && awaitingCenterRef.current) handleAwaitingCenter(smoothed, now, video);
+    else if (phaseRef.current === 'recentering' && awaitingCenterRef.current) handleAwaitingCenter(smoothed, now, video);
   };
 
   const tick = useCallback(() => {

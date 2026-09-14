@@ -6,6 +6,7 @@ const PHASE_LABELS = {
   loading: 'Preparing face check...',
   centering: 'Center your face in the circle',
   calibrating: 'Look straight, relax your face',
+  recentering: 'Return to center and hold still',
   passed: 'Liveness check passed ✓'
 };
 
@@ -16,7 +17,15 @@ const REQUIRED_FAILURE_MESSAGE =
 // itself stays owned by AttendanceConfirm (same getUserMedia stream already
 // opened in handleVerifyFace) - this component only reads from it via
 // videoRef and drives useLivenessCheck's phase state machine.
-const LivenessCheck = ({ videoRef, qrSessionId, onPassed, onFailed, onDebug, onPhaseChange }) => {
+const LivenessCheck = ({
+  videoRef,
+  qrSessionId,
+  onPassed,
+  onFailed,
+  onDebug,
+  onPhaseChange,
+  mode = 'verification'
+}) => {
   const handledRef = useRef(false);
 
   const handleComplete = (result) => {
@@ -34,7 +43,8 @@ const LivenessCheck = ({ videoRef, qrSessionId, onPassed, onFailed, onDebug, onP
     active: true,
     qrSessionId,
     onComplete: handleComplete,
-    onDebug
+    onDebug,
+    mode
   });
 
   // Purely cosmetic - lets AttendanceConfirm tint the circular face-guide
@@ -44,7 +54,11 @@ const LivenessCheck = ({ videoRef, qrSessionId, onPassed, onFailed, onDebug, onP
     onPhaseChange?.(phase);
   }, [phase, onPhaseChange]);
 
-  const showProgress = phase === 'centering' || phase === 'calibrating' || phase === 'challenge' || phase === 'passed';
+  const showProgress = phase === 'centering'
+    || phase === 'calibrating'
+    || phase === 'challenge'
+    || phase === 'recentering'
+    || phase === 'passed';
   const displayPercent = Math.round(phase === 'passed' ? 100 : progressPercent);
 
   return (

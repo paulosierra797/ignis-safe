@@ -349,7 +349,8 @@
 }
 
 .confirm-camera-frame--calibrating .confirm-camera-guide::before,
-.confirm-camera-frame--challenge .confirm-camera-guide::before {
+.confirm-camera-frame--challenge .confirm-camera-guide::before,
+.confirm-camera-frame--recentering .confirm-camera-guide::before {
   border-color: var(--glow);
   box-shadow: 0 0 0 999px rgba(15, 20, 24, 0.55), 0 0 22px var(--glow);
 }

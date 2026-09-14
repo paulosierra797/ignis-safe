@@ -194,11 +194,9 @@
 
 .legal-related-links a {
   min-height: 34px;
-  display: grid;
-  grid-template-columns: 1.45rem minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.28rem 0.35rem;
+  padding: 0.28rem 0.35rem 0.28rem 2.15rem;
   color: #aeb4bf;
   font-size: 0.76rem;
   line-height: 1.4;

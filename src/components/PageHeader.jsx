@@ -1,6 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FaBars } from 'react-icons/fa';
+import {
+  FiEdit2,
+  FiLogOut,
+  FiRepeat,
+  FiSettings,
+  FiShield,
+  FiUser
+} from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useLayout } from '../context/LayoutContext';
@@ -32,6 +40,15 @@ const getDisplayName = (currentUser) => {
   return `${currentUser.rank || ''} ${baseName}`.trim();
 };
 
+const getIdentityName = (currentUser) => {
+  if (!currentUser) return 'User';
+
+  return [currentUser.first_name, currentUser.last_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim() || currentUser.name || currentUser.email || 'User';
+};
+
 const PageHeader = ({
   title,
   userName,
@@ -59,10 +76,15 @@ const PageHeader = ({
   const { isSidebarCollapsed, toggleMobileSidebar } = useLayout();
 
   const resolvedUserName = userName ?? getDisplayName(currentUser);
+  const resolvedIdentityName = getIdentityName(currentUser);
   const resolvedUserRole = userRole ?? (variant === 'personnel'
     ? 'Personnel'
     : formatRoleLabel(currentUser?.role));
   const resolvedUserAvatar = userAvatar ?? currentUser?.avatar_url ?? '/user-avatar.svg';
+  const resolvedEmail = currentUser?.email || accountUser?.email || '';
+  const resolvedRank = String(currentUser?.rank || '').trim();
+  const resolvedContact = String(currentUser?.contact_number || '').trim();
+  const detailLabel = variant === 'personnel' ? 'Rank' : 'Position';
   const isAdminAccount = String(accountUser?.role || currentUser?.role || '').toLowerCase() === 'admin';
   const workspaceSwitchPath = variant === 'personnel' ? '/dashboard' : '/personnel/operations';
   const workspaceSwitchLabel = variant === 'personnel'
@@ -217,24 +239,63 @@ const PageHeader = ({
             </div>
           </button>
           {isDropdownOpen && (
-            <div className="page-user-dropdown">
+            <div className="page-user-dropdown" role="menu" aria-label={`${resolvedIdentityName} account options`}>
+              <div className="page-account-summary">
+                <img
+                  src={resolvedUserAvatar}
+                  alt=""
+                  width="52"
+                  height="52"
+                  decoding="async"
+                  className="page-account-summary-avatar"
+                  onError={(event) => {
+                    event.currentTarget.onerror = null;
+                    event.currentTarget.src = '/user-avatar.svg';
+                  }}
+                />
+                <div className="page-account-identity">
+                  <strong>{resolvedIdentityName}</strong>
+                  <span>{resolvedEmail || 'No email assigned'}</span>
+                </div>
+                <button
+                  type="button"
+                  className="page-account-edit"
+                  onClick={handleOpenProfile}
+                  aria-label="Open profile settings"
+                  title="Open profile settings"
+                >
+                  <FiEdit2 aria-hidden="true" />
+                </button>
+              </div>
+
+              <div className="page-account-details" aria-label="Account information">
+                <span><FiUser aria-hidden="true" /> {resolvedUserRole}</span>
+                {resolvedRank && <span><strong>{detailLabel}:</strong> {resolvedRank}</span>}
+                {resolvedContact && <span><strong>Contact:</strong> {resolvedContact}</span>}
+              </div>
+
+              <div className="page-account-actions">
+              {(variant === 'personnel' || variant === 'admin') && (
+                <button type="button" role="menuitem" className="dropdown-item" onClick={handleOpenProfile}>
+                  <FiSettings className="dropdown-icon" aria-hidden="true" />
+                  Account Settings
+                </button>
+              )}
               {isAdminAccount && (
-                <button className="dropdown-item" onClick={handleWorkspaceSwitch}>
+                <button type="button" role="menuitem" className="dropdown-item" onClick={handleWorkspaceSwitch}>
+                  <FiRepeat className="dropdown-icon" aria-hidden="true" />
                   {workspaceSwitchLabel}
                 </button>
               )}
-              {(variant === 'personnel' || variant === 'admin') && (
-                <button className="dropdown-item" onClick={handleOpenProfile}>
-                  Profile
-                </button>
-              )}
-              <button className="dropdown-item dropdown-item--security" onClick={handleForgetThisDevice}>
+              <button type="button" role="menuitem" className="dropdown-item dropdown-item--security" onClick={handleForgetThisDevice}>
+                <FiShield className="dropdown-icon" aria-hidden="true" />
                 Forget this device
               </button>
-              <button className="dropdown-item dropdown-item--logout" onClick={handleLogout}>
-
+              <button type="button" role="menuitem" className="dropdown-item dropdown-item--logout" onClick={handleLogout}>
+                <FiLogOut className="dropdown-icon" aria-hidden="true" />
                 Logout
               </button>
+              </div>
             </div>
           )}
         </div>

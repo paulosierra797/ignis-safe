@@ -178,13 +178,122 @@
   position: absolute;
   top: calc(100% + 0.5rem);
   right: 0;
+  width: min(360px, calc(100vw - 2rem));
+  padding: 0.75rem;
   background: white;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  min-width: 180px;
-  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+  overflow: visible;
   z-index: 1000;
   animation: dropdownFadeIn 0.2s ease-out;
+}
+
+.page-account-summary {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0.25rem 0.75rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.page-account-summary-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.22);
+}
+
+.page-header--admin .page-account-summary-avatar {
+  box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.2);
+}
+
+.page-header--personnel .page-account-summary-avatar {
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.24);
+}
+
+.page-account-identity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.page-account-identity strong,
+.page-account-identity span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-account-identity strong {
+  color: #172033;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.page-account-identity span {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.page-account-edit {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #9f171c;
+  cursor: pointer;
+}
+
+.page-account-edit:hover,
+.page-account-edit:focus-visible {
+  background: #fff1f2;
+  outline: none;
+}
+
+.page-account-edit svg {
+  width: 18px;
+  height: 18px;
+}
+
+.page-account-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  padding: 0.65rem 0.25rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.page-account-details span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  overflow-wrap: anywhere;
+}
+
+.page-account-details svg {
+  flex: 0 0 auto;
+  color: #9f171c;
+}
+
+.page-header--personnel .page-account-details svg {
+  color: #c27803;
+}
+
+.page-account-actions {
+  padding-top: 0.25rem;
+  border-top: 1px solid #e5e7eb;
 }
 
 @keyframes dropdownFadeIn {
@@ -203,8 +312,10 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  min-height: 44px;
+  padding: 0.7rem 0.75rem;
   border: none;
+  border-radius: 5px;
   background: white;
   color: #2d3748;
   font-size: 0.9rem;
@@ -219,6 +330,7 @@
 }
 
 .dropdown-item--security {
+  margin-top: 0.25rem;
   border-top: 1px solid #edf2f7;
   color: #92400e;
 }
@@ -398,7 +510,9 @@
 }
 
 .dropdown-icon {
-  font-size: 1.1rem;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
 }
 
 /*
@@ -536,6 +650,14 @@
   .page-user-avatar {
     width: 34px;
     height: 34px;
+  }
+
+  .page-user-dropdown {
+    position: fixed;
+    top: 68px;
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
   }
 }
 

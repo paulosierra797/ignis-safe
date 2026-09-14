@@ -1,11 +1,12 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import LandingPreview from './LandingPreview';
 import ToastMessage from './ToastMessage';
 import { useLandingContent } from '../context/LandingContentContext';
 import { useUser } from '../context/UserContext';
-import { FiArrowDown, FiArrowUp, FiMove, FiPlus, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
+import { FiArrowDown, FiArrowLeft, FiArrowUp, FiExternalLink, FiMove, FiPlus, FiRefreshCw, FiTrash2 } from 'react-icons/fi';
 import { deleteBannerPhotoPaths, MAX_BANNER_PHOTOS, uploadBannerPhoto } from '../utils/bannerPhotoService';
 import './LandingContentEditor.css';
 import './AppDialog.css';
@@ -236,22 +237,23 @@ const EditorSectionHeading = ({ number, title, description }) => (
   </div>
 );
 
-const SectionBlock = ({ number, title, children }) => (
-  <section className="editor-card editor-card--wide">
+const SectionBlock = ({ id, number, title, children }) => (
+  <section id={id} className="editor-card editor-card--wide">
     <EditorSectionHeading number={number} title={title} />
     {children}
   </section>
 );
 
-const GroupCard = ({ number, title, description, children }) => (
-  <section className="editor-card editor-group-card">
+const GroupCard = ({ id, number, title, description, children }) => (
+  <section id={id} className="editor-card editor-group-card">
     <EditorSectionHeading number={number} title={title} description={description} />
     <div className="editor-group-fields">{children}</div>
   </section>
 );
 
-const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded = false, onDirtyChange, onActiveSectionChange }, ref) {
+const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded = false, visualMode = false, onDirtyChange, onActiveSectionChange }, ref) {
   const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
   const { currentUser } = useUser();
   const { content, setContent, resetContent, defaults, loadingContent } = useLandingContent();
   const [draft, setDraft] = useState(() => {
@@ -358,6 +360,24 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
     setSaveMessage(message);
     window.setTimeout(() => setSaveMessage(''), 3000);
   }, []);
+
+  const handlePreviewSectionEdit = useCallback((sectionKey) => {
+    if (sectionKey === 'announcements') {
+      navigate('/dashboard/announcements');
+      return;
+    }
+
+    const sectionTargets = {
+      hero: 'landing-edit-hero',
+      trust: 'landing-edit-trust',
+      process: 'landing-edit-process',
+      about: 'landing-edit-about',
+      contact: 'landing-edit-contact',
+      faq: 'landing-edit-faq',
+    };
+    const target = document.getElementById(sectionTargets[sectionKey]);
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [navigate]);
 
   const performSave = useCallback(async (nextDraft) => {
     // Safety net: if the draft would save with zero banner photos while the
@@ -801,16 +821,55 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
 
   const editorContent = (
     <>
+      {visualMode && (
+        <div className="landing-editor-visual-toolbar">
+          <div className="landing-editor-visual-toolbar-copy">
+            <button
+              type="button"
+              className="landing-editor-back-button"
+              onClick={() => navigate('/dashboard/announcements?tab=landing')}
+            >
+              <FiArrowLeft aria-hidden="true" />
+              <span>Content Management</span>
+            </button>
+            <div>
+              <h2>Landing Page Edit Mode</h2>
+              <p>Changes remain private until you review and save them.</p>
+            </div>
+            {hasChanges && <span className="landing-editor-unsaved-badge">Unpublished changes</span>}
+          </div>
+          <div className="landing-editor-actions">
+            <a className="btn btn-outline landing-editor-public-link" href="/" target="_blank" rel="noreferrer">
+              <FiExternalLink aria-hidden="true" />
+              <span>View public page</span>
+            </a>
+            <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges || saving}>
+              Discard changes
+            </button>
+            <button type="button" className="btn btn-danger" onClick={handleResetDefaults} disabled={saving}>
+              {saving ? 'Working...' : 'Reset defaults'}
+            </button>
+            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={!hasChanges || saving}>
+              {saving ? 'Saving...' : 'Review and save'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {loadingContent && (
         <div className="landing-editor-alert">Loading latest landing content...</div>
       )}
 
       <div id="landing-section-preview" ref={previewSectionRef} className="landing-section-anchor">
-        <LandingPreview content={draft} />
+        <LandingPreview
+          content={draft}
+          editorMode={visualMode}
+          onEditSection={handlePreviewSectionEdit}
+        />
       </div>
 
       <div id="landing-section-content" ref={contentSectionRef} className="landing-section-anchor">
-      {!embedded && (
+      {!embedded && !visualMode && (
         <div className="landing-editor-toolbar">
           <div className="landing-editor-toolbar-info">
             <p>Edit the text shown on your public landing page.</p>
@@ -819,9 +878,6 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             )}
           </div>
           <div className="landing-editor-actions">
-            <button type="button" className="btn btn-outline" onClick={() => scrollToNavSection(previewSectionRef, 'preview')}>
-              Quick Preview
-            </button>
             <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges || saving}>
               Discard changes
             </button>
@@ -835,7 +891,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         </div>
       )}
 
-      {embedded && (
+      {embedded && !visualMode && (
         <div className="landing-editor-compact-toolbar">
           <div>
             <h3>
@@ -847,9 +903,6 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
             <p>Edit the public landing page sections.</p>
           </div>
           <div className="landing-editor-actions">
-            <button type="button" className="btn btn-outline" onClick={() => scrollToNavSection(previewSectionRef, 'preview')}>
-              Quick Preview
-            </button>
             <button type="button" className="btn btn-secondary" onClick={handleDiscard} disabled={!hasChanges || saving}>
               Discard changes
             </button>
@@ -870,6 +923,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
 
       <div className="landing-editor-groups">
         <GroupCard
+          id="landing-edit-hero"
           number="01"
           title="Main Banner"
           description="The large banner visitors see first at the top of the landing page."
@@ -1047,6 +1101,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         </GroupCard>
 
         <GroupCard
+          id="landing-edit-about"
           number="02"
           title="About Us"
           description="Tells visitors who you are and what your organization does."
@@ -1075,6 +1130,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         </GroupCard>
 
         <GroupCard
+          id="landing-edit-mission"
           number="03"
           title="Mission"
           description="The official Mission and Vision cards shown unchanged in both language modes."
@@ -1106,6 +1162,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         </GroupCard>
 
         <GroupCard
+          id="landing-edit-contact"
           number="04"
           title="Contact Information"
           description="How visitors can reach or find your station, shown in the Contact section."
@@ -1180,7 +1237,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
       </div>
 
       <div className="landing-editor-grid">
-        <SectionBlock number="05" title="Process Section (English)">
+        <SectionBlock id="landing-edit-process" number="05" title="Process Section (English)">
           <Field label="Section title">
             <input type="text" value={draft.process.english.title} onChange={(e) => updateNested('process', 'english', 'title', e.target.value)} />
           </Field>
@@ -1205,7 +1262,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           ))}
         </SectionBlock>
 
-        <SectionBlock number="06" title="Process Section (Filipino)">
+        <SectionBlock id="landing-edit-process-filipino" number="06" title="Process Section (Filipino)">
           <Field label="Section title">
             <input type="text" value={draft.process.tagalog.title} onChange={(e) => updateNested('process', 'tagalog', 'title', e.target.value)} />
           </Field>
@@ -1230,7 +1287,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           ))}
         </SectionBlock>
 
-        <SectionBlock number="07" title="FAQ Section (English)">
+        <SectionBlock id="landing-edit-faq" number="07" title="FAQ Section (English)">
           <Field label="Section title">
             <input type="text" value={draft.faq.english.title} onChange={(e) => updateNested('faq', 'english', 'title', e.target.value)} />
           </Field>
@@ -1246,7 +1303,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
           ))}
         </SectionBlock>
 
-        <SectionBlock number="08" title="FAQ Section (Filipino)">
+        <SectionBlock id="landing-edit-faq-filipino" number="08" title="FAQ Section (Filipino)">
           <Field label="Section title">
             <input type="text" value={draft.faq.tagalog.title} onChange={(e) => updateNested('faq', 'tagalog', 'title', e.target.value)} />
           </Field>
@@ -1265,6 +1322,7 @@ const LandingContentEditor = forwardRef(function LandingContentEditor({ embedded
         {['english', 'tagalog'].map((locale, localeIndex) => (
           <SectionBlock
             key={`trust-${locale}`}
+            id={locale === 'english' ? 'landing-edit-trust' : 'landing-edit-trust-filipino'}
             number={String(9 + localeIndex).padStart(2, '0')}
             title={`Trust and Accessibility (${locale === 'english' ? 'English' : 'Filipino'})`}
           >

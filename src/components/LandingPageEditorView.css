@@ -1,0 +1,31 @@
+.landing-page-editor-view {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: #f3f4f6;
+}
+
+.landing-page-editor-main {
+  min-width: 0;
+  min-height: 100vh;
+  margin-left: var(--sidebar-width);
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+.landing-page-editor-main > .page-header {
+  margin: -2rem -2rem 1.5rem;
+  padding: 1.25rem 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .landing-page-editor-main {
+    margin-left: 0;
+    padding: 1rem;
+  }
+
+  .landing-page-editor-main > .page-header {
+    margin: -1rem -1rem 1rem;
+    padding: 1rem;
+  }
+}

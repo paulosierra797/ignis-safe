@@ -70,7 +70,7 @@
   overflow-y: hidden;
   background: #eef0f3;
   border: 1px solid #e6dcdc;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 1.25rem;
   display: flex;
   justify-content: center;
@@ -87,7 +87,7 @@
   left: 0;
   transform-origin: top left;
   background: #ffffff;
-  border-radius: 10px;
+  border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
 }
@@ -98,6 +98,48 @@
   height: 100%;
   border: 0;
   background: #ffffff;
+}
+
+.landing-preview-app {
+  min-height: 100%;
+}
+
+.landing-preview-editable-section {
+  position: relative;
+  display: flow-root;
+}
+
+.landing-preview-edit-action {
+  position: absolute;
+  z-index: 1200;
+  top: 18px;
+  right: 18px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 7px;
+  background: #b91c1c;
+  color: #ffffff;
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.24);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
+.landing-preview-edit-action svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.landing-preview-edit-action:focus-visible {
+  outline: 3px solid rgba(185, 28, 28, 0.25);
+  outline-offset: 3px;
 }
 
 @media (max-width: 640px) {

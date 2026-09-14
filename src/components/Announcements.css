@@ -280,6 +280,93 @@
   overflow: hidden;
 }
 
+.landing-editor-launch {
+  min-height: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.75rem;
+}
+
+.landing-editor-launch-copy {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.landing-editor-launch-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.landing-editor-launch-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.landing-editor-launch h2 {
+  margin: 0;
+  color: #172033;
+  font-size: 1.15rem;
+}
+
+.landing-editor-launch p {
+  max-width: 680px;
+  margin: 0.45rem 0 0;
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.landing-editor-launch-actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.landing-editor-launch-primary,
+.landing-editor-launch-secondary {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 750;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.landing-editor-launch-primary {
+  border: 1px solid #b91c1c;
+  background: #b91c1c;
+  color: #ffffff;
+}
+
+.landing-editor-launch-secondary {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+.landing-editor-launch-primary:focus-visible,
+.landing-editor-launch-secondary:focus-visible {
+  outline: 3px solid rgba(185, 28, 28, 0.18);
+  outline-offset: 2px;
+}
+
 .announcement-card h2 {
   margin: 0 0 1rem;
   font-size: 1.1rem;
@@ -1426,6 +1513,16 @@
     margin-bottom: 1.1rem;
   }
 
+  .landing-editor-launch {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .landing-editor-launch-actions {
+    width: 100%;
+  }
+
   .content-management-toolbar {
     margin-bottom: 1.1rem;
   }
@@ -1568,6 +1665,25 @@
   .landing-nav-toolbar-btn {
     flex: 1 1 0;
     padding-inline: 0.6rem;
+  }
+
+  .landing-editor-launch {
+    min-height: 0;
+    padding: 1.15rem;
+  }
+
+  .landing-editor-launch-copy {
+    flex-direction: column;
+  }
+
+  .landing-editor-launch-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .landing-editor-launch-primary,
+  .landing-editor-launch-secondary {
+    width: 100%;
   }
 
   .archived-panel-header {

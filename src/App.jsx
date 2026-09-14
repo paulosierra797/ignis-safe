@@ -33,6 +33,7 @@ const loadAdminProfile = () => import('./components/AdminProfile');
 const loadHistory = () => import('./components/History');
 const loadAdminReports = () => import('./components/AdminReports');
 const loadVisitorMessages = () => import('./components/VisitorMessages');
+const loadLandingPageEditor = () => import('./components/LandingPageEditorView');
 
 const Dashboard = lazy(loadDashboard);
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
@@ -63,6 +64,7 @@ const PrivacyPage = lazy(() => import('./components/PrivacyPage'));
 const ConfirmSignupPage = lazy(() => import('./components/ConfirmSignupPage'));
 const SendMessagePage = lazy(() => import('./components/SendMessagePage'));
 const VisitorMessages = lazy(loadVisitorMessages);
+const LandingPageEditorView = lazy(loadLandingPageEditor);
 const AppSessionTracker = lazy(() => import('./components/AppSessionTracker'));
 const LandingAnnouncements = lazy(() => import('./components/LandingAnnouncements'));
 const AboutSection = lazy(() => import('./components/AboutSection'));
@@ -85,6 +87,7 @@ const ROUTE_PRELOADERS = {
   '/dashboard/progress': loadProgress,
   '/dashboard/announcements': loadAnnouncements,
   '/dashboard/visitor-messages': loadVisitorMessages,
+  '/dashboard/landing-page-editor': loadLandingPageEditor,
   '/dashboard/assessment-questions': loadAssessmentQuestions,
   '/dashboard/learning-materials': loadLearningMaterials,
   '/dashboard/chart': loadChart,
@@ -280,6 +283,7 @@ function AppRoutes() {
               <Route path="/dashboard/progress" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="view_progress"><Progress /></ProtectedRoute>} />
               <Route path="/dashboard/audit-logs" element={<ProtectedRoute allowedRoles={['admin']}><AuditLogs /></ProtectedRoute>} />
               <Route path="/dashboard/announcements" element={<ProtectedRoute allowedRoles={['admin']}><Announcements /></ProtectedRoute>} />
+              <Route path="/dashboard/landing-page-editor" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="manage_users"><LandingPageEditorView /></ProtectedRoute>} />
               <Route path="/dashboard/visitor-messages" element={<ProtectedRoute allowedRoles={['admin']}><VisitorMessages /></ProtectedRoute>} />
               <Route path="/personnel/announcements" element={<ProtectedRoute allowedRoles={['personnel']}><Announcements /></ProtectedRoute>} />
               <Route path="/organizational-chart" element={<OrganizationalChartView />} />

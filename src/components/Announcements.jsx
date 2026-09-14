@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useBlocker, useLocation } from 'react-router-dom';
+import { useBlocker, useLocation, useNavigate } from 'react-router-dom';
 import { FiBell, FiFileText, FiCheckCircle, FiClock, FiEdit2, FiSearch, FiTrash2 } from 'react-icons/fi';
 import ArchiveButton from './ArchiveButton';
 import ArchiveListModal from './ArchiveListModal';
@@ -8,7 +8,6 @@ import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import AnnouncementAcknowledgementModal from './AnnouncementAcknowledgementModal';
 import AnnouncementNudgeTracking from './AnnouncementNudgeTracking';
-import LandingContentEditor from './LandingContentEditor';
 import PersonnelPicker from './PersonnelPicker';
 import ToastMessage from './ToastMessage';
 import { useUser } from '../context/UserContext';
@@ -166,8 +165,11 @@ const isAcknowledgementOverdue = (isoDeadline) => {
 export default function Announcements() {
   const { currentUser } = useUser();
   const location = useLocation();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('announcements');
+  const [activeTab, setActiveTab] = useState(() => (
+    new URLSearchParams(location.search).get('tab') === 'landing' ? 'landing' : 'announcements'
+  ));
   const [announcements, setAnnouncements] = useState([]);
   const [recipients, setRecipients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -227,10 +229,7 @@ export default function Announcements() {
     const draft = readAnnouncementDraft();
     return Array.isArray(draft?.attachments) ? draft.attachments : [];
   });
-  const [exitModalContext, setExitModalContext] = useState(null); // 'announcement' | 'landing' | null
-  const [isLandingDirty, setIsLandingDirty] = useState(false);
-  const [landingActiveSection, setLandingActiveSection] = useState('preview');
-  const landingEditorRef = useRef(null);
+  const [exitModalContext, setExitModalContext] = useState(null);
   const pendingNavigationRef = useRef(null);
   const bypassNavigationRef = useRef(false);
 
@@ -273,7 +272,7 @@ export default function Announcements() {
   const showAcknowledgementDeadline = formData.audience_type === 'all_personnel'
     || formData.audience_type === 'specific_personnel';
 
-  const isAnyFormDirty = isAnnouncementFormDirty || isLandingDirty;
+  const isAnyFormDirty = isAnnouncementFormDirty;
 
   const shouldBlockAnnouncementNavigation = useCallback(({ currentLocation, nextLocation }) => {
     if (bypassNavigationRef.current) {
@@ -290,9 +289,9 @@ export default function Announcements() {
 
   useEffect(() => {
     if (announcementBlocker.state === 'blocked' && exitModalContext === null) {
-      setExitModalContext(isLandingDirty ? 'landing' : 'announcement');
+      setExitModalContext('announcement');
     }
-  }, [announcementBlocker.state, isLandingDirty, exitModalContext]);
+  }, [announcementBlocker.state, exitModalContext]);
 
   useEffect(() => {
     if (!isAnnouncementFormDirty) {
@@ -360,7 +359,7 @@ export default function Announcements() {
     }
 
     pendingNavigationRef.current = { type: 'manual', navigation };
-    setExitModalContext(isLandingDirty ? 'landing' : 'announcement');
+    setExitModalContext('announcement');
   };
 
   const handleContentTabClick = (tabId) => {
@@ -372,7 +371,7 @@ export default function Announcements() {
     }
 
     pendingNavigationRef.current = { type: 'tab', tab: tabId };
-    setExitModalContext(isLandingDirty ? 'landing' : 'announcement');
+    setExitModalContext('announcement');
   };
 
   const handleKeepEditingAnnouncement = () => {
@@ -405,12 +404,8 @@ export default function Announcements() {
   };
 
   const handleLeaveAnnouncementWithoutSaving = () => {
-    if (exitModalContext === 'landing') {
-      landingEditorRef.current?.discardUnsavedChanges();
-    } else {
-      clearAnnouncementDraft();
-      resetAnnouncementForm();
-    }
+    clearAnnouncementDraft();
+    resetAnnouncementForm();
     proceedPendingAnnouncementNavigation();
   };
 
@@ -1081,24 +1076,7 @@ export default function Announcements() {
                 aria-expanded={archivedOpen}
                 aria-controls="announcementArchiveList"
               />
-            ) : (
-              <div className="landing-nav-toolbar" aria-label="Landing page section navigation">
-                <button
-                  type="button"
-                  className={`landing-nav-toolbar-btn${landingActiveSection === 'preview' ? ' is-active' : ''}`}
-                  onClick={() => landingEditorRef.current?.scrollToSection('preview')}
-                >
-                  Quick Preview
-                </button>
-                <button
-                  type="button"
-                  className={`landing-nav-toolbar-btn${landingActiveSection === 'content' ? ' is-active' : ''}`}
-                  onClick={() => landingEditorRef.current?.scrollToSection('content')}
-                >
-                  Landing Page Content
-                </button>
-              </div>
-            )}
+            ) : null}
           </div>
         )}
 
@@ -1330,14 +1308,30 @@ export default function Announcements() {
         )}
 
         {isAdmin && activeTab === 'landing' ? (
-          <div className="announcement-card landing-editor-card">
-            <LandingContentEditor
-              embedded
-              ref={landingEditorRef}
-              onDirtyChange={setIsLandingDirty}
-              onActiveSectionChange={setLandingActiveSection}
-            />
-          </div>
+          <section className="announcement-card landing-editor-launch" aria-labelledby="landing-editor-launch-title">
+            <div className="landing-editor-launch-copy">
+              <span className="landing-editor-launch-icon" aria-hidden="true"><FiEdit2 /></span>
+              <div>
+                <h2 id="landing-editor-launch-title">Landing Page Editor</h2>
+                <p>
+                  Open the live landing page in edit mode to update its text, banner photos,
+                  public information, process guide, contact details, and FAQs.
+                </p>
+              </div>
+            </div>
+            <div className="landing-editor-launch-actions">
+              <button
+                type="button"
+                className="landing-editor-launch-primary"
+                onClick={() => navigate('/dashboard/landing-page-editor')}
+              >
+                Open Landing Page Editor
+              </button>
+              <a className="landing-editor-launch-secondary" href="/" target="_blank" rel="noreferrer">
+                View Public Landing Page
+              </a>
+            </div>
+          </section>
         ) : (
           <div className={`announcement-card list-card${isAdmin ? ' sent-announcement-history' : ''}`}>
           <div className="list-card-header">
@@ -1903,12 +1897,10 @@ export default function Announcements() {
               !
             </div>
             <h3 id="unsavedExitTitle" className="unsaved-exit-title app-unsaved-title">
-              {exitModalContext === 'landing' ? 'Unsaved Landing Page' : 'Unsaved Announcement'}
+              Unsaved Announcement
             </h3>
             <p id="unsavedExitDescription" className="unsaved-exit-message app-unsaved-message">
-              {exitModalContext === 'landing'
-                ? 'You have unsaved changes in this landing page. What would you like to do before leaving this page?'
-                : 'You have unsaved changes in this announcement. What would you like to do before leaving this page?'}
+              You have unsaved changes in this announcement. What would you like to do before leaving this page?
             </p>
             <div className="unsaved-exit-actions app-unsaved-actions">
               <button

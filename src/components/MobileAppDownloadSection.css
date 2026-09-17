@@ -149,6 +149,25 @@
   line-height: 1.6;
 }
 
+.landing-mobile-app-intro {
+  max-width: 630px;
+  margin-top: 0.75rem;
+}
+
+.landing-mobile-app-intro h3 {
+  margin: 0;
+  color: #9f151a;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.landing-mobile-app-intro p {
+  margin: 0.2rem 0 0;
+  color: #344054;
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
 .landing-mobile-app-download-row {
   margin-top: 1.4rem;
   display: grid;

@@ -45,6 +45,10 @@ export default function MobileAppDownloadSection() {
 
         <div className="landing-mobile-app-content">
           <h2 id="mobile-app-title" data-landing-edit-path={`copy.${language}.mobileAppDownloadTitle`} data-landing-edit-label="Mobile app section title">{copy.mobileAppDownloadTitle}</h2>
+          <div className="landing-mobile-app-intro">
+            <h3 data-landing-edit-path={`copy.${language}.mobileAppShowcaseTitle`} data-landing-edit-label="Mobile app introduction title">{copy.mobileAppShowcaseTitle}</h3>
+            <p data-landing-edit-path={`copy.${language}.mobileAppShowcaseText`} data-landing-edit-label="Mobile app introduction" data-landing-edit-multiline="true">{copy.mobileAppShowcaseText}</p>
+          </div>
           <p data-landing-edit-path={`copy.${language}.mobileAppDownloadIntro`} data-landing-edit-label="Mobile app section introduction" data-landing-edit-multiline="true">{copy.mobileAppDownloadIntro}</p>
 
           <div className="landing-mobile-app-download-row">

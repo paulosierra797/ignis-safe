@@ -347,8 +347,9 @@ export const DEFAULT_LANDING_CONTENT = {
     }
   },
   layout: {
-    sections: ['hero', 'trust', 'mobile-app', 'announcements', 'process', 'about', 'contact', 'faq'],
-    hidden: []
+    sections: ['hero', 'trust', 'announcements', 'mobile-app', 'process', 'about', 'contact', 'faq'],
+    hidden: [],
+    orderVersion: 2
   },
   media: {
     brandLogo: null,
@@ -436,18 +437,29 @@ const LANDING_SECTION_IDS = DEFAULT_LANDING_CONTENT.layout.sections;
 
 const normalizeLandingLayout = (layout) => {
   const requestedSections = Array.isArray(layout?.sections) ? layout.sections : [];
-  const sections = [
+  let sections = [
     ...requestedSections.filter((id, index) => (
       LANDING_SECTION_IDS.includes(id) && requestedSections.indexOf(id) === index
     )),
     ...LANDING_SECTION_IDS.filter((id) => !requestedSections.includes(id))
   ];
 
+  if ((layout?.orderVersion || 1) < 2) {
+    const announcementsIndex = sections.indexOf('announcements');
+    const mobileAppIndex = sections.indexOf('mobile-app');
+
+    if (announcementsIndex > mobileAppIndex) {
+      sections = sections.filter((id) => id !== 'announcements');
+      sections.splice(sections.indexOf('mobile-app'), 0, 'announcements');
+    }
+  }
+
   return {
     sections,
     hidden: Array.isArray(layout?.hidden)
       ? layout.hidden.filter((id) => LANDING_SECTION_IDS.includes(id))
-      : []
+      : [],
+    orderVersion: 2
   };
 };
 

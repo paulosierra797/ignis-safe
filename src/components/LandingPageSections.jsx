@@ -12,8 +12,8 @@ import FAQSection from './FAQSection';
 const LANDING_SECTIONS = {
   hero: { label: 'Main banner', Component: HeroSection },
   trust: { label: 'Trust and accessibility', Component: TrustAccessibilitySection },
-  'mobile-app': { label: 'Mobile application', Component: MobileAppDownloadSection },
   announcements: { label: 'Announcements', Component: LandingAnnouncements },
+  'mobile-app': { label: 'Mobile application', Component: MobileAppDownloadSection },
   process: { label: 'Application process', Component: ProcessSection },
   about: { label: 'About us', Component: AboutSection },
   contact: { label: 'Contact information', Component: ContactSection },

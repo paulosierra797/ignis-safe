@@ -4,10 +4,10 @@ import { getLandingUiCopy } from '../utils/landingLanguage';
 import './MobileAppDownloadSection.css';
 
 const MOBILE_APP_RELEASE = {
-  downloadPath: `${import.meta.env.BASE_URL}downloads/ignis-safe.apk`,
+  downloadPath: 'https://github.com/andreii2404/ignis-safe-mobile-releases/releases/download/v1.0.0/IGNIS-SAFE-v1.0.0.apk',
   learningImagePath: `${import.meta.env.BASE_URL}mobile-app/learning-materials.jpg`,
   splashImagePath: `${import.meta.env.BASE_URL}mobile-app/ignis-safe-splash.png`,
-  fileName: 'ignis-safe.apk',
+  fileName: 'IGNIS-SAFE-v1.0.0.apk',
 };
 
 export default function MobileAppDownloadSection() {
@@ -17,6 +17,10 @@ export default function MobileAppDownloadSection() {
   const learningImage = content.media?.mobileLearningPhoto?.url || MOBILE_APP_RELEASE.learningImagePath;
   const splashImage = content.media?.mobileSplashPhoto?.url || MOBILE_APP_RELEASE.splashImagePath;
   const release = content.mobileRelease || {};
+  const installStepTwo = copy.mobileAppInstallStepTwo.replace(
+    /[\w.-]+\.apk/gi,
+    MOBILE_APP_RELEASE.fileName,
+  );
 
   return (
     <section className="landing-mobile-app" id="mobile-app" aria-labelledby="mobile-app-title">
@@ -45,7 +49,7 @@ export default function MobileAppDownloadSection() {
 
           <div className="landing-mobile-app-download-row">
             <a
-              href={MOBILE_APP_RELEASE.downloadPath}
+              href={downloadUrl}
               className="landing-mobile-app-download"
               download={MOBILE_APP_RELEASE.fileName}
             >
@@ -79,7 +83,7 @@ export default function MobileAppDownloadSection() {
               <h3 data-landing-edit-path={`copy.${language}.mobileAppInstallTitle`} data-landing-edit-label="Installation instructions title">{copy.mobileAppInstallTitle}</h3>
               <ol>
                 <li data-landing-edit-path={`copy.${language}.mobileAppInstallStepOne`} data-landing-edit-label="Installation step 1">{copy.mobileAppInstallStepOne}</li>
-                <li data-landing-edit-path={`copy.${language}.mobileAppInstallStepTwo`} data-landing-edit-label="Installation step 2">{copy.mobileAppInstallStepTwo}</li>
+                <li data-landing-edit-path={`copy.${language}.mobileAppInstallStepTwo`} data-landing-edit-label="Installation step 2">{installStepTwo}</li>
                 <li data-landing-edit-path={`copy.${language}.mobileAppInstallStepThree`} data-landing-edit-label="Installation step 3">{copy.mobileAppInstallStepThree}</li>
                 <li data-landing-edit-path={`copy.${language}.mobileAppInstallStepFour`} data-landing-edit-label="Installation step 4">{copy.mobileAppInstallStepFour}</li>
               </ol>

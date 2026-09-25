@@ -189,7 +189,13 @@ function LandingPage() {
   const invitePortal = ['admin', 'personnel'].includes(searchParams.get('portal'))
     ? searchParams.get('portal')
     : String(currentUser?.role || '').toLowerCase();
+  // Supabase falls back to the Site URL ("/") when an email link's redirect_to
+  // is not allow-listed, and a failed verification (expired/used invite)
+  // arrives as "#error=...&error_code=..." with no type. Send those to the
+  // activation page so the user sees why, instead of the public landing page.
+  const isAuthLinkError = hashParams.has('error_code') || hashParams.has('error_description');
   const isInviteLink = hashParams.get('type') === 'invite'
+    || isAuthLinkError
     || searchParams.get('type') === 'invite'
     || searchParams.get('mode') === 'invite'
     || (searchParams.has('code') && ['admin', 'personnel'].includes(invitePortal))

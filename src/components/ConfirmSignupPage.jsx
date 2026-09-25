@@ -15,6 +15,7 @@ import './ConfirmSignupPage.css';
 
 const OTP_REQUEST_TIMEOUT_MS = 15000;
 const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+const INVALID_INVITE_MESSAGE = 'This invitation link is invalid or has expired. Please request a new invitation.';
 const normalizeInviteRole = (role) => String(role || '').trim().toLowerCase() === 'admin'
   ? 'admin'
   : 'personnel';
@@ -36,6 +37,11 @@ export default function ConfirmSignupPage() {
   const isInviteActivation = searchParams.get('mode') === 'invite'
     || hashParams.get('type') === 'invite';
   const [inviteRole, setInviteRole] = useState(() => normalizeInviteRole(searchParams.get('portal')));
+  // Captured on first render: Supabase reports a failed invite verification
+  // (expired, already used, invalid) as "#error_code=..." in the URL hash.
+  const [inviteStatus, setInviteStatus] = useState(() => (
+    hashParams.has('error_code') || hashParams.has('error_description') ? 'invalid' : 'checking'
+  ));
   const [email, setEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [password, setPassword] = useState('');
@@ -61,14 +67,22 @@ export default function ConfirmSignupPage() {
   const isAdminInvite = inviteRole === 'admin';
 
   useEffect(() => {
-    if (!isInviteActivation) {
+    if (!isInviteActivation || inviteStatus !== 'checking') {
       return;
     }
 
     let isCancelled = false;
     const loadInviteContext = async () => {
+      // getSession() waits for the client to consume the invite tokens in the
+      // URL, so no session here means the link did not authenticate anyone.
       const { data } = await getInviteActivationContext();
-      if (!isCancelled && data?.role) {
+      if (isCancelled) return;
+      if (!data) {
+        setInviteStatus('invalid');
+        return;
+      }
+      setInviteStatus('valid');
+      if (data.role) {
         setInviteRole(normalizeInviteRole(data.role));
       }
     };
@@ -77,7 +91,7 @@ export default function ConfirmSignupPage() {
     return () => {
       isCancelled = true;
     };
-  }, [isInviteActivation]);
+  }, [isInviteActivation, inviteStatus]);
   
   const handleVerifyOtp = async (event) => {
     event.preventDefault();
@@ -199,6 +213,12 @@ export default function ConfirmSignupPage() {
           <h1 id="confirm-signup-title">
             {isAdminInvite ? 'Activate Admin Account' : 'Activate Personnel Account'}
           </h1>
+          {inviteStatus === 'invalid' ? (
+            <p className="confirm-signup-description" role="alert">
+              {INVALID_INVITE_MESSAGE}
+            </p>
+          ) : (
+          <>
           <p className="confirm-signup-description">
             {isAdminInvite
               ? 'Create your password to securely activate your administrator account.'
@@ -271,11 +291,13 @@ export default function ConfirmSignupPage() {
             <button
               type="submit"
               className="confirm-signup-primary"
-              disabled={isVerifying || !isInvitePasswordValid}
+              disabled={isVerifying || inviteStatus !== 'valid' || !isInvitePasswordValid}
             >
               {isVerifying ? 'Activating...' : 'Activate Account'}
             </button>
           </form>
+          </>
+          )}
 
           <p className="confirm-signup-footer">
             Already activated? <Link to={`/login?portal=${inviteRole}`}>Go to Login</Link>

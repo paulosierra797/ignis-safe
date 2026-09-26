@@ -4,10 +4,10 @@ import { getLandingUiCopy } from '../utils/landingLanguage';
 import './MobileAppDownloadSection.css';
 
 const MOBILE_APP_RELEASE = {
-  downloadPath: 'https://github.com/andreii2404/ignis-safe-mobile-releases/releases/download/v1.0.0/IGNIS-SAFE-v1.0.0.apk',
+  downloadPath: 'https://github.com/andreii2404/ignis-safe-mobile-releases/releases/download/v1.0.3/IGNIS-SAFE-v1.0.3-build4-arm64.apk',
   learningImagePath: `${import.meta.env.BASE_URL}mobile-app/learning-materials.jpg`,
   splashImagePath: `${import.meta.env.BASE_URL}mobile-app/ignis-safe-splash.png`,
-  fileName: 'IGNIS-SAFE-v1.0.0.apk',
+  fileName: 'IGNIS-SAFE-v1.0.3-build4-arm64.apk',
 };
 
 export default function MobileAppDownloadSection() {

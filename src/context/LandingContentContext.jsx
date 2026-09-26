@@ -359,12 +359,12 @@ export const DEFAULT_LANDING_CONTENT = {
     mobileSplashPhoto: null
   },
   mobileRelease: {
-    version: '1.0.0',
-    size: '223.91 MB',
+    version: '1.0.3 (Build 4)',
+    size: '223.38 MB',
     compatibility: 'Android 7.1+',
-    architecture: '64-bit ARM',
+    architecture: 'Universal (ARM64, ARMv7, x86_64)',
     format: 'APK',
-    releaseDate: 'September 1, 2026'
+    releaseDate: 'September 26, 2026'
   },
   copy: {
     english: {
@@ -408,6 +408,15 @@ const normalizeCopyObject = (value) => {
   return Object.fromEntries(
     Object.entries(value).map(([key, child]) => [key, normalizeCopyObject(child)])
   );
+};
+
+const normalizeMobileRelease = (release = {}) => {
+  const version = String(release.version || '').trim();
+  const isLegacyRelease = !version || version === '1.0.0' || version === '1.0.0 (build 1)';
+
+  return normalizeCopyObject(isLegacyRelease
+    ? { ...DEFAULT_LANDING_CONTENT.mobileRelease }
+    : { ...DEFAULT_LANDING_CONTENT.mobileRelease, ...release });
 };
 
 const mergeFaqEntries = (candidateEntries, defaultEntries) => {
@@ -548,13 +557,7 @@ const mergeWithDefaults = (candidate = {}) => ({
     ...DEFAULT_LANDING_CONTENT.media,
     ...(candidate.media || {})
   },
-  mobileRelease: normalizeCopyObject({
-    ...DEFAULT_LANDING_CONTENT.mobileRelease,
-    ...(candidate.mobileRelease || {}),
-    version: candidate.mobileRelease?.version === '1.0.0 (build 1)'
-      ? '1.0.0'
-      : candidate.mobileRelease?.version || DEFAULT_LANDING_CONTENT.mobileRelease.version
-  }),
+  mobileRelease: normalizeMobileRelease(candidate.mobileRelease),
   copy: normalizeCopyObject({
     english: {
       ...DEFAULT_LANDING_CONTENT.copy.english,

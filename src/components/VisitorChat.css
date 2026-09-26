@@ -532,6 +532,13 @@
   font-weight: 700;
 }
 
+.visitor-chat-sender small {
+  margin-left: 0.35rem;
+  color: #8a4b4e;
+  font-size: inherit;
+  font-weight: 650;
+}
+
 .visitor-chat-message.is-visitor .visitor-chat-sender {
   margin-right: 0.2rem;
   text-align: right;
@@ -568,22 +575,9 @@
   text-align: right;
 }
 
-.visitor-chat-system-message {
-  width: min(100%, 520px);
-  margin: 0 auto 1rem;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 0.4rem;
-  color: #64748b;
-  font-size: 0.66rem;
-  line-height: 1.5;
-  text-align: center;
-}
-
-.visitor-chat-system-message svg {
-  flex: 0 0 auto;
-  margin-top: 0.12rem;
+.visitor-chat-message.is-automatic p {
+  border-color: #f1c6c8;
+  background: #fffafa;
 }
 
 .visitor-chat-error,

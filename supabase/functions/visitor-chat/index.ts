@@ -286,8 +286,9 @@ Deno.serve(async (request) => {
       if (conversationError) throw conversationError;
 
       const acknowledgement =
-        'Your message has been received. An administrator will reply here. '
-        + 'This channel is not monitored for emergencies. Call 911 for immediate assistance.';
+        'Thank you for contacting the BFP Dasmariñas City Fire Station. '
+        + 'We have received your message, and a member of our team will respond as soon as possible. '
+        + 'For emergencies, call 911 immediately.';
 
       const { error: messageError } = await serviceClient
         .from('visitor_messages')

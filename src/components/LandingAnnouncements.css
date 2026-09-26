@@ -232,6 +232,8 @@
   padding: 1.5rem;
   background: rgba(17, 24, 39, 0.72);
   backdrop-filter: blur(5px);
+  overscroll-behavior: contain;
+  animation: landing-announcement-overlay-in 160ms ease-out;
 }
 
 .landing-announcement-modal {
@@ -244,6 +246,18 @@
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
+  outline: none;
+  animation: landing-announcement-modal-in 180ms ease-out;
+}
+
+@keyframes landing-announcement-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes landing-announcement-modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .landing-announcement-modal-header {
@@ -419,20 +433,24 @@
   }
 
   .landing-announcement-modal-overlay {
-    place-items: end center;
-    padding: 0;
+    place-items: center;
+    padding: 1rem;
   }
 
   .landing-announcement-modal {
     width: 100%;
-    max-height: 92dvh;
-    border-right: 0;
-    border-bottom: 0;
-    border-left: 0;
-    border-radius: 8px 8px 0 0;
+    max-height: calc(100dvh - 2rem);
+    border-radius: 8px;
   }
 
   .landing-announcement-modal-attachments {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-announcement-modal-overlay,
+  .landing-announcement-modal {
+    animation: none;
   }
 }

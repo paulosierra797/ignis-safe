@@ -1,5 +1,6 @@
 import Pagination from './Pagination';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import CloseButton from './CloseButton';
 import './LandingAnnouncements.css';
 import { useLandingContent } from '../context/LandingContentContext';
@@ -74,6 +75,7 @@ export default function LandingAnnouncements() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const modalRef = useRef(null);
 
   const itemsPerPage = 10;
 
@@ -93,6 +95,8 @@ export default function LandingAnnouncements() {
     if (!selectedAnnouncement) return undefined;
 
     const previousOverflow = document.body.style.overflow;
+    const previouslyFocused = document.activeElement;
+    const focusFrame = window.requestAnimationFrame(() => modalRef.current?.focus());
     const handleEscape = (event) => {
       if (event.key === 'Escape') setSelectedAnnouncement(null);
     };
@@ -101,8 +105,10 @@ export default function LandingAnnouncements() {
     window.addEventListener('keydown', handleEscape);
 
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleEscape);
+      previouslyFocused?.focus?.();
     };
   }, [selectedAnnouncement]);
 
@@ -184,7 +190,7 @@ export default function LandingAnnouncements() {
         )}
       </div>
 
-      {selectedAnnouncement && (
+      {selectedAnnouncement && createPortal((
         <div
           className="landing-announcement-modal-overlay"
           onMouseDown={(event) => {
@@ -192,10 +198,13 @@ export default function LandingAnnouncements() {
           }}
         >
           <article
+            ref={modalRef}
             className="landing-announcement-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby={`landing-announcement-modal-title-${selectedAnnouncement.announcement_id}`}
+            aria-describedby={`landing-announcement-modal-content-${selectedAnnouncement.announcement_id}`}
+            tabIndex={-1}
           >
             <div className="landing-announcement-modal-header">
               <span className="landing-announcement-tag">{copy.publicNotice}</span>
@@ -209,7 +218,12 @@ export default function LandingAnnouncements() {
             <h2 id={`landing-announcement-modal-title-${selectedAnnouncement.announcement_id}`}>
               {normalizeDasmarinasText(selectedAnnouncement.title)}
             </h2>
-            <p className="landing-announcement-modal-content">{normalizeDasmarinasText(selectedAnnouncement.content)}</p>
+            <p
+              className="landing-announcement-modal-content"
+              id={`landing-announcement-modal-content-${selectedAnnouncement.announcement_id}`}
+            >
+              {normalizeDasmarinasText(selectedAnnouncement.content)}
+            </p>
 
             {Array.isArray(selectedAnnouncement.attachments) && selectedAnnouncement.attachments.length > 0 && (
               <div className="landing-announcement-modal-attachments">
@@ -246,7 +260,7 @@ export default function LandingAnnouncements() {
             </div>
           </article>
         </div>
-      )}
+      ), document.body)}
     </section>
   );
 }

@@ -1,0 +1,300 @@
+/* Shared motion language for the public landing page. Admin editing stays static. */
+.landing-admin-section:not(.is-editing) {
+  position: relative;
+}
+
+.landing-admin-section:not(.is-editing) > :is(
+  .landing-trust,
+  .landing-announcements,
+  .about,
+  .contact,
+  .faq
+) {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.landing-admin-section:not(.is-editing) > :is(
+  .landing-trust,
+  .landing-announcements,
+  .about,
+  .contact,
+  .faq
+)::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: -52px;
+  background-image:
+    linear-gradient(rgba(23, 32, 51, 0.024) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 32, 51, 0.024) 1px, transparent 1px);
+  background-size: 52px 52px;
+  animation: landing-pattern-drift 32s linear infinite;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.landing-admin-section:not(.is-editing) > :is(
+  .landing-trust,
+  .landing-announcements,
+  .about,
+  .contact,
+  .faq
+) > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes landing-pattern-drift {
+  to { transform: translate3d(52px, 52px, 0); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-brand,
+  .landing-emergency-call,
+  .landing-hotline-link,
+  .nav-link,
+  .landing-language-toggle,
+  .login-btn,
+  .hero-primary-action,
+  .hero-secondary-action,
+  .hero-service-link,
+  .landing-trust-item,
+  .landing-announcement-card,
+  .process-column,
+  .value-card,
+  .about-chart-link,
+  .contact-detail-card,
+  .faq-item,
+  .footer-nav-links a,
+  .footer-contact > a,
+  .footer-links a {
+    transition-duration: 200ms;
+    transition-timing-function: ease;
+  }
+
+  .landing-brand:hover {
+    transform: translateY(-1px);
+  }
+
+  .nav-link:hover::after,
+  .nav-link:focus-visible::after {
+    transform: scaleX(1);
+  }
+
+  .landing-language-toggle:hover .landing-language-flag {
+    transform: translateY(-1px) rotate(-4deg);
+  }
+
+  .landing-language-flag {
+    transition: transform 200ms ease;
+  }
+
+  .login-btn:hover svg,
+  .landing-emergency-call:hover svg {
+    transform: translateX(2px);
+  }
+
+  .login-btn svg,
+  .landing-emergency-call svg {
+    transition: transform 200ms ease;
+  }
+
+  .hero-primary-action:hover,
+  .hero-secondary-action:hover {
+    box-shadow: 0 10px 24px rgba(8, 17, 31, 0.2);
+    transform: translateY(-3px);
+  }
+
+  .hero-primary-action svg {
+    transition: transform 200ms ease;
+  }
+
+  .hero-primary-action:hover svg {
+    transform: translate(2px, -2px);
+  }
+
+  .hero-service-link {
+    transition-property: background-color, box-shadow, transform;
+  }
+
+  .hero-service-link:hover {
+    z-index: 1;
+    box-shadow: 0 12px 26px rgba(20, 33, 58, 0.1);
+    transform: translateY(-3px);
+  }
+
+  .hero-service-link > svg {
+    transition: transform 200ms ease, color 200ms ease;
+  }
+
+  .hero-service-link:hover > svg:first-child {
+    transform: scale(1.08) rotate(-4deg);
+  }
+
+  .hero-service-link:hover > svg:last-child {
+    color: #a8171c;
+    transform: translateX(4px);
+  }
+
+  .landing-trust-item {
+    transition-property: border-color, transform;
+  }
+
+  .landing-trust-item:hover {
+    border-color: #c77d80;
+    transform: translateY(-3px);
+  }
+
+  .landing-trust-item > svg,
+  .value-card > svg,
+  .contact-detail-icon,
+  .footer-contact > a > svg {
+    transition: transform 220ms ease, color 220ms ease;
+  }
+
+  .landing-trust-item:hover > svg,
+  .value-card:hover > svg {
+    color: #c1272d;
+    transform: translateY(-2px) rotate(-5deg) scale(1.06);
+  }
+
+  .landing-announcement-card {
+    transition-property: border-color, box-shadow, transform;
+  }
+
+  .landing-announcement-card:hover {
+    border-color: #d8b1b3;
+    box-shadow: 0 16px 30px rgba(20, 33, 58, 0.11);
+    transform: translateY(-4px);
+  }
+
+  .landing-announcement-image-link img,
+  .about-image,
+  .contact-station-image {
+    transition: transform 500ms ease;
+  }
+
+  .landing-announcement-image-link:hover img,
+  .about-image-wrap:hover .about-image,
+  .contact-image:hover .contact-station-image {
+    transform: scale(1.025);
+  }
+
+  .process-column {
+    transition-property: background-color, transform;
+  }
+
+  .process-column:hover {
+    background: rgba(255, 255, 255, 0.035);
+    transform: translateY(-4px);
+  }
+
+  .process-column:hover .step-number {
+    transform: scale(1.08);
+  }
+
+  .step-number {
+    transition: transform 200ms ease, background-color 200ms ease;
+  }
+
+  .value-card {
+    transition-property: border-color, transform;
+  }
+
+  .value-card:hover {
+    border-color: #d0a3a5;
+    transform: translateX(4px);
+  }
+
+  .about-chart-link svg {
+    transition: transform 200ms ease;
+  }
+
+  .about-chart-link:hover svg {
+    transform: translateX(4px);
+  }
+
+  .contact-detail-card {
+    transition-property: border-color, background-color, box-shadow, transform;
+  }
+
+  .contact-detail-card:hover {
+    box-shadow: 0 10px 22px rgba(20, 33, 58, 0.08);
+    transform: translateY(-2px);
+  }
+
+  .contact-detail-card:hover .contact-detail-icon {
+    transform: scale(1.06) rotate(-4deg);
+  }
+
+  .contact-copy-button svg {
+    transition: transform 180ms ease;
+  }
+
+  .contact-copy-button:hover svg {
+    transform: scale(1.12);
+  }
+
+  .faq-item {
+    transition-property: border-color, box-shadow, transform;
+  }
+
+  .faq-item:hover {
+    border-color: #d8b1b3;
+    box-shadow: 0 10px 22px rgba(27, 37, 53, 0.08);
+    transform: translateY(-2px);
+  }
+
+  .faq-item .toggle-icon {
+    transition: background-color 200ms ease, transform 200ms ease;
+  }
+
+  .faq-item:hover .toggle-icon {
+    background: #a8171c;
+    transform: rotate(8deg) scale(1.06);
+  }
+
+  .faq-item.open .toggle-icon {
+    background: #a8171c;
+    transform: rotate(180deg);
+  }
+
+  .footer-nav-links a:hover,
+  .footer-contact > a:hover,
+  .footer-links a:hover {
+    transform: translateX(3px);
+  }
+
+  .footer-nav-links a,
+  .footer-contact > a,
+  .footer-links a {
+    transition-property: color, transform;
+  }
+
+  .footer-contact > a:hover > svg {
+    transform: scale(1.08) rotate(-5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-admin-section:not(.is-editing) > :is(
+    .landing-trust,
+    .landing-announcements,
+    .about,
+    .contact,
+    .faq
+  )::before {
+    animation: none;
+  }
+
+  .landing-admin-section:not(.is-editing) *,
+  .header *,
+  .footer * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

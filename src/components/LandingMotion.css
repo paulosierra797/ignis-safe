@@ -248,17 +248,15 @@
   }
 
   .faq-item .toggle-icon {
-    transition: background-color 200ms ease, transform 200ms ease;
+    transition: color 200ms ease;
   }
 
   .faq-item:hover .toggle-icon {
-    background: #a8171c;
-    transform: rotate(8deg) scale(1.06);
+    color: #a8171c;
   }
 
   .faq-item.open .toggle-icon {
-    background: #a8171c;
-    transform: rotate(180deg);
+    color: #a8171c;
   }
 
   .footer-nav-links a:hover,

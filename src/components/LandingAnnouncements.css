@@ -66,6 +66,20 @@
   border-radius: 8px;
   background: #ffffff;
   box-shadow: 0 8px 20px rgba(20, 33, 58, 0.06);
+  cursor: pointer;
+  transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+}
+
+.landing-announcement-card:hover,
+.landing-announcement-card:focus-visible {
+  border-color: #cb5559;
+  box-shadow: 0 14px 30px rgba(20, 33, 58, 0.12);
+  transform: translateY(-3px);
+  outline: none;
+}
+
+.landing-announcement-card:active {
+  transform: translateY(-1px) scale(0.992);
 }
 
 .landing-announcement-tag {
@@ -197,34 +211,11 @@
   overflow-wrap: anywhere;
 }
 
-.landing-announcement-expand-button {
-  width: fit-content;
-  margin-top: 1rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.58rem 0.8rem;
-  border: 1px solid #e2aaaa;
-  border-radius: 6px;
-  background: #fff7f7;
-  color: #991b1b;
-  font-size: 0.76rem;
-  font-weight: 800;
-  cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
-}
-
-.landing-announcement-expand-button:hover,
-.landing-announcement-expand-button:focus-visible {
-  transform: translateY(-1px);
-  border-color: #b91c1c;
-  background: #fef2f2;
-  outline: none;
-}
-
 .landing-announcement-modal-overlay {
-  position: fixed;
-  inset: 0;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw;
+  height: 100dvh;
   z-index: 5000;
   overflow-y: auto;
   display: grid;
@@ -247,17 +238,12 @@
   background: #ffffff;
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.28);
   outline: none;
-  animation: landing-announcement-modal-in 180ms ease-out;
+  transform-origin: center;
 }
 
 @keyframes landing-announcement-overlay-in {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-@keyframes landing-announcement-modal-in {
-  from { opacity: 0; transform: translateY(10px) scale(0.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .landing-announcement-modal-header {
@@ -449,8 +435,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .landing-announcement-modal-overlay,
-  .landing-announcement-modal {
+  .landing-announcement-modal-overlay {
     animation: none;
+  }
+
+  .landing-announcement-card {
+    transition: none;
   }
 }

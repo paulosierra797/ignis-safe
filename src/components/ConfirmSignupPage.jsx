@@ -123,7 +123,7 @@ export default function ConfirmSignupPage() {
 
       setMessage({ type: 'success', text: 'Signup confirmed successfully. You can now sign in.' });
       setTimeout(() => {
-        navigate('/login?verified=1', { replace: true });
+        navigate('/portal/login?verified=1', { replace: true });
       }, 1500);
     } catch (err) {
       setMessage({ type: 'error', text: err.message || 'Failed to verify OTP code. Please try again.' });
@@ -190,7 +190,7 @@ export default function ConfirmSignupPage() {
       setCurrentUser(null);
       setMessage({ type: 'success', text: 'Account activated. You can now sign in.' });
       setTimeout(() => {
-        navigate(`/login?verified=1&portal=${inviteRole}`, { replace: true });
+        navigate(`/portal/login?verified=1&portal=${inviteRole}`, { replace: true });
       }, 1500);
     } catch (err) {
       setMessage({ type: 'error', text: err.message || 'Unable to activate this account.' });
@@ -300,7 +300,7 @@ export default function ConfirmSignupPage() {
           )}
 
           <p className="confirm-signup-footer">
-            Already activated? <Link to={`/login?portal=${inviteRole}`}>Go to Login</Link>
+            Already activated? <Link to={`/portal/login?portal=${inviteRole}`}>Go to Login</Link>
           </p>
         </div>
       </div>
@@ -349,7 +349,7 @@ export default function ConfirmSignupPage() {
         </form>
 
         <p className="confirm-signup-footer">
-          Already confirmed? <Link to="/login">Go to Login</Link>
+          Already confirmed? <Link to="/portal/login">Go to Login</Link>
         </p>
       </div>
     </div>

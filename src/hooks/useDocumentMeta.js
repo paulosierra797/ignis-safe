@@ -34,11 +34,13 @@ const PUBLIC_META = {
     title: 'Privacy Policy — IGNIS SAFE',
     description: 'How IGNIS SAFE collects, uses, protects, retains, and shares personal data across its public and authorized services.',
   },
-  '/login': {
+  '/portal/login': {
     title: 'Sign In — IGNIS SAFE | BFP Dasmariñas City Fire Station',
     description:
       'Secure sign-in for authorized personnel and administrators of the IGNIS SAFE '
       + 'portal of BFP Dasmariñas City Fire Station.',
+    canonical: false,
+    robots: 'noindex, nofollow',
   },
   '/personnel/operations': {
     title: 'Personnel Shift Schedule — IGNIS SAFE',
@@ -180,8 +182,11 @@ export default function useDocumentMeta() {
     if (meta) {
       document.title = meta.title;
       upsertMeta('name', 'description', meta.description);
-      upsertLink('canonical', `${CANONICAL_ORIGIN}${pathname === '/' ? '/' : pathname}`);
-      upsertMeta('name', 'robots', 'index, follow');
+      upsertLink(
+        'canonical',
+        meta.canonical === false ? null : `${CANONICAL_ORIGIN}${pathname === '/' ? '/' : pathname}`
+      );
+      upsertMeta('name', 'robots', meta.robots || 'index, follow');
     } else {
       // Unlisted private/auth routes: never index.
       upsertMeta('name', 'description', DEFAULT_DESCRIPTION);

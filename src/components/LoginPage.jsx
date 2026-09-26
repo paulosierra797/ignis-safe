@@ -248,7 +248,7 @@ const logLoginIfPersonnel = (user) => {
       if (!active) return;
 
       stopRecoveryListener();
-      window.history.replaceState({}, document.title, '/login');
+      window.history.replaceState({}, document.title, '/portal/login');
 
       if (!authorization.authorized) {
         setAuthFlowGated(false);
@@ -281,7 +281,7 @@ const logLoginIfPersonnel = (user) => {
       if (active && !validationStarted) {
         stopRecoveryListener();
         setAuthFlowGated(false);
-        window.history.replaceState({}, document.title, '/login');
+        window.history.replaceState({}, document.title, '/portal/login');
         setForgotPasswordStep('request');
         setError('This recovery link is invalid or has expired. Request a new reset code.');
       }
@@ -533,7 +533,7 @@ const handleLogin = async (e) => {
       }
 
       await signOut();
-      window.history.replaceState({}, document.title, '/login');
+      window.history.replaceState({}, document.title, '/portal/login');
       setForgotPasswordStep('resetDone');
     } catch (err) {
       setError("Failed to update password. Please try again.");
@@ -597,7 +597,7 @@ const handleLogin = async (e) => {
     setOtpNotice("");
     setOtpResendIn(0);
     setOtpResending(false);
-    window.history.replaceState({}, document.title, '/login');
+    window.history.replaceState({}, document.title, '/portal/login');
   };
 
 const handleResendOtp = async () => {

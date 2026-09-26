@@ -173,7 +173,20 @@
 
 .footer-links {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 1rem;
+}
+
+.footer-portal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.footer-portal-link svg {
+  width: 14px;
+  height: 14px;
 }
 
 @media (max-width: 900px) {

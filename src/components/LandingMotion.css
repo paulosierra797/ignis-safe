@@ -56,7 +56,6 @@
   .landing-hotline-link,
   .nav-link,
   .landing-language-toggle,
-  .login-btn,
   .hero-primary-action,
   .hero-secondary-action,
   .hero-service-link,
@@ -91,12 +90,10 @@
     transition: transform 200ms ease;
   }
 
-  .login-btn:hover svg,
   .landing-emergency-call:hover svg {
     transform: translateX(2px);
   }
 
-  .login-btn svg,
   .landing-emergency-call svg {
     transition: transform 200ms ease;
   }

@@ -220,8 +220,7 @@
   }
 
   .landing-inline-page .landing-language-selector,
-  .landing-inline-page .landing-language-toggle,
-  .landing-inline-page .login-btn {
+  .landing-inline-page .landing-language-toggle {
     width: 100%;
   }
 }

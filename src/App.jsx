@@ -70,7 +70,7 @@ const FloatingContactButton = lazy(() => import('./components/FloatingContactBut
 const Footer = lazy(() => import('./components/Footer'));
 
 const ROUTE_PRELOADERS = {
-  '/login': loadLogin,
+  '/portal/login': loadLogin,
   '/dashboard': loadDashboard,
   '/dashboard/analytics': loadAnalytics,
   '/dashboard/profile': loadAdminProfile,
@@ -120,6 +120,11 @@ function RoutePreloader() {
   }, []);
 
   return null;
+}
+
+function LegacyLoginRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={`/portal/login${search}${hash}`} replace />;
 }
 
 function ScrollToTop() {
@@ -249,7 +254,8 @@ function AppRoutes() {
       >
         <Routes>
               <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<LoginPage />} />
+              <Route path="/portal/login" element={<LoginPage />} />
+              <Route path="/login" element={<LegacyLoginRedirect />} />
               <Route path="/confirm-signup" element={<ConfirmSignupPage />} />
               <Route path="/personnel" element={<Navigate to="/personnel/operations" replace />} />
               <Route path="/personnel/profile" element={<ProtectedRoute allowedRoles={['personnel']}><PersonnelProfile /></ProtectedRoute>} />

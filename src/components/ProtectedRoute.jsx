@@ -80,11 +80,11 @@ export default function ProtectedRoute({ children, requiredPermission, allowedRo
   }
 
   if (!currentUser) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/portal/login" replace />;
   }
 
   if (isDeactivated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/portal/login" replace />;
   }
 
   const normalizedRole = String(currentUser.role || '').trim().toLowerCase();
@@ -93,7 +93,7 @@ export default function ProtectedRoute({ children, requiredPermission, allowedRo
       ? '/dashboard'
       : normalizedRole === 'personnel'
         ? '/personnel/operations'
-        : '/login';
+        : '/portal/login';
     return <Navigate to={fallbackPath} replace />;
   }
 

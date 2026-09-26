@@ -12,5 +12,5 @@ IGNIS SAFE is the public information and secure personnel portal for the Bureau 
 
 ## Secure portal
 
-- [Sign in](https://bfp-dasmacfs.com/login): Authorized administrator and personnel sign-in.
+- [Staff portal](https://bfp-dasmacfs.com/portal/login): Authorized administrator and personnel sign-in.
 - [Personnel workspace](https://bfp-dasmacfs.com/personnel/operations): Authorized personnel shift schedule and leave-request workspace.

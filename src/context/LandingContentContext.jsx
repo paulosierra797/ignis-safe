@@ -362,7 +362,7 @@ export const DEFAULT_LANDING_CONTENT = {
     version: '1.0.3 (Build 4)',
     size: '223.38 MB',
     compatibility: 'Android 7.1+',
-    architecture: 'Universal (ARM64, ARMv7, x86_64)',
+    architecture: 'Android devices only',
     format: 'APK',
     releaseDate: 'September 26, 2026'
   },
@@ -413,10 +413,18 @@ const normalizeCopyObject = (value) => {
 const normalizeMobileRelease = (release = {}) => {
   const version = String(release.version || '').trim();
   const isLegacyRelease = !version || version === '1.0.0' || version === '1.0.0 (build 1)';
-
-  return normalizeCopyObject(isLegacyRelease
+  const normalizedRelease = normalizeCopyObject(isLegacyRelease
     ? { ...DEFAULT_LANDING_CONTENT.mobileRelease }
     : { ...DEFAULT_LANDING_CONTENT.mobileRelease, ...release });
+
+  if (
+    normalizedRelease.version === DEFAULT_LANDING_CONTENT.mobileRelease.version
+    && ['64-bit ARM', 'Universal (ARM64, ARMv7, x86_64)'].includes(normalizedRelease.architecture)
+  ) {
+    normalizedRelease.architecture = DEFAULT_LANDING_CONTENT.mobileRelease.architecture;
+  }
+
+  return normalizedRelease;
 };
 
 const mergeFaqEntries = (candidateEntries, defaultEntries) => {

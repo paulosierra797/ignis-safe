@@ -1,16 +1,22 @@
+import { useEffect, useRef, useState } from 'react';
+import { FiDownload } from 'react-icons/fi';
 import { QRCodeSVG } from 'qrcode.react';
 import { useLandingContent } from '../context/LandingContentContext';
 import { getLandingUiCopy } from '../utils/landingLanguage';
 import './MobileAppDownloadSection.css';
 
 const MOBILE_APP_RELEASE = {
-  downloadPath: 'https://github.com/andreii2404/ignis-safe-mobile-releases/releases/download/v1.0.3/IGNIS-SAFE-v1.0.3-build4-arm64.apk',
+  downloadPath: 'https://github.com/andreii2404/ignis-safe-mobile-releases/releases/download/v1.0.3/IGNIS-SAFE.apk',
   learningImagePath: `${import.meta.env.BASE_URL}mobile-app/learning-materials.jpg`,
   splashImagePath: `${import.meta.env.BASE_URL}mobile-app/ignis-safe-splash.png`,
-  fileName: 'IGNIS-SAFE-v1.0.3-build4-arm64.apk',
+  fileName: 'IGNIS-SAFE.apk',
 };
 
 export default function MobileAppDownloadSection() {
+  const sectionRef = useRef(null);
+  const [isVisible, setIsVisible] = useState(
+    () => typeof window === 'undefined' || !('IntersectionObserver' in window),
+  );
   const { content, language } = useLandingContent();
   const copy = { ...getLandingUiCopy(language), ...(content.copy?.[language] || {}) };
   const downloadUrl = new URL(MOBILE_APP_RELEASE.downloadPath, window.location.origin).href;
@@ -22,8 +28,30 @@ export default function MobileAppDownloadSection() {
     MOBILE_APP_RELEASE.fileName,
   );
 
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section || isVisible) return undefined;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      setIsVisible(true);
+      observer.disconnect();
+    }, { threshold: 0.16 });
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [isVisible]);
+
   return (
-    <section className="landing-mobile-app" id="mobile-app" aria-labelledby="mobile-app-title">
+    <section
+      ref={sectionRef}
+      className={`landing-mobile-app${isVisible ? ' is-visible' : ''}`}
+      id="mobile-app"
+      aria-labelledby="mobile-app-title"
+    >
+      <div className="landing-mobile-app-particles" aria-hidden="true">
+        {Array.from({ length: 7 }, (_, index) => <span key={index} />)}
+      </div>
       <div className="landing-mobile-app-container">
         <div className="landing-mobile-app-device" role="img" aria-label={copy.mobileAppPreviewLabel}>
           <div className="landing-mobile-app-phone-scene" aria-hidden="true">
@@ -57,6 +85,7 @@ export default function MobileAppDownloadSection() {
               className="landing-mobile-app-download"
               download={MOBILE_APP_RELEASE.fileName}
             >
+              <FiDownload className="landing-mobile-app-download-icon" aria-hidden="true" />
               <span data-landing-edit-path={`copy.${language}.downloadApk`} data-landing-edit-label="APK download button label">{copy.downloadApk}</span>
             </a>
 

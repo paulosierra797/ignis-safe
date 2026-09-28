@@ -687,13 +687,14 @@ const DEFAULT_RADIUS_METERS = 100;
 
 // --- REAL BFP LOCATION (production) ---
 const defaultStation = {
-  latitude: parseNumber(import.meta.env.VITE_STATION_LATITUDE, 14.5994),
-  longitude: parseNumber(import.meta.env.VITE_STATION_LONGITUDE, 120.9842),
+  latitude: parseNumber(import.meta.env.VITE_STATION_LATITUDE, 14.32238173066333),
+  longitude: parseNumber(import.meta.env.VITE_STATION_LONGITUDE, 120.94420001104767),
   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
   address: import.meta.env.VITE_STATION_ADDRESS || '',
   stationId: 'DEFAULT',
   radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS)
 };
+
 
 // TEST ONLY — temporary attendance test location (General Trias)
 // const testStation = {

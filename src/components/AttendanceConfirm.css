@@ -411,28 +411,24 @@
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
+/* Default covers both "Verify Face" and "Try Again" (.error) so both read
+   as the same primary security action. */
 .face-verify-btn:not(.verified):not(:disabled) {
-  background: #ffffff;
+  background: var(--heat);
   border-color: var(--heat);
-  color: var(--heat-dark);
-}
-
-.face-verify-btn.error:not(:disabled) {
-  background: var(--heat-soft);
-  border-color: var(--heat);
-  color: var(--heat-dark);
+  color: #ffffff;
 }
 
 .face-verify-btn:not(.verified):not(:disabled):hover {
-  background: var(--heat);
-  border-color: var(--heat);
+  background: var(--heat-dark);
+  border-color: var(--heat-dark);
   color: #ffffff;
   transform: translateY(-2px);
 }
 
 .face-verify-btn:not(.verified):not(:disabled):active {
-  background: var(--heat-dark);
-  border-color: var(--heat-dark);
+  background: #8a2620;
+  border-color: #8a2620;
   color: #ffffff;
   transform: translateY(0);
 }
@@ -440,6 +436,16 @@
 .face-verify-btn:focus-visible {
   outline: 2px solid var(--heat-dark);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(214, 69, 61, 0.22);
+}
+
+/* "Checking..." (liveness/matching in progress) - neutral gray, clearly
+   unavailable rather than a dimmed red button. */
+.face-verify-btn:disabled {
+  background: #e2e5e9;
+  border-color: #e2e5e9;
+  color: #9aa0a8;
+  opacity: 1;
 }
 
 .location-status {
@@ -457,22 +463,31 @@
 }
 
 .location-status.error {
-  background: rgba(239, 68, 68, 0.1);
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
   color: var(--error);
   font-weight: 600;
+  padding: 10px 12px;
+  line-height: 1.4;
 }
 
 .confirm-camera-frame {
   position: relative;
   width: 100%;
   max-width: 100%;
-  height: 380px;
+  height: 360px;
   margin: 0 auto;
   border-radius: 14px;
   overflow: hidden;
   background: #0f1418;
   border: 1px solid rgba(0, 0, 0, 0.08);
-  transition: height 0.2s ease;
+  transition: height 0.2s ease, border-color 0.2s ease;
+}
+
+.confirm-camera-frame--idle {
+  background: linear-gradient(180deg, #141b21, #0b0f13);
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 .confirm-camera-frame--compact {
@@ -512,10 +527,11 @@
 }
 
 .confirm-camera-placeholder-icon {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 1.5px solid rgba(238, 241, 244, 0.3);
+  border: 1.5px solid rgba(238, 241, 244, 0.35);
+  background: rgba(238, 241, 244, 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -525,6 +541,7 @@
 .confirm-camera-placeholder span {
   font-size: 12px;
   font-weight: 500;
+  letter-spacing: 0.2px;
 }
 
 /* Circular face guide: a transparent circle "cut out" of a dimmed overlay

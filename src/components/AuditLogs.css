@@ -234,7 +234,7 @@
 .audit-logs-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 1000px;
+  min-width: 1080px;
 }
 
 .audit-logs-table thead {
@@ -324,6 +324,33 @@
 .audit-logs-action-badge.export {
   background: #0ea5e9;
   color: white;
+}
+
+.audit-logs-action-badge.login {
+  background: #0891b2;
+  color: white;
+}
+
+.audit-logs-device-column {
+  width: 110px;
+}
+
+.audit-logs-device-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.audit-logs-device-badge svg {
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+.audit-logs-device-empty {
+  color: #cbd5e1;
 }
 
 .audit-logs-status-badge {
@@ -475,6 +502,45 @@
   margin: 0;
   line-height: 1.5;
   word-break: break-word;
+}
+
+.audit-logs-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.audit-logs-modal-section-title {
+  font-weight: 700;
+  color: #64748b;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.audit-logs-modal-section-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.86rem;
+  color: #1f2937;
+}
+
+.audit-logs-modal-session-id {
+  font-family: 'Courier New', monospace;
+  font-size: 0.78rem;
+  word-break: break-all;
+  text-align: right;
+}
+
+.audit-logs-modal-security-note {
+  margin: 0.3rem 0 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: #94a3b8;
 }
 
 @media (max-width: 1100px) {
@@ -653,10 +719,14 @@
   }
 
   .audit-logs-table td:nth-child(5)::before {
-    content:"Details";
+    content:"Device";
   }
 
   .audit-logs-table td:nth-child(6)::before {
+    content:"Details";
+  }
+
+  .audit-logs-table td:nth-child(7)::before {
     content:"Status";
   }
 

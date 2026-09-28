@@ -5,7 +5,7 @@ import PageHeader from './PageHeader';
 import ToastMessage from './ToastMessage';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { FaDownload, FaSearch, FaTimes } from 'react-icons/fa';
+import { FaDownload, FaSearch, FaTimes, FaDesktop, FaMobileAlt, FaTabletAlt } from 'react-icons/fa';
 import './AuditLogs.css';
 import { getAdminAuditLogs } from '../utils/usersService';
 import { formatStatusLabel } from '../utils/statusUtils';
@@ -18,6 +18,36 @@ const getStatusClass = (status) => {
   if (normalized.includes('fail')) return 'failed';
   if (normalized.includes('pending')) return 'pending';
   return 'success';
+};
+
+const DEVICE_ICONS = {
+  Mobile: FaMobileAlt,
+  Tablet: FaTabletAlt,
+  Desktop: FaDesktop
+};
+
+const DeviceBadge = ({ deviceType }) => {
+  if (!deviceType) return <span className="audit-logs-device-empty">&mdash;</span>;
+  const Icon = DEVICE_ICONS[deviceType] || FaDesktop;
+  return (
+    <span className="audit-logs-device-badge">
+      <Icon aria-hidden="true" />
+      {deviceType}
+    </span>
+  );
+};
+
+// Any row carrying at least one piece of captured security metadata should
+// always offer View Details, regardless of how short its details text is.
+const hasSecurityMetadata = (log) =>
+  Boolean(log?.ipAddress || log?.deviceType || log?.operatingSystem || log?.browser || log?.sessionIdentifier);
+
+const formatLocation = (location) => {
+  if (!location || location.available !== true) return 'Location not available';
+  const { latitude, longitude, source } = location;
+  if (typeof latitude !== 'number' || typeof longitude !== 'number') return 'Location not available';
+  const sourceLabel = source ? ` (${source})` : '';
+  return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}${sourceLabel}`;
 };
 
 const escapeCsvValue = (value) => {
@@ -210,6 +240,7 @@ export default function AuditLogs() {
                 <option>Account Updated</option>
                 <option>Account Deleted</option>
                 <option>User Login</option>
+                <option>Failed Login Attempt</option>
                 <option>Organizational Chart Updated</option>
                 <option>Attendance Export CSV</option>
                 <option>Attendance Export PDF</option>
@@ -270,6 +301,7 @@ export default function AuditLogs() {
                 <th>TIMESTAMP</th>
                 <th>USER</th>
                 <th>ACTION</th>
+                <th className="audit-logs-device-column">DEVICE</th>
                 <th>DETAILS</th>
                 <th>STATUS</th>
               </tr>
@@ -277,13 +309,13 @@ export default function AuditLogs() {
             <tbody>
               {loadingLogs ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
                     Loading audit logs...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
                     No audit logs found matching your filters.
                   </td>
                 </tr>
@@ -298,9 +330,12 @@ export default function AuditLogs() {
                         {log.action}
                       </span>
                     </td>
+                    <td className="audit-logs-device-column">
+                      <DeviceBadge deviceType={log.deviceType} />
+                    </td>
                     <td>
                       <div className="audit-logs-details-text">{log.details}</div>
-                      {String(log.details || '').length > DETAILS_TRUNCATE_LENGTH && (
+                      {(String(log.details || '').length > DETAILS_TRUNCATE_LENGTH || hasSecurityMetadata(log)) && (
                         <button
                           type="button"
                           className="audit-logs-view-details-btn"
@@ -364,6 +399,47 @@ export default function AuditLogs() {
                 <span className="audit-logs-modal-row-label">Details</span>
                 <p>{selectedLog.details}</p>
               </div>
+
+              {hasSecurityMetadata(selectedLog) && (
+                <div className="audit-logs-modal-section">
+                  <div className="audit-logs-modal-section-title">Device &amp; Session</div>
+                  <div className="audit-logs-modal-section-row">
+                    <span className="audit-logs-modal-row-label">Device</span>
+                    <span>{selectedLog.deviceType || 'Not available'}</span>
+                  </div>
+                  <div className="audit-logs-modal-section-row">
+                    <span className="audit-logs-modal-row-label">OS</span>
+                    <span>{selectedLog.operatingSystem || 'Not available'}</span>
+                  </div>
+                  <div className="audit-logs-modal-section-row">
+                    <span className="audit-logs-modal-row-label">Browser</span>
+                    <span>
+                      {selectedLog.browser
+                        ? `${selectedLog.browser}${selectedLog.browserVersion ? ` ${selectedLog.browserVersion}` : ''}`
+                        : 'Not available'}
+                    </span>
+                  </div>
+                  <div className="audit-logs-modal-section-row">
+                    <span className="audit-logs-modal-row-label">IP Address</span>
+                    <span>{selectedLog.ipAddress || 'Not available'}</span>
+                  </div>
+                  {selectedLog.sessionIdentifier && (
+                    <div className="audit-logs-modal-section-row">
+                      <span className="audit-logs-modal-row-label">Session ID</span>
+                      <span className="audit-logs-modal-session-id">{selectedLog.sessionIdentifier}</span>
+                    </div>
+                  )}
+                  <div className="audit-logs-modal-section-row">
+                    <span className="audit-logs-modal-row-label">Location</span>
+                    <span>{formatLocation(selectedLog.location)}</span>
+                  </div>
+                  <p className="audit-logs-modal-security-note">
+                    Device/IP/session data is supporting metadata only and does not by itself prove who
+                    physically operated this device. The authenticated account above remains the
+                    primary identity for this event.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -9,3 +9,6 @@ verify_jwt = true
 
 [functions.request-backoffice-password-reset]
 verify_jwt = false
+
+[functions.record-login-audit]
+verify_jwt = false

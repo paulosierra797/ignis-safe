@@ -16,6 +16,8 @@ verifyBackofficeRecoveryAccount,
 sendLoginOtp,
 updatePassword,
 signOut,
+recordLoginAudit,
+recordFailedLoginAudit,
 
 verifyLoginOtp
 } from '../utils/authService';
@@ -107,6 +109,23 @@ const describeOtpSendError = (error) => {
     return `Too many code requests. Please wait ${parseRetryAfterSeconds(error)} seconds and try again.`;
   }
   return error.message || 'Could not send the login OTP. Please try again.';
+};
+
+// Maps a handleLogin() failure into one of the same safe, normalized audit
+// categories the record-login-audit Edge Function whitelists. Tied to the
+// exact error messages thrown below in handleLogin — never sends raw
+// Supabase Auth error text to the audit function.
+const LOGIN_FAILURE_REASON_BY_MESSAGE = [
+  [/too many login attempts/i, 'too_many_attempts'],
+  [/invalid email or password/i, 'invalid_credentials'],
+  [/not active/i, 'account_inactive'],
+  [/not authorized to access this portal/i, 'account_not_authorized']
+];
+
+const classifyLoginFailure = (error) => {
+  const message = String(error?.message || '');
+  const match = LOGIN_FAILURE_REASON_BY_MESSAGE.find(([pattern]) => pattern.test(message));
+  return match ? match[1] : 'unknown_error';
 };
 
 // Only ever follow a post-login redirect back into the Attendance QR flow -
@@ -348,6 +367,9 @@ const handleLogin = async (e) => {
     });
 
     if (authError) {
+      if (authError.status === 429 || OTP_RATE_LIMIT_CODES.has(authError.code)) {
+        throw new Error('Too many login attempts. Please wait a few minutes and try again.');
+      }
       throw new Error('Invalid email or password');
     }
 
@@ -423,6 +445,7 @@ const handleLogin = async (e) => {
       }
 
       logLoginIfPersonnel(refreshedUser);
+      recordLoginAudit();
       setAuthStep('authenticated');
       return;
     }
@@ -455,6 +478,7 @@ const handleLogin = async (e) => {
   } catch (loginError) {
     setAuthFlowGated(false);
     setError(loginError?.message || 'Login failed. Please try again.');
+    recordFailedLoginAudit({ email: normalizedEmail, failureReason: classifyLoginFailure(loginError) });
   } finally {
     setLoading(false);
   }
@@ -725,6 +749,7 @@ const handleVerify = async (e) => {
     }
 
     logLoginIfPersonnel(refreshedUser);
+    recordLoginAudit();
 
     setAuthStep("authenticated");
   } catch (verifyError) {

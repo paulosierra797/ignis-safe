@@ -587,6 +587,36 @@ export const logAdminActivity = async ({
   }
 };
 
+// Security metadata is optional/older-row-safe: every field defaults to
+// null here so rows written before this feature (or non-login actions that
+// never captured it) render as "Not available" in the UI instead of
+// crashing or showing undefined.
+const NO_SECURITY_METADATA = {
+  ipAddress: null,
+  userAgent: null,
+  deviceType: null,
+  operatingSystem: null,
+  browser: null,
+  browserVersion: null,
+  sessionIdentifier: null,
+  location: null
+};
+
+const flattenSecurityMetadata = (metadata) => {
+  if (!metadata || typeof metadata !== 'object') return { ...NO_SECURITY_METADATA };
+
+  return {
+    ipAddress: metadata.ip_address ?? null,
+    userAgent: metadata.user_agent ?? null,
+    deviceType: metadata.device_type ?? null,
+    operatingSystem: metadata.operating_system ?? null,
+    browser: metadata.browser ?? null,
+    browserVersion: metadata.browser_version ?? null,
+    sessionIdentifier: metadata.session_identifier ?? null,
+    location: metadata.location ?? null
+  };
+};
+
 // Get admin-only audit logs (no report workflow events)
 export const getAdminAuditLogs = async () => {
   try {
@@ -597,7 +627,7 @@ export const getAdminAuditLogs = async () => {
         .order('updated_at', { ascending: false }),
       supabase
         .from(ADMIN_ACTIVITY_TABLE)
-        .select('log_id, admin_id, actor_name, action, action_type, details, status, performed_at')
+        .select('log_id, admin_id, actor_name, action, action_type, details, status, metadata, performed_at')
         .order('performed_at', { ascending: false })
     ]);
 
@@ -610,6 +640,17 @@ export const getAdminAuditLogs = async () => {
       }
       customActivityRows = [];
     }
+
+    // record-login-audit now writes a real "User Login" row per successful
+    // login. Once an admin has at least one, stop synthesizing a duplicate
+    // from admin.last_login for them — but keep the synthetic fallback for
+    // admins who haven't logged in since this shipped, so their history
+    // isn't blank.
+    const adminIdsWithRealLoginRow = new Set(
+      customActivityRows
+        .filter((row) => row.action === 'User Login' && row.admin_id)
+        .map((row) => row.admin_id)
+    );
 
     const rows = adminRowsRes.data || [];
     const logs = [];
@@ -627,19 +668,21 @@ export const getAdminAuditLogs = async () => {
           action: 'Account Created',
           actionType: 'registration',
           details: `Created ${roleLabel} account (${statusLabel})`,
-          status: 'SUCCESS'
+          status: 'SUCCESS',
+          ...NO_SECURITY_METADATA
         });
       }
 
-      if (row.last_login) {
+      if (row.last_login && !adminIdsWithRealLoginRow.has(row.admin_id)) {
         logs.push({
           id: `login-${row.admin_id}`,
           timestamp: row.last_login,
           user: userLabel,
           action: 'User Login',
-          actionType: 'submission',
+          actionType: 'login',
           details: 'Successful login',
-          status: 'SUCCESS'
+          status: 'SUCCESS',
+          ...NO_SECURITY_METADATA
         });
       }
 
@@ -651,7 +694,8 @@ export const getAdminAuditLogs = async () => {
           action: 'Account Updated',
           actionType: 'edit',
           details: `Updated account details (${statusLabel})`,
-          status: 'SUCCESS'
+          status: 'SUCCESS',
+          ...NO_SECURITY_METADATA
         });
       }
     });
@@ -664,7 +708,8 @@ export const getAdminAuditLogs = async () => {
         action: row.action || 'Admin Activity',
         actionType: row.action_type || 'edit',
         details: row.details || '-',
-        status: row.status || 'SUCCESS'
+        status: row.status || 'SUCCESS',
+        ...flattenSecurityMetadata(row.metadata)
       });
     });
 

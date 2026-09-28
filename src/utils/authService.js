@@ -190,6 +190,67 @@ export const signUp = async (email, password, userData = {}) => {
 
 
 
+// Best-effort audit metadata capture for backoffice logins. Never blocks or
+// alters the auth decision: every call here is fire-and-forget and swallows
+// its own errors, only logging them for debugging. The actual IP/device/
+// OS/browser fields are resolved server-side by the record-login-audit Edge
+// Function, which also independently re-derives identity from the verified
+// session (or, for failures, from a lookup of the attempted email) rather
+// than trusting anything sent from here.
+//
+// Exported so the real login UI (src/components/LoginPage.jsx, which owns
+// the actual signInWithPassword/verifyOtp flow used in production) can call
+// these directly at its own success/failure points, in addition to this
+// module's own signIn()/verifyLoginOtp() helpers below.
+export const recordLoginAudit = () => {
+  const sessionIdentifier = getStoredDeviceId();
+  supabase.functions
+    .invoke('record-login-audit', {
+      body: sessionIdentifier ? { sessionIdentifier } : {}
+    })
+    .then(({ error }) => {
+      if (error) console.error('[audit] record-login-audit invoke failed:', error);
+    })
+    .catch((error) => console.error('[audit] record-login-audit threw:', error));
+};
+
+// failureReason must already be one of the safe, normalized categories (the
+// Edge Function whitelists it again server-side regardless). Raw error text
+// is never accepted here or sent to the audit function.
+export const recordFailedLoginAudit = ({ email, failureReason }) => {
+  const sessionIdentifier = getStoredDeviceId();
+  supabase.functions
+    .invoke('record-login-audit', {
+      body: {
+        email: normalizeEmail(email),
+        failureReason,
+        ...(sessionIdentifier ? { sessionIdentifier } : {})
+      }
+    })
+    .then(({ error: invokeError }) => {
+      if (invokeError) console.error('[audit] record-login-audit (failed attempt) invoke failed:', invokeError);
+    })
+    .catch((invokeError) => console.error('[audit] record-login-audit (failed attempt) threw:', invokeError));
+};
+
+// Maps a signIn() failure into one of a small set of safe, non-identifying
+// categories. Raw Supabase Auth error text is never sent to the audit
+// function or stored — only this normalized reason. This mapping is tied to
+// this module's own signIn() error messages; LoginPage.jsx classifies its
+// own (differently worded) errors separately.
+const classifyLoginFailure = (error) => {
+  const message = String(error?.message || '').toLowerCase();
+  if (message.includes('not connected to an authorized')) return 'account_not_authorized';
+  if (message.includes('invalid login credentials')) return 'invalid_credentials';
+  if (message.includes('rate limit') || message.includes('too many') || message.includes('security purposes')) {
+    return 'too_many_attempts';
+  }
+  if (message.includes('inactive') || message.includes('suspended') || message.includes('banned') || message.includes('locked')) {
+    return 'account_inactive';
+  }
+  return 'unknown_error';
+};
+
 // Sign in user
 export const signIn = async (email, password) => {
   try {
@@ -203,7 +264,7 @@ export const signIn = async (email, password) => {
     // Get admin details from admin table
     if (authData.user) {
       let adminData = null;
-      
+
       // Try to fetch admin record
       try {
         const { data, error } = await supabase
@@ -211,7 +272,7 @@ export const signIn = async (email, password) => {
           .select('*')
           .eq('admin_id', authData.user.id)
           .single();
-        
+
         if (!error && data) {
           adminData = data;
         }
@@ -227,13 +288,16 @@ export const signIn = async (email, password) => {
           .rpc('touch_backoffice_activity')
           .then(() => {})
           .catch(() => {});
+        // Record login security metadata (IP/device/OS/browser) in the
+        // background. Never awaited: must not delay or affect this result.
+        recordLoginAudit();
 
-        return { 
-          data: { 
-            auth: authData, 
+        return {
+          data: {
+            auth: authData,
             user: withDisplayName(adminData)
-          }, 
-          error: null 
+          },
+          error: null
         };
       }
 
@@ -244,6 +308,7 @@ export const signIn = async (email, password) => {
     return { data: authData, error: null };
   } catch (error) {
     console.error('Error signing in:', error);
+    recordFailedLoginAudit({ email, failureReason: classifyLoginFailure(error) });
     return { data: null, error: error.message };
   }
 };

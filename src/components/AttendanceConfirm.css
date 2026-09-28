@@ -2,62 +2,348 @@
   --ink: #0c0f12;
   --heat: #d6453d;
   --heat-dark: #b2322a;
+  --heat-soft: rgba(214, 69, 61, 0.1);
   --glow: #f5b544;
   --mist: #eef1f4;
   --steel: #2f3339;
   --success: #10b981;
   --error: #ef4444;
+  --line: rgba(12, 15, 18, 0.08);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 .attendance-confirm-page {
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 32px 20px;
-  background: radial-gradient(circle at 10% 10%, rgba(214, 69, 61, 0.18), transparent 40%),
-    radial-gradient(circle at 90% 0%, rgba(245, 181, 68, 0.25), transparent 35%),
+  padding: 40px 20px;
+  background: radial-gradient(circle at 10% 10%, rgba(214, 69, 61, 0.14), transparent 40%),
+    radial-gradient(circle at 90% 0%, rgba(245, 181, 68, 0.2), transparent 35%),
     linear-gradient(160deg, #f9f6f1, #eef0f2);
   font-family: 'Poppins', sans-serif;
   color: var(--ink);
 }
 
-.confirm-card {
+.confirm-shell {
   width: 100%;
-  max-width: 420px;
-  background: #ffffff;
-  border-radius: 26px;
-  padding: 28px;
-  box-shadow: 0 24px 45px rgba(20, 20, 20, 0.16);
+  max-width: 740px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 10px;
 }
+
+.confirm-eyebrow {
+  padding-left: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--heat);
+}
+
+.confirm-card {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 32px;
+  box-shadow: 0 20px 40px rgba(20, 20, 20, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* ---------- Header ---------- */
 
 .confirm-header {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-}
-
-.confirm-badge {
-  font-family: 'Poppins', sans-serif;
-  font-size: 12px;
-  letter-spacing: 2px;
-  font-weight: 700;
-  color: var(--heat);
+  gap: 4px;
 }
 
 .confirm-header h1 {
   margin: 0;
   font-size: 26px;
+  font-weight: 700;
   font-family: 'Poppins', sans-serif;
 }
 
-.confirm-header p {
+.confirm-datetime {
   margin: 0;
   color: #6a6f76;
   font-size: 13px;
+  font-weight: 500;
+}
+
+/* ---------- Officer + attendance summary ---------- */
+
+.confirm-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--mist);
+  border: 1px solid var(--line);
+}
+
+.ig-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #6b7078;
+}
+
+.summary-officer-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.summary-officer-id {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.summary-officer-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-rank-badge {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--heat-soft);
+  color: var(--heat-dark);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.summary-station-line {
+  font-size: 12px;
+  color: #6b7078;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-divider {
+  height: 1px;
+  background: var(--line);
+}
+
+.summary-attendance {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary-attendance-message {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+}
+
+.summary-attendance-times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.summary-time-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+}
+
+.summary-time-block span {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7078;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.summary-time-block strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ---------- Verification progress chips (read-only, visual) ---------- */
+
+.confirm-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.progress-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  color: #6b7078;
+}
+
+.progress-chip-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.progress-chip--pending {
+  color: #9aa0a8;
+}
+
+.progress-chip--current {
+  background: var(--heat-soft);
+  border-color: rgba(214, 69, 61, 0.35);
+  color: var(--heat-dark);
+}
+
+.progress-chip--done {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--success);
+}
+
+.progress-chip--error {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--error);
+}
+
+.security-badge {
+  padding: 8px 10px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 8px;
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ---------- Generic compact alert banner ---------- */
+
+.confirm-alert {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+.confirm-alert--error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+}
+
+.auth-error {
+  padding: 12px 14px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  color: var(--error);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ---------- Completed state ---------- */
+
+.attendance-completed-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.24);
+}
+
+.attendance-completed-times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.attendance-completed-time-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  text-align: center;
+}
+
+.attendance-completed-label {
+  color: #6b7078;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.attendance-completed-value {
+  color: var(--ink);
+  font-family: 'Poppins', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.attendance-history-btn {
+  min-height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: var(--steel);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ---------- Verification body sections ---------- */
+
+.confirm-body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
 }
 
 .confirm-section {
@@ -74,173 +360,15 @@
   color: #6b7078;
 }
 
-.confirm-select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 500;
-  background: #ffffff;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-}
-
-.confirm-select:focus {
-  outline: none;
-  border-color: var(--heat);
-}
-
-.confirm-info {
-  background: var(--mist);
-  border-radius: 16px;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: 13px;
-}
-
-.info-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-weight: 600;
-}
-
-.info-row span {
-  color: #6b7078;
-  font-weight: 500;
-}
-
-.security-badge {
-  margin-top: 6px;
-  padding: 8px 10px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  border-radius: 8px;
-  color: #10b981;
+.section-hint {
+  margin: 0;
   font-size: 12px;
-  font-weight: 600;
-  text-align: center;
-}
-
-.attendance-status-card {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-}
-
-.attendance-status-card.completed {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.28);
-}
-
-.attendance-status-card strong {
-  display: block;
-  margin: 4px 0 0;
-  color: var(--ink);
-  font-size: 15px;
+  color: #6b7078;
   line-height: 1.4;
 }
 
-.attendance-status-label {
-  color: #6b7078;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-}
-
-.attendance-status-times {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  font-size: 12px;
-}
-
-.attendance-status-times span {
-  padding: 10px;
-  border-radius: 10px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.attendance-status-error {
-  color: var(--error);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.attendance-completed-card {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 20px 16px;
-  border-radius: 16px;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(16, 185, 129, 0.24);
-}
-
-.attendance-completed-times {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.attendance-completed-time-block {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px 14px;
-  border-radius: 12px;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  text-align: center;
-}
-
-.attendance-completed-label {
-  color: #6b7078;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-}
-
-.attendance-completed-value {
-  color: var(--ink);
-  font-family: 'Poppins', sans-serif;
-  font-size: 24px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.attendance-history-btn {
-  min-height: 42px;
-  border: none;
-  border-radius: 12px;
-  background: var(--steel);
-  color: #ffffff;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.auth-error {
-  padding: 12px 14px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  border-radius: 12px;
-  color: var(--error);
-  font-size: 13px;
-  font-weight: 600;
-  text-align: center;
-}
-
 .location-btn {
+  min-height: 44px;
   padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -298,18 +426,23 @@
 .confirm-camera-frame {
   position: relative;
   width: 100%;
-  min-height: 180px;
+  min-height: 220px;
   border-radius: 14px;
   overflow: hidden;
   background: #0f1418;
   border: 1px solid rgba(0, 0, 0, 0.08);
+  transition: min-height 0.2s ease;
+}
+
+.confirm-camera-frame--compact {
+  min-height: 120px;
 }
 
 .confirm-camera-preview {
   display: block;
   width: 100%;
   height: 100%;
-  min-height: 180px;
+  min-height: 220px;
   object-fit: cover;
   /* Mirror the on-screen preview only, like a normal front-camera app
      (Windows Camera, Zoom, FaceTime, etc.) - this is a display-only CSS
@@ -320,6 +453,41 @@
      liveness head-pose math stay on the unmirrored source and remain
      unaffected by this. See livenessChallenge.js's TURN_YAW_SIGN comment. */
   transform: scaleX(-1);
+}
+
+.confirm-camera-frame--compact .confirm-camera-preview {
+  min-height: 120px;
+}
+
+/* Visual-only placeholder shown before the camera has ever been requested
+   (verificationState === 'idle'), so the page never shows a meaningless
+   black rectangle on load. It never affects when/how getUserMedia runs. */
+.confirm-camera-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(238, 241, 244, 0.65);
+  pointer-events: none;
+}
+
+.confirm-camera-placeholder-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(238, 241, 244, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.confirm-camera-placeholder span {
+  font-size: 12px;
+  font-weight: 500;
 }
 
 /* Circular face guide: a transparent circle "cut out" of a dimmed overlay
@@ -404,6 +572,7 @@
 }
 
 .confirm-btn {
+  min-height: 46px;
   padding: 12px;
   border-radius: 14px;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -438,6 +607,7 @@
 }
 
 .confirm-submit {
+  min-height: 48px;
   padding: 14px 16px;
   border: none;
   border-radius: 16px;
@@ -459,6 +629,9 @@
 .confirm-submit:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  box-shadow: none;
+  background: #e2e5e9;
+  color: #9aa0a8;
 }
 
 .confirm-result {
@@ -482,17 +655,18 @@
 }
 
 .confirm-status {
-  font-size: 13px;
+  font-size: 12px;
   color: #6b7078;
   background: #f6f0e9;
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: 10px;
+  padding: 10px 12px;
 }
 
 .confirm-footer {
-  font-size: 12px;
+  font-size: 11px;
   color: #7b7f86;
   text-align: center;
+  line-height: 1.4;
 }
 
 .attendance-confirm-overlay {
@@ -597,21 +771,49 @@
   color: #ffffff;
 }
 
-@media (max-width: 480px) {
-  .confirm-card {
-    padding: 22px;
+@media (max-width: 640px) {
+  .attendance-confirm-page {
+    padding: 20px 16px;
   }
 
-  .attendance-status-times,
+  .confirm-card {
+    padding: 20px;
+    gap: 18px;
+    border-radius: 16px;
+  }
+
+  .confirm-header h1 {
+    font-size: 22px;
+  }
+
+  .summary-attendance-times,
   .attendance-completed-times {
     grid-template-columns: 1fr;
   }
 
   .attendance-completed-value {
-    font-size: 22px;
+    font-size: 20px;
+  }
+
+  .confirm-mode {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
   }
 
   .attendance-confirm-dialog-actions {
     flex-direction: column-reverse;
+  }
+}
+
+@media (max-width: 360px) {
+  .summary-officer-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .summary-officer-name {
+    white-space: normal;
+    word-break: break-word;
   }
 }

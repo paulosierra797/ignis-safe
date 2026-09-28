@@ -626,72 +626,111 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
 
   const now = new Date();
 
+  // Visual-only verification progress indicator. Reads existing state only;
+  // never mutates it, gates an action, advances the workflow, or feeds back
+  // into any verification/attendance logic.
+  const faceStepStatus = verificationState === 'success'
+    ? 'done'
+    : verificationState === 'failed'
+      ? 'error'
+      : 'current';
+  const locationStepStatus = isLocationVerified
+    ? 'done'
+    : faceStepStatus === 'done'
+      ? 'current'
+      : 'pending';
+  const confirmStepDone = Boolean(
+    attendanceCompleted || confirmStatus?.type === 'success' || timeInSuccess || timeOutSuccess
+  );
+  const confirmStepStatus = confirmStepDone
+    ? 'done'
+    : (faceStepStatus === 'done' && locationStepStatus === 'done')
+      ? 'current'
+      : 'pending';
+  const progressIcon = (stepStatus, doneIcon = '✓') =>
+    stepStatus === 'done' ? doneIcon : stepStatus === 'error' ? '✕' : stepStatus === 'current' ? '●' : '○';
+
   return (
     <div className="attendance-confirm-page">
-      <div className="confirm-card">
-        <div className="confirm-header">
-          <span className="confirm-badge">IGNIS SAFE</span>
-          <h1>Confirm Attendance</h1>
-          <p>{stationLabel} - Secure Session</p>
-        </div>
-
-        {authError && (
-          <div className="auth-error">
-            {authError}
+      <div className="confirm-shell">
+        <div className="confirm-eyebrow">IGNIS SAFE · SECURE ATTENDANCE</div>
+        <div className="confirm-card">
+          <div className="confirm-header">
+            <h1>Confirm Attendance</h1>
+            <p className="confirm-datetime">{now.toLocaleDateString()} · {now.toLocaleTimeString()}</p>
           </div>
-        )}
 
-        {!authError && authenticatedOfficer && (
-          <>
-            {/* Auto-filled Officer Info */}
-            <div className="confirm-info">
-              <div className="info-row">
-                <span>Officer Name</span>
-                <strong>{authenticatedOfficer.name}</strong>
-              </div>
-              <div className="info-row">
-                <span>Rank</span>
-                <strong>{authenticatedOfficer.rank}</strong>
-              </div>
-              <div className="info-row">
-                <span>Date</span>
-                <strong>{now.toLocaleDateString()}</strong>
-              </div>
-              <div className="info-row">
-                <span>Time</span>
-                <strong>{now.toLocaleTimeString()}</strong>
-              </div>
-              <div className="security-badge">
-                ✓ Authenticated & Verified
-              </div>
+          {authError && (
+            <div className="auth-error">
+              {authError}
             </div>
+          )}
 
-            <div className={`attendance-status-card ${attendanceCompleted ? 'completed' : ''}`}>
-              <div>
-                <span className="attendance-status-label">Attendance Status</span>
-                <strong>
-                  {isAttendanceStatusLoading
-                    ? 'Checking Supabase...'
-                    : attendanceStatus?.message || 'No attendance record found.'}
-                </strong>
+          {!authError && authenticatedOfficer && (
+            <>
+              {/* Auto-filled Officer + attendance summary */}
+              <div className="confirm-summary">
+                <div className="summary-officer-row">
+                  <div className="summary-officer-id">
+                    <span className="ig-label">Officer</span>
+                    <strong className="summary-officer-name" title={authenticatedOfficer.name}>
+                      {authenticatedOfficer.name}
+                    </strong>
+                  </div>
+                  <span className="summary-rank-badge">{authenticatedOfficer.rank}</span>
+                </div>
+                <div className="summary-station-line">{stationLabel} · Secure Session</div>
+
+                <div className="summary-divider" />
+
+                <div className="summary-attendance">
+                  <span className="ig-label">Today's Attendance</span>
+                  <div className="summary-attendance-message">
+                    {isAttendanceStatusLoading
+                      ? 'Checking Supabase...'
+                      : attendanceStatus?.message || 'No attendance record found.'}
+                  </div>
+                  <div className="summary-attendance-times">
+                    <div className="summary-time-block">
+                      <span>Time In</span>
+                      <strong>{attendanceStatus?.record?.timeIn || 'Not recorded'}</strong>
+                    </div>
+                    <div className="summary-time-block">
+                      <span>Time Out</span>
+                      <strong>{attendanceStatus?.record?.timeOut || 'Not recorded'}</strong>
+                    </div>
+                  </div>
+                  {attendanceStatus?.qrValid === false && (
+                    <div className="confirm-alert confirm-alert--error">
+                      {attendanceStatus.qrError || 'This QR session is no longer valid'}. Please rescan the station QR code.
+                    </div>
+                  )}
+                  {attendanceStatusError && (
+                    <div className="confirm-alert confirm-alert--error">{attendanceStatusError}</div>
+                  )}
+                </div>
+
+                <div className="confirm-progress" role="list" aria-label="Verification progress">
+                  <span className={`progress-chip progress-chip--${faceStepStatus}`} role="listitem">
+                    <span className="progress-chip-icon" aria-hidden="true">{progressIcon(faceStepStatus)}</span>
+                    Face Verification
+                  </span>
+                  <span className={`progress-chip progress-chip--${locationStepStatus}`} role="listitem">
+                    <span className="progress-chip-icon" aria-hidden="true">{progressIcon(locationStepStatus)}</span>
+                    Location Verification
+                  </span>
+                  <span className={`progress-chip progress-chip--${confirmStepStatus}`} role="listitem">
+                    <span className="progress-chip-icon" aria-hidden="true">{progressIcon(confirmStepStatus)}</span>
+                    Confirm
+                  </span>
+                </div>
+
+                <div className="security-badge">
+                  ✓ Authenticated & Verified
+                </div>
               </div>
-              {attendanceStatus?.record && (
-                <div className="attendance-status-times">
-                  <span>Time In: {attendanceStatus.record.timeIn || '--'}</span>
-                  <span>Time Out: {attendanceStatus.record.timeOut || '--'}</span>
-                </div>
-              )}
-              {attendanceStatus?.qrValid === false && (
-                <div className="attendance-status-error">
-                  {attendanceStatus.qrError || 'This QR session is no longer valid'}. Please rescan the station QR code.
-                </div>
-              )}
-              {attendanceStatusError && (
-                <div className="attendance-status-error">{attendanceStatusError}</div>
-              )}
-            </div>
 
-            {attendanceCompleted ? (
+              {attendanceCompleted ? (
               <div className="attendance-completed-card">
                 <div className="attendance-completed-times">
                   <div className="attendance-completed-time-block">
@@ -712,9 +751,28 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
                 </button>
               </div>
             ) : (
-              <>
+              <div className="confirm-body">
             <div className="confirm-section">
               <label className="section-label">Face Verification</label>
+              <div
+                className={`confirm-camera-frame confirm-camera-frame--${showLiveness ? livenessPhase : 'idle'} ${verificationState === 'success' ? 'confirm-camera-frame--compact' : ''}`}
+              >
+                <video ref={videoRef} className="confirm-camera-preview" autoPlay muted playsInline />
+                {showLiveness && <div className="confirm-camera-guide" aria-hidden="true" />}
+                {verificationState === 'idle' && !showLiveness && (
+                  <div className="confirm-camera-placeholder" aria-hidden="true">
+                    <span className="confirm-camera-placeholder-icon">📷</span>
+                    <span>Camera preview will appear here</span>
+                  </div>
+                )}
+              </div>
+              <canvas ref={canvasRef} className="confirm-camera-canvas" aria-hidden="true" />
+              {verificationState !== 'success' && (
+                <p className="section-hint">Position your face inside the guide.</p>
+              )}
+              <div className={`location-status ${faceError ? 'error' : verificationState === 'success' ? 'success' : ''}`}>
+                {faceError || faceStatus}
+              </div>
               <button
                 type="button"
                 className={`location-btn ${verificationState === 'success' ? 'verified' : ''} ${verificationState === 'failed' ? 'error' : ''}`}
@@ -729,14 +787,6 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
                       ? 'Try Again'
                       : 'Verify Face'}
               </button>
-              <div className={`location-status ${faceError ? 'error' : verificationState === 'success' ? 'success' : ''}`}>
-                {faceError || faceStatus}
-              </div>
-              <div className={`confirm-camera-frame confirm-camera-frame--${showLiveness ? livenessPhase : 'idle'}`}>
-                <video ref={videoRef} className="confirm-camera-preview" autoPlay muted playsInline />
-                {showLiveness && <div className="confirm-camera-guide" aria-hidden="true" />}
-              </div>
-              <canvas ref={canvasRef} className="confirm-camera-canvas" aria-hidden="true" />
               {showLiveness && (
                 <LivenessCheck
                   key={livenessAttemptKey}
@@ -765,6 +815,7 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
             {/* GPS Validation */}
             <div className="confirm-section">
               <label className="section-label">Location Verification</label>
+              <p className="section-hint">Verify that you are within the authorized attendance location.</p>
               <button
                 type="button"
                 className={`location-btn ${isLocationVerified ? 'verified' : ''}`}
@@ -785,28 +836,31 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
             </div>
 
             {/* Time Mode Selection */}
-            <div className="confirm-mode">
-              <button
-                type="button"
-                className={`confirm-btn ${mode === 'in' ? 'active' : ''}`}
-                onClick={() => setMode('in')}
-                disabled={timeInDisabled}
-              >
-                TIME IN
-              </button>
-              <button
-                type="button"
-                className={`confirm-btn alt ${mode === 'out' ? 'active' : ''}`}
-                onClick={() => setMode('out')}
-                disabled={timeOutDisabled}
-              >
-                TIME OUT
-              </button>
+            <div className="confirm-section">
+              <label className="section-label">Attendance Action</label>
+              <div className="confirm-mode">
+                <button
+                  type="button"
+                  className={`confirm-btn ${mode === 'in' ? 'active' : ''}`}
+                  onClick={() => setMode('in')}
+                  disabled={timeInDisabled}
+                >
+                  TIME IN
+                </button>
+                <button
+                  type="button"
+                  className={`confirm-btn alt ${mode === 'out' ? 'active' : ''}`}
+                  onClick={() => setMode('out')}
+                  disabled={timeOutDisabled}
+                >
+                  TIME OUT
+                </button>
+              </div>
             </div>
 
-            <button 
-              type="button" 
-              className="confirm-submit" 
+            <button
+              type="button"
+              className="confirm-submit"
               onClick={handleConfirm}
               disabled={!authenticatedOfficer || !mode || !geoLocation || !authenticatedOfficer.faceVerified || !verificationPhotoBlob || isProcessing || (mode === 'in' && timeInDisabled) || (mode === 'out' && timeOutDisabled)}
             >
@@ -824,7 +878,7 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
             <div className="confirm-footer">
               Your face, location, and attendance details are verified and logged instantly. Only you can mark attendance with this session.
             </div>
-              </>
+              </div>
             )}
 
             {showHouseRules && (
@@ -905,6 +959,7 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
             )}
           </>
         )}
+        </div>
       </div>
     </div>
   );

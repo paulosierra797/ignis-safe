@@ -775,7 +775,7 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
               </div>
               <button
                 type="button"
-                className={`location-btn ${verificationState === 'success' ? 'verified' : ''} ${verificationState === 'failed' ? 'error' : ''}`}
+                className={`location-btn face-verify-btn ${verificationState === 'success' ? 'verified' : ''} ${verificationState === 'failed' ? 'error' : ''}`}
                 onClick={handleVerifyFace}
                 disabled={verificationState === 'liveness' || verificationState === 'matching'}
               >

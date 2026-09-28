@@ -651,7 +651,8 @@
 }
 
 .module-recommendations-error {
-  border-left: 3px solid #dc2626;
+  border: 1.5px solid #b7c1cf;
+  padding: 2.75rem 1.5rem;
   background: #fef2f2;
 }
 

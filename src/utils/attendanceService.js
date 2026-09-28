@@ -686,56 +686,49 @@ const parseNumber = (value, fallback) => {
 const DEFAULT_RADIUS_METERS = 100;
 
 // --- REAL BFP LOCATION (production) ---
-// const defaultStation = {
-//   latitude: parseNumber(import.meta.env.VITE_STATION_LATITUDE, 14.5994),
-//   longitude: parseNumber(import.meta.env.VITE_STATION_LONGITUDE, 120.9842),
-//   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
-//   address: import.meta.env.VITE_STATION_ADDRESS || '',
-//   stationId: 'DEFAULT',
-//   radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS)
-// };
-
-// TEST ONLY — temporary attendance test location
-// Captured live from navigator.geolocation (browser/device GPS fix) on 2026-08-14
-// for testing the full Time In / Time Out flow. Restore the REAL BFP LOCATION
-// block above when done testing.
 const defaultStation = {
-  latitude: 14.364417324719483, // TEST ONLY
-  longitude: 120.88277998427404, // TEST ONLY
+  latitude: parseNumber(import.meta.env.VITE_STATION_LATITUDE, 14.32237),
+  longitude: parseNumber(import.meta.env.VITE_STATION_LONGITUDE, 120.94420),
   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
-  address: import.meta.env.VITE_STATION_ADDRESS ||
-    'Block 2 Lot 74 Tennyson St., Brighton 2, Lancaster New City, Brgy. Pasong Camachile I, General Trias, Cavite, Philippines',
+  address: import.meta.env.VITE_STATION_ADDRESS || '',
   stationId: 'DEFAULT',
-  // radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS), // ORIGINAL — restore this line when done testing
-  radius: 50 // TEST ONLY — widened to absorb GPS accuracy drift while testing
+  radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS)
 };
+
+
+// TEST ONLY — temporary attendance test location (General Trias)
+// const testStation = {
+//   latitude: 14.364417324719483,
+//   longitude: 120.88277998427404,
+//   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
+//   address: import.meta.env.VITE_STATION_ADDRESS ||
+//     'Block 2 Lot 74 Tennyson St., Brighton 2, Lancaster New City, Brgy. Pasong Camachile I, General Trias, Cavite, Philippines',
+//   stationId: 'DEFAULT',
+//   radius: 50
+// };
 
 export const STATION_GEO = defaultStation;
 
 export const STATION_GEO_MAP = {
   DEFAULT: defaultStation,
   // --- REAL BFP LOCATION (production) ---
-  // 'ZINI-M3': {
-  //   latitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LATITUDE, defaultStation.latitude),
-  //   longitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LONGITUDE, defaultStation.longitude),
-  //   name: import.meta.env.VITE_STATION_ZINI_M3_NAME || 'Station Delta',
-  //   address: import.meta.env.VITE_STATION_ZINI_M3_ADDRESS || defaultStation.address,
-  //   stationId: 'ZINI-M3',
-  //   radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius)
-  // },
-  // TEST ONLY — temporary attendance test location
-  // Captured live from navigator.geolocation (browser/device GPS fix) on 2026-08-14
-  // for testing the full Time In / Time Out flow. Restore the REAL BFP LOCATION
-  // block above when done testing.
   'ZINI-M3': {
-    latitude: 14.364417324719483, // TEST ONLY
-    longitude: 120.88277998427404, // TEST ONLY
+    latitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LATITUDE, defaultStation.latitude),
+    longitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LONGITUDE, defaultStation.longitude),
     name: import.meta.env.VITE_STATION_ZINI_M3_NAME || 'Station Delta',
     address: import.meta.env.VITE_STATION_ZINI_M3_ADDRESS || defaultStation.address,
     stationId: 'ZINI-M3',
-    // radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius), // ORIGINAL — restore this line when done testing
-    radius: 50 // TEST ONLY — widened to absorb GPS accuracy drift while testing
+    radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius)
   }
+  // TEST ONLY — temporary attendance test location (General Trias)
+  // 'ZINI-M3': {
+  //   latitude: 14.364417324719483,
+  //   longitude: 120.88277998427404,
+  //   name: import.meta.env.VITE_STATION_ZINI_M3_NAME || 'Station Delta',
+  //   address: import.meta.env.VITE_STATION_ZINI_M3_ADDRESS || defaultStation.address,
+  //   stationId: 'ZINI-M3',
+  //   radius: 50
+  // }
 };
 
 export const getStationGeo = (stationId) => {

@@ -5,7 +5,6 @@ import {
   FiCheck,
   FiCopy,
   FiExternalLink,
-  FiInfo,
   FiMail,
   FiMessageCircle,
   FiRefreshCw,
@@ -26,7 +25,7 @@ import { useLandingContent } from '../context/LandingContentContext';
 
 const CHAT_COPY = {
   english: {
-    messageUs: 'Message Us', team: 'BFP Dasmariñas Team', visitor: 'Visitor', you: 'You', conversation: 'Conversation',
+    messageUs: 'Message Us', team: 'BFP Dasmariñas Team', visitor: 'Visitor', you: 'You', conversation: 'Conversation', automatedReply: 'Automatic reply',
     restoring: 'Restoring your conversation...', restoringDetail: 'Your previous messages are being loaded securely.',
     recoveryTitle: 'Private recovery code', recoveryHelp: 'Keep this code private. Use it to continue the conversation on another device.',
     copied: 'Copied', copyCode: 'Copy code', writeMessage: 'Write a message', wait: 'Wait', sendMessage: 'Send message',
@@ -47,7 +46,7 @@ const CHAT_COPY = {
     },
   },
   tagalog: {
-    messageUs: 'Mag-message', team: 'BFP Dasmariñas Team', visitor: 'Bisita', you: 'Ikaw', conversation: 'Pag-uusap',
+    messageUs: 'Mag-message', team: 'BFP Dasmariñas Team', visitor: 'Bisita', you: 'Ikaw', conversation: 'Pag-uusap', automatedReply: 'Awtomatikong tugon',
     restoring: 'Binabalik ang iyong pag-uusap...', restoringDetail: 'Ligtas na kinukuha ang iyong mga naunang mensahe.',
     recoveryTitle: 'Pribadong recovery code', recoveryHelp: 'Panatilihing pribado ang code na ito. Gamitin ito upang ipagpatuloy ang pag-uusap sa ibang device.',
     copied: 'Nakopya', copyCode: 'Kopyahin ang code', writeMessage: 'Sumulat ng mensahe', wait: 'Maghintay', sendMessage: 'Ipadala ang mensahe',
@@ -300,10 +299,18 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
             {sortedMessages.map((message) => {
               if (message.sender_type === 'system') {
                 return (
-                  <div className="visitor-chat-system-message" key={message.id}>
-                    <FiInfo aria-hidden="true" />
-                    <span>{message.body}</span>
-                  </div>
+                  <article className="visitor-chat-message is-admin is-automatic" key={message.id}>
+                    <span className="visitor-chat-message-avatar" aria-hidden="true">
+                      <FiShield />
+                    </span>
+                    <div>
+                      <span className="visitor-chat-sender">
+                        {copy.team} <small>{copy.automatedReply}</small>
+                      </span>
+                      <p>{message.body}</p>
+                      <time dateTime={message.created_at}>{formatMessageTime(message.created_at)}</time>
+                    </div>
+                  </article>
                 );
               }
 

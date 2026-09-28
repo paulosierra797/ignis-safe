@@ -1,7 +1,7 @@
 import './Footer.css'
 import logo from '../assets/bfp_dasma-280.webp'
 import { Link, useLocation } from 'react-router-dom'
-import { FiFacebook, FiMail, FiPhone } from 'react-icons/fi'
+import { FiFacebook, FiLogIn, FiMail, FiPhone } from 'react-icons/fi'
 import { useLandingContent } from '../context/LandingContentContext'
 import { getLandingUiCopy, normalizeDasmarinasText } from '../utils/landingLanguage'
 
@@ -77,6 +77,10 @@ export default function Footer() {
         <div className="footer-container footer-bottom-inner">
           <p>&copy; {currentYear} BFP Dasmariñas City Fire Station. <span data-landing-edit-path={`copy.${language}.rightsReserved`} data-landing-edit-label="Copyright text">{copy.rightsReserved}</span></p>
           <div className="footer-links">
+            <Link to="/portal/login" className="footer-portal-link">
+              <FiLogIn aria-hidden="true" />
+              <span>{copy.staffPortal}</span>
+            </Link>
             <Link to="/terms">{copy.terms}</Link>
             <Link to="/privacy">{copy.privacy}</Link>
           </div>

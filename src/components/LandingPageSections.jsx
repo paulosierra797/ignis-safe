@@ -1,3 +1,6 @@
+import { useRef } from 'react';
+import { useGSAP } from '@gsap/react';
+import { gsap } from 'gsap';
 import { FiArrowDown, FiArrowUp, FiEye, FiEyeOff, FiMove, FiSettings } from 'react-icons/fi';
 import { useLandingContent } from '../context/LandingContentContext';
 import HeroSection from './HeroSection';
@@ -8,6 +11,9 @@ import ProcessSection from './ProcessSection';
 import AboutSection from './AboutSection';
 import ContactSection from './ContactSection';
 import FAQSection from './FAQSection';
+import './LandingMotion.css';
+
+gsap.registerPlugin(useGSAP);
 
 const LANDING_SECTIONS = {
   hero: { label: 'Main banner', Component: HeroSection },
@@ -19,6 +25,70 @@ const LANDING_SECTIONS = {
   contact: { label: 'Contact information', Component: ContactSection },
   faq: { label: 'Frequently asked questions', Component: FAQSection },
 };
+
+const MOTION_TARGETS = {
+  hero: '.hero-content > *, .hero-service-status, .hero-service-link',
+  trust: '.landing-trust-heading, .landing-trust-item',
+  announcements: '.landing-announcements-header, .landing-announcements-grid, .landing-announcements-empty',
+  process: '.process-heading-row, .process-column',
+  about: '.about-image-wrap, .about-content > *',
+  contact: '.contact-image, .contact-content > h2, .emergency-title, .contact-info',
+  faq: '.faq-heading-row, .faq-item',
+};
+
+function LandingSectionFrame({ sectionId, className, editMode, children }) {
+  const sectionRef = useRef(null);
+
+  useGSAP(() => {
+    const frame = sectionRef.current;
+    const targetSelector = MOTION_TARGETS[sectionId];
+    if (!frame || editMode || !targetSelector) return undefined;
+
+    const targets = Array.from(frame.querySelectorAll(targetSelector));
+    if (targets.length === 0) return undefined;
+
+    let observer;
+    const media = gsap.matchMedia();
+
+    media.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.set(targets, { autoAlpha: 0, y: sectionId === 'hero' ? 16 : 26 });
+
+      observer = new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting) return;
+
+        frame.classList.add('is-motion-visible');
+        gsap.to(targets, {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.62,
+          stagger: 0.065,
+          ease: 'power2.out',
+          clearProps: 'opacity,visibility,transform',
+        });
+        observer.disconnect();
+      }, { threshold: 0.1, rootMargin: '0px 0px -7% 0px' });
+
+      observer.observe(frame);
+      return () => observer?.disconnect();
+    });
+
+    media.add('(prefers-reduced-motion: reduce)', () => {
+      frame.classList.add('is-motion-visible');
+      gsap.set(targets, { clearProps: 'opacity,visibility,transform' });
+    });
+
+    return () => {
+      observer?.disconnect();
+      media.revert();
+    };
+  }, { scope: sectionRef, dependencies: [editMode, sectionId], revertOnUpdate: true });
+
+  return (
+    <div ref={sectionRef} className={className} data-landing-section={sectionId}>
+      {children}
+    </div>
+  );
+}
 
 export default function LandingPageSections({
   editMode = false,
@@ -39,10 +109,11 @@ export default function LandingPageSections({
 
     const SectionComponent = definition.Component;
     return (
-      <div
+      <LandingSectionFrame
         key={sectionId}
+        sectionId={sectionId}
+        editMode={editMode}
         className={`landing-admin-section${editMode ? ' is-editing' : ''}${isHidden ? ' is-hidden' : ''}`}
-        data-landing-section={sectionId}
       >
         {editMode && (
           <div className="landing-admin-section-tools" data-landing-editor-control="true">
@@ -99,7 +170,7 @@ export default function LandingPageSections({
         ) : (
           <SectionComponent />
         )}
-      </div>
+      </LandingSectionFrame>
     );
   });
 }

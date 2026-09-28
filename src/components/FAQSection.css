@@ -32,16 +32,6 @@
   text-wrap: balance;
 }
 
-.faq-heading-row h2::after {
-  content: '';
-  position: absolute;
-  right: -0.35rem;
-  bottom: -0.2rem;
-  width: 42px;
-  height: 2px;
-  background: #d64045;
-}
-
 .faq-intro {
   width: min(100%, 520px);
   margin: 0.8rem auto 0;
@@ -109,10 +99,9 @@
   display: inline-grid;
   place-items: center;
   border: 0;
-  border-radius: 50%;
-  background: #17191d;
-  color: #ffffff;
-  font-size: 0.88rem;
+  background: transparent;
+  color: #172033;
+  font-size: 1.25rem;
   font-weight: 700;
   line-height: 1;
 }

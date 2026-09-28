@@ -7,7 +7,7 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 // the Supabase default. localStorage is shared across every tab on the origin,
 // so a user who is already signed in stays signed in when the Attendance / QR
 // link opens in a new tab or window - the attendance guard reuses the existing
-// session instead of bouncing a logged-in user through /login again.
+// session instead of bouncing a logged-in user through /portal/login again.
 // (sessionStorage is scoped to a single browsing context, so a freshly opened
 // tab would see no session and the guard would treat the user as logged out.)
 //

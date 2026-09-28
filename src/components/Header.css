@@ -248,11 +248,6 @@
   outline: none;
 }
 
-.landing-login-link {
-  margin-left: 0.15rem;
-  text-decoration: none;
-}
-
 .landing-language-selector {
   position: relative;
 }
@@ -376,32 +371,6 @@
   color: #7a8798;
   font-size: 0.66rem;
   font-weight: 750;
-}
-
-.login-btn {
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.5rem 0.65rem;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: #344054;
-  font-size: 0.74rem;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: none;
-  transition: color 0.18s ease;
-}
-
-.login-btn:hover,
-.login-btn:focus-visible {
-  background: transparent;
-  color: #8f1519;
-  transform: none;
-  outline: none;
 }
 
 .menu-btn {
@@ -536,10 +505,6 @@
     padding: 0.72rem 0.9rem;
   }
 
-  .landing-login-link {
-    margin: 0.65rem 0 0;
-  }
-
   .landing-language-selector {
     width: 100%;
     margin-top: 0.45rem;
@@ -574,9 +539,6 @@
     margin-top: 0.1rem;
   }
 
-  .login-btn {
-    width: 100%;
-  }
 }
 
 @media (max-width: 520px) {
@@ -611,8 +573,7 @@
 @media (prefers-reduced-motion: reduce) {
   .nav,
   .nav-dropdown-menu,
-  .nav-link::after,
-  .login-btn {
+  .nav-link::after {
     transition: none;
   }
 }

@@ -1,5 +1,6 @@
 import Pagination from './Pagination';
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import CloseButton from './CloseButton';
 import './LandingAnnouncements.css';
 import { useLandingContent } from '../context/LandingContentContext';
@@ -17,56 +18,6 @@ const formatDate = (isoDate) => {
   });
 };
 
-function ExpandableAnnouncementMessage({ content, copy }) {
-  const [expanded, setExpanded] = useState(false);
-  const [canExpand, setCanExpand] = useState(false);
-  const contentRef = useRef(null);
-
-  useLayoutEffect(() => {
-    if (expanded) return undefined;
-
-    const element = contentRef.current;
-    if (!element) return undefined;
-
-    const measureOverflow = () => {
-      setCanExpand(element.scrollHeight > element.clientHeight + 1);
-    };
-
-    measureOverflow();
-    const observer = typeof ResizeObserver !== 'undefined'
-      ? new ResizeObserver(measureOverflow)
-      : null;
-    observer?.observe(element);
-    window.addEventListener('resize', measureOverflow);
-
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener('resize', measureOverflow);
-    };
-  }, [content, expanded]);
-
-  return (
-    <div className="landing-announcement-message">
-      <p
-        ref={contentRef}
-        className={`landing-announcement-content${expanded ? '' : ' is-clamped'}`}
-      >
-        {normalizeDasmarinasText(content)}
-      </p>
-      {canExpand && (
-        <button
-          type="button"
-          className="landing-announcement-content-toggle"
-          onClick={() => setExpanded((current) => !current)}
-          aria-expanded={expanded}
-        >
-          {expanded ? copy.seeLess : copy.seeMore}
-        </button>
-      )}
-    </div>
-  );
-}
-
 export default function LandingAnnouncements() {
   const { content, language } = useLandingContent();
   const copy = { ...getLandingUiCopy(language), ...(content.copy?.[language] || {}) };
@@ -74,8 +25,26 @@ export default function LandingAnnouncements() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const modalRef = useRef(null);
+  const modalOriginRef = useRef(null);
 
   const itemsPerPage = 10;
+
+  const openAnnouncement = (announcement, trigger) => {
+    modalOriginRef.current = trigger?.getBoundingClientRect?.() || null;
+    setSelectedAnnouncement(announcement);
+  };
+
+  const handleCardClick = (event, announcement) => {
+    if (event.target.closest('a')) return;
+    openAnnouncement(announcement, event.currentTarget);
+  };
+
+  const handleCardKeyDown = (event, announcement) => {
+    if (event.target !== event.currentTarget || !['Enter', ' '].includes(event.key)) return;
+    event.preventDefault();
+    openAnnouncement(announcement, event.currentTarget);
+  };
 
   useEffect(() => {
     const loadAnnouncements = async () => {
@@ -93,6 +62,8 @@ export default function LandingAnnouncements() {
     if (!selectedAnnouncement) return undefined;
 
     const previousOverflow = document.body.style.overflow;
+    const previouslyFocused = document.activeElement;
+    const focusFrame = window.requestAnimationFrame(() => modalRef.current?.focus());
     const handleEscape = (event) => {
       if (event.key === 'Escape') setSelectedAnnouncement(null);
     };
@@ -101,9 +72,40 @@ export default function LandingAnnouncements() {
     window.addEventListener('keydown', handleEscape);
 
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleEscape);
+      previouslyFocused?.focus?.();
     };
+  }, [selectedAnnouncement]);
+
+  useLayoutEffect(() => {
+    const modal = modalRef.current;
+    const origin = modalOriginRef.current;
+    if (!selectedAnnouncement || !modal || !origin) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+
+    const target = modal.getBoundingClientRect();
+    const originCenterX = origin.left + origin.width / 2;
+    const originCenterY = origin.top + origin.height / 2;
+    const targetCenterX = target.left + target.width / 2;
+    const targetCenterY = target.top + target.height / 2;
+    const scaleX = Math.max(0.12, Math.min(1, origin.width / target.width));
+    const scaleY = Math.max(0.12, Math.min(1, origin.height / target.height));
+
+    const animation = modal.animate([
+      {
+        opacity: 0.35,
+        transform: `translate(${originCenterX - targetCenterX}px, ${originCenterY - targetCenterY}px) scale(${scaleX}, ${scaleY})`,
+      },
+      { opacity: 1, transform: 'translate(0, 0) scale(1, 1)' },
+    ], {
+      duration: 360,
+      easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      fill: 'both',
+    });
+
+    return () => animation.cancel();
   }, [selectedAnnouncement]);
 
   const totalPages = Math.max(1, Math.ceil(announcements.length / itemsPerPage));
@@ -133,23 +135,33 @@ export default function LandingAnnouncements() {
   (safeCurrentPage - 1) * itemsPerPage,
   (safeCurrentPage - 1) * itemsPerPage + itemsPerPage
 ).map((announcement) => (
-              <article key={announcement.announcement_id} className="landing-announcement-card">
+              <article
+                key={announcement.announcement_id}
+                className="landing-announcement-card"
+                role="button"
+                tabIndex={0}
+                aria-haspopup="dialog"
+                aria-label={`${copy.viewFullAnnouncement}: ${normalizeDasmarinasText(announcement.title)}`}
+                onClick={(event) => handleCardClick(event, announcement)}
+                onKeyDown={(event) => handleCardKeyDown(event, announcement)}
+              >
                 <span className="landing-announcement-tag">{copy.publicLabel}</span>
                 <h3>{normalizeDasmarinasText(announcement.title)}</h3>
-                <ExpandableAnnouncementMessage content={announcement.content} copy={copy} />
+                <div className="landing-announcement-message">
+                  <p className="landing-announcement-content is-clamped">
+                    {normalizeDasmarinasText(announcement.content)}
+                  </p>
+                </div>
                 {Array.isArray(announcement.attachments) && announcement.attachments.length > 0 && (
                   <div className="landing-announcement-attachments">
                     {announcement.attachments.map((attachment, index) => (
                       attachment.is_image ? (
-                        <button
-                          type="button"
+                        <div
                           key={`${announcement.announcement_id}-img-${index}`}
                           className="landing-announcement-image-link"
-                          onClick={() => setSelectedAnnouncement(announcement)}
-                          aria-label={`Expand ${announcement.title}`}
                         >
                           <img src={attachment.file_url} alt={normalizeDasmarinasText(attachment.file_name || 'Attached image')} loading="lazy" />
-                        </button>
+                        </div>
                       ) : (
                         <a
                           key={`${announcement.announcement_id}-file-${index}`}
@@ -164,14 +176,6 @@ export default function LandingAnnouncements() {
                     ))}
                   </div>
                 )}
-                <button
-                  type="button"
-                  className="landing-announcement-expand-button"
-                  onClick={() => setSelectedAnnouncement(announcement)}
-                >
-                  {copy.viewFullAnnouncement}
-                  <span aria-hidden="true">↗</span>
-                </button>
                 <div className="landing-announcement-meta">
                   <span>BFP Dasmariñas City Fire Station</span>
                   <span>{formatDate(announcement.created_at)}</span>
@@ -184,7 +188,7 @@ export default function LandingAnnouncements() {
         )}
       </div>
 
-      {selectedAnnouncement && (
+      {selectedAnnouncement && createPortal((
         <div
           className="landing-announcement-modal-overlay"
           onMouseDown={(event) => {
@@ -192,10 +196,13 @@ export default function LandingAnnouncements() {
           }}
         >
           <article
+            ref={modalRef}
             className="landing-announcement-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby={`landing-announcement-modal-title-${selectedAnnouncement.announcement_id}`}
+            aria-describedby={`landing-announcement-modal-content-${selectedAnnouncement.announcement_id}`}
+            tabIndex={-1}
           >
             <div className="landing-announcement-modal-header">
               <span className="landing-announcement-tag">{copy.publicNotice}</span>
@@ -209,7 +216,12 @@ export default function LandingAnnouncements() {
             <h2 id={`landing-announcement-modal-title-${selectedAnnouncement.announcement_id}`}>
               {normalizeDasmarinasText(selectedAnnouncement.title)}
             </h2>
-            <p className="landing-announcement-modal-content">{normalizeDasmarinasText(selectedAnnouncement.content)}</p>
+            <p
+              className="landing-announcement-modal-content"
+              id={`landing-announcement-modal-content-${selectedAnnouncement.announcement_id}`}
+            >
+              {normalizeDasmarinasText(selectedAnnouncement.content)}
+            </p>
 
             {Array.isArray(selectedAnnouncement.attachments) && selectedAnnouncement.attachments.length > 0 && (
               <div className="landing-announcement-modal-attachments">
@@ -246,7 +258,7 @@ export default function LandingAnnouncements() {
             </div>
           </article>
         </div>
-      )}
+      ), document.body)}
     </section>
   );
 }

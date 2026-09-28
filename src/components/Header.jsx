@@ -4,7 +4,7 @@ import logo from '../assets/bfp_dasma-280.webp';
 import englishFlag from '../assets/flag-us.svg';
 import filipinoFlag from '../assets/flag-ph.svg';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FiChevronDown, FiLogIn, FiMenu, FiPhoneCall, FiX } from 'react-icons/fi';
+import { FiChevronDown, FiMenu, FiPhoneCall, FiX } from 'react-icons/fi';
 import { useLandingContent } from '../context/LandingContentContext';
 import { getLandingUiCopy } from '../utils/landingLanguage';
 
@@ -752,10 +752,6 @@ export default function Header() {
             </ul>
           </div>
 
-          <Link className="landing-login-link login-btn" to="/login" onClick={() => setMenuOpen(false)}>
-            <FiLogIn aria-hidden="true" />
-            <span data-landing-edit-path={`copy.${language}.login`} data-landing-edit-label="Login link label">{copy.login}</span>
-          </Link>
         </nav>
       </div>
     </header>

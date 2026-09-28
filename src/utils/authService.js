@@ -473,6 +473,9 @@ export const sendPasswordResetEmail = async (email) => {
       {
         body: {
           email: normalizedEmail,
+          // Keep the long-standing callback allow-listed in Supabase. The app
+          // immediately forwards /login (including its recovery hash) to the
+          // canonical staff portal route.
           redirectTo: `${window.location.origin}/login`
         }
       }

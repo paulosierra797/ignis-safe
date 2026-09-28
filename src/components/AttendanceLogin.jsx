@@ -8,8 +8,8 @@ import './AttendanceLogin.css';
 
 // Bounce-through controller for the Attendance QR flow: it never asks for
 // credentials itself. It resolves the visitor's existing session (personnel
-// login lives on the normal /login page) and either continues straight into
-// attendance validation or sends them to /login with a return URL back here.
+// login lives on the staff /portal/login page) and either continues straight
+// into attendance validation or sends them there with a return URL back here.
 const AttendanceLogin = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -78,12 +78,12 @@ const AttendanceLogin = () => {
         // No usable personnel session. Distinguish "not logged in at all"
         // (send to the normal login page and come straight back here) from
         // "logged in but this account can't mark attendance" (surface an
-        // error instead of bouncing back to /login in a loop).
+        // error instead of bouncing back to /portal/login in a loop).
         const { data: sessionData } = await supabase.auth.getSession();
         if (isCancelled) return;
 
         if (!sessionData?.session) {
-          navigate(`/login?redirect=${encodeURIComponent(buildLoginBounceUrl())}`, { replace: true });
+          navigate(`/portal/login?redirect=${encodeURIComponent(buildLoginBounceUrl())}`, { replace: true });
           return;
         }
 

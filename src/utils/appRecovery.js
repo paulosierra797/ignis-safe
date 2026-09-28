@@ -83,7 +83,7 @@ export function clearReloadMarker() {
 
 // "Return to home" - send the user to the right place for their role with a
 // full document load (also picks up a fresh build). ProtectedRoute still runs
-// on arrival, so a signed-out or unauthorized user is bounced to /login.
+// on arrival, so a signed-out or unauthorized user is bounced to /portal/login.
 export async function returnToRoleHome() {
   await clearStaleClientCaches();
   setReloadGuardActive(false);

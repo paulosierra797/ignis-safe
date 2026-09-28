@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Pagination from './Pagination';
 import RecordActions from './RecordActions';
@@ -8,21 +8,14 @@ import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
 import ToastMessage from './ToastMessage';
 import CloseButton from './CloseButton';
-import AttendanceRequirementsModal from './AttendanceRequirementsModal';
 import {
   generateQRSession,
   getActiveQRSession,
   getExpiryTime,
   getAttendanceStatus,
-  getMyAttendanceHistory,
-  getFaceByAdminId,
-  STATION_GEO
+  getMyAttendanceHistory
 } from '../utils/attendanceService';
-import { getSession } from '../utils/authService';
-import { useUser } from '../context/UserContext';
 import './AttendancePersonnel.css';
-
-const ATTENDANCE_REQUIREMENTS_SEEN_PREFIX = 'ignis-safe:attendance-requirements-seen';
 
 const formatDistance = (distanceMeters) => {
   const distance = Number(distanceMeters);
@@ -61,12 +54,6 @@ const AttendancePersonnel = () => {
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [searchParams] = useSearchParams();
-  const { currentUser } = useUser();
-  const navigate = useNavigate();
-
-  const [showRequirementsModal, setShowRequirementsModal] = useState(false);
-  const [requirementsSeenKey, setRequirementsSeenKey] = useState(null);
-  const [hasRegisteredFaceId, setHasRegisteredFaceId] = useState(true);
 
   const stationId = searchParams.get('station') || 'DEFAULT';
   const rawBaseUrl = import.meta.env.VITE_PUBLIC_BASE_URL
@@ -86,79 +73,6 @@ const AttendancePersonnel = () => {
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
   }, [selectedRecord]);
-
-  // Attendance Requirements gate: instructional only, shown once per
-  // successful login session. Keyed by the Supabase session's sign-in
-  // timestamp (not localStorage) so it naturally reappears after a logout
-  // and a fresh login, without touching any auth/session logic.
-  useEffect(() => {
-    let isCancelled = false;
-    const personnelId = currentUser?.admin_id;
-    if (!personnelId) return undefined;
-
-    const evaluateRequirementsGate = async () => {
-      try {
-        const { data: session } = await getSession();
-        const loginMarker = session?.user?.last_sign_in_at || session?.user?.id || 'session';
-        const seenKey = `${ATTENDANCE_REQUIREMENTS_SEEN_PREFIX}:${personnelId}:${loginMarker}`;
-
-        if (isCancelled) return;
-        setRequirementsSeenKey(seenKey);
-
-        let alreadySeen = false;
-        try {
-          alreadySeen = Boolean(window.sessionStorage.getItem(seenKey));
-        } catch {
-          alreadySeen = false;
-        }
-
-        if (!alreadySeen) setShowRequirementsModal(true);
-      } catch {
-        if (!isCancelled) setShowRequirementsModal(true);
-      }
-    };
-
-    void evaluateRequirementsGate();
-    return () => {
-      isCancelled = true;
-    };
-  }, [currentUser?.admin_id]);
-
-  useEffect(() => {
-    let isCancelled = false;
-    const personnelId = currentUser?.admin_id;
-    if (!personnelId) return undefined;
-
-    const checkFaceIdRegistered = async () => {
-      try {
-        const { data } = await getFaceByAdminId(personnelId);
-        if (!isCancelled) setHasRegisteredFaceId(Boolean(data));
-      } catch {
-        if (!isCancelled) setHasRegisteredFaceId(true);
-      }
-    };
-
-    void checkFaceIdRegistered();
-    return () => {
-      isCancelled = true;
-    };
-  }, [currentUser?.admin_id]);
-
-  const handleRequirementsContinue = () => {
-    if (requirementsSeenKey) {
-      try {
-        window.sessionStorage.setItem(requirementsSeenKey, '1');
-      } catch {
-        // Private browsing or storage unavailable — modal may show again
-        // next visit this session, which is a safe fallback.
-      }
-    }
-    setShowRequirementsModal(false);
-  };
-
-  const handleRequirementsGoToProfile = () => {
-    navigate('/personnel/profile');
-  };
 
   const handleRefreshQR = useCallback(async () => {
     try {
@@ -265,14 +179,6 @@ const AttendancePersonnel = () => {
 
   return (
     <div className="attendance-personnel-container">
-      {showRequirementsModal && (
-        <AttendanceRequirementsModal
-          hasFaceId={hasRegisteredFaceId}
-          radiusMeters={STATION_GEO.radius}
-          onContinue={handleRequirementsContinue}
-          onGoToProfile={handleRequirementsGoToProfile}
-        />
-      )}
       <Sidebar variant="personnel" />
       <div className="attendance-personnel-content">
         <PageHeader

@@ -2,6 +2,22 @@ export const VISITOR_CHAT_MAX_LENGTH = 1500;
 export const VISITOR_CHAT_STORAGE_KEY = 'ignis-safe:visitor-chat-access';
 export const VISITOR_CHAT_DRAFT_KEY = 'ignis-safe:visitor-chat-draft';
 export const VISITOR_CHAT_PENDING_KEY = 'ignis-safe:visitor-chat-pending';
+export const VISITOR_CHAT_VISITOR_ID_KEY = 'ignis-safe:visitor-id';
+
+// Persistent per-browser identifier (survives across tabs/sessions, unlike the
+// sessionStorage-scoped recovery code) so the server can scope conversation-creation
+// rate limits to this visitor instead of falling back to a shared IP address.
+export const getOrCreateVisitorId = () => {
+  try {
+    const existing = localStorage.getItem(VISITOR_CHAT_VISITOR_ID_KEY);
+    if (existing) return existing;
+    const visitorId = crypto.randomUUID();
+    localStorage.setItem(VISITOR_CHAT_VISITOR_ID_KEY, visitorId);
+    return visitorId;
+  } catch {
+    return crypto.randomUUID();
+  }
+};
 
 const readFunctionErrorPayload = async (error) => {
   const response = error?.context;
@@ -41,6 +57,7 @@ export const startVisitorConversation = ({ name, email, message, website = '', c
     message,
     website,
     clientMessageId,
+    visitorId: getOrCreateVisitorId(),
   });
 
 export const fetchVisitorConversation = ({ recoveryCode, markRead = false }) =>

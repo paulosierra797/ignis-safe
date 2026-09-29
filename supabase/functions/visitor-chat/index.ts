@@ -229,6 +229,9 @@ Deno.serve(async (request) => {
       const validationError = validateMessageContent(rawMessage);
       const message = maskOffensiveLanguage(rawMessage);
       const clientMessageId = String(body?.clientMessageId || '');
+      const visitorId = String(body?.visitorId || '');
+      const hasVisitorId = isValidClientId(visitorId);
+      const visitorIdHash = hasVisitorId ? await sha256('visitor-id-' + visitorId) : null;
 
       if (visitorName.length < 2 || visitorName.length > 80 || !isValidName(visitorName)) {
         return jsonResponse({ error: 'Please enter a valid name using letters and spaces only.' }, 400);
@@ -239,6 +242,93 @@ Deno.serve(async (request) => {
       if (validationError) return jsonResponse({ error: validationError }, 400);
       if (!isValidClientId(clientMessageId)) {
         return jsonResponse({ error: 'Unable to safely identify this message. Please try again.' }, 400);
+      }
+
+      // A returning visitor (same persistent browser id) who still has an active
+      // conversation should continue it instead of creating a duplicate one, so a
+      // cleared/lost recovery code doesn't consume conversation-creation quota.
+      if (visitorIdHash) {
+        const { data: existingConversation, error: existingConversationError } = await serviceClient
+          .from('visitor_conversations')
+          .select('*')
+          .eq('visitor_id_hash', visitorIdHash)
+          .eq('is_archived', false)
+          .is('delete_after', null)
+          .order('last_message_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existingConversationError) throw existingConversationError;
+
+        if (existingConversation) {
+          const allowedMessage = await enforceRateLimits({
+            request,
+            action: 'message',
+            rules: [
+              {
+                subject: String(existingConversation.id) + '-cooldown',
+                windowMs: MESSAGE_COOLDOWN_MS,
+                limit: 1,
+                includeRequestSource: false,
+              },
+              {
+                subject: String(existingConversation.id) + '-ten-minutes',
+                windowMs: 10 * 60 * 1000,
+                limit: 5,
+                includeRequestSource: false,
+              },
+              {
+                subject: String(existingConversation.id) + '-daily',
+                windowMs: 24 * 60 * 60 * 1000,
+                limit: 25,
+                includeRequestSource: false,
+              },
+            ],
+          });
+          if (!allowedMessage) {
+            return jsonResponse({
+              error: 'Message limit reached. Please wait before sending another message.',
+            }, 429);
+          }
+          if (await isRecentDuplicate(String(existingConversation.id), message)) {
+            return jsonResponse({ error: 'This message was already sent. Please write a new message.' }, 409);
+          }
+
+          const reissuedCode = createRecoveryCode();
+          const reissuedCodeHash = await sha256(normalizeRecoveryCode(reissuedCode));
+          const reuseNow = new Date().toISOString();
+
+          const { error: reuseMessageError } = await serviceClient
+            .from('visitor_messages')
+            .insert({
+              conversation_id: existingConversation.id,
+              client_message_id: clientMessageId,
+              sender_type: 'visitor',
+              body: message,
+              created_at: reuseNow,
+            });
+          if (reuseMessageError && reuseMessageError.code !== '23505') throw reuseMessageError;
+
+          const { data: reopenedConversation, error: reopenError } = await serviceClient
+            .from('visitor_conversations')
+            .update({
+              access_code_hash: reissuedCodeHash,
+              status: 'open',
+              resolved_at: null,
+              resolved_by: null,
+              last_message_preview: message.slice(0, 180),
+              last_sender_type: 'visitor',
+              last_message_at: reuseNow,
+              visitor_last_read_at: reuseNow,
+              updated_at: reuseNow,
+            })
+            .eq('id', existingConversation.id)
+            .select('*')
+            .single();
+          if (reopenError) throw reopenError;
+
+          const reusedResult = await fetchConversation(reopenedConversation, true);
+          return jsonResponse({ data: { ...reusedResult, recoveryCode: reissuedCode }, error: null });
+        }
       }
 
       const emailRateRule = visitorEmail
@@ -253,8 +343,15 @@ Deno.serve(async (request) => {
         request,
         action: 'start',
         rules: [
-          { subject: 'connection-short', windowMs: 30 * 60 * 1000, limit: 1 },
-          { subject: 'connection-day', windowMs: 24 * 60 * 60 * 1000, limit: 3 },
+          hasVisitorId
+            ? { subject: 'visitor-short-' + visitorIdHash, windowMs: 30 * 60 * 1000, limit: 1, includeRequestSource: false }
+            : { subject: 'connection-short', windowMs: 30 * 60 * 1000, limit: 1 },
+          hasVisitorId
+            ? { subject: 'visitor-day-' + visitorIdHash, windowMs: 24 * 60 * 60 * 1000, limit: 3, includeRequestSource: false }
+            : { subject: 'connection-day', windowMs: 24 * 60 * 60 * 1000, limit: 3 },
+          // Coarse, generous per-IP ceiling kept as an abuse fallback/signal so a single
+          // connection can't mint unlimited conversations by rotating visitor ids.
+          { subject: 'connection-day-fallback', windowMs: 24 * 60 * 60 * 1000, limit: 15 },
           ...emailRateRule,
         ],
       });
@@ -275,6 +372,7 @@ Deno.serve(async (request) => {
           visitor_label: visitorLabel,
           visitor_name: visitorName,
           visitor_email: visitorEmail,
+          visitor_id_hash: visitorIdHash,
           access_code_hash: accessCodeHash,
           last_message_preview: message.slice(0, 180),
           last_sender_type: 'visitor',

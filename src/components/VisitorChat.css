@@ -247,10 +247,6 @@
   gap: 0.75rem;
 }
 
-.visitor-chat--full .visitor-chat-reconnect-error {
-  grid-column: 1 / -1;
-}
-
 .visitor-chat-welcome h2,
 .visitor-chat-welcome p,
 .visitor-chat-restore-form h2,
@@ -592,7 +588,6 @@
 }
 
 .visitor-chat-reconnect-error {
-  margin-bottom: 0.85rem;
   border: 1px solid #fecaca;
   border-radius: 6px;
 }

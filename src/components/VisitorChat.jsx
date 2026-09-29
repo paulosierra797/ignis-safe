@@ -400,13 +400,6 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
             </aside>
           )}
 
-          {error && (
-            <div className="visitor-chat-reconnect-error" role="alert">
-              <p>{error}</p>
-              <button type="button" onClick={handleStartDifferentConversation}>{copy.startAgain}</button>
-            </div>
-          )}
-
           {restoreMode ? (
             <form className="visitor-chat-restore-form" onSubmit={handleRestore}>
               {isCompact && (
@@ -435,6 +428,12 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                 autoComplete="off"
                 required
               />
+              {error && (
+                <div className="visitor-chat-reconnect-error" role="alert">
+                  <p>{error}</p>
+                  <button type="button" onClick={handleStartDifferentConversation}>{copy.startAgain}</button>
+                </div>
+              )}
               <button type="submit" className="visitor-chat-primary" disabled={loading || !recoveryInput.trim()}>
                 {loading ? copy.checking : copy.continueConversation}
               </button>
@@ -532,6 +531,13 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
                 <FiShield aria-hidden="true" />
                 {copy.privacy}
               </p>
+
+              {error && (
+                <div className="visitor-chat-reconnect-error" role="alert">
+                  <p>{error}</p>
+                  <button type="button" onClick={handleStartDifferentConversation}>{copy.startAgain}</button>
+                </div>
+              )}
 
               <button
                 type="submit"

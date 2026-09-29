@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   clearPendingVisitorMessage,
   clearVisitorChatAccess,
+  createClientMessageId,
   fetchVisitorConversation,
   readPendingVisitorMessage,
   readVisitorChatAccess,
@@ -10,6 +11,8 @@ import {
   storePendingVisitorMessage,
   storeVisitorChatAccess,
 } from '../utils/visitorChatService';
+
+const UNEXPECTED_ERROR_MESSAGE = 'Something went wrong while sending your message. Please try again.';
 
 export default function useVisitorChat({ active = false } = {}) {
   const [access, setAccess] = useState(() => readVisitorChatAccess());
@@ -21,6 +24,14 @@ export default function useVisitorChat({ active = false } = {}) {
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [error, setError] = useState('');
   const requestInFlightRef = useRef(false);
+  // Synchronous submit latch. The `sending` state only updates on the next
+  // render, so two rapid submits could both slip past a state-only guard.
+  const submitInFlightRef = useRef(false);
+
+  const finishSubmit = useCallback(() => {
+    submitInFlightRef.current = false;
+    setSending(false);
+  }, []);
 
   useEffect(() => {
     if (cooldownSeconds <= 0) return undefined;
@@ -30,12 +41,13 @@ export default function useVisitorChat({ active = false } = {}) {
     return () => window.clearInterval(intervalId);
   }, [cooldownSeconds]);
 
-  const applyResult = useCallback((data) => {
+  const applyResult = useCallback((data, { keepError = false } = {}) => {
     if (!data) return;
     setConversation(data.conversation || null);
     setMessages(data.messages || []);
     setHasUnreadReply(Boolean(data.hasUnreadAdminReply));
-    setError('');
+    // A background poll must not wipe the error a failed submit just showed.
+    if (!keepError) setError('');
   }, []);
 
   const refresh = useCallback(async ({ markRead = false, quiet = false } = {}) => {
@@ -43,21 +55,30 @@ export default function useVisitorChat({ active = false } = {}) {
 
     requestInFlightRef.current = true;
     if (!quiet) setLoading(true);
-    const result = await fetchVisitorConversation({
-      recoveryCode: access.recoveryCode,
-      markRead,
-    });
-    requestInFlightRef.current = false;
-    if (!quiet) setLoading(false);
 
-    if (result.error) {
-      if (!quiet) setError(result.error);
+    try {
+      const result = await fetchVisitorConversation({
+        recoveryCode: access.recoveryCode,
+        markRead,
+      });
+
+      if (result.error) {
+        if (!quiet) setError(result.error);
+        return result;
+      }
+
+      applyResult(result.data, { keepError: quiet });
+      if (markRead) setHasUnreadReply(false);
       return result;
+    } catch (refreshError) {
+      console.error('Refreshing the visitor conversation failed:', refreshError);
+      const failure = { data: null, error: UNEXPECTED_ERROR_MESSAGE };
+      if (!quiet) setError(failure.error);
+      return failure;
+    } finally {
+      requestInFlightRef.current = false;
+      if (!quiet) setLoading(false);
     }
-
-    applyResult(result.data);
-    if (markRead) setHasUnreadReply(false);
-    return result;
   }, [access, applyResult]);
 
   useEffect(() => {
@@ -94,14 +115,18 @@ export default function useVisitorChat({ active = false } = {}) {
 
     let cancelled = false;
     const retryPending = async () => {
-      const result = await sendVisitorMessage({
-        recoveryCode: access.recoveryCode,
-        message: pending.message,
-        clientMessageId: pending.clientMessageId,
-      });
-      if (!cancelled && !result.error) {
-        clearPendingVisitorMessage();
-        applyResult(result.data);
+      try {
+        const result = await sendVisitorMessage({
+          recoveryCode: access.recoveryCode,
+          message: pending.message,
+          clientMessageId: pending.clientMessageId,
+        });
+        if (!cancelled && !result.error) {
+          clearPendingVisitorMessage();
+          applyResult(result.data);
+        }
+      } catch (retryError) {
+        console.error('Retrying the pending visitor message failed:', retryError);
       }
     };
     void retryPending();
@@ -111,90 +136,131 @@ export default function useVisitorChat({ active = false } = {}) {
   }, [access?.recoveryCode, applyResult]);
 
   const startConversation = async ({ name, email, message, website = '' }) => {
-    if (sending) return { error: 'A message is already being sent.' };
+    if (submitInFlightRef.current) {
+      return { data: null, error: 'A message is already being sent.' };
+    }
+
+    submitInFlightRef.current = true;
     setSending(true);
     setError('');
 
-    const result = await startVisitorConversation({
-      name,
-      email,
-      message,
-      website,
-      clientMessageId: crypto.randomUUID(),
-    });
-    setSending(false);
+    try {
+      const result = await startVisitorConversation({
+        name,
+        email,
+        message,
+        website,
+        clientMessageId: createClientMessageId(),
+      });
 
-    if (result.error) {
-      setError(result.error);
+      if (result.error) {
+        setError(result.error);
+        return result;
+      }
+
+      const nextAccess = {
+        conversationId: result.data.conversation.id,
+        recoveryCode: result.data.recoveryCode,
+      };
+      storeVisitorChatAccess(nextAccess);
+      setAccess(nextAccess);
+      applyResult(result.data);
+      setCooldownSeconds(15);
       return result;
+    } catch (submitError) {
+      console.error('Starting the visitor conversation failed:', submitError);
+      const failure = { data: null, error: UNEXPECTED_ERROR_MESSAGE };
+      setError(failure.error);
+      return failure;
+    } finally {
+      // Runs after success, after a handled error result, and after an
+      // unexpected throw, so the button can never stay stuck on "Sending...".
+      finishSubmit();
     }
-
-    const nextAccess = {
-      conversationId: result.data.conversation.id,
-      recoveryCode: result.data.recoveryCode,
-    };
-    storeVisitorChatAccess(nextAccess);
-    setAccess(nextAccess);
-    applyResult(result.data);
-    setCooldownSeconds(15);
-    return result;
   };
 
   const sendMessage = async (message) => {
-    if (!access?.recoveryCode || sending) {
-      return { error: 'The conversation is not ready yet.' };
+    if (submitInFlightRef.current) {
+      return { data: null, error: 'A message is already being sent.' };
+    }
+    if (!access?.recoveryCode) {
+      return { data: null, error: 'The conversation is not ready yet.' };
     }
     if (cooldownSeconds > 0) {
-      const result = { error: `Please wait ${cooldownSeconds} seconds before sending again.` };
+      const result = {
+        data: null,
+        error: `Please wait ${cooldownSeconds} seconds before sending again.`,
+      };
       setError(result.error);
       return result;
     }
 
-    const pending = { message, clientMessageId: crypto.randomUUID() };
-    storePendingVisitorMessage(pending);
+    submitInFlightRef.current = true;
     setSending(true);
     setError('');
 
-    const result = await sendVisitorMessage({
-      recoveryCode: access.recoveryCode,
-      ...pending,
-    });
-    setSending(false);
+    try {
+      const pending = { message, clientMessageId: createClientMessageId() };
+      storePendingVisitorMessage(pending);
 
-    if (result.error) {
-      setError(result.error);
+      const result = await sendVisitorMessage({
+        recoveryCode: access.recoveryCode,
+        ...pending,
+      });
+
+      if (result.error) {
+        setError(result.error);
+        return result;
+      }
+
+      clearPendingVisitorMessage();
+      applyResult(result.data);
+      setCooldownSeconds(15);
       return result;
+    } catch (submitError) {
+      console.error('Sending the visitor message failed:', submitError);
+      const failure = { data: null, error: UNEXPECTED_ERROR_MESSAGE };
+      setError(failure.error);
+      return failure;
+    } finally {
+      finishSubmit();
     }
-
-    clearPendingVisitorMessage();
-    applyResult(result.data);
-    setCooldownSeconds(15);
-    return result;
   };
 
   const restoreConversation = async (recoveryCode) => {
     setLoading(true);
     setError('');
-    const result = await fetchVisitorConversation({ recoveryCode, markRead: true });
-    setLoading(false);
 
-    if (result.error) {
-      setError(result.error);
+    try {
+      const result = await fetchVisitorConversation({ recoveryCode, markRead: true });
+
+      if (result.error) {
+        setError(result.error);
+        return result;
+      }
+
+      const nextAccess = {
+        conversationId: result.data.conversation.id,
+        recoveryCode: String(recoveryCode || '').trim().toUpperCase(),
+      };
+      storeVisitorChatAccess(nextAccess);
+      setAccess(nextAccess);
+      applyResult(result.data);
+      setHasUnreadReply(false);
       return result;
+    } catch (restoreError) {
+      console.error('Restoring the visitor conversation failed:', restoreError);
+      const failure = { data: null, error: UNEXPECTED_ERROR_MESSAGE };
+      setError(failure.error);
+      return failure;
+    } finally {
+      setLoading(false);
     }
-
-    const nextAccess = {
-      conversationId: result.data.conversation.id,
-      recoveryCode: String(recoveryCode || '').trim().toUpperCase(),
-    };
-    storeVisitorChatAccess(nextAccess);
-    setAccess(nextAccess);
-    applyResult(result.data);
-    setHasUnreadReply(false);
-    return result;
   };
 
   const disconnectConversation = () => {
+    submitInFlightRef.current = false;
+    setSending(false);
     clearVisitorChatAccess();
     setAccess(null);
     setConversation(null);

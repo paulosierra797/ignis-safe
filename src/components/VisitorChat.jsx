@@ -186,6 +186,8 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
 
   const handleStart = async (event) => {
     event.preventDefault();
+    if (sending) return;
+
     const trimmedDetails = {
       name: details.name.trim(),
       email: details.email.trim(),
@@ -201,29 +203,29 @@ export default function VisitorChat({ variant = 'full', active = true, onClose }
     if (nextFieldErrors.name || nextFieldErrors.email || nextFieldErrors.message) return;
 
     const result = await startConversation(trimmedDetails);
-    if (!result.error) {
-      clearVisitorChatDraft();
-      setDetails(INITIAL_DETAILS);
-      setFieldErrors(INITIAL_FIELD_ERRORS);
-      setShowRecoveryCode(true);
-    }
+    if (result?.error) return;
+
+    clearVisitorChatDraft();
+    setDetails(INITIAL_DETAILS);
+    setFieldErrors(INITIAL_FIELD_ERRORS);
+    setShowRecoveryCode(true);
   };
 
   const handleRestore = async (event) => {
     event.preventDefault();
     const result = await restoreConversation(recoveryInput);
-    if (!result.error) {
-      setRestoreMode(false);
-      setRecoveryInput('');
-    }
+    if (result?.error) return;
+
+    setRestoreMode(false);
+    setRecoveryInput('');
   };
 
   const handleSend = async (event) => {
     event.preventDefault();
     const message = composer.trim();
-    if (!message) return;
+    if (!message || sending) return;
     const result = await sendMessage(message);
-    if (!result.error) setComposer('');
+    if (!result?.error) setComposer('');
   };
 
   const handleCopyRecoveryCode = async () => {

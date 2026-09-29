@@ -4,6 +4,24 @@ export const VISITOR_CHAT_DRAFT_KEY = 'ignis-safe:visitor-chat-draft';
 export const VISITOR_CHAT_PENDING_KEY = 'ignis-safe:visitor-chat-pending';
 export const VISITOR_CHAT_VISITOR_ID_KEY = 'ignis-safe:visitor-id';
 
+// Hard ceiling for a single Edge Function call. Without it a stalled connection
+// leaves the caller awaiting forever, which is what pins the submit button on
+// its "Sending..." state. On timeout the caller gets a normal error result.
+export const VISITOR_CHAT_REQUEST_TIMEOUT_MS = 30000;
+
+// crypto.randomUUID() is unavailable in insecure contexts and older browsers;
+// falling back keeps message submission from throwing before it even starts.
+export const createClientMessageId = () => {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+  } catch {
+    // fall through to the manual identifier below
+  }
+  return 'cid-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+};
+
 // Persistent per-browser identifier (survives across tabs/sessions, unlike the
 // sessionStorage-scoped recovery code) so the server can scope conversation-creation
 // rate limits to this visitor instead of falling back to a shared IP address.
@@ -11,11 +29,11 @@ export const getOrCreateVisitorId = () => {
   try {
     const existing = localStorage.getItem(VISITOR_CHAT_VISITOR_ID_KEY);
     if (existing) return existing;
-    const visitorId = crypto.randomUUID();
+    const visitorId = createClientMessageId();
     localStorage.setItem(VISITOR_CHAT_VISITOR_ID_KEY, visitorId);
     return visitorId;
   } catch {
-    return crypto.randomUUID();
+    return createClientMessageId();
   }
 };
 
@@ -41,10 +59,27 @@ const withRetryAfter = (message, retryAfterSeconds) => {
   return (message ? message + ' ' : '') + formatRetryAfterMessage(retryAfterSeconds);
 };
 
+const TIMEOUT_MARKER = Symbol('visitor-chat-timeout');
+
+const withTimeout = (promise, timeoutMs) => {
+  let timeoutId;
+  const timeout = new Promise((resolve) => {
+    timeoutId = setTimeout(() => resolve(TIMEOUT_MARKER), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+};
+
 const invoke = async (functionName, body) => {
   try {
     const { supabase } = await import('./supabaseClient');
-    const { data, error } = await supabase.functions.invoke(functionName, { body });
+    const response = await withTimeout(
+      supabase.functions.invoke(functionName, { body }),
+      VISITOR_CHAT_REQUEST_TIMEOUT_MS,
+    );
+    if (response === TIMEOUT_MARKER) {
+      return { data: null, error: 'The request timed out. Please check your connection and try again.' };
+    }
+    const { data, error } = response || {};
     if (error) {
       const payload = await readFunctionErrorPayload(error);
       const message = payload?.error || error.message || 'Messaging is temporarily unavailable.';
@@ -122,12 +157,20 @@ export const readVisitorChatAccess = () => {
 };
 
 export const storeVisitorChatAccess = (access) => {
-  sessionStorage.setItem(VISITOR_CHAT_STORAGE_KEY, JSON.stringify(access));
+  try {
+    sessionStorage.setItem(VISITOR_CHAT_STORAGE_KEY, JSON.stringify(access));
+  } catch {
+    // Storage can be unavailable (private mode / quota); in-memory state still works.
+  }
 };
 
 export const clearVisitorChatAccess = () => {
-  sessionStorage.removeItem(VISITOR_CHAT_STORAGE_KEY);
-  sessionStorage.removeItem(VISITOR_CHAT_PENDING_KEY);
+  try {
+    sessionStorage.removeItem(VISITOR_CHAT_STORAGE_KEY);
+    sessionStorage.removeItem(VISITOR_CHAT_PENDING_KEY);
+  } catch {
+    // ignore unavailable storage
+  }
 };
 
 export const readVisitorChatDraft = () => {
@@ -139,11 +182,19 @@ export const readVisitorChatDraft = () => {
 };
 
 export const storeVisitorChatDraft = (draft) => {
-  sessionStorage.setItem(VISITOR_CHAT_DRAFT_KEY, JSON.stringify(draft));
+  try {
+    sessionStorage.setItem(VISITOR_CHAT_DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    // ignore unavailable storage
+  }
 };
 
 export const clearVisitorChatDraft = () => {
-  sessionStorage.removeItem(VISITOR_CHAT_DRAFT_KEY);
+  try {
+    sessionStorage.removeItem(VISITOR_CHAT_DRAFT_KEY);
+  } catch {
+    // ignore unavailable storage
+  }
 };
 
 export const readPendingVisitorMessage = () => {
@@ -155,9 +206,17 @@ export const readPendingVisitorMessage = () => {
 };
 
 export const storePendingVisitorMessage = (pending) => {
-  sessionStorage.setItem(VISITOR_CHAT_PENDING_KEY, JSON.stringify(pending));
+  try {
+    sessionStorage.setItem(VISITOR_CHAT_PENDING_KEY, JSON.stringify(pending));
+  } catch {
+    // ignore unavailable storage
+  }
 };
 
 export const clearPendingVisitorMessage = () => {
-  sessionStorage.removeItem(VISITOR_CHAT_PENDING_KEY);
+  try {
+    sessionStorage.removeItem(VISITOR_CHAT_PENDING_KEY);
+  } catch {
+    // ignore unavailable storage
+  }
 };

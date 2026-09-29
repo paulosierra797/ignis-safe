@@ -13,11 +13,18 @@ const serviceClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
-const jsonResponse = (payload: Record<string, unknown>, status = 200) =>
+const jsonResponse = (payload: Record<string, unknown>, status = 200, extraHeaders: Record<string, string> = {}) =>
   new Response(JSON.stringify(payload), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...extraHeaders },
   });
+
+const rateLimitResponse = (error: string, retryAfterSeconds: number) =>
+  jsonResponse(
+    { error, retryAfter: retryAfterSeconds },
+    429,
+    { 'Retry-After': String(retryAfterSeconds) },
+  );
 
 const sha256 = async (value: string) => {
   const bytes = new TextEncoder().encode(value);
@@ -95,7 +102,10 @@ const enforceRateLimits = async ({
     p_limits: rules.map((rule) => rule.limit),
   });
   if (error) throw error;
-  return data === true;
+  return {
+    allowed: data?.allowed === true,
+    retryAfterSeconds: Number.isFinite(data?.retry_after_seconds) ? data.retry_after_seconds : 0,
+  };
 };
 
 const normalizedMessageFingerprint = (value: string) => value
@@ -260,7 +270,7 @@ Deno.serve(async (request) => {
         if (existingConversationError) throw existingConversationError;
 
         if (existingConversation) {
-          const allowedMessage = await enforceRateLimits({
+          const messageLimit = await enforceRateLimits({
             request,
             action: 'message',
             rules: [
@@ -284,10 +294,8 @@ Deno.serve(async (request) => {
               },
             ],
           });
-          if (!allowedMessage) {
-            return jsonResponse({
-              error: 'Message limit reached. Please wait before sending another message.',
-            }, 429);
+          if (!messageLimit.allowed) {
+            return rateLimitResponse('Message limit reached.', messageLimit.retryAfterSeconds);
           }
           if (await isRecentDuplicate(String(existingConversation.id), message)) {
             return jsonResponse({ error: 'This message was already sent. Please write a new message.' }, 409);
@@ -339,7 +347,7 @@ Deno.serve(async (request) => {
             includeRequestSource: false,
           }]
         : [];
-      const allowed = await enforceRateLimits({
+      const startLimit = await enforceRateLimits({
         request,
         action: 'start',
         rules: [
@@ -355,10 +363,11 @@ Deno.serve(async (request) => {
           ...emailRateRule,
         ],
       });
-      if (!allowed) {
-        return jsonResponse({
-          error: 'Too many new conversations were created from this connection. Please try again later.',
-        }, 429);
+      if (!startLimit.allowed) {
+        return rateLimitResponse(
+          'Too many new conversations were created from this connection.',
+          startLimit.retryAfterSeconds,
+        );
       }
 
       const recoveryCode = createRecoveryCode();
@@ -417,7 +426,7 @@ Deno.serve(async (request) => {
     if (action === 'fetch') {
       const conversation = await loadConversation(body?.recoveryCode);
       if (!conversation) {
-        const allowed = await enforceRateLimits({
+        const restoreLimit = await enforceRateLimits({
           request,
           action: 'restore',
           rules: [
@@ -425,11 +434,15 @@ Deno.serve(async (request) => {
             { subject: 'invalid-recovery-day', windowMs: 24 * 60 * 60 * 1000, limit: 12 },
           ],
         });
+        if (!restoreLimit.allowed) {
+          return rateLimitResponse(
+            'Too many unsuccessful recovery attempts.',
+            restoreLimit.retryAfterSeconds,
+          );
+        }
         return jsonResponse({
-          error: allowed
-            ? 'Conversation not found. Check the recovery code and try again.'
-            : 'Too many unsuccessful recovery attempts. Please try again later.',
-        }, allowed ? 404 : 429);
+          error: 'Conversation not found. Check the recovery code and try again.',
+        }, 404);
       }
 
       const result = await fetchConversation(conversation, body?.markRead === true);
@@ -462,8 +475,13 @@ Deno.serve(async (request) => {
         return jsonResponse({ data: result, error: null });
       }
 
-      if (new Date(conversation.created_at).getTime() > Date.now() - MESSAGE_COOLDOWN_MS) {
-        return jsonResponse({ error: 'Please wait 15 seconds before sending another message.' }, 429);
+      const cooldownRemainingMs = MESSAGE_COOLDOWN_MS
+        - (Date.now() - new Date(conversation.created_at).getTime());
+      if (cooldownRemainingMs > 0) {
+        return rateLimitResponse(
+          'Please wait before sending another message.',
+          Math.max(1, Math.ceil(cooldownRemainingMs / 1000)),
+        );
       }
 
       const message = maskOffensiveLanguage(rawMessage);
@@ -471,7 +489,7 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: 'This message was already sent. Please write a new message.' }, 409);
       }
 
-      const allowed = await enforceRateLimits({
+      const messageLimit = await enforceRateLimits({
         request,
         action: 'message',
         rules: [
@@ -495,10 +513,8 @@ Deno.serve(async (request) => {
           },
         ],
       });
-      if (!allowed) {
-        return jsonResponse({
-          error: 'Message limit reached. Please wait before sending another message.',
-        }, 429);
+      if (!messageLimit.allowed) {
+        return rateLimitResponse('Message limit reached.', messageLimit.retryAfterSeconds);
       }
 
       const now = new Date().toISOString();

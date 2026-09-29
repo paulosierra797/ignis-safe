@@ -30,18 +30,30 @@ const readFunctionErrorPayload = async (error) => {
   }
 };
 
+const formatRetryAfterMessage = (retryAfterSeconds) => {
+  if (retryAfterSeconds < 60) return 'Please try again in less than a minute.';
+  const minutes = Math.ceil(retryAfterSeconds / 60);
+  return 'Please try again in ' + minutes + ' minute' + (minutes === 1 ? '' : 's') + '.';
+};
+
+const withRetryAfter = (message, retryAfterSeconds) => {
+  if (!Number.isFinite(retryAfterSeconds) || retryAfterSeconds <= 0) return message;
+  return (message ? message + ' ' : '') + formatRetryAfterMessage(retryAfterSeconds);
+};
+
 const invoke = async (functionName, body) => {
   try {
     const { supabase } = await import('./supabaseClient');
     const { data, error } = await supabase.functions.invoke(functionName, { body });
     if (error) {
       const payload = await readFunctionErrorPayload(error);
+      const message = payload?.error || error.message || 'Messaging is temporarily unavailable.';
       return {
         data: null,
-        error: payload?.error || error.message || 'Messaging is temporarily unavailable.',
+        error: payload ? withRetryAfter(message, payload.retryAfter) : message,
       };
     }
-    if (data?.error) return { data: null, error: data.error };
+    if (data?.error) return { data: null, error: withRetryAfter(data.error, data.retryAfter) };
     return { data: data?.data || null, error: null };
   } catch (error) {
     console.error('Visitor messaging request failed:', error);

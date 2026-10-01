@@ -197,6 +197,7 @@ export default function Progress() {
   const [searchQuery, setSearchQuery] = useState('');
   const [moduleFilter, setModuleFilter] = useState('All');
   const [barangayFilter, setBarangayFilter] = useState('All');
+  const [locationFilter, setLocationFilter] = useState('All');
   const [completionFilter, setCompletionFilter] = useState('All');
   const [completionSearchText, setCompletionSearchText] = useState('All');
   const [isCompletionDropdownOpen, setIsCompletionDropdownOpen] = useState(false);
@@ -267,6 +268,7 @@ export default function Progress() {
   const handleClearFilters = () => {
     setModuleFilter('All');
     setBarangayFilter('All');
+    setLocationFilter('All');
     setCompletionFilter('All');
     setCompletionSearchText('All');
     setSearchQuery('');
@@ -369,25 +371,27 @@ export default function Progress() {
         !normalizedQuery ||
         String(item.name || '').toLowerCase().includes(normalizedQuery) ||
         String(item.email || '').toLowerCase().includes(normalizedQuery) ||
-        String(item.barangay || '').toLowerCase().includes(normalizedQuery);
+        String(item.barangay || '').toLowerCase().includes(normalizedQuery) ||
+        String(item.location || '').toLowerCase().includes(normalizedQuery);
 
       const matchesModule =
         moduleFilter === 'All' ||
         item.modules.some((module) => module.name === moduleFilter && module.progress > 0);
 
       const matchesBarangay = barangayFilter === 'All' || item.barangay === barangayFilter;
+      const matchesLocation = locationFilter === 'All' || item.locationKey === locationFilter;
 
       const matchesCompletion = matchesCompletionFilter(item.overallPercent, completionFilter);
 
-      return matchesSearch && matchesModule && matchesBarangay && matchesCompletion;
+      return matchesSearch && matchesModule && matchesBarangay && matchesLocation && matchesCompletion;
     });
-  }, [barangayFilter, completionFilter, moduleFilter, progressRows, searchQuery]);
+  }, [barangayFilter, locationFilter, completionFilter, moduleFilter, progressRows, searchQuery]);
 
   // User Progress table pagination: 5 users per page, controls shown only when
   // the filtered list has more than one page. Changing any filter jumps back to
   // the first page (adjusted during render, per the React "you might not need an
   // effect" pattern).
-  const filterSignature = `${barangayFilter}|${completionFilter}|${moduleFilter}|${searchQuery}`;
+  const filterSignature = `${barangayFilter}|${locationFilter}|${completionFilter}|${moduleFilter}|${searchQuery}`;
   const [lastFilterSignature, setLastFilterSignature] = useState(filterSignature);
   if (filterSignature !== lastFilterSignature) {
     setLastFilterSignature(filterSignature);
@@ -465,7 +469,7 @@ export default function Progress() {
         <div className="progress-controls">
           <div className={`progress-filters progress-filters--${activeView}`}>
             <div className="progress-filter">
-              <label htmlFor="progress-filter-barangay">Filter by Barangay</label>
+              <label htmlFor="progress-filter-barangay">Barangay / Location</label>
               <select
                 id="progress-filter-barangay"
                 value={barangayFilter}
@@ -481,6 +485,16 @@ export default function Progress() {
                 ))}
               </select>
             </div>
+
+            {activeView === 'users' && <div className="progress-filter">
+              <label htmlFor="progress-filter-location">Location</label>
+              <select id="progress-filter-location" value={locationFilter} onChange={(event) => setLocationFilter(event.target.value)}>
+                <option value="All">All locations</option>
+                <option value="dasmarinas">Dasmariñas City, Cavite</option>
+                <option value="outside">Outside Dasmariñas City</option>
+                <option value="unspecified">Not Specified</option>
+              </select>
+            </div>}
 
             {activeView === 'users' && <div className="progress-filter">
               <label htmlFor="progress-filter-module">Filter by Module</label>
@@ -538,7 +552,7 @@ export default function Progress() {
                 type="text"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search name, email, or barangay..."
+                placeholder="Search name, email, or location..."
                 autoComplete="off"
               />
             </div>}
@@ -703,7 +717,7 @@ export default function Progress() {
               <tr>
                 <th>No.</th>
                 <th>Name</th>
-                <th>Barangay</th>
+                <th>Location / Barangay</th>
                 <th>Account Type</th>
                 <th>Module Progress</th>
                 <th>Overall %</th>
@@ -732,10 +746,11 @@ export default function Progress() {
                     <td>{(safePage - 1) * USERS_PER_PAGE + index + 1}</td>
                     <td title={item.name}>{item.name}</td>
                     <td
-                      title={item.barangay}
+                      title={item.locationKey === 'outside' ? item.location : `${item.barangay}, ${item.location}`}
                       className={item.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'progress-cell-muted' : ''}
                     >
                       {item.barangay}
+                      {item.locationKey !== 'outside' && <small className="progress-location-note">{item.location}</small>}
                     </td>
                     <td>
                       <span className={`progress-account-type-badge ${item.accountType.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -798,9 +813,14 @@ export default function Progress() {
 
 
         <div className="progress-card-row">
+          <span>Location</span>
+          <strong>{item.location}</strong>
+        </div>
+
+        {item.locationKey !== 'outside' && <div className="progress-card-row">
           <span>Barangay</span>
           <strong>{item.barangay}</strong>
-        </div>
+        </div>}
 
 
         <div className="progress-card-row">
@@ -1086,12 +1106,12 @@ export default function Progress() {
                       <div className="progress-modal-info-item">
                         <span className="progress-modal-info-icon"><FiMapPin aria-hidden="true" /></span>
                         <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">BARANGAY</span>
+                          <span className="progress-modal-label">LOCATION</span>
                           <span className="progress-modal-value">
-                            {selectedUser.barangay}
-                            {[selectedUser.city, selectedUser.province].filter(Boolean).length > 0 && (
+                            {selectedUser.location}
+                            {selectedUser.locationKey !== 'outside' && (
                               <small className="progress-modal-value-note">
-                                {[selectedUser.city, selectedUser.province].filter(Boolean).join(', ')}
+                                {selectedUser.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'Barangay not specified' : `Barangay ${selectedUser.barangay}`}
                               </small>
                             )}
                           </span>

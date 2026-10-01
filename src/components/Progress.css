@@ -1579,7 +1579,7 @@
 }
 
 .progress-filters {
-  grid-template-columns: repeat(3, minmax(160px, 1fr)) minmax(260px, 1.4fr) auto;
+  grid-template-columns: repeat(4, minmax(140px, 1fr)) minmax(220px, 1.4fr) auto;
   gap: 0.8rem;
 }
 
@@ -1658,6 +1658,20 @@
 
 .progress-table--users {
   min-width: 1100px;
+}
+
+.progress-location-note {
+  display: block;
+  margin-top: 0.2rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progress-table--users th:nth-child(3),
+.progress-table--users tbody td:nth-child(3) {
+  max-width: 200px;
 }
 
 .progress-table--users th:nth-child(9),

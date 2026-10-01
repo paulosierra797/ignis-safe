@@ -3,13 +3,12 @@ import { FiDownload } from 'react-icons/fi';
 import { QRCodeSVG } from 'qrcode.react';
 import { useLandingContent } from '../context/LandingContentContext';
 import { getLandingUiCopy } from '../utils/landingLanguage';
+import { MOBILE_APP_RELEASE } from '../utils/mobileAppRelease';
 import './MobileAppDownloadSection.css';
 
-const MOBILE_APP_RELEASE = {
-  downloadPath: 'https://github.com/andreii2404/ignis-safe-mobile-releases/releases/download/v1.0.3/IGNIS-SAFE.apk',
+const MOBILE_APP_IMAGES = {
   learningImagePath: `${import.meta.env.BASE_URL}mobile-app/learning-materials.jpg`,
   splashImagePath: `${import.meta.env.BASE_URL}mobile-app/ignis-safe-splash.png`,
-  fileName: 'IGNIS-SAFE.apk',
 };
 
 export default function MobileAppDownloadSection() {
@@ -19,9 +18,9 @@ export default function MobileAppDownloadSection() {
   );
   const { content, language } = useLandingContent();
   const copy = { ...getLandingUiCopy(language), ...(content.copy?.[language] || {}) };
-  const downloadUrl = new URL(MOBILE_APP_RELEASE.downloadPath, window.location.origin).href;
-  const learningImage = content.media?.mobileLearningPhoto?.url || MOBILE_APP_RELEASE.learningImagePath;
-  const splashImage = content.media?.mobileSplashPhoto?.url || MOBILE_APP_RELEASE.splashImagePath;
+  const downloadUrl = MOBILE_APP_RELEASE.downloadUrl;
+  const learningImage = content.media?.mobileLearningPhoto?.url || MOBILE_APP_IMAGES.learningImagePath;
+  const splashImage = content.media?.mobileSplashPhoto?.url || MOBILE_APP_IMAGES.splashImagePath;
   const release = content.mobileRelease || {};
   const installStepTwo = copy.mobileAppInstallStepTwo.replace(
     /[\w.-]+\.apk/gi,
@@ -103,9 +102,9 @@ export default function MobileAppDownloadSection() {
             <figure className="landing-mobile-app-qr">
               <QRCodeSVG
                 value={downloadUrl}
-                size={116}
+                size={132}
                 level="M"
-                marginSize={0}
+                marginSize={4}
                 role="img"
                 aria-label={copy.mobileAppQrTitle}
               />

@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getMobileUserLocation, OUTSIDE_DASMARINAS_LOCATION } from './mobileUserLocation';
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -262,6 +263,7 @@ export const getProgressPageData = async () => {
       { data: assessments, error: assessmentsError },
       { data: adminRows, error: adminError },
       { data: barangayRows, error: barangayError },
+      { data: locationRows, error: locationError },
     ] = await Promise.all([
       supabase
         .from('profiles')
@@ -290,6 +292,7 @@ export const getProgressPageData = async () => {
         .select('name, display_order')
         .eq('is_active', true)
         .order('display_order', { ascending: true, nullsFirst: false }),
+      supabase.rpc('get_mobile_registration_locations'),
     ]);
 
     if (profilesError) throw profilesError;
@@ -299,6 +302,7 @@ export const getProgressPageData = async () => {
     if (assessmentsError) throw assessmentsError;
     if (adminError) throw adminError;
     if (barangayError) throw barangayError;
+    if (locationError) throw locationError;
 
     const safeProfiles = profiles || [];
     const safeModules = modules || [];
@@ -308,6 +312,7 @@ export const getProgressPageData = async () => {
     const safeAdminRows = adminRows || [];
     const safeBarangayRows = barangayRows || [];
     const barangayLookup = buildBarangayLookup(safeBarangayRows);
+    const registeredLocations = new Map((locationRows || []).map((row) => [row.user_id, row.location]));
     // Internal admin and personnel accounts can also have a profiles row, but
     // the Users page is the public mobile-app user directory. Keep back-office
     // accounts in their dedicated account-management views.
@@ -364,11 +369,16 @@ export const getProgressPageData = async () => {
       ]);
       const normalizedLastActivityAt = lastActivityAt ? lastActivityAt.toISOString() : null;
 
-      const barangayLabel = resolveBarangayLabel(profile.barangay, barangayLookup);
+      const userLocation = getMobileUserLocation(profile, registeredLocations.get(profile.id));
+      const barangayLabel = userLocation.key === 'outside'
+        ? OUTSIDE_DASMARINAS_LOCATION
+        : resolveBarangayLabel(profile.barangay, barangayLookup);
 
       return {
         id: profile.id,
         accountType: 'Mobile User',
+        location: userLocation.label,
+        locationKey: userLocation.key,
         barangay: barangayLabel,
         barangayRaw: profile.barangay || null,
         city: profile.city || '',

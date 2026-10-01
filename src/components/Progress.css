@@ -175,17 +175,17 @@
 
 .progress-clear {
   align-self: end;
-  height: var(--progress-control-height, 42px);
+  min-height: var(--progress-control-height, 42px);
   min-width: 140px;
   border: 1px solid #e2e8f0;
   background: #f1f5f9;
   color: #475569;
   font-weight: 700;
   border-radius: 8px;
-  padding: 0 1.1rem;
+  padding: 0.6rem 1.1rem;
   font-size: 0.8rem;
   letter-spacing: 0.3px;
-  white-space: nowrap;
+  white-space: normal;
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-color 0.2s;
 }
@@ -1773,6 +1773,10 @@
     grid-column: 1 / -1;
   }
 
+  .progress-controls {
+    position: static;
+  }
+
   .progress-clear {
     grid-column: 2;
   }
@@ -1801,8 +1805,8 @@
 
   .progress-controls {
     top: 123px;
-    max-height: calc(100dvh - 76px);
-    overflow-y: auto;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 

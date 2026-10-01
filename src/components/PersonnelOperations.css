@@ -240,16 +240,21 @@
 }
 
 .leave-document-input-row {
+  position: relative;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.55rem;
 }
 
-.leave-document-input {
+.leave-form-grid .leave-document-input {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 1px;
   height: 1px;
+  padding: 0;
+  border: 0;
   overflow: hidden;
   opacity: 0;
   pointer-events: none;
@@ -572,6 +577,8 @@
 }
 
 .shift-calendar-panel {
+  --calendar-day-height: 148px;
+  --calendar-gap: 4px;
   background: transparent;
   border: none;
   border-radius: 0;
@@ -664,7 +671,7 @@
 .shift-calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(96px, 1fr));
-  gap: 4px;
+  gap: var(--calendar-gap);
   min-width: 720px;
 }
 
@@ -681,8 +688,13 @@
 }
 
 .shift-calendar-days{
-    grid-auto-rows: 148px;
+    grid-auto-rows: var(--calendar-day-height);
+    min-height: calc(var(--calendar-week-count, 5) * (var(--calendar-day-height) + var(--calendar-gap)) - var(--calendar-gap));
     align-items: stretch;
+}
+
+.shift-calendar-weekdays .shift-calendar-weekday-short {
+  display: none;
 }
 
 .shift-calendar-loading {
@@ -696,12 +708,12 @@
 }
 
 .shift-calendar-empty {
-  min-height: 148px;
+  min-height: var(--calendar-day-height);
 }
 
 .shift-calendar-day-card {
   min-width: 0;
-  height: 148px;
+  height: var(--calendar-day-height);
   box-sizing: border-box;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
@@ -1110,12 +1122,12 @@
   }
 
   .shift-calendar-days {
-    grid-auto-rows: 140px;
+    grid-auto-rows: var(--calendar-day-height);
   }
 
   .shift-calendar-empty,
   .shift-calendar-loading {
-    min-height: 140px;
+    min-height: var(--calendar-day-height);
   }
 
   .shift-calendar-weekdays span{
@@ -1125,7 +1137,7 @@
 }
 
   .shift-calendar-day-card{
-    height: 140px;
+    height: var(--calendar-day-height);
     padding:0.45rem 0.5rem;
 }
   .shift-calendar-day-card.today {
@@ -1356,15 +1368,15 @@
     width: 100%;
     min-width: 0;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 3px;
+    gap: var(--calendar-gap);
   }
 
-  .shift-calendar-days {
-    grid-auto-rows: 112px;
+  .shift-calendar-panel {
+    --calendar-day-height: 112px;
+    --calendar-gap: 3px;
   }
 
   .shift-calendar-day-card {
-    height: 112px;
     min-width: 0;
     padding: 0.4rem 0.32rem;
     border-radius: 8px;
@@ -1408,5 +1420,45 @@
 
   .personnel-modal-header {
     z-index: 5;
+  }
+}
+
+@media (max-width: 600px) {
+  .shift-calendar-panel {
+    --calendar-day-height: max(60px, 3.25rem);
+  }
+
+  .shift-calendar-weekdays .shift-calendar-weekday-full {
+    display: none;
+  }
+
+  .shift-calendar-weekdays .shift-calendar-weekday-short {
+    display: inline;
+  }
+
+  .shift-calendar-day-card,
+  .shift-calendar-day-card.today {
+    padding: 0.35rem 0.1rem;
+    justify-content: center;
+  }
+
+  .shift-calendar-day-top {
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .shift-calendar-day-number {
+    font-size: 1rem;
+  }
+
+  /* Full shift information remains in the existing tap-to-open day dialog. */
+  .shift-calendar-day-card .shift-tag {
+    font-size: 0;
+    gap: 0;
+  }
+
+  .shift-calendar-day-body,
+  .shift-calendar-no-data {
+    display: none;
   }
 }

@@ -127,7 +127,9 @@
 }
 
 .nav {
+  min-width: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.15rem;
@@ -236,7 +238,8 @@
   color: #344054;
   font-size: 0.82rem;
   font-weight: 650;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   text-decoration: none;
 }
 
@@ -423,6 +426,7 @@
     padding: 6.5rem 1.25rem 2rem;
     display: flex;
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
     justify-content: flex-start;
     gap: 0.35rem;
@@ -430,14 +434,16 @@
     background: #ffffff;
     border-left: 1px solid #e2e7ee;
     box-shadow: -20px 0 40px rgba(20, 33, 58, 0.22);
-    transform: translateX(105%);
+    transform: translateX(0);
+    opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: transform 0.25s ease, visibility 0.25s ease;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
   }
 
   .nav.active {
     transform: translateX(0);
+    opacity: 1;
     visibility: visible;
     pointer-events: auto;
   }
@@ -455,6 +461,7 @@
 
   .nav-link {
     width: 100%;
+    white-space: normal;
     min-height: 48px;
     justify-content: flex-start;
     padding: 0.8rem 0.9rem;
@@ -464,6 +471,11 @@
 
   .nav-dropdown-toggle {
     justify-content: space-between;
+  }
+
+  .nav-link > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .nav-link::after {
@@ -481,6 +493,7 @@
   }
 
   .nav-dropdown-menu {
+    display: none;
     position: static;
     min-width: 0;
     max-height: 0;
@@ -497,7 +510,8 @@
   }
 
   .nav-dropdown-menu.open {
-    max-height: 220px;
+    display: block;
+    max-height: none;
     margin: 0.1rem 0 0.25rem;
   }
 
@@ -521,6 +535,7 @@
   }
 
   .landing-language-menu {
+    display: none;
     position: static;
     min-width: 0;
     max-height: 0;
@@ -535,7 +550,8 @@
   }
 
   .landing-language-menu.open {
-    max-height: 120px;
+    display: block;
+    max-height: none;
     margin-top: 0.1rem;
   }
 

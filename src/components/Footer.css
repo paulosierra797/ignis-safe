@@ -90,6 +90,8 @@
 .footer-nav-links a,
 .footer-contact > a,
 .footer-links a {
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: #b7c0cf;
   font-size: 0.74rem;
   text-decoration: none;
@@ -155,6 +157,8 @@
 .footer-bottom {
   border-top: 1px solid #2d3749;
   background: #0d1422;
+  /* Leave clearance for the floating message button at the end of the page. */
+  padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px));
 }
 
 .footer-bottom-inner {

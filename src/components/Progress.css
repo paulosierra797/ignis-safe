@@ -1579,7 +1579,7 @@
 }
 
 .progress-filters {
-  grid-template-columns: repeat(4, minmax(140px, 1fr)) minmax(220px, 1.4fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
   gap: 0.8rem;
 }
 
@@ -1602,6 +1602,15 @@
 .progress-filter-query input::placeholder {
   color: #94a3b8;
   font-size: 0.82rem;
+}
+
+.progress-filters--users .progress-filter-query,
+.progress-filters--users .progress-clear {
+  grid-column: auto;
+}
+
+.progress-filter .responsive-select > select {
+  height: 100%;
 }
 
 /* Participation figures share one summary surface instead of five cards. */

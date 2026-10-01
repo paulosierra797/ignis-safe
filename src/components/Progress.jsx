@@ -26,6 +26,7 @@ import Pagination from './Pagination';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import ToastMessage from './ToastMessage';
+import ResponsiveSelect from './ResponsiveSelect';
 import './Progress.css';
 import {
   UNSPECIFIED_BARANGAY_LABEL,
@@ -470,45 +471,40 @@ export default function Progress() {
           <div className={`progress-filters progress-filters--${activeView}`}>
             <div className="progress-filter">
               <label htmlFor="progress-filter-barangay">Barangay / Location</label>
-              <select
+              <ResponsiveSelect
                 id="progress-filter-barangay"
                 value={barangayFilter}
                 onChange={(event) => {
                   setBarangayFilter(event.target.value);
                   setBarangayPage(1);
                 }}
-              >
-                {barangayOptions.map((barangayOption) => (
-                  <option key={barangayOption} value={barangayOption}>
-                    {barangayOption}
-                  </option>
-                ))}
-              </select>
+                options={barangayOptions.map((value) => ({ value, label: value }))}
+              />
             </div>
 
             {activeView === 'users' && <div className="progress-filter">
               <label htmlFor="progress-filter-location">Location</label>
-              <select id="progress-filter-location" value={locationFilter} onChange={(event) => setLocationFilter(event.target.value)}>
-                <option value="All">All locations</option>
-                <option value="dasmarinas">Dasmariñas City, Cavite</option>
-                <option value="outside">Outside Dasmariñas City</option>
-                <option value="unspecified">Not Specified</option>
-              </select>
+              <ResponsiveSelect
+                id="progress-filter-location"
+                value={locationFilter}
+                onChange={(event) => setLocationFilter(event.target.value)}
+                options={[
+                  { value: 'All', label: 'All locations' },
+                  { value: 'dasmarinas', label: 'Dasmariñas City, Cavite' },
+                  { value: 'outside', label: 'Outside Dasmariñas City' },
+                  { value: 'unspecified', label: 'Not Specified' },
+                ]}
+              />
             </div>}
 
             {activeView === 'users' && <div className="progress-filter">
               <label htmlFor="progress-filter-module">Filter by Module</label>
-              <select
+              <ResponsiveSelect
                 id="progress-filter-module"
                 value={moduleFilter}
                 onChange={(event) => setModuleFilter(event.target.value)}
-              >
-                {moduleOptions.map((moduleOption) => (
-                  <option key={moduleOption} value={moduleOption}>
-                    {moduleOption}
-                  </option>
-                ))}
-              </select>
+                options={moduleOptions.map((value) => ({ value, label: value }))}
+              />
             </div>}
 
             {activeView === 'users' && <div className="progress-filter progress-filter-searchable">

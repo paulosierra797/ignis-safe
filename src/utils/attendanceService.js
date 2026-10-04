@@ -685,21 +685,40 @@ const parseNumber = (value, fallback) => {
 
 const DEFAULT_RADIUS_METERS = 100;
 
-const defaultStation = {
+// =====================================================================
+// ATTENDANCE REFERENCE LOCATION (shared by DEFAULT and ZINI-M3 stations)
+// To switch locations, change ONLY which values are active below.
+// validateProximity() receives this radius via stationGeo.radius.
+// =====================================================================
+const ACTIVE_STATION_LOCATION = {
+  // ACTIVE TEST LOCATION - CAPSTONE DEFENSE
+  // NOTE: the 50 m radius is for TEMPORARY TESTING ONLY.
+  // When restoring the actual BFP station location, the radius MUST be changed back to 12 meters.
+  latitude: 14.302160924767284,
+  longitude: 120.95710660642294,
+  radius: 50
+
+  // PREVIOUS TEMPORARY LOCATION - DO NOT DELETE
+  // latitude: 14.364416667
+  // longitude: 120.882666667
+  // radius: 50
+
   // ORIGINAL BFP LOCATION - DO NOT DELETE
+  // (restore radius to 12 meters when switching back to this location)
   // latitude: 14.32237
   // longitude: 120.94420
   // radius: 12
-  //
-  // To revert: restore these env-driven lines and remove the TEMPORARY block below.
+};
+
+const defaultStation = {
+  // Env-driven lines kept for reference when reverting to the original BFP location:
   // latitude: parseNumber(import.meta.env.VITE_STATION_LATITUDE, 14.32237),
   // longitude: parseNumber(import.meta.env.VITE_STATION_LONGITUDE, 120.94420),
   // radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS),
 
-  // TEMPORARY LOCATION - TODAY ONLY
-  latitude: 14.364416667,
-  longitude: 120.882666667,
-  radius: 50,
+  latitude: ACTIVE_STATION_LOCATION.latitude,
+  longitude: ACTIVE_STATION_LOCATION.longitude,
+  radius: ACTIVE_STATION_LOCATION.radius, // 50 m = TEMPORARY TESTING ONLY (BFP actual: 12 m)
 
   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
   address: import.meta.env.VITE_STATION_ADDRESS || '',
@@ -723,20 +742,14 @@ export const STATION_GEO = defaultStation;
 export const STATION_GEO_MAP = {
   DEFAULT: defaultStation,
   'ZINI-M3': {
-    // ORIGINAL BFP LOCATION - DO NOT DELETE
-    // latitude: 14.32237
-    // longitude: 120.94420
-    // radius: 12
-    //
-    // To revert: restore these env-driven lines and remove the TEMPORARY block below.
+    // Env-driven lines kept for reference when reverting to the original BFP location:
     // latitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LATITUDE, defaultStation.latitude),
     // longitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LONGITUDE, defaultStation.longitude),
     // radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius),
 
-    // TEMPORARY LOCATION - TODAY ONLY
-    latitude: 14.364416667,
-    longitude: 120.882666667,
-    radius: 50,
+    latitude: ACTIVE_STATION_LOCATION.latitude,
+    longitude: ACTIVE_STATION_LOCATION.longitude,
+    radius: ACTIVE_STATION_LOCATION.radius, // 50 m = TEMPORARY TESTING ONLY (BFP actual: 12 m)
 
     name: import.meta.env.VITE_STATION_ZINI_M3_NAME || 'Station Delta',
     address: import.meta.env.VITE_STATION_ZINI_M3_ADDRESS || defaultStation.address,

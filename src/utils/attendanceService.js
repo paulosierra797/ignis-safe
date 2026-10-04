@@ -685,14 +685,25 @@ const parseNumber = (value, fallback) => {
 
 const DEFAULT_RADIUS_METERS = 100;
 
-// --- REAL BFP LOCATION (production) ---
 const defaultStation = {
-  latitude: parseNumber(import.meta.env.VITE_STATION_LATITUDE, 14.32237),
-  longitude: parseNumber(import.meta.env.VITE_STATION_LONGITUDE, 120.94420),
+  // ORIGINAL BFP LOCATION - DO NOT DELETE
+  // latitude: 14.32237
+  // longitude: 120.94420
+  // radius: 12
+  //
+  // To revert: restore these env-driven lines and remove the TEMPORARY block below.
+  // latitude: parseNumber(import.meta.env.VITE_STATION_LATITUDE, 14.32237),
+  // longitude: parseNumber(import.meta.env.VITE_STATION_LONGITUDE, 120.94420),
+  // radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS),
+
+  // TEMPORARY LOCATION - TODAY ONLY
+  latitude: 14.364416667,
+  longitude: 120.882666667,
+  radius: 50,
+
   name: import.meta.env.VITE_STATION_NAME || 'Station Delta',
   address: import.meta.env.VITE_STATION_ADDRESS || '',
-  stationId: 'DEFAULT',
-  radius: parseNumber(import.meta.env.VITE_STATION_RADIUS, DEFAULT_RADIUS_METERS)
+  stationId: 'DEFAULT'
 };
 
 
@@ -711,14 +722,25 @@ export const STATION_GEO = defaultStation;
 
 export const STATION_GEO_MAP = {
   DEFAULT: defaultStation,
-  // --- REAL BFP LOCATION (production) ---
   'ZINI-M3': {
-    latitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LATITUDE, defaultStation.latitude),
-    longitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LONGITUDE, defaultStation.longitude),
+    // ORIGINAL BFP LOCATION - DO NOT DELETE
+    // latitude: 14.32237
+    // longitude: 120.94420
+    // radius: 12
+    //
+    // To revert: restore these env-driven lines and remove the TEMPORARY block below.
+    // latitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LATITUDE, defaultStation.latitude),
+    // longitude: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_LONGITUDE, defaultStation.longitude),
+    // radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius),
+
+    // TEMPORARY LOCATION - TODAY ONLY
+    latitude: 14.364416667,
+    longitude: 120.882666667,
+    radius: 50,
+
     name: import.meta.env.VITE_STATION_ZINI_M3_NAME || 'Station Delta',
     address: import.meta.env.VITE_STATION_ZINI_M3_ADDRESS || defaultStation.address,
-    stationId: 'ZINI-M3',
-    radius: parseNumber(import.meta.env.VITE_STATION_ZINI_M3_RADIUS, defaultStation.radius)
+    stationId: 'ZINI-M3'
   }
   // TEST ONLY — temporary attendance test location (General Trias)
   // 'ZINI-M3': {

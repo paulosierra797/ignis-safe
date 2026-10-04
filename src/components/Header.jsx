@@ -47,18 +47,17 @@ function useDropdownAutoClose(open, onClose, containerRef, toggleRef) {
   useEffect(() => {
     if (!open) return undefined;
 
-    const handlePointerDown = (event) => {
+    const handleOutsideClick = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         onClose();
       }
     };
 
-    document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('touchstart', handlePointerDown);
+    // Close after a tap completes so collapsing a menu cannot move its target.
+    document.addEventListener('click', handleOutsideClick);
 
     return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('click', handleOutsideClick);
     };
   }, [open, onClose, containerRef]);
 
@@ -285,6 +284,17 @@ export default function Header() {
 
   useEffect(() => () => clearTimeout(suppressTimeoutRef.current), []);
 
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1181px)');
+    const closeMobileMenu = () => {
+      if (!desktop.matches) return;
+      setMenuOpen(false);
+      setOpenDropdown(null);
+    };
+    desktop.addEventListener('change', closeMobileMenu);
+    return () => desktop.removeEventListener('change', closeMobileMenu);
+  }, []);
+
   const openResources = useCallback(() => setOpenDropdown('resources'), []);
   const closeResources = useCallback(
     () => setOpenDropdown((current) => (current === 'resources' ? null : current)),
@@ -385,6 +395,7 @@ export default function Header() {
   };
 
   const handleResourcesBlur = (event) => {
+    if (event.relatedTarget?.closest('.nav-dropdown-toggle, .landing-language-toggle')) return;
     if (resourcesRef.current && !resourcesRef.current.contains(event.relatedTarget)) {
       closeResources();
     }
@@ -450,6 +461,7 @@ export default function Header() {
   };
 
   const handleAboutBlur = (event) => {
+    if (event.relatedTarget?.closest('.nav-dropdown-toggle, .landing-language-toggle')) return;
     if (aboutRef.current && !aboutRef.current.contains(event.relatedTarget)) {
       closeAbout();
     }
@@ -510,6 +522,7 @@ export default function Header() {
   };
 
   const handleContactBlur = (event) => {
+    if (event.relatedTarget?.closest('.nav-dropdown-toggle, .landing-language-toggle')) return;
     if (contactRef.current && !contactRef.current.contains(event.relatedTarget)) {
       closeContact();
     }

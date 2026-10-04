@@ -59,6 +59,14 @@ button {
   font-family: inherit;
 }
 
+:where(input, select, textarea) {
+  min-width: 0;
+}
+
+:where(h1, h2, h3, h4, h5, h6, p, label, button) {
+  overflow-wrap: anywhere;
+}
+
 body.sidebar-collapsed {
   --sidebar-width: var(--sidebar-collapsed-width);
 }

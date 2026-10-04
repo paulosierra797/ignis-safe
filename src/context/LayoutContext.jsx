@@ -21,6 +21,15 @@ export const LayoutProvider = ({ children }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 901px)');
+    const closeOnDesktop = () => {
+      if (desktop.matches) setIsMobileSidebarOpen(false);
+    };
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => desktop.removeEventListener('change', closeOnDesktop);
+  }, []);
+
+  useEffect(() => {
     document.body.classList.toggle('sidebar-collapsed', isSidebarCollapsed);
     localStorage.setItem('sidebar-collapsed', String(isSidebarCollapsed));
 

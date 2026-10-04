@@ -241,6 +241,7 @@
 
 .visitor-chat--full .visitor-chat-start-form,
 .visitor-chat--full .visitor-chat-restore-form {
+  min-width: 0;
   width: 100%;
   max-width: 680px;
   justify-self: end;
@@ -695,6 +696,13 @@
 
 @keyframes visitor-chat-spin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 900px) {
+  .visitor-chat--full .visitor-chat-onboarding {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1.4rem;
+  }
 }
 
 @media (max-width: 640px) {

@@ -1,0 +1,57 @@
+.responsive-select {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--progress-control-height, 44px);
+  padding: 0.55rem 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.responsive-select-label {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.responsive-select-chevron {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+
+.responsive-select > select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.responsive-select:focus-within {
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.08);
+}
+
+.responsive-select--disabled {
+  opacity: 0.65;
+}
+
+.responsive-select--disabled > select {
+  cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+  .responsive-select {
+    font-size: 16px;
+  }
+}

@@ -1315,6 +1315,7 @@
 .analytics-card-header {
   min-height: 52px;
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
@@ -1322,7 +1323,13 @@
 }
 
 .analytics-card-header > div {
+  flex: 1 1 12rem;
   min-width: 0;
+}
+
+.analytics-card-header > select {
+  flex: 0 1 10rem;
+  max-width: 100%;
 }
 
 .analytics-card-header h3 {

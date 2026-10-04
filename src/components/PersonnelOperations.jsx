@@ -751,13 +751,16 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
               <div className="shift-calendar-scroll">
               <div className="shift-calendar-grid shift-calendar-weekdays">
                 {CALENDAR_WEEKDAYS.map((weekday) => (
-                  <span key={weekday}>{weekday}</span>
+                  <span key={weekday} aria-label={weekday}>
+                    <span className="shift-calendar-weekday-full" aria-hidden="true">{weekday}</span>
+                    <span className="shift-calendar-weekday-short" aria-hidden="true">{weekday[0]}</span>
+                  </span>
                 ))}
               </div>
 
               <div
                 className="shift-calendar-grid shift-calendar-days"
-                style={{ minHeight: `${(calendarCells.length / 7) * 152 - 4}px` }}
+                style={{ '--calendar-week-count': calendarCells.length / 7 }}
               >
                 {scheduleLoading && (
                   <div className="shift-calendar-loading">Loading shift schedule...</div>

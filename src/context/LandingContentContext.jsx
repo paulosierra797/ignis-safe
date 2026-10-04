@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useUser } from './UserContext';
 import { getLandingUiCopy, LANDING_LANGUAGE_STORAGE_KEY, normalizeDasmarinasText } from '../utils/landingLanguage';
 import { getPublicLandingContent } from '../utils/publicContentService';
+import { MOBILE_APP_RELEASE } from '../utils/mobileAppRelease';
 
 const STORAGE_KEY = 'ignis_landing_content_v1';
 const MAX_BANNER_PHOTOS = 5;
@@ -358,14 +359,7 @@ export const DEFAULT_LANDING_CONTENT = {
     mobileLearningPhoto: null,
     mobileSplashPhoto: null
   },
-  mobileRelease: {
-    version: '1.0.3 (Build 4)',
-    size: '223.38 MB',
-    compatibility: 'Android 7.1+',
-    architecture: 'Android devices only',
-    format: 'APK',
-    releaseDate: 'September 26, 2026'
-  },
+  mobileRelease: { ...MOBILE_APP_RELEASE.details },
   copy: {
     english: {
       ...getLandingUiCopy('english'),
@@ -412,7 +406,7 @@ const normalizeCopyObject = (value) => {
 
 const normalizeMobileRelease = (release = {}) => {
   const version = String(release.version || '').trim();
-  const isLegacyRelease = !version || version === '1.0.0' || version === '1.0.0 (build 1)';
+  const isLegacyRelease = !version || ['1.0.0', '1.0.0 (build 1)', '1.0.3 (build 4)', '1.0.5 (build 6)'].includes(version.toLowerCase());
   const normalizedRelease = normalizeCopyObject(isLegacyRelease
     ? { ...DEFAULT_LANDING_CONTENT.mobileRelease }
     : { ...DEFAULT_LANDING_CONTENT.mobileRelease, ...release });

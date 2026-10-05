@@ -173,7 +173,7 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
     // Only re-run when the route actually changes so this closes the
     // drawer on navigation without fighting the open/toggle handlers.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   useLayoutEffect(() => {
     const el = sidebarRef.current;

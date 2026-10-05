@@ -499,6 +499,37 @@ function EmergencyNumberEditRow({ form, setField, onSave, onCancel, busy }) {
 // Card 3 — Cavite BFP Directory (groups -> entries -> phones)
 // ---------------------------------------------------------------------------
 
+// Collapses an expanded directory accordion once the user has scrolled it fully
+// out of view. `element` is the expanded section's DOM node (null when nothing
+// is expanded). The sticky page header + quick-nav cover the top of the
+// viewport, so that strip is excluded from what counts as visible. Nothing
+// collapses until the section has been seen on screen at least once, and never
+// while `blocked` (an edit form inside it is open).
+function useCollapseWhenOffscreen(element, onCollapse, blocked = false) {
+  const onCollapseRef = useRef(onCollapse);
+  useEffect(() => { onCollapseRef.current = onCollapse; }, [onCollapse]);
+
+  useEffect(() => {
+    if (!element || blocked || typeof IntersectionObserver === 'undefined') return undefined;
+
+    const stickyOffset = ['.page-header', '.aboutus-quicknav']
+      .reduce((sum, selector) => sum + (document.querySelector(selector)?.offsetHeight ?? 0), 0);
+
+    let hasBeenVisible = false;
+    const observer = new IntersectionObserver((entries) => {
+      const { isIntersecting } = entries[entries.length - 1];
+      if (isIntersecting) {
+        hasBeenVisible = true;
+      } else if (hasBeenVisible) {
+        onCollapseRef.current();
+      }
+    }, { rootMargin: `-${stickyOffset}px 0px 0px 0px` });
+
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element, blocked]);
+}
+
 function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   const info = useSingletonForm({
     load: aboutUsService.getDirectoryInfo,
@@ -524,6 +555,11 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   const [phoneForm, setPhoneForm] = useState({});
   const [phoneBaseline, setPhoneBaseline] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  // DOM nodes of the currently expanded group / station, for the auto-collapse
+  // observers below.
+  const [expandedGroupEl, setExpandedGroupEl] = useState(null);
+  const [expandedEntryEl, setExpandedEntryEl] = useState(null);
 
   const refreshTree = async () => {
     setLoadingTree(true);
@@ -625,6 +661,29 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
       || (Boolean(phoneEditing) && isFormDirty(phoneForm, phoneBaseline))
   );
 
+  // Auto-collapse an expanded district / station when it scrolls out of view.
+  // Held open while an edit form anywhere inside it is open.
+  const expandedGroupData = groups.find((group) => group.group_key === expandedGroup);
+  const groupHasOpenEdit = expandedGroup !== null && (
+    groupEditing === expandedGroup
+    || entryEditing?.groupKey === expandedGroup
+    || Boolean(phoneEditing && expandedGroupData?.entries.some((entry) => entry.entry_key === phoneEditing.entryKey))
+  );
+  const entryHasOpenEdit = expandedEntry !== null && (
+    entryEditing?.entryKey === expandedEntry
+    || phoneEditing?.entryKey === expandedEntry
+  );
+  useCollapseWhenOffscreen(
+    expandedGroupEl,
+    () => setExpandedGroup((current) => (current === expandedGroup ? null : current)),
+    groupHasOpenEdit
+  );
+  useCollapseWhenOffscreen(
+    expandedEntryEl,
+    () => setExpandedEntry((current) => (current === expandedEntry ? null : current)),
+    entryHasOpenEdit
+  );
+
   return (
     <section id="cavite-directory" className="aboutus-card">
       <header className="aboutus-card-header">
@@ -662,7 +721,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
             {groups.map((group) => {
               const isExpanded = expandedGroup === group.group_key;
               return (
-                <li key={group.group_key} className="aboutus-directory-group">
+                <li key={group.group_key} className="aboutus-directory-group" ref={isExpanded ? setExpandedGroupEl : undefined}>
                   {groupEditing === group.group_key ? (
                     <div className="aboutus-edit-row">
                       <FieldPair label="Title" valueEn={groupForm.title_en} valueTl={groupForm.title_tl}
@@ -698,7 +757,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                         {group.entries.map((entry) => {
                           const entryExpanded = expandedEntry === entry.entry_key;
                           return (
-                            <li key={entry.entry_key} className="aboutus-directory-entry">
+                            <li key={entry.entry_key} className="aboutus-directory-entry" ref={entryExpanded ? setExpandedEntryEl : undefined}>
                               {entryEditing?.groupKey === group.group_key && entryEditing.entryKey === entry.entry_key ? (
                                 <EntryEditRow form={entryForm} setForm={setEntryForm} onSave={() => requestSave(saveEntry)} onCancel={cancelEntryEdit} busy={busy} />
                               ) : (

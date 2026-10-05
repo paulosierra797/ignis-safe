@@ -7,7 +7,7 @@ import AIRecommendationsDialog from './AIRecommendationsDialog';
 import { getPersonnelOverviewStats, getUsersFromProfiles } from '../utils/usersService';
 import { getAnalyticsDashboardStats, getAnalyticsChartsData } from '../utils/knowledgeAnalyticsService';
 import { getPersonnelForDate, getShiftAssignmentSummaryForDate } from '../utils/personnelOperationsService';
-import { getManilaToday } from '../utils/dateUtils';
+import { getManilaToday, getMonthKeyInTimeZone } from '../utils/dateUtils';
 import { formatStatusLabel } from '../utils/statusUtils';
 import './Dashboard.css';
 import './InsightsSurface.css';
@@ -50,18 +50,6 @@ const getActivityTrendsParams = (option) => {
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
-};
-
-const toPercentDelta = (current, previous) => {
-  const safeCurrent = toNumber(current, 0);
-  const safePrevious = toNumber(previous, 0);
-
-  if (safePrevious <= 0) {
-    if (safeCurrent <= 0) return 0;
-    return 100;
-  }
-
-  return Math.round(((safeCurrent - safePrevious) / safePrevious) * 100);
 };
 
 const getBarHeights = (values) => {
@@ -112,6 +100,7 @@ export default function Dashboard() {
   const [activityTrendsData, setActivityTrendsData] = useState(DEFAULT_CHARTS.activityTrends);
   const [mobileStats, setMobileStats] = useState({
     totalRegistered: 0,
+    registeredThisMonth: 0,
     activeUsersToday: 0,
     activeUsersThisWeek: 0,
     newRegistrationsCurrent: 0,
@@ -239,6 +228,11 @@ if (currentKnowledge < 40) {
             return date >= previousPeriodStart && date < currentPeriodStart;
           }).length;
 
+          const currentMonthKey = getMonthKeyInTimeZone(now);
+          const registeredThisMonth = safeUsers.filter(
+            (user) => getMonthKeyInTimeZone(user.created_at) === currentMonthKey,
+          ).length;
+
           const userOverviewValues = charts?.userOverview?.values || [];
           const activeUsersToday = toNumber(userOverviewValues[userOverviewValues.length - 1], 0);
           const activeUsersThisWeek = userOverviewValues
@@ -252,6 +246,7 @@ if (currentKnowledge < 40) {
 
           setMobileStats({
             totalRegistered: safeUsers.length,
+            registeredThisMonth,
             activeUsersToday,
             activeUsersThisWeek,
             newRegistrationsCurrent,
@@ -404,11 +399,6 @@ if (currentKnowledge < 40) {
     }))
     .sort((a, b) => b.value - a.value)
     ;
-
-  const registrationTrend = toPercentDelta(
-    mobileStats.newRegistrationsCurrent,
-    mobileStats.newRegistrationsPrevious,
-  );
 
   const knowledgeGainPrefix = analyticsStats.knowledgeGainPercent > 0 ? '+' : '';
 
@@ -636,10 +626,10 @@ if (currentKnowledge < 40) {
                 <div className="metric-value">
                   <span className="main-number">{mobileStatsLoading ? '...' : mobileStats.totalRegistered}</span>
                 </div>
-                <span className={`metric-trend ${registrationTrend >= 0 ? 'positive' : ''}`}>
+                <span className={`metric-trend ${mobileStats.registeredThisMonth > 0 ? 'positive' : ''}`}>
                   {mobileStatsLoading
                     ? '...'
-                    : `${registrationTrend >= 0 ? '+' : ''}${registrationTrend}% this month`}
+                    : `${mobileStats.registeredThisMonth > 0 ? '+' : ''}${mobileStats.registeredThisMonth} this month`}
                 </span>
                 <p className="metric-description">All learner accounts currently registered in the mobile application.</p>
               </div>

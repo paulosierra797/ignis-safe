@@ -21,4 +21,25 @@ export const getTodayIsoInTimeZone = (timeZone = MANILA_TIME_ZONE) => {
 
 export const getManilaToday = () => getTodayIsoInTimeZone(MANILA_TIME_ZONE);
 
+// Returns the YYYY-MM calendar month of a date (or date string) in the given
+// IANA timezone, or null if the value is missing/invalid.
+export const getMonthKeyInTimeZone = (value, timeZone = MANILA_TIME_ZONE) => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit'
+  }).formatToParts(date);
+
+  const lookup = {};
+  for (const part of parts) {
+    lookup[part.type] = part.value;
+  }
+
+  return `${lookup.year}-${lookup.month}`;
+};
+
 export { MANILA_TIME_ZONE };

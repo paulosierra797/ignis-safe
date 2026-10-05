@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -25,6 +26,7 @@ const formatRoleLabel = (role) => {
 
 export default function AdminProfile() {
   const { currentUser, setCurrentUser } = useUser();
+  const navigate = useNavigate();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -248,6 +250,17 @@ export default function AdminProfile() {
     });
   };
 
+  // Password changes reuse the existing Forgot Password / reset flow on the
+  // login page, pre-filled with this admin's assigned email.
+  const handleChangePassword = () => {
+    const accountEmail = String(currentUser?.email || '').trim();
+    if (!accountEmail) {
+      showModal('error', 'No email address is assigned to this account.');
+      return;
+    }
+    navigate('/portal/login', { state: { changePasswordEmail: accountEmail } });
+  };
+
   return (
     <div className="admin-profile-container">
       <Sidebar variant="admin" />
@@ -396,6 +409,14 @@ export default function AdminProfile() {
                 </div>
 
                 <div className="profile-actions-row">
+                  <button
+                    type="button"
+                    className="save-changes-btn"
+                    onClick={handleChangePassword}
+                    disabled={savingSecurity}
+                  >
+                    Change Password
+                  </button>
                   <button
                     type="button"
                     className="save-changes-btn"

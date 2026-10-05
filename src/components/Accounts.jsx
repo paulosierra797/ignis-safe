@@ -16,6 +16,7 @@ import {
   FiPhone,
   FiSave,
   FiShield,
+  FiSmartphone,
   FiUser,
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
@@ -115,6 +116,9 @@ const getPersonnelAccountType = (account) =>
   account?.is_personnel_workspace_profile
     ? 'Personnel workspace profile'
     : 'Personnel account';
+
+// Secondary indicator only: set once the Personnel/Admin account has used the mobile app.
+const isMobileUser = (account) => account?.mobile_user_since != null;
 
 const getAccountStatusDetails = (status) => {
   const normalizedStatus = String(status || '')
@@ -224,6 +228,12 @@ function AccountStatusModal({ account, onClose }) {
                 </span>
               </div>
             )}
+            <div className="account-status-detail-row" role="listitem">
+              <span className="account-status-detail-label">Mobile User</span>
+              <span className={`status-pill ${isMobileUser(account) ? 'active' : 'inactive'}`}>
+                {isMobileUser(account) ? 'Yes' : 'No'}
+              </span>
+            </div>
           </div>
         </div>
       </section>
@@ -343,6 +353,13 @@ function PersonnelProfileModal({
                 <div>
                   <span>Workspace Role</span>
                   <strong>{formatStatusLabel(account.role, 'Personnel')}</strong>
+                </div>
+              </div>
+              <div className="personnel-profile-detail">
+                <FiSmartphone aria-hidden="true" />
+                <div>
+                  <span>Mobile User</span>
+                  <strong>{isMobileUser(account) ? 'Yes' : 'No'}</strong>
                 </div>
               </div>
               <div className="personnel-profile-detail">
@@ -3978,7 +3995,7 @@ const permissions = getDefaultPermissions(formData.role);
                           <RecordActions label="Profile change history actions">
                           <ArchiveButton
                             onClick={() => requestArchiveHistoryItem('profile', request)}
-                            label={`Archive profile change request for ${request.personnel_name || 'personnel'}`}
+                            label="Archive"
                             title="Archive request"
                           />
                           </RecordActions>
@@ -4032,7 +4049,7 @@ const permissions = getDefaultPermissions(formData.role);
                 {request.status !== 'pending' && (
                   <RecordActions label="Profile change history actions">
                   <ArchiveButton
-                    label={`Archive profile change request for ${request.personnel_name || 'personnel'}`}
+                    label="Archive"
                     onClick={() => requestArchiveHistoryItem('profile', request)}
                   />
                   </RecordActions>

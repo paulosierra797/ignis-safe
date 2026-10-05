@@ -827,7 +827,7 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
                   : isLocationVerified
                     ? '✓ Location Verified'
                     : geoLocation
-                      ? 'Not On-Site'
+                      ? 'Try Again'
                       : 'Request Location'}
               </button>
               <div className={`location-status ${isLocationVerified ? 'success' : geoStatus.includes('✗') || (geoLocation && !isLocationVerified) ? 'error' : ''}`}>

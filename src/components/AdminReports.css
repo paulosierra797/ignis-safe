@@ -713,6 +713,17 @@
   cursor: pointer;
 }
 
+/* Keep the Archive button label and icon white; overrides the red `.report-archive-confirm span` rule. */
+.report-archive-confirm-actions button.archive-control,
+.report-archive-confirm-actions button.archive-control:hover,
+.report-archive-confirm-actions button.archive-control:active,
+.report-archive-confirm-actions button.archive-control:focus,
+.report-archive-confirm-actions button.archive-control:focus-visible,
+.report-archive-confirm-actions button.archive-control > span,
+.report-archive-confirm-actions button.archive-control > svg {
+  color: #ffffff;
+}
+
 @media (max-width: 720px) {
   .admin-reports-toolbar-right {
     flex-direction: row;

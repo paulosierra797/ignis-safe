@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FaArrowLeft,
   FaCheck,
@@ -172,6 +172,7 @@ const validateTrustedDeviceRecord = (record, { deviceId, userId }) => {
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const attendanceRedirect = getSafeAttendanceRedirect(searchParams.get('redirect'));
   const { currentUser, setCurrentUser, refreshCurrentUser } = useUser();
@@ -189,6 +190,7 @@ export default function LoginPage() {
   const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isResetEmailLocked, setIsResetEmailLocked] = useState(false);
   const isResetFlowActiveRef = useRef(false);
   const [authStep, setAuthStep] = useState("login");
   const [otpNotice, setOtpNotice] = useState("");
@@ -321,6 +323,22 @@ const logLoginIfPersonnel = (user) => {
       active = false;
       stopRecoveryListener();
     };
+  }, []);
+
+  // Admin Profile -> Security -> Change Password lands here with the account
+  // email in router state; start the same Forgot Password flow for that email.
+  useEffect(() => {
+    const changePasswordEmail = String(location.state?.changePasswordEmail || '').trim();
+    if (!changePasswordEmail) return;
+
+    setAuthFlowGated(true);
+    setResetEmail(changePasswordEmail);
+    setIsResetEmailLocked(true);
+    setForgotPasswordStep('request');
+    setError('');
+    window.history.replaceState({}, document.title, '/portal/login');
+  // Router state is read once on arrival.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -612,6 +630,7 @@ const handleLogin = async (e) => {
      setAuthStep("login"); 
     setForgotPasswordStep(null);
     setResetEmail("");
+    setIsResetEmailLocked(false);
     setResetCode("");
     setNewPassword("");
     setConfirmPassword("");
@@ -918,6 +937,8 @@ useEffect(() => {
                     placeholder="name@example.com"
                     value={resetEmail}
                     onChange={(e) => setResetEmail(e.target.value)}
+                    className={isResetEmailLocked ? 'recovery-readonly-input' : undefined}
+                    readOnly={isResetEmailLocked}
                     autoComplete="email"
                     required
                   />

@@ -1599,9 +1599,11 @@ def delete_user(request: DeleteUserRequest) -> Dict[str, Any]:
 
 
 from .admin_users import router as admin_users_router
+from .personnel_import import router as personnel_import_router
 
 
 app.include_router(admin_users_router)
+app.include_router(personnel_import_router)
 
 
 @app.get("/api/knowledge-analytics/filter-options", dependencies=[Depends(require_admin)])

@@ -22,6 +22,7 @@ import {
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
+import PersonnelImportModal from './PersonnelImportModal';
 import ExpandableText from './ExpandableText';
 import ToastMessage from './ToastMessage';
 import './Accounts.css';
@@ -851,6 +852,9 @@ export default function Accounts() {
   const [personnelPage, setPersonnelPage] = useState(1);
   const [adminPage, setAdminPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importState, setImportState] = useState({ dirty: false, processing: false });
+  const [pendingImportNavigation, setPendingImportNavigation] = useState(null);
   const [isAddExitConfirmOpen, setIsAddExitConfirmOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
@@ -982,8 +986,9 @@ export default function Accounts() {
 
     const currentPath = `${currentLocation.pathname}${currentLocation.search}${currentLocation.hash}`;
     const nextPath = `${nextLocation.pathname}${nextLocation.search}${nextLocation.hash}`;
-    return (isAddFormDirty || isPersonnelShiftDirty || isShiftScheduleDirty) && currentPath !== nextPath;
-  }, [isAddFormDirty, isPersonnelShiftDirty, isShiftScheduleDirty]);
+    return (isAddFormDirty || isPersonnelShiftDirty || isShiftScheduleDirty
+      || (isImportModalOpen && (importState.dirty || importState.processing))) && currentPath !== nextPath;
+  }, [isAddFormDirty, isPersonnelShiftDirty, isShiftScheduleDirty, isImportModalOpen, importState]);
   const addPersonnelBlocker = useBlocker(shouldBlockAccountsNavigation);
   const hasPendingAddExit = isAddExitConfirmOpen
     || (addPersonnelBlocker.state === 'blocked' && isAddFormDirty);
@@ -2310,6 +2315,10 @@ const permissions = getDefaultPermissions(formData.role);
   };
 
   const handleAccountsHeaderNavigationRequest = (navigation) => {
+    if (isImportModalOpen && (importState.dirty || importState.processing)) {
+      setPendingImportNavigation(navigation);
+      return;
+    }
     if (isAddFormDirty) {
       pendingAddNavigationRef.current = { type: 'manual', navigation };
       setIsAddExitConfirmOpen(true);
@@ -3332,9 +3341,16 @@ const permissions = getDefaultPermissions(formData.role);
               </>
             )}
             {activeAccountsTab === 'personnel' && (
-              <button className="add-personnel-btn" onClick={handleOpenAddModal}>
-                Add Personnel
-              </button>
+              <>
+                <button className="add-personnel-btn" onClick={handleOpenAddModal}>
+                  Add Personnel
+                </button>
+                {String(currentUser?.account_role || currentUser?.role || '').toLowerCase() === 'admin' && (
+                  <button type="button" className="shift-schedule-btn personnel-import-open-button" onClick={() => setIsImportModalOpen(true)}>
+                    Import Personnel
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -4512,6 +4528,31 @@ const permissions = getDefaultPermissions(formData.role);
     </div>
   </div>
 )}
+
+        {isImportModalOpen && (
+          <PersonnelImportModal
+            onStateChange={setImportState}
+            onClose={() => {
+              setIsImportModalOpen(false);
+              setImportState({ dirty: false, processing: false });
+              setPendingImportNavigation(null);
+              if (addPersonnelBlocker.state === 'blocked') addPersonnelBlocker.reset();
+            }}
+            onCreated={() => Promise.all([fetchAccounts(), loadPersonnelAccountHistory()])}
+            navigationBlocked={addPersonnelBlocker.state === 'blocked' || Boolean(pendingImportNavigation)}
+            onCancelNavigation={() => {
+              setPendingImportNavigation(null);
+              if (addPersonnelBlocker.state === 'blocked') addPersonnelBlocker.reset();
+            }}
+            onDiscardNavigation={() => {
+              setIsImportModalOpen(false);
+              setImportState({ dirty: false, processing: false });
+              setPendingImportNavigation(null);
+              if (pendingImportNavigation) runAddManualNavigation(pendingImportNavigation);
+              else if (addPersonnelBlocker.state === 'blocked') addPersonnelBlocker.proceed();
+            }}
+          />
+        )}
 
         {isAddModalOpen && (
           <div className="accounts-modal-overlay" role="dialog" aria-modal="true">

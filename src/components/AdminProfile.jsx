@@ -251,14 +251,17 @@ export default function AdminProfile() {
   };
 
   // Password changes reuse the existing Forgot Password / reset flow on the
-  // login page, pre-filled with this admin's assigned email.
+  // login page, pre-filled with this admin's assigned email. The admin stays
+  // signed in and "Back to Profile" returns here.
   const handleChangePassword = () => {
     const accountEmail = String(currentUser?.email || '').trim();
     if (!accountEmail) {
       showModal('error', 'No email address is assigned to this account.');
       return;
     }
-    navigate('/portal/login', { state: { changePasswordEmail: accountEmail } });
+    navigate('/portal/login', {
+      state: { changePasswordEmail: accountEmail, returnTo: '/dashboard/profile' }
+    });
   };
 
   return (

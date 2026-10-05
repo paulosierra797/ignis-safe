@@ -144,6 +144,14 @@ const getSafeAttendanceRedirect = (rawRedirect) => {
 
   return isAllowed ? rawRedirect : null;
 };
+
+// Profile -> Change Password reuses the Forgot Password flow while the user
+// stays signed in. Only these Profile pages may be returned to.
+const PROFILE_RETURN_ALLOWLIST = ['/dashboard/profile', '/personnel/profile'];
+
+const getSafeProfileReturnPath = (rawReturnTo) =>
+  PROFILE_RETURN_ALLOWLIST.includes(rawReturnTo) ? rawReturnTo : null;
+
 const TRUST_DURATION_MS = {
   personnel: 14 * 24 * 60 * 60 * 1000,
   admin: 12 * 60 * 60 * 1000
@@ -192,6 +200,13 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isResetEmailLocked, setIsResetEmailLocked] = useState(false);
   const isResetFlowActiveRef = useRef(false);
+  // Set only when an authenticated user opened this flow from their Profile;
+  // read once on arrival because router state is cleared right after.
+  const [profileReturnPath] = useState(() => (
+    String(location.state?.changePasswordEmail || '').trim()
+      ? getSafeProfileReturnPath(location.state?.returnTo)
+      : null
+  ));
   const [authStep, setAuthStep] = useState("login");
   const [otpNotice, setOtpNotice] = useState("");
   const [otpResendIn, setOtpResendIn] = useState(0);
@@ -357,10 +372,14 @@ const logLoginIfPersonnel = (user) => {
     return () => {
       if (isResetFlowActiveRef.current) {
         setAuthFlowGated(false);
-        void signOut();
+        // A Profile user keeps their existing session when leaving the flow;
+        // a successful password change already signs them out.
+        if (!profileReturnPath) {
+          void signOut();
+        }
       }
     };
-  }, []);
+  }, [profileReturnPath]);
 
 const handleLogin = async (e) => {
   e.preventDefault();
@@ -575,6 +594,11 @@ const handleLogin = async (e) => {
       }
 
       await signOut();
+      if (profileReturnPath) {
+        // The auth listener is gated during this flow, so clear the
+        // signed-in Profile user explicitly after the required sign-out.
+        setCurrentUser(null);
+      }
       window.history.replaceState({}, document.title, '/portal/login');
       setForgotPasswordStep('resetDone');
     } catch (err) {
@@ -642,6 +666,16 @@ const handleLogin = async (e) => {
     setOtpResending(false);
     window.history.replaceState({}, document.title, '/portal/login');
   };
+
+  // Leaves the reused recovery flow without touching the session, so the
+  // user returns to their Profile still signed in with the same role.
+  const handleBackToProfile = () => {
+    setAuthFlowGated(false);
+    navigate(profileReturnPath, { replace: true });
+  };
+
+  const handleRecoveryBack = profileReturnPath ? handleBackToProfile : handleBackToLogin;
+  const recoveryBackLabel = profileReturnPath ? 'Back to Profile' : 'Back to login';
 
 const handleResendOtp = async () => {
   if (otpResendIn > 0 || otpResending) return;
@@ -951,9 +985,9 @@ useEffect(() => {
                 <button type="submit" className="login-button recovery-primary" disabled={loading}>
                   {loading ? 'Checking account...' : 'Send reset code'}
                 </button>
-                <button type="button" onClick={handleBackToLogin} className="back-button recovery-secondary" disabled={loading}>
+                <button type="button" onClick={handleRecoveryBack} className="back-button recovery-secondary" disabled={loading}>
                   <FaArrowLeft aria-hidden="true" />
-                  Back to login
+                  {recoveryBackLabel}
                 </button>
               </form>
             </div>
@@ -1024,9 +1058,9 @@ useEffect(() => {
               <button type="submit" className="login-button recovery-primary" disabled={loading}>
                 {loading ? 'Updating password...' : 'Update password'}
               </button>
-              <button type="button" onClick={handleBackToLogin} className="back-button recovery-secondary" disabled={loading}>
+              <button type="button" onClick={handleRecoveryBack} className="back-button recovery-secondary" disabled={loading}>
                 <FaArrowLeft aria-hidden="true" />
-                Back to login
+                {recoveryBackLabel}
               </button>
             </form>
             </div>
@@ -1074,9 +1108,9 @@ useEffect(() => {
                 <button type="submit" className="verify-button recovery-primary" disabled={loading}>
                   {loading ? 'Verifying code...' : 'Verify code'}
                 </button>
-                <button type="button" onClick={handleBackToLogin} className="back-button recovery-secondary" disabled={loading}>
+                <button type="button" onClick={handleRecoveryBack} className="back-button recovery-secondary" disabled={loading}>
                   <FaArrowLeft aria-hidden="true" />
-                  Back to login
+                  {recoveryBackLabel}
                 </button>
               </form>
             </div>
@@ -1102,8 +1136,8 @@ useEffect(() => {
                 <button onClick={() => setForgotPasswordStep('verifyCode')} className="login-button recovery-primary">
                   Enter reset code
                 </button>
-                <button onClick={handleBackToLogin} className="back-button recovery-secondary">
-                  Back to login
+                <button onClick={handleRecoveryBack} className="back-button recovery-secondary">
+                  {recoveryBackLabel}
                 </button>
               </div>
             </div>

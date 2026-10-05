@@ -492,7 +492,6 @@ export default function Progress() {
                   { value: 'All', label: 'All locations' },
                   { value: 'dasmarinas', label: 'Dasmariñas City, Cavite' },
                   { value: 'outside', label: 'Outside Dasmariñas City' },
-                  { value: 'unspecified', label: 'Not Specified' },
                 ]}
               />
             </div>}
@@ -1138,13 +1137,6 @@ export default function Progress() {
                         <div className="progress-modal-info-body">
                           <span className="progress-modal-label">LAST SIMULATION</span>
                           <span className="progress-modal-value">{selectedUser.lastSimulation}</span>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiCheckCircle aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">SIMULATIONS COMPLETED</span>
-                          <span className="progress-modal-value">{selectedUser.completedSimulations}</span>
                         </div>
                       </div>
                     </div>

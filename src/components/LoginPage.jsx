@@ -152,6 +152,10 @@ const PROFILE_RETURN_ALLOWLIST = ['/dashboard/profile', '/personnel/profile'];
 const getSafeProfileReturnPath = (rawReturnTo) =>
   PROFILE_RETURN_ALLOWLIST.includes(rawReturnTo) ? rawReturnTo : null;
 
+// How long the "Password changed successfully" state stays visible before a
+// Profile user is signed out and returned to the login form.
+const PASSWORD_CHANGED_LOGOUT_DELAY_MS = 2000;
+
 const TRUST_DURATION_MS = {
   personnel: 14 * 24 * 60 * 60 * 1000,
   admin: 12 * 60 * 60 * 1000
@@ -193,7 +197,7 @@ export default function LoginPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [forgotPasswordStep, setForgotPasswordStep] = useState(null); // null, 'request', 'validatingRecovery', 'emailSent', 'verifyCode', 'setPassword', 'resetDone'
+  const [forgotPasswordStep, setForgotPasswordStep] = useState(null); // null, 'request', 'validatingRecovery', 'emailSent', 'verifyCode', 'setPassword', 'passwordChangedLoggingOut', 'resetDone'
   const [resetEmail, setResetEmail] = useState("");
   const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -202,11 +206,15 @@ export default function LoginPage() {
   const isResetFlowActiveRef = useRef(false);
   // Set only when an authenticated user opened this flow from their Profile;
   // read once on arrival because router state is cleared right after.
-  const [profileReturnPath] = useState(() => (
+  // Cleared once a successful password change has signed the user out.
+  const [profileReturnPath, setProfileReturnPath] = useState(() => (
     String(location.state?.changePasswordEmail || '').trim()
       ? getSafeProfileReturnPath(location.state?.returnTo)
       : null
   ));
+  // True while leaving the flow must keep the signed-in Profile session; set
+  // to false the moment the password has actually been changed.
+  const keepSessionOnExitRef = useRef(Boolean(profileReturnPath));
   const [authStep, setAuthStep] = useState("login");
   const [otpNotice, setOtpNotice] = useState("");
   const [otpResendIn, setOtpResendIn] = useState(0);
@@ -372,14 +380,15 @@ const logLoginIfPersonnel = (user) => {
     return () => {
       if (isResetFlowActiveRef.current) {
         setAuthFlowGated(false);
-        // A Profile user keeps their existing session when leaving the flow;
-        // a successful password change already signs them out.
-        if (!profileReturnPath) {
+        // A Profile user keeps their existing session when leaving the flow
+        // (e.g. browser Back) before the password is changed; once it has
+        // been changed, any exit ends the session.
+        if (!keepSessionOnExitRef.current) {
           void signOut();
         }
       }
     };
-  }, [profileReturnPath]);
+  }, []);
 
 const handleLogin = async (e) => {
   e.preventDefault();
@@ -593,12 +602,19 @@ const handleLogin = async (e) => {
         return;
       }
 
-      await signOut();
       if (profileReturnPath) {
-        // The auth listener is gated during this flow, so clear the
-        // signed-in Profile user explicitly after the required sign-out.
-        setCurrentUser(null);
+        // The password is changed: from here on, leaving the page (browser
+        // Back, top-left arrow) must end the session instead of keeping it.
+        keepSessionOnExitRef.current = false;
+        setForgotPasswordStep('passwordChangedLoggingOut');
+        await new Promise((resolve) => window.setTimeout(resolve, PASSWORD_CHANGED_LOGOUT_DELAY_MS));
+        // Signs out, clears the gated Profile user and shows the login form.
+        await handleBackToLogin();
+        setProfileReturnPath(null);
+        return;
       }
+
+      await signOut();
       window.history.replaceState({}, document.title, '/portal/login');
       setForgotPasswordStep('resetDone');
     } catch (err) {
@@ -836,15 +852,21 @@ useEffect(() => {
 }, [currentUser, authStep, navigate, attendanceRedirect]);
 
   const displayPortal = pendingRole || 'admin';
+  const isLoggingOutAfterPasswordChange = forgotPasswordStep === 'passwordChangedLoggingOut';
+  // Opened from Profile and the password is not changed yet: the top-left
+  // arrow returns to Profile with the session intact, like "Back to Profile".
+  const isTopBackToProfile = Boolean(profileReturnPath) && !isLoggingOutAfterPasswordChange;
+  const topBackLabel = isTopBackToProfile ? 'Back to profile' : 'Back to landing page';
 
   return (
     <main className={`login-page login-page--${displayPortal}`}>
       <button
         type="button"
         className="login-landing-back"
-        onClick={() => navigate('/')}
-        aria-label="Back to landing page"
-        title="Back to landing page"
+        onClick={isTopBackToProfile ? handleBackToProfile : () => navigate('/')}
+        disabled={isLoggingOutAfterPasswordChange}
+        aria-label={topBackLabel}
+        title={topBackLabel}
       >
         <FaArrowLeft aria-hidden="true" />
       </button>
@@ -1139,6 +1161,24 @@ useEffect(() => {
                 <button onClick={handleRecoveryBack} className="back-button recovery-secondary">
                   {recoveryBackLabel}
                 </button>
+              </div>
+            </div>
+          </div>
+        </>
+      ) : forgotPasswordStep === 'passwordChangedLoggingOut' ? (
+        <>
+          <LoginBrandPanel portal={displayPortal} />
+          <div className="login-right">
+            <div className="login-form-container recovery-card recovery-card--status" aria-live="polite">
+              <RecoveryHeader
+                icon={FaCheck}
+                kicker="Recovery complete"
+                title="Password changed successfully"
+                description="Logging you out..."
+                tone="success"
+              />
+              <div className="recovery-loading-track" aria-hidden="true">
+                <span />
               </div>
             </div>
           </div>

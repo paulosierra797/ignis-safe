@@ -6,17 +6,14 @@ import './AppDialog.css';
 import { useUser } from '../context/UserContext';
 import {
   getOrgChartConfig,
-  saveOrgChartConfig,
-  uploadOrgChartAvatar
+  saveOrgChartConfig
 } from '../utils/orgChartService';
 import { logAdminActivity } from '../utils/usersService';
-import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_TYPES } from '../utils/avatarCrop';
-import AvatarCropModal from './AvatarCropModal';
 import './Chart.css';
+import { projectChartText } from '../utils/contentEditingPolicy';
 import OrgChartLayout from './OrgChartLayout';
 import OrgSelectField from './OrgSelectField';
 import { ORG_RANK_OPTIONS, separateOrgRank } from '../utils/orgChartFields';
-import { FiTrash2 } from 'react-icons/fi';
 
 const LEGACY_AVATAR_PLACEHOLDER_PATH = '/user-avatar.png';
 
@@ -207,24 +204,10 @@ const flattenNodes = (data) => {
   return nodes;
 };
 
-const getNodeAndDescendantIds = (node) => [
-  node.id,
-  ...(node.units || []).flatMap((unit) => getNodeAndDescendantIds(unit))
-];
-
-const createOrgNode = (kind) => ({
-  id: `${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  rank: '',
-  name: 'New personnel',
-  title: kind === 'section' ? 'New Section' : 'New Position',
-  avatar_url: '',
-  ...(kind === 'section' ? { units: [] } : {})
-});
-
-// Builds the list of changed fields (name/title/avatar) between the snapshot taken
+// Builds the list of changed fields (name/rank/title) between the snapshot taken
 // when edit mode was entered and the current in-progress edits, so it can be shown
 // in the confirmation modal before anything is persisted.
-const buildChangeList = (original, current, pendingAvatarFiles) => {
+const buildChangeList = (original, current) => {
   const originalMap = new Map(flattenNodes(original).map((node) => [node.id, node]));
   const currentMap = new Map(flattenNodes(current).map((node) => [node.id, node]));
   const changes = [];
@@ -262,15 +245,6 @@ const buildChangeList = (original, current, pendingAvatarFiles) => {
         label: 'Position',
         oldValue: prev.title,
         newValue: node.title
-      });
-    }
-
-    if (pendingAvatarFiles[node.id]) {
-      changes.push({
-        nodeId: node.id,
-        field: 'avatar',
-        label: 'Profile Image',
-        personName: node.name
       });
     }
   });
@@ -349,14 +323,9 @@ export const OrgCard = ({
   node,
   editMode,
   canEdit,
-  canDelete = false,
-  deleteLabel = 'Delete personnel',
-  onChange,
-  onImageChange,
-  onDelete
+  onChange
 }) => {
   const fallbackAvatar = useMemo(() => buildAvatarPlaceholder(node.name), [node.name]);
-  const fileInputRef = useRef(null);
   const [failedAvatarSrc, setFailedAvatarSrc] = useState(null);
   const preferredAvatarSrc =
     node.avatar_url && node.avatar_url !== LEGACY_AVATAR_PLACEHOLDER_PATH
@@ -368,17 +337,6 @@ export const OrgCard = ({
 
   return (
     <div className={`org-card${editMode ? ' org-card-editing' : ''}`}>
-      {editMode && canEdit && canDelete && (
-        <button
-          type="button"
-          className="org-card-delete"
-          onClick={() => onDelete?.(node.id)}
-          aria-label={`${deleteLabel}: ${node.name || 'personnel'}`}
-          title={deleteLabel}
-        >
-          <FiTrash2 aria-hidden="true" />
-        </button>
-      )}
       <img
         src={avatarSrc}
         alt={node.name}
@@ -407,27 +365,6 @@ export const OrgCard = ({
             <OrgSelectField label="Position" value={node.title} options={positionOptions}
               disabled={!canEdit} onChange={value => onChange(node.id, 'title', value)} />
           </div>
-          {canEdit && (
-            <>
-              <button
-                type="button"
-                className="org-avatar-upload"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <span className="org-avatar-upload-icon" aria-hidden="true">+</span>
-                {node.avatar_url && node.avatar_url !== LEGACY_AVATAR_PLACEHOLDER_PATH
-                  ? 'Change photo'
-                  : 'Add photo'}
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={(event) => onImageChange(node.id, event)}
-                hidden
-              />
-            </>
-          )}
         </>
       ) : (
         <div className="org-person-info">
@@ -469,10 +406,6 @@ export default function Chart() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingChart, setIsLoadingChart] = useState(true);
   const [lastEditedAt, setLastEditedAt] = useState(null);
-  const [pendingAvatarFiles, setPendingAvatarFiles] = useState({});
-  const [avatarPreviewUrls, setAvatarPreviewUrls] = useState({});
-  const [cropFile, setCropFile] = useState(null);
-  const [cropNodeId, setCropNodeId] = useState(null);
   const [pendingChanges, setPendingChanges] = useState([]);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [successSummary, setSuccessSummary] = useState(null);
@@ -486,9 +419,9 @@ export default function Chart() {
 
   const currentChanges = useMemo(
     () => editMode
-      ? buildChangeList(editSnapshotRef.current || orgData, orgData, pendingAvatarFiles)
+      ? buildChangeList(editSnapshotRef.current || orgData, orgData)
       : [],
-    [editMode, orgData, pendingAvatarFiles]
+    [editMode, orgData]
   );
   const isDirty = editMode && currentChanges.length > 0;
 
@@ -565,19 +498,6 @@ export default function Chart() {
     }
   }, [blocker.state]);
 
-  useEffect(() => {
-    return () => {
-      Object.values(avatarPreviewUrls).forEach((url) => URL.revokeObjectURL(url));
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const clearPendingAvatars = () => {
-    Object.values(avatarPreviewUrls).forEach((url) => URL.revokeObjectURL(url));
-    setAvatarPreviewUrls({});
-    setPendingAvatarFiles({});
-  };
-
   const persistChart = async (chartData, activityDetails = 'Organizational chart was updated.') => {
     const { updatedAt, error } = await saveOrgChartConfig(chartData, currentUser?.admin_id || null);
 
@@ -606,59 +526,11 @@ export default function Chart() {
   };
 
   const handleUpdate = (id, field, value) => {
-    if (!isAdmin) {
+    if (!isAdmin || !editMode || !['name', 'rank', 'title'].includes(field)) {
       return;
     }
 
     setOrgData((prev) => applyNodeUpdate(prev, id, field, value));
-  };
-
-  const handleAddDepartment = () => {
-    if (!isAdmin || !editMode) return;
-    setOrgData((prev) => ({
-      ...prev,
-      departments: [...prev.departments, createOrgNode('section')]
-    }));
-  };
-
-  const handleAddUnit = (departmentId) => {
-    if (!isAdmin || !editMode) return;
-    setOrgData((prev) => ({
-      ...prev,
-      departments: prev.departments.map((department) => (
-        department.id === departmentId
-          ? { ...department, units: [...(department.units || []), createOrgNode('personnel')] }
-          : department
-      ))
-    }));
-  };
-
-  const handleDeleteNode = (nodeId) => {
-    if (!isAdmin || !editMode || [orgData.top.id, orgData.second.id].includes(nodeId)) return;
-
-    const targetNode = flattenNodes(orgData).find((node) => node.id === nodeId);
-    if (!targetNode) return;
-    const removedIds = new Set(getNodeAndDescendantIds(targetNode));
-
-    removedIds.forEach((id) => {
-      if (avatarPreviewUrls[id]) URL.revokeObjectURL(avatarPreviewUrls[id]);
-    });
-    setAvatarPreviewUrls((current) => Object.fromEntries(
-      Object.entries(current).filter(([id]) => !removedIds.has(id))
-    ));
-    setPendingAvatarFiles((current) => Object.fromEntries(
-      Object.entries(current).filter(([id]) => !removedIds.has(id))
-    ));
-
-    setOrgData((current) => ({
-      ...current,
-      departments: current.departments
-        .filter((department) => department.id !== nodeId)
-        .map((department) => ({
-          ...department,
-          units: (department.units || []).filter((unit) => unit.id !== nodeId)
-        }))
-    }));
   };
 
   const handleEditToggle = () => {
@@ -672,7 +544,7 @@ export default function Chart() {
       return;
     }
 
-    const changes = buildChangeList(editSnapshotRef.current || orgData, orgData, pendingAvatarFiles);
+    const changes = buildChangeList(editSnapshotRef.current || orgData, orgData);
 
     if (changes.length === 0) {
       setEditMode(false);
@@ -690,21 +562,7 @@ export default function Chart() {
   };
 
   const saveChartChanges = async (changes) => {
-    let finalData = orgData;
-
-    for (const [nodeId, file] of Object.entries(pendingAvatarFiles)) {
-      const { data: imageUrl, error } = await uploadOrgChartAvatar(
-        nodeId,
-        file,
-        currentUser?.admin_id || 'admin'
-      );
-
-      if (error) {
-        throw new Error(error);
-      }
-
-      finalData = applyNodeUpdate(finalData, nodeId, 'avatar_url', imageUrl);
-    }
+    const finalData = projectChartText(editSnapshotRef.current || orgData, orgData);
 
     const saved = await persistChart(finalData, buildActivityDetails(changes));
 
@@ -717,7 +575,6 @@ export default function Chart() {
 
   const clearEditSession = (finalData) => {
     setOrgData(finalData);
-    clearPendingAvatars();
     setEditMode(false);
     editSnapshotRef.current = null;
     setIsConfirmModalOpen(false);
@@ -787,7 +644,6 @@ export default function Chart() {
     if (editSnapshotRef.current) {
       setOrgData(editSnapshotRef.current);
     }
-    clearPendingAvatars();
     setEditMode(false);
     editSnapshotRef.current = null;
     setIsConfirmModalOpen(false);
@@ -839,65 +695,6 @@ export default function Chart() {
     }
   };
 
-  const handleAvatarSelect = (id, event) => {
-    if (!isAdmin) {
-      return;
-    }
-
-    const file = event.target.files?.[0];
-    event.target.value = '';
-    if (!file) {
-      return;
-    }
-
-    if (!AVATAR_ALLOWED_TYPES.includes(file.type)) {
-      setErrorInfo({ message: 'Invalid file type. Please upload an image (JPEG, PNG, GIF, or WebP).' });
-      return;
-    }
-
-    if (file.size > AVATAR_MAX_SIZE) {
-      setErrorInfo({ message: 'File size exceeds 5MB. Please upload a smaller image.' });
-      return;
-    }
-
-    setCropNodeId(id);
-    setCropFile(file);
-  };
-
-  const handleCropCancel = () => {
-    setCropFile(null);
-    setCropNodeId(null);
-  };
-
-  const handleCropError = (message) => {
-    setCropFile(null);
-    setCropNodeId(null);
-    setErrorInfo({ message: message || 'The avatar could not be cropped.' });
-  };
-
-  const handleCropApply = (croppedFile) => {
-    const nodeId = cropNodeId;
-    const previewUrl = URL.createObjectURL(croppedFile);
-
-    setAvatarPreviewUrls((prev) => {
-      if (prev[nodeId]) {
-        URL.revokeObjectURL(prev[nodeId]);
-      }
-      return { ...prev, [nodeId]: previewUrl };
-    });
-
-    setPendingAvatarFiles((prev) => ({
-      ...prev,
-      [nodeId]: croppedFile
-    }));
-
-    setCropFile(null);
-    setCropNodeId(null);
-  };
-
-  const withPreview = (node) =>
-    avatarPreviewUrls[node.id] ? { ...node, avatar_url: avatarPreviewUrls[node.id] } : node;
-
   return (
     <div className="chart-container">
       <Sidebar onNavigationRequest={handleHeaderNavigationRequest} />
@@ -927,34 +724,17 @@ export default function Chart() {
         <OrgChartLayout
           data={orgData}
           loadingMessage={isLoadingChart ? 'Loading chart...' : undefined}
-          editMode={editMode && isAdmin}
-          onAddDepartment={handleAddDepartment}
-          onAddUnit={handleAddUnit}
           renderNode={node => (
             <OrgCard
-              node={withPreview(node)}
+              node={node}
               editMode={editMode}
               canEdit={isAdmin}
-              canDelete={![orgData.top.id, orgData.second.id].includes(node.id)}
-              deleteLabel={orgData.departments.some((department) => department.id === node.id)
-                ? 'Delete section and its personnel'
-                : 'Delete personnel'}
               onChange={handleUpdate}
-              onImageChange={handleAvatarSelect}
-              onDelete={handleDeleteNode}
             />
           )}
         />
       </div>
 
-      {!errorInfo && (
-        <AvatarCropModal
-          file={cropFile}
-          onCancel={handleCropCancel}
-          onApply={handleCropApply}
-          onError={handleCropError}
-        />
-      )}
 
       {hasPendingNavigation && !errorInfo && (
         <div

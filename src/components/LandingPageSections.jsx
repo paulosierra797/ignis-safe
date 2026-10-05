@@ -1,7 +1,6 @@
 import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
-import { FiArrowDown, FiArrowUp, FiEye, FiEyeOff, FiMove, FiSettings } from 'react-icons/fi';
 import { useLandingContent } from '../context/LandingContentContext';
 import HeroSection from './HeroSection';
 import TrustAccessibilitySection from './TrustAccessibilitySection';
@@ -92,20 +91,17 @@ function LandingSectionFrame({ sectionId, className, editMode, children }) {
 
 export default function LandingPageSections({
   editMode = false,
-  onMoveSection,
-  onToggleSection,
-  onManageSection,
 }) {
   const { content } = useLandingContent();
   const sections = content.layout?.sections || Object.keys(LANDING_SECTIONS);
   const hidden = new Set(content.layout?.hidden || []);
 
-  return sections.map((sectionId, index) => {
+  return sections.map((sectionId) => {
     const definition = LANDING_SECTIONS[sectionId];
     if (!definition) return null;
 
     const isHidden = hidden.has(sectionId);
-    if (isHidden && !editMode) return null;
+    if (isHidden) return null;
 
     const SectionComponent = definition.Component;
     return (
@@ -115,61 +111,7 @@ export default function LandingPageSections({
         editMode={editMode}
         className={`landing-admin-section${editMode ? ' is-editing' : ''}${isHidden ? ' is-hidden' : ''}`}
       >
-        {editMode && (
-          <div className="landing-admin-section-tools" data-landing-editor-control="true">
-            <span><FiMove aria-hidden="true" /> {definition.label}</span>
-            <button
-              type="button"
-              onClick={() => onMoveSection?.(sectionId, -1)}
-              disabled={index === 0}
-              aria-label={`Move ${definition.label} section up`}
-              title="Move section up"
-            >
-              <FiArrowUp aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onMoveSection?.(sectionId, 1)}
-              disabled={index === sections.length - 1}
-              aria-label={`Move ${definition.label} section down`}
-              title="Move section down"
-            >
-              <FiArrowDown aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onToggleSection?.(sectionId)}
-              aria-label={`${isHidden ? 'Show' : 'Hide'} ${definition.label} section`}
-              title={`${isHidden ? 'Show' : 'Hide'} section`}
-            >
-              {isHidden ? <FiEye aria-hidden="true" /> : <FiEyeOff aria-hidden="true" />}
-            </button>
-            {sectionId === 'announcements' && (
-              <button
-                type="button"
-                onClick={() => onManageSection?.(sectionId)}
-                aria-label="Manage announcements"
-                title="Manage announcements"
-              >
-                <FiSettings aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        )}
-
-        {isHidden ? (
-          <button
-            type="button"
-            className="landing-admin-hidden-section"
-            onClick={() => onToggleSection?.(sectionId)}
-            data-landing-editor-control="true"
-          >
-            <FiEye aria-hidden="true" />
-            <span>{definition.label} is hidden. Select to show it.</span>
-          </button>
-        ) : (
-          <SectionComponent />
-        )}
+        <SectionComponent />
       </LandingSectionFrame>
     );
   });

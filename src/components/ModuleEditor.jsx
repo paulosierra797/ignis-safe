@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { supabase } from '../utils/supabaseClient';
 import MetadataEditor from './MetadataEditors/MetadataEditor';
 import FireClassDetailsEditor from './MetadataEditors/FireClassDetailsEditor';
 import LearningMaterialsTextEditor from './MetadataEditors/LearningMaterialsTextEditor';
-import MediaAssetEditor from './MetadataEditors/MediaAssetEditor';
 import {
   BilingualGrid,
   EditorField,
@@ -41,11 +39,9 @@ export default function ModuleEditor({
   fireGuides,
   fireClassDetails,
   learningTexts,
-  mediaAssets,
   setFireGuides,
   setFireClassDetails,
   setLearningTexts,
-  setMediaAssets,
   handleSaveModule,
   saving
 }) {
@@ -60,9 +56,6 @@ export default function ModuleEditor({
   const editedPage = editedModule.pages.find((entry) => entry.page_no === page?.page_no);
   const pageTexts = learningTexts.filter(
     (text) => text.module_no === moduleEntry.module_no && text.page_no === page?.page_no
-  );
-  const pageMedia = mediaAssets.filter(
-    (asset) => asset.module_no === moduleEntry.module_no && asset.page_no === page?.page_no
   );
   const visibleBlocks = page
     ? page.blocks.filter((block) =>
@@ -99,29 +92,6 @@ export default function ModuleEditor({
     });
   };
 
-  const uploadMedia = async (asset, file) => {
-    if (!file) return;
-
-    const extension = file.name.split('.').pop();
-    const path = `${asset.module_no}/${asset.asset_key}.${extension}`;
-    const { error } = await supabase.storage
-      .from('learning-materials')
-      .upload(path, file, { upsert: true });
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    const { data } = supabase.storage.from('learning-materials').getPublicUrl(path);
-    setMediaAssets((previous) =>
-      previous.map((entry) =>
-        entry.id === asset.id
-          ? { ...entry, asset_path: path, public_url: data.publicUrl }
-          : entry
-      )
-    );
-  };
 
   return (
     <div className="module-editor-shell">
@@ -147,7 +117,7 @@ export default function ModuleEditor({
         <div>
           <strong>Existing content updates only</strong>
           <p>
-            You can revise the current text, labels, and guides. Adding, deleting, or reordering modules, pages, and blocks is locked because their identifiers and sequence are used by mobile routes, database mappings, progress tracking, and saved learner records.
+            You can revise existing text, labels, and guides. Media files and the module, page, and block structure are fixed.
           </p>
         </div>
       </aside>
@@ -361,38 +331,6 @@ export default function ModuleEditor({
             </EditorSection>
           )}
 
-          <EditorSection
-            title="Media Assets"
-            description="Existing images, videos, and bilingual accessibility labels for this page."
-            collapsible
-            defaultOpen={pageMedia.length > 0}
-          >
-            {pageMedia.length > 0 ? (
-              <div className="module-editor-media-grid">
-                {pageMedia.map((asset, index) => (
-                  <EditorItemCard
-                    key={asset.id}
-                    number={index + 1}
-                    label={asset.asset_key || asset.asset_type || 'Media asset'}
-                  >
-                    <MediaAssetEditor
-                      asset={asset}
-                      uploadFile={uploadMedia}
-                      updateAsset={(field, value) => {
-                        setMediaAssets((previous) =>
-                          previous.map((entry) =>
-                            entry.id === asset.id ? { ...entry, [field]: value } : entry
-                          )
-                        );
-                      }}
-                    />
-                  </EditorItemCard>
-                ))}
-              </div>
-            ) : (
-              <div className="module-editor-empty">No media assets for this page.</div>
-            )}
-          </EditorSection>
         </div>
       ) : (
         <div className="module-editor-empty">No pages available for this module.</div>

@@ -194,7 +194,7 @@
   cursor: pointer;
 }
 
-.landing-inline-edit-modal > label {
+.landing-inline-edit-modal label {
   display: grid;
   gap: 0.45rem;
   padding: 1.1rem;

@@ -17,32 +17,14 @@ import {
   updateLearningMaterialFireClassDetail,
   updateLearningMaterialFireClassGuides,
   updateLearningMaterialTexts,
-  getLearningMaterialMediaAssets,   // ← Add this
-  updateLearningMaterialMediaAsset
 } from '../utils/learningMaterialsService';
-import MetadataEditor from "./MetadataEditors/MetadataEditor";
-import FireClassDetailsEditor from "./MetadataEditors/FireClassDetailsEditor";
-import LearningMaterialsTextEditor from "./MetadataEditors/LearningMaterialsTextEditor";
-import MediaAssetEditor from "./MetadataEditors/MediaAssetEditor";
+import { projectLearningText } from '../utils/contentEditingPolicy';
 import ModuleEditor from "./ModuleEditor";
 import ModuleCard from "./ModuleCard";
 
 import './LearningMaterials.css';
 
 const formatCount = (value) => new Intl.NumberFormat('en-US').format(Number(value || 0));
-const FORMAT_SOURCE_LINE = (line) => (Number.isInteger(line) ? `Line ${line}` : '-');
-const FORMAT_BLOCK_REFERENCE = (block, moduleNo, pageNo) => {
-  const rawKey = String(block?.block_key || '').trim();
-  const match = rawKey.match(/^m(\d+)_p(\d+)_b(\d+)$/i);
-
-  if (match) {
-    return `Block reference: Module ${match[1]} • Page ${match[2]} • Block ${match[3]}`;
-  }
-
-  const blockNo = Number.isInteger(block?.block_no) ? block.block_no : '-';
-  return `Block reference: Module ${moduleNo ?? '-'} • Page ${pageNo ?? '-'} • Block ${blockNo}`;
-};
-
 const cloneEditorValue = (value) => JSON.parse(JSON.stringify(value));
 
 const createEditorState = ({
@@ -50,13 +32,11 @@ const createEditorState = ({
   fireGuides,
   fireClassDetails,
   learningTexts,
-  mediaAssets
 }) => ({
   editedModule: cloneEditorValue(editedModule),
   fireGuides: cloneEditorValue(fireGuides),
   fireClassDetails: cloneEditorValue(fireClassDetails),
   learningTexts: cloneEditorValue(learningTexts),
-  mediaAssets: cloneEditorValue(mediaAssets)
 });
 
 export default function LearningMaterials() {
@@ -66,7 +46,6 @@ export default function LearningMaterials() {
   const [fireGuides, setFireGuides] = useState([]);
   const [learningTexts, setLearningTexts] = useState([]);
   const [fireClassDetails, setFireClassDetails] = useState([]);
-  const [mediaAssets, setMediaAssets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [saving, setSaving] = useState(false);
@@ -87,9 +66,8 @@ export default function LearningMaterials() {
       fireGuides,
       fireClassDetails,
       learningTexts,
-      mediaAssets
     });
-  }, [editedModule, fireGuides, fireClassDetails, learningTexts, mediaAssets]);
+  }, [editedModule, fireGuides, fireClassDetails, learningTexts]);
 
   const isEditorDirty = Boolean(
     editedModule && editorBaselineSnapshot && currentEditorSnapshot !== editorBaselineSnapshot
@@ -123,7 +101,6 @@ export default function LearningMaterials() {
       fireGuides,
       fireClassDetails,
       learningTexts,
-      mediaAssets
     };
     const moduleCopy = cloneEditorValue(module);
     const baseline = createEditorState({
@@ -131,7 +108,6 @@ export default function LearningMaterials() {
       fireGuides: sourceData.fireGuides,
       fireClassDetails: sourceData.fireClassDetails,
       learningTexts: sourceData.learningTexts,
-      mediaAssets: sourceData.mediaAssets
     });
 
     editorBaselineRef.current = baseline;
@@ -154,7 +130,6 @@ export default function LearningMaterials() {
     setFireGuides(cloneEditorValue(baseline.fireGuides));
     setFireClassDetails(cloneEditorValue(baseline.fireClassDetails));
     setLearningTexts(cloneEditorValue(baseline.learningTexts));
-    setMediaAssets(cloneEditorValue(baseline.mediaAssets));
     return baseline;
   };
 
@@ -203,14 +178,16 @@ export default function LearningMaterials() {
       return false;
     }
 
+    const textOnlyModule = projectLearningText(editorBaselineRef.current.editedModule, editedModule);
+
     setSaving(true);
     setMessage({ type: '', text: '' });
 
-    const moduleResult = await updateLearningMaterialModule(editedModule.module_no, {
-      title_en: editedModule.title,
-      title_tl: editedModule.title_tl,
-      subtitle_en: editedModule.subtitle,
-      subtitle_tl: editedModule.subtitle_tl
+    const moduleResult = await updateLearningMaterialModule(textOnlyModule.module_no, {
+      title_en: textOnlyModule.title,
+      title_tl: textOnlyModule.title_tl,
+      subtitle_en: textOnlyModule.subtitle,
+      subtitle_tl: textOnlyModule.subtitle_tl
       
     });
 
@@ -223,10 +200,11 @@ export default function LearningMaterials() {
       return false;
     }
 
+    try {
     await Promise.all(
-  editedModule.pages.map(async (page) => {
+  textOnlyModule.pages.map(async (page) => {
     const pageResult = await updateLearningMaterialPage(
-      editedModule.module_no,
+      textOnlyModule.module_no,
       page.page_no,
       {
         title_en: page.title_en,
@@ -257,6 +235,11 @@ export default function LearningMaterials() {
     );
   })
 );
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message });
+      setSaving(false);
+      return false;
+    }
 try {
   await Promise.all(
     fireClassDetails.map(async (detail) => {
@@ -311,32 +294,6 @@ try {
 }
 try {
   await Promise.all(
-    mediaAssets.map(async (asset) => {
-      const result = await updateLearningMaterialMediaAsset(asset.id, {
-        asset_path: asset.asset_path,
-        public_url: asset.public_url,
-        alt_en: asset.alt_en,
-        alt_tl: asset.alt_tl,
-      });
-
-      if (result.error) {
-        throw new Error(
-          result.error.message || result.error
-        );
-      }
-    })
-  );
-} catch (err) {
-  setMessage({
-    type: "error",
-    text: `Failed to update media asset: ${err.message}`,
-  });
-
-  setSaving(false);
-  return false;
-}
-try {
-  await Promise.all(
     fireGuides.map(async (guide) => {
       const result =
         await updateLearningMaterialFireClassGuides(
@@ -367,18 +324,18 @@ try {
 }
    setModules((prev) =>
   prev.map((m) =>
-    m.module_no === editedModule.module_no
-      ? editedModule
+    m.module_no === textOnlyModule.module_no
+      ? textOnlyModule
       : m
   )
 );
  const savedBaseline = createEditorState({
-   editedModule,
+   editedModule: textOnlyModule,
    fireGuides,
    fireClassDetails,
    learningTexts,
-   mediaAssets
  });
+ setEditedModule(textOnlyModule);
  editorBaselineRef.current = savedBaseline;
  setEditorBaselineSnapshot(JSON.stringify(savedBaseline));
 
@@ -455,13 +412,11 @@ try {
   guidesResult,
   detailsResult,
   textsResult,
-  mediaResult
 ] = await Promise.all([
   getLearningMaterialsAdminView(),
   getLearningMaterialFireClassGuides(),
   getLearningMaterialFireClassDetails(),
    getLearningMaterialTexts(),
-   getLearningMaterialMediaAssets()
 ]);
 
       if (!mounted) return;
@@ -471,7 +426,6 @@ try {
         guidesResult.error && `Failed to load class guides: ${guidesResult.error}`,
         detailsResult.error && `Failed to load fire class details: ${detailsResult.error}`,
         textsResult.error && `Failed to load learning texts: ${textsResult.error}`,
-        mediaResult.error && `Failed to load media assets: ${mediaResult.error}`
       ].find(Boolean);
 
       if (firstLoadError) {
@@ -482,7 +436,6 @@ try {
       setFireGuides(guidesResult.data || []);
       setFireClassDetails(detailsResult.data || []);
       setLearningTexts(textsResult.data || []);
-      setMediaAssets(mediaResult.data || []);
       setLoading(false);
     };
 
@@ -498,9 +451,6 @@ try {
     const n = Number(selectedModule);
     return searchedModules.filter((m) => Number(m.module_no) === n);
   }, [searchedModules, selectedModule]);
-  const SELECTED_MODULE_DATA = displayedModules.find(
-  m => m.module_no === selectedModuleCard
-);
 
   const visiblePages = displayedModules.reduce((c, m) => c + (m.pages?.length || 0), 0);
   const visibleBlocks = displayedModules.reduce((c, m) => c + (m.pages?.reduce((pc, p) => pc + (p.blocks?.length || 0), 0) || 0), 0);
@@ -621,12 +571,10 @@ try {
     fireGuides={fireGuides}
     fireClassDetails={fireClassDetails}
     learningTexts={learningTexts}
-    mediaAssets={mediaAssets}
 
     setFireGuides={setFireGuides}
     setFireClassDetails={setFireClassDetails}
     setLearningTexts={setLearningTexts}
-    setMediaAssets={setMediaAssets}
 
     handleSaveModule={handleSaveModule}
     saving={saving}

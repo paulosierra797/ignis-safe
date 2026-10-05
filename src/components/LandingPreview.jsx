@@ -4,21 +4,10 @@ import LandingPageSections from './LandingPageSections';
 import { LandingContentPreviewProvider } from '../context/LandingContentContext';
 import './LandingPreview.css';
 
-function LandingPageCanvas({ editorMode, onEditItem, onEditImage, onMoveSection, onToggleSection, onManageSection }) {
+function LandingPageCanvas({ editorMode, onEditItem }) {
   const handleCanvasClick = (event) => {
     if (!editorMode) return;
     if (event.target.closest('[data-landing-editor-control="true"]')) return;
-
-    const imageTarget = event.target.closest('[data-landing-edit-image]');
-    if (imageTarget) {
-      event.preventDefault();
-      event.stopPropagation();
-      onEditImage?.({
-        path: imageTarget.dataset.landingEditImage,
-        label: imageTarget.dataset.landingEditLabel || 'Landing page image',
-      });
-      return;
-    }
 
     const textTarget = event.target.closest('[data-landing-edit-path]');
     if (textTarget) {
@@ -45,12 +34,7 @@ function LandingPageCanvas({ editorMode, onEditItem, onEditImage, onMoveSection,
     <div className={`landing-inline-page${editorMode ? ' is-edit-mode' : ' is-view-mode'}`} onClickCapture={handleCanvasClick}>
       <Header />
       <main id="main-content">
-        <LandingPageSections
-          editMode={editorMode}
-          onMoveSection={onMoveSection}
-          onToggleSection={onToggleSection}
-          onManageSection={onManageSection}
-        />
+        <LandingPageSections editMode={editorMode} />
       </main>
       <Footer />
     </div>
@@ -61,10 +45,6 @@ export default function LandingPreview({
   content,
   editorMode = false,
   onEditItem,
-  onEditImage,
-  onMoveSection,
-  onToggleSection,
-  onManageSection,
 }) {
   return (
     <div className="landing-live-editor-canvas">
@@ -72,10 +52,6 @@ export default function LandingPreview({
         <LandingPageCanvas
           editorMode={editorMode}
           onEditItem={onEditItem}
-          onEditImage={onEditImage}
-          onMoveSection={onMoveSection}
-          onToggleSection={onToggleSection}
-          onManageSection={onManageSection}
         />
       </LandingContentPreviewProvider>
     </div>

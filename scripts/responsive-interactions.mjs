@@ -230,15 +230,16 @@ try {
       await checkPage(page);
     });
 
-    await test('Landing editor text and image dialogs', async () => {
+    await test('Landing editor text dialog and locked images', async () => {
       await ready(page, '/dashboard/landing-page-editor');
       await page.getByRole('button', { name: 'Edit Mode', exact: true }).click();
       await page.locator('.landing-inline-page .hero-content h1').click();
       await fits(page, '.landing-inline-edit-modal', { vertical: true });
       await page.getByRole('button', { name: 'Close editor', exact: true }).click();
       await page.locator('.landing-inline-page [data-landing-edit-image]').first().click();
-      await fits(page, '.landing-inline-edit-modal', { vertical: true });
-      await page.getByRole('button', { name: /Close (image|banner) editor/, exact: true }).click();
+      assert.equal(await page.locator('.landing-inline-edit-modal').count(), 0, 'Images must not open an editor');
+      assert.equal(await page.locator('.landing-visual-editor input[type=file]').count(), 0);
+      assert.equal(await page.locator('.landing-admin-section-tools').count(), 0);
     });
 
     await test('User profile dialog and outside-city filter', async () => {

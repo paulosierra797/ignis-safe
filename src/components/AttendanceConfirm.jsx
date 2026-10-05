@@ -51,6 +51,11 @@ const AttendanceConfirm = () => {
   const [showLiveness, setShowLiveness] = useState(false);
   const [livenessAttemptKey, setLivenessAttemptKey] = useState(0);
   const [livenessPhase, setLivenessPhase] = useState('idle');
+  // 'offsite' | 'repeated' | null — feedback popup after a location check that
+  // lands outside the authorized radius.
+  const [locationNotice, setLocationNotice] = useState(null);
+  // Consecutive location checks that returned NOT ON-SITE; reset on ON-SITE.
+  const failedLocationAttemptsRef = useRef(0);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -86,6 +91,11 @@ const AttendanceConfirm = () => {
   const isAttendanceStatusKnown = Boolean(attendanceStatus) && !isAttendanceStatusLoading;
   const timeInDisabled = !isAttendanceStatusKnown || !attendanceStatus?.canTimeIn;
   const timeOutDisabled = !isAttendanceStatusKnown || !attendanceStatus?.canTimeOut;
+  // A location check has run and placed the personnel outside the radius. Every
+  // attendance action stays locked until a later check returns ON-SITE.
+  const isOffSite = Boolean(geoProximity) && !geoProximity.isValid;
+  const timeInActionDisabled = timeInDisabled || isOffSite;
+  const timeOutActionDisabled = timeOutDisabled || isOffSite;
   const attendanceCompleted = attendanceStatus?.state === 'completed';
 
   // Explains why an action is blocked, in priority order. Returns '' when the
@@ -241,8 +251,12 @@ useEffect(() => {
         withinRadius: proximity.isValid
       });
       if (proximity.isValid) {
+        failedLocationAttemptsRef.current = 0;
+        setLocationNotice(null);
         setGeoStatus(`✓ On-site verified (${proximity.distance.toFixed(0)}m away)`);
       } else {
+        failedLocationAttemptsRef.current += 1;
+        setLocationNotice(failedLocationAttemptsRef.current % 5 === 0 ? 'repeated' : 'offsite');
         setGeoStatus(`✗ Not on-site (${proximity.distance.toFixed(0)}m away)`);
       }
     } catch (error) {
@@ -488,6 +502,10 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
     }
     if (!authenticatedOfficer) {
       setStatus('Authentication error. Please login again.');
+      return;
+    }
+    if (isOffSite) {
+      setLocationNotice('offsite');
       return;
     }
     if (mode === 'in' && timeInDisabled) {
@@ -841,17 +859,19 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
               <div className="confirm-mode">
                 <button
                   type="button"
-                  className={`confirm-btn ${mode === 'in' ? 'active' : ''}`}
-                  onClick={() => setMode('in')}
-                  disabled={timeInDisabled}
+                  className={`confirm-btn ${mode === 'in' && !isOffSite ? 'active' : ''}`}
+                  onClick={() => { if (!timeInActionDisabled) setMode('in'); }}
+                  disabled={timeInActionDisabled}
+                  aria-disabled={timeInActionDisabled}
                 >
                   TIME IN
                 </button>
                 <button
                   type="button"
-                  className={`confirm-btn alt ${mode === 'out' ? 'active' : ''}`}
-                  onClick={() => setMode('out')}
-                  disabled={timeOutDisabled}
+                  className={`confirm-btn alt ${mode === 'out' && !isOffSite ? 'active' : ''}`}
+                  onClick={() => { if (!timeOutActionDisabled) setMode('out'); }}
+                  disabled={timeOutActionDisabled}
+                  aria-disabled={timeOutActionDisabled}
                 >
                   TIME OUT
                 </button>
@@ -862,7 +882,7 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
               type="button"
               className="confirm-submit"
               onClick={handleConfirm}
-              disabled={!authenticatedOfficer || !mode || !geoLocation || !authenticatedOfficer.faceVerified || !verificationPhotoBlob || isProcessing || (mode === 'in' && timeInDisabled) || (mode === 'out' && timeOutDisabled)}
+              disabled={!authenticatedOfficer || !mode || !geoLocation || isOffSite || !authenticatedOfficer.faceVerified || !verificationPhotoBlob || isProcessing || (mode === 'in' && timeInDisabled) || (mode === 'out' && timeOutDisabled)}
             >
               {isProcessing ? 'Saving...' : 'Confirm Attendance'}
             </button>
@@ -895,6 +915,49 @@ const handleLivenessFailed = useCallback((reason, attemptId) => {
                   })
                 }
               />
+            )}
+
+            {locationNotice && (
+              <div className="attendance-confirm-overlay" role="presentation">
+                <div
+                  className="attendance-confirm-dialog"
+                  role="alertdialog"
+                  aria-modal="true"
+                  aria-labelledby="locationNoticeTitle"
+                  aria-describedby="locationNoticeBody"
+                >
+                  <div className="attendance-confirm-dialog-icon warning" aria-hidden="true">!</div>
+                  <h2 id="locationNoticeTitle">
+                    {locationNotice === 'repeated'
+                      ? 'Unable to verify your attendance location'
+                      : 'You are not at the authorized attendance location'}
+                  </h2>
+                  <p id="locationNoticeBody">
+                    {locationNotice === 'repeated' ? (
+                      <>
+                        You are still outside the authorized attendance area. Please move closer to or proceed to
+                        the BFP Dasmariñas City Fire Station before trying again. Time In and Time Out are only
+                        available while you are within the allowed location.
+                      </>
+                    ) : (
+                      <>
+                        You must be within the BFP Dasmariñas City Fire Station attendance area before you can
+                        Time In or Time Out. Please move closer to the station and tap <strong>Try Again</strong>.
+                      </>
+                    )}
+                  </p>
+                  <div className="attendance-confirm-dialog-actions">
+                    <button
+                      type="button"
+                      className="attendance-confirm-approve"
+                      onClick={() => setLocationNotice(null)}
+                      autoFocus
+                    >
+                      OK
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
 
             {timeInSuccess && (

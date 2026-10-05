@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import RecordActions from './RecordActions';
 import {
-  FiPlus, FiEdit2, FiTrash2, FiArrowUp, FiArrowDown, FiSave, FiX,
+  FiEdit2, FiSave, FiX,
   FiChevronDown, FiChevronRight
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
@@ -13,11 +13,6 @@ import { useUser } from '../context/UserContext';
 import { logAdminActivity } from '../utils/usersService';
 import * as aboutUsService from '../utils/aboutUsService';
 import UnsavedChangesPrompt from './UnsavedChangesPrompt';
-
-const nextOrder = (rows = []) => rows.reduce(
-  (max, row) => Math.max(max, Number(row.display_order) || 0),
-  0
-) + 1;
 
 const SAVE_SUCCESS_MESSAGE = 'Changes saved successfully.';
 const UNSAVED_TITLE = 'Unsaved Changes';
@@ -74,54 +69,6 @@ function StatusBadge({ active }) {
   );
 }
 
-function ReorderButtons({ index, count, busy, onMoveUp, onMoveDown }) {
-  return (
-    <span className="aboutus-reorder-buttons">
-      <button
-        type="button"
-        className="aboutus-icon-btn"
-        onClick={onMoveUp}
-        disabled={busy || index === 0}
-        aria-label="Move up"
-        title="Move up"
-      >
-        <FiArrowUp aria-hidden="true" />
-      </button>
-      <button
-        type="button"
-        className="aboutus-icon-btn"
-        onClick={onMoveDown}
-        disabled={busy || index === count - 1}
-        aria-label="Move down"
-        title="Move down"
-      >
-        <FiArrowDown aria-hidden="true" />
-      </button>
-    </span>
-  );
-}
-
-function ConfirmDeleteModal({ open, title, message, busy, onCancel, onConfirm }) {
-  if (!open) return null;
-
-  return (
-    <div className="aboutus-modal-overlay" role="dialog" aria-modal="true">
-      <div className="aboutus-modal-box">
-        <h3>{title}</h3>
-        <p>{message}</p>
-        <div className="aboutus-modal-actions">
-          <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}>
-            Cancel
-          </button>
-          <button type="button" className="aboutus-btn aboutus-btn-danger" onClick={onConfirm} disabled={busy}>
-            {busy ? 'Deleting...' : 'Delete'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function FieldPair({ label, valueEn, valueTl, onChangeEn, onChangeTl, multiline, rows = 3 }) {
   const Field = multiline ? 'textarea' : 'input';
   return (
@@ -167,50 +114,27 @@ function SingleField({ label, value, onChange, multiline, rows = 2, type = 'text
   );
 }
 
-function SelectField({ label, value, onChange, options }) {
-  return (
-    <label className="aboutus-field aboutus-field-single">
-      <span>{label}</span>
-      <select value={value || ''} onChange={(event) => onChange(event.target.value)}>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function ActiveCheckbox({ checked, onChange }) {
-  return (
-    <label className="aboutus-checkbox">
-      <input type="checkbox" checked={Boolean(checked)} onChange={(event) => onChange(event.target.checked)} />
-      <span>Active</span>
-    </label>
-  );
-}
-
 function MessageBanner({ message }) {
   return <ToastMessage message={message?.text} type={message?.type || 'info'} />;
 }
 
 // ---------------------------------------------------------------------------
-// Generic repeatable-list controller (add / edit / delete / reorder)
+// Existing-row text editor
 // ---------------------------------------------------------------------------
 
 function useEditableList({
-  load, create, update, remove, reorder, getId,
+  load, update, getId,
   mapToForm = (row) => ({ ...row }),
   notify, entityLabel
 }) {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editingId, setEditingId] = useState(null); // null | 'new' | <id>
+  const [editingId, setEditingId] = useState(null); // null | <id>
   const [form, setForm] = useState({});
   // The row (or blank defaults) the open editor started from, so "dirty" means
   // "differs from the last saved Supabase value", not "an editor is open".
   const [formBaseline, setFormBaseline] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -232,7 +156,6 @@ function useEditableList({
   }, []);
 
   const setField = (key, value) => setForm((current) => ({ ...current, [key]: value }));
-  const startAdd = (defaults = {}) => { setEditingId('new'); setForm(defaults); setFormBaseline(defaults); };
   const startEdit = (row) => {
     const initial = mapToForm(row);
     setEditingId(getId(row));
@@ -243,8 +166,11 @@ function useEditableList({
 
   const save = async () => {
     setBusy(true);
-    const isNew = editingId === 'new';
-    const { error } = isNew ? await create(form, rows) : await update(form);
+    if (!rows.some((row) => getId(row) === editingId)) {
+      setBusy(false);
+      return false;
+    }
+    const { error } = await update(form);
     setBusy(false);
 
     if (error) {
@@ -258,44 +184,11 @@ function useEditableList({
     return true;
   };
 
-  const confirmDelete = (row) => setPendingDelete(row);
-  const cancelDeleteRequest = () => setPendingDelete(null);
-
-  const doDelete = async () => {
-    if (!pendingDelete) return;
-    setBusy(true);
-    const { error } = await remove(pendingDelete);
-    setBusy(false);
-
-    if (error) {
-      notify('error', `Failed to delete ${entityLabel}: ${error}`);
-      return;
-    }
-
-    notify('success', `${entityLabel} deleted.`);
-    setPendingDelete(null);
-    await refresh();
-  };
-
-  const move = async (index, direction) => {
-    setBusy(true);
-    const { error } = await reorder(rows, index, direction);
-    setBusy(false);
-
-    if (error) {
-      notify('error', `Failed to reorder ${entityLabel}: ${error}`);
-      return;
-    }
-
-    await refresh();
-  };
-
   const isDirty = editingId !== null && isFormDirty(form, formBaseline);
 
   return {
-    rows, loading, editingId, form, busy, pendingDelete, isDirty,
-    setField, startAdd, startEdit, cancelEdit, save,
-    confirmDelete, cancelDeleteRequest, doDelete, move, refresh
+    rows, loading, editingId, form, busy, isDirty,
+    setField, startEdit, cancelEdit, save, refresh
   };
 }
 
@@ -363,12 +256,9 @@ function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
   const numbers = useEditableList({
     load: aboutUsService.listPartnerContactNumbers,
     // Edit-only section - the saved numbers can be modified but not added or removed.
-    create: async () => ({ error: 'Adding contact numbers is not supported.' }),
     update: (form) => aboutUsService.updatePartnerContactNumber(form.contact_key, {
       label: form.label, display_value: form.display_value, dial_value: form.dial_value
     }),
-    remove: async () => ({ error: 'Deleting contact numbers is not supported.' }),
-    reorder: aboutUsService.reorderPartnerContactNumbers,
     getId: (row) => row.contact_key,
     mapToForm: (row) => ({ ...row, label: row.contact_type }),
     notify,
@@ -497,14 +387,10 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
   const numbers = useEditableList({
     load: aboutUsService.listEmergencyNumbers,
     // Edit-only section - the saved numbers can be modified but not added or removed.
-    create: async () => ({ error: 'Adding emergency numbers is not supported.' }),
     update: (form) => aboutUsService.updateEmergencyNumber(form.id, {
-      label_en: form.label_en, label_tl: form.label_tl, contact_type: form.contact_type,
-      is_active: form.is_active, display_order: form.display_order,
+      label_en: form.label_en, label_tl: form.label_tl,
       contact_key: form.contact_key, display_value: form.display_value, dial_value: form.dial_value
     }),
-    remove: async () => ({ error: 'Deleting emergency numbers is not supported.' }),
-    reorder: aboutUsService.reorderEmergencyNumbers,
     getId: (row) => row.id,
     notify,
     entityLabel: 'emergency number'
@@ -549,7 +435,7 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
         <h3>Emergency numbers</h3>
         <p className="aboutus-section-note">
           These are the saved emergency numbers shown to visitors. Each entry can be
-          edited - its label, phone type, number, and visibility - but numbers cannot be
+          edited - its label and number - but numbers cannot be
           added or removed here.
         </p>
 
@@ -586,15 +472,6 @@ function EmergencyNumberEditRow({ form, setField, onSave, onCancel, busy }) {
   return (
     <div className="aboutus-edit-row aboutus-emergency-edit-row">
       <div className="aboutus-emergency-editor-grid">
-        <SelectField
-          label="Phone type"
-          value={form.contact_type || 'mobile'}
-          onChange={(v) => setField('contact_type', v)}
-          options={[
-            { value: 'mobile', label: 'Mobile phone' },
-            { value: 'landline', label: 'Landline' },
-          ]}
-        />
         <SingleField
           label="Number shown to visitors"
           value={form.display_value}
@@ -610,7 +487,6 @@ function EmergencyNumberEditRow({ form, setField, onSave, onCancel, busy }) {
       </div>
       <FieldPair label="Public label" valueEn={form.label_en} valueTl={form.label_tl}
         onChangeEn={(v) => setField('label_en', v)} onChangeTl={(v) => setField('label_tl', v)} />
-      <ActiveCheckbox checked={form.is_active} onChange={(v) => setField('is_active', v)} />
       <div className="aboutus-edit-row-actions">
         <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
         <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
@@ -648,7 +524,6 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   const [phoneForm, setPhoneForm] = useState({});
   const [phoneBaseline, setPhoneBaseline] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState(null); // { kind, ...refs, label }
 
   const refreshTree = async () => {
     setLoadingTree(true);
@@ -671,12 +546,6 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   };
 
   // --- groups ---
-  const startAddGroup = () => {
-    const defaults = { title_en: '', title_tl: '', is_active: true };
-    setGroupEditing('new');
-    setGroupForm(defaults);
-    setGroupBaseline(defaults);
-  };
   const startEditGroup = (group) => {
     setGroupEditing(group.group_key);
     setGroupForm({ ...group });
@@ -686,10 +555,8 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
 
   const saveGroup = async () => {
     setBusy(true);
-    const isNew = groupEditing === 'new';
-    const { error } = isNew
-      ? await aboutUsService.createDirectoryGroup({ title_en: groupForm.title_en, title_tl: groupForm.title_tl, display_order: nextOrder(groups) })
-      : await aboutUsService.updateDirectoryGroup(groupEditing, { title_en: groupForm.title_en, title_tl: groupForm.title_tl, is_active: groupForm.is_active });
+    if (!groups.some((group) => group.group_key === groupEditing)) { setBusy(false); return; }
+    const { error } = await aboutUsService.updateDirectoryGroup(groupEditing, { title_en: groupForm.title_en, title_tl: groupForm.title_tl });
     setBusy(false);
 
     if (error) { notify('error', `Failed to save district/group: ${error}`); return; }
@@ -698,21 +565,8 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
     await refreshTree();
   };
 
-  const moveGroup = async (index, direction) => {
-    setBusy(true);
-    const { error } = await aboutUsService.reorderDirectoryGroups(groups, index, direction);
-    setBusy(false);
-    if (error) { notify('error', `Failed to reorder districts/groups: ${error}`); return; }
-    await refreshTree();
-  };
 
   // --- entries ---
-  const startAddEntry = (groupKey) => {
-    const defaults = { name_en: '', name_tl: '', email: '', is_active: true };
-    setEntryEditing({ groupKey, entryKey: 'new' });
-    setEntryForm(defaults);
-    setEntryBaseline(defaults);
-  };
   const startEditEntry = (groupKey, entry) => {
     setEntryEditing({ groupKey, entryKey: entry.entry_key });
     setEntryForm({ ...entry });
@@ -723,18 +577,11 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   const saveEntry = async () => {
     if (!entryEditing) return;
     const { groupKey, entryKey } = entryEditing;
-    const group = groups.find((g) => g.group_key === groupKey);
-    const isNew = entryKey === 'new';
-
+    if (!groups.find((group) => group.group_key === groupKey)?.entries.some((entry) => entry.entry_key === entryKey)) return;
     setBusy(true);
-    const { error } = isNew
-      ? await aboutUsService.createDirectoryEntry(groupKey, {
-        name_en: entryForm.name_en, name_tl: entryForm.name_tl, email: entryForm.email,
-        display_order: nextOrder(group?.entries || [])
-      })
-      : await aboutUsService.updateDirectoryEntry(entryKey, {
-        name_en: entryForm.name_en, name_tl: entryForm.name_tl, email: entryForm.email, is_active: entryForm.is_active
-      });
+    const { error } = await aboutUsService.updateDirectoryEntry(entryKey, {
+      name_en: entryForm.name_en, name_tl: entryForm.name_tl, email: entryForm.email
+    });
     setBusy(false);
 
     if (error) { notify('error', `Failed to save station: ${error}`); return; }
@@ -743,21 +590,8 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
     await refreshTree();
   };
 
-  const moveEntry = async (group, index, direction) => {
-    setBusy(true);
-    const { error } = await aboutUsService.reorderDirectoryEntries(group.entries, index, direction);
-    setBusy(false);
-    if (error) { notify('error', `Failed to reorder stations: ${error}`); return; }
-    await refreshTree();
-  };
 
   // --- phones ---
-  const startAddPhone = (entryKey) => {
-    const defaults = { display_value: '', dial_value: '' };
-    setPhoneEditing({ entryKey, id: 'new' });
-    setPhoneForm(defaults);
-    setPhoneBaseline(defaults);
-  };
   const startEditPhone = (entryKey, phone) => {
     setPhoneEditing({ entryKey, id: phone.id });
     setPhoneForm({ ...phone });
@@ -768,16 +602,9 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   const savePhone = async () => {
     if (!phoneEditing) return;
     const { entryKey, id } = phoneEditing;
-    const entry = groups.flatMap((g) => g.entries).find((e) => e.entry_key === entryKey);
-    const isNew = id === 'new';
-
+    if (!groups.flatMap((group) => group.entries).find((entry) => entry.entry_key === entryKey)?.phones.some((phone) => phone.id === id)) return;
     setBusy(true);
-    const { error } = isNew
-      ? await aboutUsService.createDirectoryPhone(entryKey, {
-        display_value: phoneForm.display_value, dial_value: phoneForm.dial_value,
-        display_order: nextOrder(entry?.phones || [])
-      })
-      : await aboutUsService.updateDirectoryPhone(id, { display_value: phoneForm.display_value, dial_value: phoneForm.dial_value, is_active: phoneForm.is_active });
+    const { error } = await aboutUsService.updateDirectoryPhone(id, { display_value: phoneForm.display_value, dial_value: phoneForm.dial_value });
     setBusy(false);
 
     if (error) { notify('error', `Failed to save phone number: ${error}`); return; }
@@ -786,36 +613,8 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
     await refreshTree();
   };
 
-  const movePhone = async (entry, index, direction) => {
-    setBusy(true);
-    const { error } = await aboutUsService.reorderDirectoryPhones(entry.phones, index, direction);
-    setBusy(false);
-    if (error) { notify('error', `Failed to reorder phone numbers: ${error}`); return; }
-    await refreshTree();
-  };
 
   // --- delete flow (shared confirm modal for all 3 levels) ---
-  const doDelete = async () => {
-    if (!pendingDelete) return;
-    setBusy(true);
-    let error = null;
-
-    if (pendingDelete.kind === 'group') {
-      ({ error } = await aboutUsService.deleteDirectoryGroup(pendingDelete.group_key));
-    } else if (pendingDelete.kind === 'entry') {
-      ({ error } = await aboutUsService.deleteDirectoryEntry(pendingDelete.entry_key));
-    } else if (pendingDelete.kind === 'phone') {
-      ({ error } = await aboutUsService.deleteDirectoryPhone(pendingDelete.id));
-    }
-
-    setBusy(false);
-    if (error) { notify('error', `Failed to delete: ${error}`); return; }
-
-    notify('success', 'Deleted successfully.');
-    logAboutUsActivity(currentUser, 'About Us Content Deleted', `Deleted a Cavite BFP Directory ${pendingDelete.kind}.`);
-    setPendingDelete(null);
-    await refreshTree();
-  };
 
   useReportDirty(
     reportDirty,
@@ -856,25 +655,11 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
       <div className="aboutus-subsection">
         <div className="aboutus-list-header">
           <h3>Districts / groups</h3>
-          <button type="button" className="aboutus-btn aboutus-btn-outline" onClick={startAddGroup}>
-            <FiPlus aria-hidden="true" /> Add district/group
-          </button>
         </div>
-
-        {groupEditing === 'new' && (
-          <div className="aboutus-edit-row">
-            <FieldPair label="Title" valueEn={groupForm.title_en} valueTl={groupForm.title_tl}
-              onChangeEn={(v) => setGroupForm((f) => ({ ...f, title_en: v }))} onChangeTl={(v) => setGroupForm((f) => ({ ...f, title_tl: v }))} />
-            <div className="aboutus-edit-row-actions">
-              <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelGroupEdit} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-              <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveGroup)} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
-            </div>
-          </div>
-        )}
 
         {loadingTree ? <div className="aboutus-loading">Loading...</div> : (
           <ul className="aboutus-directory-groups">
-            {groups.map((group, groupIndex) => {
+            {groups.map((group) => {
               const isExpanded = expandedGroup === group.group_key;
               return (
                 <li key={group.group_key} className="aboutus-directory-group">
@@ -882,7 +667,6 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                     <div className="aboutus-edit-row">
                       <FieldPair label="Title" valueEn={groupForm.title_en} valueTl={groupForm.title_tl}
                         onChangeEn={(v) => setGroupForm((f) => ({ ...f, title_en: v }))} onChangeTl={(v) => setGroupForm((f) => ({ ...f, title_tl: v }))} />
-                      <ActiveCheckbox checked={groupForm.is_active} onChange={(v) => setGroupForm((f) => ({ ...f, is_active: v }))} />
                       <div className="aboutus-edit-row-actions">
                         <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelGroupEdit} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
                         <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveGroup)} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
@@ -897,18 +681,8 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                         <StatusBadge active={group.is_active} />
                       </button>
                       <div className="aboutus-item-actions">
-                        <ReorderButtons index={groupIndex} count={groups.length} busy={busy} onMoveUp={() => moveGroup(groupIndex, -1)} onMoveDown={() => moveGroup(groupIndex, 1)} />
                         <RecordActions label={`Actions for ${group.title_en}`}>
                         <button type="button" className="aboutus-icon-btn" onClick={() => startEditGroup(group)} aria-label="Edit district/group" title="Edit"><FiEdit2 aria-hidden="true" /></button>
-                        <button
-                          type="button"
-                          className="aboutus-icon-btn aboutus-icon-btn-danger"
-                          onClick={() => setPendingDelete({ kind: 'group', group_key: group.group_key, label: group.title_en })}
-                          aria-label="Delete district/group"
-                          title="Delete"
-                        >
-                          <FiTrash2 aria-hidden="true" />
-                        </button>
                         </RecordActions>
                       </div>
                     </div>
@@ -918,17 +692,10 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                     <div className="aboutus-directory-entries">
                       <div className="aboutus-list-header">
                         <h4>Stations</h4>
-                        <button type="button" className="aboutus-btn aboutus-btn-outline aboutus-btn-small" onClick={() => startAddEntry(group.group_key)}>
-                          <FiPlus aria-hidden="true" /> Add station
-                        </button>
                       </div>
 
-                      {entryEditing?.groupKey === group.group_key && entryEditing.entryKey === 'new' && (
-                        <EntryEditRow form={entryForm} setForm={setEntryForm} onSave={() => requestSave(saveEntry)} onCancel={cancelEntryEdit} busy={busy} />
-                      )}
-
                       <ul className="aboutus-directory-entry-list">
-                        {group.entries.map((entry, entryIndex) => {
+                        {group.entries.map((entry) => {
                           const entryExpanded = expandedEntry === entry.entry_key;
                           return (
                             <li key={entry.entry_key} className="aboutus-directory-entry">
@@ -944,18 +711,8 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                     <StatusBadge active={entry.is_active} />
                                   </button>
                                   <div className="aboutus-item-actions">
-                                    <ReorderButtons index={entryIndex} count={group.entries.length} busy={busy} onMoveUp={() => moveEntry(group, entryIndex, -1)} onMoveDown={() => moveEntry(group, entryIndex, 1)} />
                                     <RecordActions label={`Actions for ${entry.name_en}`}>
                                     <button type="button" className="aboutus-icon-btn" onClick={() => startEditEntry(group.group_key, entry)} aria-label="Edit station" title="Edit"><FiEdit2 aria-hidden="true" /></button>
-                                    <button
-                                      type="button"
-                                      className="aboutus-icon-btn aboutus-icon-btn-danger"
-                                      onClick={() => setPendingDelete({ kind: 'entry', entry_key: entry.entry_key, label: entry.name_en })}
-                                      aria-label="Delete station"
-                                      title="Delete"
-                                    >
-                                      <FiTrash2 aria-hidden="true" />
-                                    </button>
                                     </RecordActions>
                                   </div>
                                 </div>
@@ -965,17 +722,10 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                 <div className="aboutus-directory-phones">
                                   <div className="aboutus-list-header">
                                     <h5>Phone numbers</h5>
-                                    <button type="button" className="aboutus-btn aboutus-btn-outline aboutus-btn-small" onClick={() => startAddPhone(entry.entry_key)}>
-                                      <FiPlus aria-hidden="true" /> Add phone
-                                    </button>
                                   </div>
 
-                                  {phoneEditing?.entryKey === entry.entry_key && phoneEditing.id === 'new' && (
-                                    <PhoneEditRow form={phoneForm} setForm={setPhoneForm} onSave={() => requestSave(savePhone)} onCancel={cancelPhoneEdit} busy={busy} />
-                                  )}
-
                                   <ul className="aboutus-directory-phone-list">
-                                    {entry.phones.map((phone, phoneIndex) => (
+                                    {entry.phones.map((phone) => (
                                       <li key={phone.id} className="aboutus-item-row aboutus-item-row-compact">
                                         {phoneEditing?.entryKey === entry.entry_key && phoneEditing.id === phone.id ? (
                                           <PhoneEditRow form={phoneForm} setForm={setPhoneForm} onSave={() => requestSave(savePhone)} onCancel={cancelPhoneEdit} busy={busy} />
@@ -986,18 +736,8 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                               <StatusBadge active={phone.is_active} />
                                             </div>
                                             <div className="aboutus-item-actions">
-                                              <ReorderButtons index={phoneIndex} count={entry.phones.length} busy={busy} onMoveUp={() => movePhone(entry, phoneIndex, -1)} onMoveDown={() => movePhone(entry, phoneIndex, 1)} />
                                               <RecordActions label={`Actions for ${phone.display_value}`}>
                                               <button type="button" className="aboutus-icon-btn" onClick={() => startEditPhone(entry.entry_key, phone)} aria-label="Edit phone" title="Edit"><FiEdit2 aria-hidden="true" /></button>
-                                              <button
-                                                type="button"
-                                                className="aboutus-icon-btn aboutus-icon-btn-danger"
-                                                onClick={() => setPendingDelete({ kind: 'phone', id: phone.id, label: phone.display_value })}
-                                                aria-label="Delete phone"
-                                                title="Delete"
-                                              >
-                                                <FiTrash2 aria-hidden="true" />
-                                              </button>
                                               </RecordActions>
                                             </div>
                                           </>
@@ -1022,21 +762,6 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
           </ul>
         )}
       </div>
-
-      <ConfirmDeleteModal
-        open={Boolean(pendingDelete)}
-        title="Delete directory item"
-        message={
-          pendingDelete?.kind === 'group'
-            ? `Delete "${pendingDelete?.label}"? This also deletes every station and phone number inside it.`
-            : pendingDelete?.kind === 'entry'
-              ? `Delete "${pendingDelete?.label}"? This also deletes its phone numbers.`
-              : `Delete phone number "${pendingDelete?.label}"?`
-        }
-        busy={busy}
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={doDelete}
-      />
     </section>
   );
 }
@@ -1048,7 +773,6 @@ function EntryEditRow({ form, setForm, onSave, onCancel, busy }) {
       <FieldPair label="Station name" valueEn={form.name_en} valueTl={form.name_tl}
         onChangeEn={(v) => setField('name_en', v)} onChangeTl={(v) => setField('name_tl', v)} />
       <SingleField label="Email" type="email" value={form.email} onChange={(v) => setField('email', v)} />
-      <ActiveCheckbox checked={form.is_active} onChange={(v) => setField('is_active', v)} />
       <div className="aboutus-edit-row-actions">
         <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
         <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
@@ -1080,13 +804,9 @@ function PhoneEditRow({ form, setForm, onSave, onCancel, busy }) {
 function GeneralTextsCard({ notify, reportDirty, requestSave }) {
   const sections = useEditableList({
     load: aboutUsService.listSections,
-    create: async () => ({ error: 'Adding new sections is not supported.' }),
     update: (form) => aboutUsService.updateSection(form.section_key, {
       title_en: form.title_en, title_tl: form.title_tl, subtitle_en: form.subtitle_en, subtitle_tl: form.subtitle_tl,
-      icon_key: form.icon_key, is_active: form.is_active
     }),
-    remove: async () => ({ error: 'Deleting sections is not supported.' }),
-    reorder: aboutUsService.reorderSections,
     getId: (row) => row.section_key,
     notify,
     entityLabel: 'section'
@@ -1105,7 +825,7 @@ function GeneralTextsCard({ notify, reportDirty, requestSave }) {
         <h3>Section Titles &amp; Subtitles</h3>
         {sections.loading ? <div className="aboutus-loading">Loading...</div> : (
           <ul className="aboutus-item-list">
-            {sections.rows.map((row, index) => (
+            {sections.rows.map((row) => (
               <li key={row.section_key} className="aboutus-item-row">
                 {sections.editingId === row.section_key ? (
                   <div className="aboutus-edit-row">
@@ -1113,8 +833,6 @@ function GeneralTextsCard({ notify, reportDirty, requestSave }) {
                       onChangeEn={(v) => sections.setField('title_en', v)} onChangeTl={(v) => sections.setField('title_tl', v)} />
                     <FieldPair label="Subtitle" valueEn={sections.form.subtitle_en} valueTl={sections.form.subtitle_tl}
                       onChangeEn={(v) => sections.setField('subtitle_en', v)} onChangeTl={(v) => sections.setField('subtitle_tl', v)} />
-                    <SingleField label="Icon key" value={sections.form.icon_key} onChange={(v) => sections.setField('icon_key', v)} />
-                    <ActiveCheckbox checked={sections.form.is_active} onChange={(v) => sections.setField('is_active', v)} />
                     <div className="aboutus-edit-row-actions">
                       <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={sections.cancelEdit} disabled={sections.busy}><FiX aria-hidden="true" /> Cancel</button>
                       <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(sections.save)} disabled={sections.busy}><FiSave aria-hidden="true" /> {sections.busy ? 'Saving...' : 'Save'}</button>
@@ -1128,7 +846,6 @@ function GeneralTextsCard({ notify, reportDirty, requestSave }) {
                       <StatusBadge active={row.is_active} />
                     </div>
                     <div className="aboutus-item-actions">
-                      <ReorderButtons index={index} count={sections.rows.length} busy={sections.busy} onMoveUp={() => sections.move(index, -1)} onMoveDown={() => sections.move(index, 1)} />
                       <RecordActions label={`Actions for ${row.title_en}`}>
                       <button type="button" className="aboutus-icon-btn" onClick={() => sections.startEdit(row)} aria-label="Edit section" title="Edit"><FiEdit2 aria-hidden="true" /></button>
                       </RecordActions>

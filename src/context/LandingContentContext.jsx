@@ -4,6 +4,7 @@ import { useUser } from './UserContext';
 import { getLandingUiCopy, LANDING_LANGUAGE_STORAGE_KEY, normalizeDasmarinasText } from '../utils/landingLanguage';
 import { getPublicLandingContent } from '../utils/publicContentService';
 import { MOBILE_APP_RELEASE } from '../utils/mobileAppRelease';
+import { projectLandingText } from '../utils/contentEditingPolicy';
 
 const STORAGE_KEY = 'ignis_landing_content_v1';
 const MAX_BANNER_PHOTOS = 5;
@@ -426,6 +427,9 @@ const mergeFaqEntries = (candidateEntries, defaultEntries) => {
     return defaultEntries;
   }
 
+  // Fully populated pages already have their fixed set of editable questions.
+  if (candidateEntries.length >= defaultEntries.length) return candidateEntries;
+
   const normalizeQuestion = (value) => String(value || '').trim().toLowerCase();
   const defaultQuestions = new Set(
     defaultEntries.map((entry) => normalizeQuestion(entry.question))
@@ -434,7 +438,11 @@ const mergeFaqEntries = (candidateEntries, defaultEntries) => {
     (entry) => !defaultQuestions.has(normalizeQuestion(entry?.question))
   );
 
-  return [...defaultEntries, ...customEntries];
+  const savedByQuestion = new Map(candidateEntries.map((entry) => [normalizeQuestion(entry?.question), entry]));
+  return [
+    ...defaultEntries.map((entry) => savedByQuestion.get(normalizeQuestion(entry.question)) || entry),
+    ...customEntries
+  ];
 };
 
 const normalizeStationEmail = (value) => {
@@ -670,20 +678,21 @@ export const LandingContentProvider = ({ children }) => {
   }, [shouldSyncContent]);
 
   const setContent = async (nextContent) => {
-    const merged = mergeWithDefaults(nextContent);
-    setContentState(merged);
-
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-    } catch (error) {
-      console.error('Error saving landing content to storage:', error);
-    }
-
+    const merged = projectLandingText(content, nextContent);
     const { saveLandingContentToDb } = await loadLandingContentService();
     const { error } = await saveLandingContentToDb({
       content: merged,
       updatedBy: currentUser?.admin_id || null,
     });
+
+    if (!error) {
+      setContentState(merged);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      } catch (storageError) {
+        console.error('Error saving landing content to storage:', storageError);
+      }
+    }
 
     return { error };
   };

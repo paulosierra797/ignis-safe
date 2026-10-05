@@ -165,13 +165,6 @@ export default function ContentSectionEditor({ block, page, editedModule, setEdi
 
             {part.url !== undefined && (
               <div className="module-editor-single-grid">
-                <EditorField label="URL">
-                  <input
-                    className="url"
-                    value={part.url || ''}
-                    onChange={(event) => updatePart(index, 'url', event.target.value)}
-                  />
-                </EditorField>
                 <EditorField label="Organization">
                   <input
                     className="org"

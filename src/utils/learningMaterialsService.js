@@ -95,12 +95,6 @@ export const getLearningMaterialMediaAssets = async () => {
   };
 };
 
-export const updateLearningMaterialMediaAsset = async (id, updates) => {
-  return await supabase
-    .from("learning_material_media_assets")
-    .update(updates)
-    .eq("id", id);
-};
 export const updateLearningMaterialFireClassDetail = async (
   id,
   updates

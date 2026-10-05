@@ -18,8 +18,7 @@
   z-index: 100;
 }
 
-.landing-inline-page.is-edit-mode [data-landing-edit-path],
-.landing-inline-page.is-edit-mode [data-landing-edit-image] {
+.landing-inline-page.is-edit-mode [data-landing-edit-path] {
   cursor: pointer;
   outline: 2px dashed transparent;
   outline-offset: 4px;
@@ -32,18 +31,12 @@
   background: rgba(255, 255, 255, 0.13);
 }
 
-.landing-inline-page.is-edit-mode [data-landing-edit-image]:hover,
-.landing-inline-page.is-edit-mode [data-landing-edit-image]:focus-visible {
-  outline-color: #fbbf24;
-}
-
 .landing-admin-section {
   position: relative;
   min-width: 0;
 }
 
 .landing-admin-section.is-editing {
-  padding-top: 42px;
   outline: 1px solid rgba(185, 28, 28, 0.24);
   outline-offset: -1px;
 }

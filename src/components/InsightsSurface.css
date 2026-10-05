@@ -51,6 +51,11 @@
   transform: translateY(-2px);
 }
 
+/* Moving the select's container can leave a native popup repaint artifact. */
+.dashboard-main .chart-card--activity.clickable:hover {
+  transform: none;
+}
+
 :is(
   .dashboard-main .metric-card.clickable,
   .dashboard-main .knowledge-journey,

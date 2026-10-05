@@ -811,7 +811,7 @@ if (currentKnowledge < 40) {
         />
         <div className="charts-section">
           <div
-            className="chart-card clickable"
+            className="chart-card clickable chart-card--activity"
             role="button"
             tabIndex={0}
             onClick={() => navigate('/dashboard/analytics')}

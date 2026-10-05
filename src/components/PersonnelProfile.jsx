@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -72,6 +73,7 @@ const EMPTY_REQUEST_VALUES = Object.fromEntries(
 );
 
 export default function PersonnelProfile() {
+  const navigate = useNavigate();
   const { currentUser, setCurrentUser } = useUser();
   const [rank, setRank] = useState('');
   const [rankCustom, setRankCustom] = useState('');
@@ -620,6 +622,20 @@ const showModal = ({ type = "info", message, onConfirm }) => {
   });
 };
 
+// Password changes reuse the existing Forgot Password / reset flow on the
+// login page, pre-filled with this account's email. The user stays signed in
+// and "Back to Profile" returns here.
+const handleChangePassword = () => {
+  const accountEmail = String(currentUser?.email || '').trim();
+  if (!accountEmail) {
+    showModal({ type: 'error', message: 'No email address is assigned to this account.' });
+    return;
+  }
+  navigate('/portal/login', {
+    state: { changePasswordEmail: accountEmail, returnTo: '/personnel/profile' }
+  });
+};
+
     // send to backend
    
   return (
@@ -744,6 +760,13 @@ const showModal = ({ type = "info", message, onConfirm }) => {
                     onClick={openRequestModal}
                   >
                     Request to Change Information
+                  </button>
+                  <button
+                    type="button"
+                    className="change-password-btn"
+                    onClick={handleChangePassword}
+                  >
+                    Change Password
                   </button>
                   <button
                     type="button"

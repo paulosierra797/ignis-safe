@@ -826,13 +826,24 @@ function GeneralTextsCard({ notify, reportDirty, requestSave }) {
         {sections.loading ? <div className="aboutus-loading">Loading...</div> : (
           <ul className="aboutus-item-list">
             {sections.rows.map((row) => (
-              <li key={row.section_key} className="aboutus-item-row">
+              <li
+                key={row.section_key}
+                className={`aboutus-item-row${sections.editingId === row.section_key ? ' is-editing' : ''}`}
+              >
                 {sections.editingId === row.section_key ? (
-                  <div className="aboutus-edit-row">
-                    <FieldPair label="Title" valueEn={sections.form.title_en} valueTl={sections.form.title_tl}
-                      onChangeEn={(v) => sections.setField('title_en', v)} onChangeTl={(v) => sections.setField('title_tl', v)} />
-                    <FieldPair label="Subtitle" valueEn={sections.form.subtitle_en} valueTl={sections.form.subtitle_tl}
-                      onChangeEn={(v) => sections.setField('subtitle_en', v)} onChangeTl={(v) => sections.setField('subtitle_tl', v)} />
+                  <div className="aboutus-edit-row aboutus-section-edit">
+                    <div className="aboutus-section-edit-grid">
+                      <div className="aboutus-section-edit-col aboutus-section-edit-col--en">
+                        <h4 className="aboutus-section-edit-lang">English</h4>
+                        <SingleField label="Title" value={sections.form.title_en} onChange={(v) => sections.setField('title_en', v)} />
+                        <SingleField label="Subtitle" value={sections.form.subtitle_en} onChange={(v) => sections.setField('subtitle_en', v)} />
+                      </div>
+                      <div className="aboutus-section-edit-col aboutus-section-edit-col--tl">
+                        <h4 className="aboutus-section-edit-lang">Tagalog</h4>
+                        <SingleField label="Title" value={sections.form.title_tl} onChange={(v) => sections.setField('title_tl', v)} />
+                        <SingleField label="Subtitle" value={sections.form.subtitle_tl} onChange={(v) => sections.setField('subtitle_tl', v)} />
+                      </div>
+                    </div>
                     <div className="aboutus-edit-row-actions">
                       <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={sections.cancelEdit} disabled={sections.busy}><FiX aria-hidden="true" /> Cancel</button>
                       <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(sections.save)} disabled={sections.busy}><FiSave aria-hidden="true" /> {sections.busy ? 'Saving...' : 'Save'}</button>

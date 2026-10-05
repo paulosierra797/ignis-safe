@@ -584,6 +584,89 @@
   margin-top: 0.5rem;
 }
 
+/* Section Titles & Subtitles editor: the list row would otherwise wrap the
+   editor in a second border/padding and size it to its content (leaving a wide
+   empty gap on the right). Drop the row chrome and let the editor fill it. */
+.aboutus-item-row.is-editing {
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.aboutus-item-row.is-editing > .aboutus-edit-row {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+/* RecordHover.css tints every record row orange on hover/focus; an open editor
+   is not a record to pick, so keep it neutral. Specificity must beat that
+   file's !important rules. */
+body .aboutus-item-list > .aboutus-item-row.is-editing,
+body .aboutus-item-list > .aboutus-item-row.is-editing:hover,
+body .aboutus-item-list > .aboutus-item-row.is-editing:focus-within {
+  border: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  transform: none;
+}
+
+.aboutus-section-edit {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.aboutus-section-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem 1.25rem;
+}
+
+.aboutus-section-edit-col {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.aboutus-section-edit-col .aboutus-field {
+  margin-bottom: 0;
+}
+
+.aboutus-section-edit-col .aboutus-field-single {
+  max-width: none;
+}
+
+.aboutus-section-edit-lang {
+  width: fit-content;
+  margin: 0;
+  padding: 0.16rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.aboutus-section-edit-col--en .aboutus-section-edit-lang {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.aboutus-section-edit-col--tl .aboutus-section-edit-lang {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.aboutus-section-edit .aboutus-edit-row-actions {
+  margin-top: 1rem;
+}
+
+@media (max-width: 640px) {
+  .aboutus-section-edit-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .aboutus-status-pill {
   display: inline-flex;
   align-items: center;

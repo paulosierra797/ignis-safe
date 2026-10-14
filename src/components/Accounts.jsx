@@ -34,6 +34,7 @@ import {
   getPersonnelAccountHistory,
   updatePersonnelWorkspaceProfile,
   updateUser,
+  setSuperAdminPrivilege,
   getShiftScheduleConfig,
   saveShiftScheduleConfig
 } from '../utils/usersService';
@@ -91,6 +92,8 @@ const EMPTY_PERSONNEL_FORM = {
   contact_number: ''
 };
 const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
+const isSuperAdminAccount = (account) =>
+  account?.is_super_admin === true && !account?.is_personnel_workspace_profile;
 const getPersonnelInitials = (account) => {
   const first = String(account?.first_name || '').trim().charAt(0);
   const last = String(account?.last_name || '').trim().charAt(0);
@@ -749,6 +752,9 @@ function AccountDirectoryGroup({
                       <div className="account-directory-rank-role-cell">
                         <span className="account-directory-rank">{account.rank || '—'}</span>
                         <span className="account-directory-role">{account.role || '—'}</span>
+                        {isSuperAdminAccount(account) && (
+                          <span className="account-directory-super-admin-badge">Super Admin</span>
+                        )}
                       </div>
                     </td>
                     <td className="col-status" data-label="Status">
@@ -790,7 +796,7 @@ function AccountDirectoryGroup({
 }
 
 export default function Accounts() {
-  const { currentUser } = useUser();
+  const { currentUser, isSuperAdmin } = useUser();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeAccountsTab = ACCOUNTS_TAB_KEYS.includes(searchParams.get('tab'))
     ? searchParams.get('tab')
@@ -910,6 +916,7 @@ export default function Accounts() {
   const [isConfirmActionModalOpen, setIsConfirmActionModalOpen] = useState(false);
   const [isConfirmActionProcessing, setIsConfirmActionProcessing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [superAdminMessage, setSuperAdminMessage] = useState({ type: '', text: '' });
   const [formErrors, setFormErrors] = useState({});
   const [leaveMessage, setLeaveMessage] = useState({ type: '', text: '' });
   const [shiftMessage, setShiftMessage] = useState({ type: '', text: '' });
@@ -3171,6 +3178,40 @@ const permissions = getDefaultPermissions(formData.role);
     });
   };
 
+  const handleSuperAdminPrivilege = (account, grant) => {
+    if (!account?.admin_id) {
+      return;
+    }
+
+    const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || account.email || 'this account';
+    setPendingConfirmAction({
+      action: 'super-admin-privilege',
+      payload: { account, grant },
+      title: grant ? 'Grant Super Admin' : 'Revoke Super Admin',
+      message: grant
+        ? `Grant Super Admin privileges to ${accountName}? They will be able to grant and revoke Super Admin privileges.`
+        : `Revoke Super Admin privileges from ${accountName}? Their Admin access will remain unchanged.`,
+      confirmLabel: grant ? 'Grant Super Admin' : 'Revoke Super Admin'
+    });
+    setIsConfirmActionModalOpen(true);
+  };
+
+  // The audit log entry is written server-side by the RPC.
+  const executeSuperAdminPrivilege = async (account, grant) => {
+    setSuperAdminMessage({ type: '', text: '' });
+    const { error } =await setSuperAdminPrivilege(account.admin_id, grant);
+    if (error) {
+      setSuperAdminMessage({ type: 'error', text: error });
+      return;
+    }
+
+    await fetchAccounts();
+    setSuperAdminMessage({
+      type: 'success',
+      text: grant ? 'Super Admin privileges granted.' : 'Super Admin privileges revoked.'
+    });
+  };
+
   const closeConfirmActionModal = () => {
     if (isConfirmActionProcessing) {
       return;
@@ -3205,6 +3246,13 @@ const permissions = getDefaultPermissions(formData.role);
       await executeArchiveHistoryItem(
         pendingConfirmAction.payload.type,
         pendingConfirmAction.payload.request
+      );
+    }
+
+    if (pendingConfirmAction.action === 'super-admin-privilege') {
+      await executeSuperAdminPrivilege(
+        pendingConfirmAction.payload.account,
+        pendingConfirmAction.payload.grant
       );
     }
 
@@ -3254,6 +3302,21 @@ const permissions = getDefaultPermissions(formData.role);
       ? [{ key: 'clear-leave', label: 'Clear Leave', onSelect: () => handleClearLeaveDate(account) }]
       : []),
     { key: 'edit', label: 'Edit Details', onSelect: () => openEditModal(account) },
+    ...(isSuperAdmin
+      && !isSuperAdminAccount(account)
+      && !account.is_personnel_workspace_profile
+      && String(account.role || '').trim().toLowerCase() === 'admin'
+      && String(account.status || '').trim().toLowerCase() === 'active'
+      ? [{ key: 'grant-super-admin', label: 'Grant Super Admin', onSelect: () => handleSuperAdminPrivilege(account, true) }]
+      : []),
+    ...(isSuperAdmin && isSuperAdminAccount(account)
+      ? [{
+        key: 'revoke-super-admin',
+        label: 'Revoke Super Admin',
+        destructive: true,
+        onSelect: () => handleSuperAdminPrivilege(account, false)
+      }]
+      : []),
     ...(String(account.role || '').trim().toLowerCase() !== 'admin'
       && !account.is_personnel_workspace_profile
       ? [{
@@ -4157,6 +4220,7 @@ const permissions = getDefaultPermissions(formData.role);
           </button>
         </div>
 
+        <ToastMessage message={superAdminMessage.text} type={superAdminMessage.type} />
         {loadingAccounts ? (
           <div className="account-directory-loading">Loading accounts...</div>
         ) : (
@@ -4428,6 +4492,7 @@ const permissions = getDefaultPermissions(formData.role);
       <label>Role</label>
       <select
         value={editFormData.role}
+        disabled={isSuperAdminAccount(selectedEditAccount)}
         onChange={(e) =>
           setEditFormData({
             ...editFormData,
@@ -4438,6 +4503,14 @@ const permissions = getDefaultPermissions(formData.role);
         <option value="personnel">Personnel</option>
         <option value="admin">Admin</option>
       </select>
+      {isSuperAdminAccount(selectedEditAccount) && (
+        <small className="accounts-modal-field-hint accounts-edit-personnel-hint">
+          <FiInfo aria-hidden="true" />
+          <span>
+            Super Admin accounts keep the Admin role. Revoke Super Admin privileges before changing the role.
+          </span>
+        </small>
+      )}
     </div>
 
 
@@ -5745,6 +5818,7 @@ const permissions = getDefaultPermissions(formData.role);
         ) : <button
           className={
             ['remove-shift-assignment', 'save-cleared-shift-schedule'].includes(pendingConfirmAction.action)
+              || (pendingConfirmAction.action === 'super-admin-privilege' && pendingConfirmAction.payload.grant)
               ? 'accounts-modal-add'
               : 'leave-reject-btn'
           }

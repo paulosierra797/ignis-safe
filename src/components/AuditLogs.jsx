@@ -239,6 +239,8 @@ export default function AuditLogs() {
                 <option>Account Created</option>
                 <option>Account Updated</option>
                 <option>Account Deleted</option>
+                <option>Super Admin Granted</option>
+                <option>Super Admin Revoked</option>
                 <option>User Login</option>
                 <option>Failed Login Attempt</option>
                 <option>Organizational Chart Updated</option>

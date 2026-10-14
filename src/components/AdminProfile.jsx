@@ -25,7 +25,7 @@ const formatRoleLabel = (role) => {
 };
 
 export default function AdminProfile() {
-  const { currentUser, setCurrentUser } = useUser();
+  const { currentUser, setCurrentUser, isSuperAdmin } = useUser();
   const navigate = useNavigate();
 
   const [firstName, setFirstName] = useState('');
@@ -47,7 +47,7 @@ export default function AdminProfile() {
   const [profileInitialized, setProfileInitialized] = useState(false);
 
   const displayName = `${currentUser?.first_name || ''} ${currentUser?.last_name || ''}`.trim() || 'Admin';
-  const displayRole = formatRoleLabel(currentUser?.role);
+  const displayRole = isSuperAdmin ? 'Super Admin' : formatRoleLabel(currentUser?.role);
   const displayPhone = currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || 'Not available';
   const savedPhone = digitsOnly(currentUser?.contact_number || currentUser?.phone || currentUser?.phone_number || '');
   const hasUnsavedProfileChanges = profileInitialized && Boolean(currentUser) && (

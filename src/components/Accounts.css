@@ -1653,6 +1653,18 @@
   text-transform: capitalize;
 }
 
+.account-directory-super-admin-badge {
+  align-self: flex-start;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  font-size: 0.68rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .account-directory-table .account-directory-status-group {
   flex-direction: row;
   flex-wrap: wrap;

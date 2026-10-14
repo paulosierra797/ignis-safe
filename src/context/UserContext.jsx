@@ -38,6 +38,8 @@ export const UserProvider = ({ children }) => {
   const shouldInitializeAuth = !PUBLIC_PATHS.has(location.pathname);
   const isPersonnelWorkspace = isPersonnelWorkspacePath(location.pathname);
   const isAdminAccount = String(accountUser?.role || '').toLowerCase() === 'admin';
+  // Display/UI gating only; Super Admin authority is enforced in Supabase.
+  const isSuperAdmin = isAdminAccount && accountUser?.is_super_admin === true;
   const currentUser = isPersonnelWorkspace && isAdminAccount
     ? (personnelWorkspaceUser || {
       ...accountUser,
@@ -251,6 +253,7 @@ export const UserProvider = ({ children }) => {
   const value = {
     currentUser,
     accountUser,
+    isSuperAdmin,
     setCurrentUser,
     refreshCurrentUser,
     switchRole,

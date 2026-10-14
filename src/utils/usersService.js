@@ -410,6 +410,25 @@ export const deleteUser = async (adminId) => {
   }
 };
 
+// Grant or revoke Super Admin privileges. Authorization and the audit log entry
+// are enforced server-side by the set_super_admin_privilege RPC.
+export const setSuperAdminPrivilege = async (targetAdminId, grant) => {
+  try {
+    const { data, error } = await supabase.rpc('set_super_admin_privilege', {
+      p_target_admin_id: targetAdminId,
+      p_grant: Boolean(grant)
+    });
+
+    if (error) throw error;
+
+    emitDataChanged('users', { action: grant ? 'super_admin_grant' : 'super_admin_revoke', admin_id: targetAdminId });
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error updating Super Admin privileges:', error);
+    return { data: null, error: error.message };
+  }
+};
+
 // Get admin by email
 export const getUserByEmail = async (email) => {
   try {

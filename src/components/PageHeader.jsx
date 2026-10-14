@@ -69,6 +69,7 @@ const PageHeader = ({
   const {
     currentUser,
     accountUser,
+    isSuperAdmin,
     checkCurrentDeviceTrust,
     forgetThisDevice,
     logout
@@ -79,7 +80,9 @@ const PageHeader = ({
   const resolvedIdentityName = getIdentityName(currentUser);
   const resolvedUserRole = userRole ?? (variant === 'personnel'
     ? 'Personnel'
-    : formatRoleLabel(currentUser?.role));
+    : isSuperAdmin
+      ? 'Super Admin'
+      : formatRoleLabel(currentUser?.role));
   const resolvedUserAvatar = userAvatar ?? currentUser?.avatar_url ?? '/user-avatar.svg';
   const resolvedEmail = currentUser?.email || accountUser?.email || '';
   const resolvedRank = String(currentUser?.rank || '').trim();

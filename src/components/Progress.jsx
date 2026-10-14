@@ -4,22 +4,21 @@ import {
   FiAward,
   FiBarChart2,
   FiBookOpen,
-  FiCalendar,
   FiCheckCircle,
   FiChevronDown,
-  FiClock,
   FiEye,
-  FiFileText,
   FiGlobe,
   FiMail,
   FiMapPin,
   FiPieChart,
   FiPlayCircle,
   FiStar,
-  FiUser,
   FiUsers,
 } from 'react-icons/fi';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import { useGSAP } from '@gsap/react';
+import { gsap } from 'gsap';
+import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
 import RecordActions from './RecordActions';
 import Pagination from './Pagination';
@@ -35,6 +34,40 @@ import {
   getUserFeedback,
   summarizeUsers,
 } from '../utils/progressService';
+
+gsap.registerPlugin(useGSAP);
+
+const prefersReducedMotion = () => (
+  typeof window !== 'undefined'
+  && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+);
+
+const AGE_BRACKETS = [
+  { max: 17, label: 'Under 18' },
+  { max: 24, label: '18–24' },
+  { max: 34, label: '25–34' },
+  { max: 44, label: '35–44' },
+  { max: 54, label: '45–54' },
+  { max: 64, label: '55–64' },
+  { max: Infinity, label: '65 and above' },
+];
+
+// Only an age range is shown in User Details, never the exact date of birth.
+const getAgeBracket = (user) => {
+  if (user?.ageBracket) return user.ageBracket;
+
+  const birthDate = new Date(user?.birthDate || '');
+  if (!user?.birthDate || Number.isNaN(birthDate.getTime())) return 'Not recorded';
+
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const hasHadBirthday = today.getMonth() > birthDate.getMonth()
+    || (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
+  if (!hasHadBirthday) age -= 1;
+  if (age < 0) return 'Not recorded';
+
+  return AGE_BRACKETS.find((bracket) => age <= bracket.max).label;
+};
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -208,9 +241,16 @@ export default function Progress() {
   const [expandedTests, setExpandedTests] = useState({});
   const [userFeedback, setUserFeedback] = useState([]);
   const [isFeedbackLoading, setIsFeedbackLoading] = useState(false);
+  const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [barangayPage, setBarangayPage] = useState(1);
   const completionBlurTimeoutRef = useRef(null);
+  const userModalRef = useRef(null);
+  const moreDetailsRef = useRef(null);
+  const { currentUser } = useUser();
+  // Same gate as the /dashboard/users route: admin role with manage_users.
+  const canViewMoreDetails = String(currentUser?.role || '').trim().toLowerCase() === 'admin'
+    && Boolean(currentUser?.permissions?.includes('manage_users'));
   const requestedView = searchParams.get('view');
   const defaultView = location.pathname.endsWith('/users') ? 'users' : 'participation';
   const activeView = requestedView === 'users' || (!requestedView && defaultView === 'users')
@@ -317,6 +357,7 @@ export default function Progress() {
 
   const handleViewUser = (user) => {
     setSelectedUser(user);
+    setIsMoreDetailsOpen(false);
     setShowModal(true);
   };
 
@@ -329,10 +370,65 @@ export default function Progress() {
   };
 
   const handleCloseModal = () => {
+    if (moreDetailsRef.current) gsap.killTweensOf(moreDetailsRef.current);
     setShowModal(false);
     setSelectedUser(null);
     setExpandedTests({});
     setUserFeedback([]);
+    setIsMoreDetailsOpen(false);
+  };
+
+  // Entrance: the panel settles in, then the essential details follow.
+  useGSAP(() => {
+    const modal = userModalRef.current;
+    if (!showModal || !modal || prefersReducedMotion()) return;
+
+    gsap.timeline({ defaults: { ease: 'power3.out', clearProps: 'opacity,visibility,transform' } })
+      .from(modal, { autoAlpha: 0, y: 18, scale: 0.985, duration: 0.42 })
+      .from(modal.querySelectorAll('[data-user-detail-reveal]'), {
+        autoAlpha: 0,
+        y: 10,
+        duration: 0.4,
+        stagger: 0.05,
+      }, '-=0.2');
+  }, { scope: userModalRef, dependencies: [showModal, selectedUser?.id] });
+
+  // More Details: height opens from 0, then its groups fade up in sequence.
+  useGSAP(() => {
+    const panel = moreDetailsRef.current;
+    if (!isMoreDetailsOpen || !panel || prefersReducedMotion()) return;
+
+    gsap.timeline({ defaults: { ease: 'power2.out' } })
+      .fromTo(panel, { height: 0, autoAlpha: 0, overflow: 'hidden' }, {
+        height: 'auto',
+        autoAlpha: 1,
+        duration: 0.45,
+        clearProps: 'height,opacity,visibility,overflow',
+      })
+      .from(panel.querySelectorAll('.progress-user-group'), {
+        autoAlpha: 0,
+        y: 12,
+        duration: 0.35,
+        stagger: 0.05,
+        clearProps: 'opacity,visibility,transform',
+      }, '-=0.25');
+  }, { scope: userModalRef, dependencies: [isMoreDetailsOpen] });
+
+  const handleToggleMoreDetails = () => {
+    const panel = moreDetailsRef.current;
+    if (!isMoreDetailsOpen || !panel || prefersReducedMotion()) {
+      setIsMoreDetailsOpen((current) => !current);
+      return;
+    }
+
+    gsap.to(panel, {
+      height: 0,
+      autoAlpha: 0,
+      overflow: 'hidden',
+      duration: 0.3,
+      ease: 'power2.inOut',
+      onComplete: () => setIsMoreDetailsOpen(false),
+    });
   };
 
   useEffect(() => {
@@ -1018,264 +1114,284 @@ export default function Progress() {
 
         {showModal && selectedUser && (
           <div className="progress-modal-overlay" onClick={handleCloseModal}>
-            <div className="progress-modal" onClick={(e) => e.stopPropagation()}>
+            <div
+              ref={userModalRef}
+              className="progress-modal progress-user-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="progress-user-modal-name"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="progress-modal-header">
                 <div className="progress-modal-heading">
-                  <span className="progress-modal-eyebrow">User Details</span>
-                  <h2>Learning Profile</h2>
-                  <p>Account activity and training performance</p>
+                  <span className="progress-modal-eyebrow">Users</span>
+                  <h2>User Details</h2>
+                  <p>Essential account information</p>
                 </div>
                 <CloseButton
                   className="progress-modal-close"
                   onClick={handleCloseModal}
-                  label="Close personnel progress"
+                  label="Close user details"
                 />
               </div>
 
-              <div className="progress-modal-content">
-                <section className="progress-modal-identity">
-                  <div className="progress-modal-avatar" aria-hidden="true">
+              <div className="progress-modal-content progress-user-content">
+                <section className="progress-user-identity" data-user-detail-reveal>
+                  <div className="progress-user-avatar" aria-hidden="true">
                     {selectedUser.avatarUrl ? (
                       <img src={selectedUser.avatarUrl} alt="" />
                     ) : (
                       getUserInitials(selectedUser.name)
                     )}
                   </div>
-                  <div className="progress-modal-identity-copy">
-                    <span className="progress-modal-label">USER ACCOUNT</span>
-                    <h3>{selectedUser.name}</h3>
-                    <p><FiMail aria-hidden="true" />{selectedUser.email}</p>
-                    <span className={`progress-account-type-badge ${selectedUser.accountType.toLowerCase().replace(/\s+/g, '-')}`}>
-                      {selectedUser.accountType}
-                    </span>
-                  </div>
-                  <div className="progress-modal-status-summary">
-                    <span className="progress-modal-label">ACCOUNT STATUS</span>
-                    <span className={`progress-modal-status ${selectedUser.accessStatus.toLowerCase()}`}>
-                      {selectedUser.accessStatus}
-                    </span>
-                    <small>{getActivityDescription(selectedUser.accessStatus)}</small>
+                  <div className="progress-user-identity-copy">
+                    <span className="progress-user-label">Full Name</span>
+                    <h3 id="progress-user-modal-name">{selectedUser.name}</h3>
                   </div>
                 </section>
 
-                <div className="progress-modal-grid">
-                  <div className="progress-modal-section">
-                    <h4><FiActivity className="progress-modal-section-icon" aria-hidden="true" />Account Activity</h4>
-                    <div className="progress-modal-info">
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiCalendar aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">DATE CREATED</span>
-                          <span className="progress-modal-value">{formatLongDate(selectedUser.dateCreated)}</span>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiClock aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">LAST ACTIVITY</span>
-                          <span className="progress-modal-value">{formatLongDate(selectedUser.lastActivityAt)}</span>
-                        </div>
-                      </div>
-                    </div>
+                <dl className="progress-user-essentials">
+                  <div className="progress-user-field progress-user-field-wide" data-user-detail-reveal>
+                    <dt className="progress-user-label">Email Address</dt>
+                    <dd className="progress-user-field-email">
+                      <FiMail aria-hidden="true" />
+                      <span>{selectedUser.email}</span>
+                    </dd>
                   </div>
-
-                  <div className="progress-modal-section">
-                    <h4><FiUser className="progress-modal-section-icon" aria-hidden="true" />Account and App Details</h4>
-                    <div className="progress-modal-info progress-modal-account-info">
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiUser aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">USERNAME</span>
-                          <span className="progress-modal-value">{selectedUser.username}</span>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiCheckCircle aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">REGISTRATION</span>
-                          <span className="progress-modal-value">
-                            {formatProfileLabel(selectedUser.registrationStatus)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiMapPin aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">LOCATION</span>
-                          <span className="progress-modal-value">
-                            {selectedUser.location}
-                            {selectedUser.locationKey !== 'outside' && (
-                              <small className="progress-modal-value-note">
-                                {selectedUser.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'Barangay not specified' : `Barangay ${selectedUser.barangay}`}
-                              </small>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiGlobe aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">APP LANGUAGE</span>
-                          <span className="progress-modal-value">
-                            {getLanguageLabel(selectedUser.appLanguageCode)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiFileText aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">TERMS AGREEMENT</span>
-                          <span className="progress-modal-value">
-                            {selectedUser.termsAccepted
-                              ? `Accepted${selectedUser.termsAcceptedAt ? ` on ${formatLongDate(selectedUser.termsAcceptedAt)}` : ''}`
-                              : 'Not accepted'}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiPlayCircle aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">LAST SIMULATION</span>
-                          <span className="progress-modal-value">{selectedUser.lastSimulation}</span>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="progress-user-field" data-user-detail-reveal>
+                    <dt className="progress-user-label">Barangay</dt>
+                    <dd>{selectedUser.barangay}</dd>
                   </div>
-
-                  <div className="progress-modal-section">
-                    <h4><FiBarChart2 className="progress-modal-section-icon" aria-hidden="true" />Learning Progress</h4>
-                    <div className="progress-modal-info">
-                      <div className="progress-modal-info-item progress-modal-info-item-centered">
-                        <span className="progress-modal-info-icon"><FiCheckCircle aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">MODULES COMPLETED</span>
-                          <span className="progress-modal-value">{selectedUser.modulesCompleted}</span>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item progress-modal-info-item-centered">
-                        <span className="progress-modal-info-icon"><FiBarChart2 aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">OVERALL PROGRESS</span>
-                          <span className="progress-modal-value">{selectedUser.overallPercent}%</span>
-                        </div>
-                      </div>
-                      <div className="progress-modal-info-item">
-                        <span className="progress-modal-info-icon"><FiMapPin aria-hidden="true" /></span>
-                        <div className="progress-modal-info-body">
-                          <span className="progress-modal-label">LAST MODULE ACCESSED</span>
-                          <span className="progress-modal-value">{selectedUser.lastAccessedModule}</span>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="progress-user-field" data-user-detail-reveal>
+                    <dt className="progress-user-label">Age Bracket</dt>
+                    <dd>{getAgeBracket(selectedUser)}</dd>
                   </div>
-                </div>
-
-                <div className="progress-modal-full progress-modal-milestones">
-                  <h4><FiAward className="progress-modal-section-icon" aria-hidden="true" />Learning Milestones</h4>
-                  {getUserMilestones(selectedUser).length === 0 ? (
-                    <p className="progress-modal-milestones-empty">No learning milestones earned yet.</p>
-                  ) : (
-                    <div className="progress-modal-milestone-list">
-                      {getUserMilestones(selectedUser).map((milestone) => (
-                        <div className="progress-modal-milestone" key={milestone.key}>
-                          <span className="progress-modal-milestone-icon"><FiAward aria-hidden="true" /></span>
-                          <span>
-                            <strong>{milestone.label}</strong>
-                            <small>{milestone.detail}</small>
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="progress-modal-full">
-                  <h4><FiBookOpen className="progress-modal-section-icon" aria-hidden="true" />Module Progress</h4>
-                  <div className="progress-modal-modules">
-                    {selectedUser.modules.map((module) => (
-                      <div key={module.name} className="progress-modal-module-card">
-                        <div className="progress-modal-module-header">
-                          <span className="progress-modal-module-name">{module.name}</span>
-                          <span className={`progress-modal-module-badge ${module.status === 'In Progress' ? 'in-progress' : module.status === 'Completed' ? 'completed' : 'not-started'}`}>
-                            {module.status === 'In Progress' ? `${module.progress}%` : module.status}
-                          </span>
-                        </div>
-                        {module.status === 'In Progress' && (
-                          <div className="progress-modal-bar">
-                            <div className="progress-modal-bar-fill" style={{ width: `${module.progress}%` }}></div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                  <div className="progress-user-field progress-user-field-wide" data-user-detail-reveal>
+                    <dt className="progress-user-label">Account Status</dt>
+                    <dd className="progress-user-field-status">
+                      <span className={`progress-modal-status ${selectedUser.accessStatus.toLowerCase()}`}>
+                        {selectedUser.accessStatus}
+                      </span>
+                      <small>{getActivityDescription(selectedUser.accessStatus)}</small>
+                    </dd>
                   </div>
-                </div>
+                </dl>
 
-                <div className="progress-modal-full">
-                  <h4><FiCheckCircle className="progress-modal-section-icon" aria-hidden="true" />Test Tracking</h4>
-                  <div className="progress-modal-tests">
-                    {selectedUser.modules.map((module) => (
-                      <div key={module.name}>
-                        <button
-                          type="button"
-                          className="progress-modal-test-item" 
-                          onClick={() => toggleTestExpanded(module.name)}
-                          aria-expanded={Boolean(expandedTests[module.name])}
-                        >
-                          <span className="progress-modal-test-name">
-                            <span className={`progress-modal-test-dropdown ${expandedTests[module.name] ? 'open' : ''}`}>
-                              <FiChevronDown aria-hidden="true" />
-                            </span>
-                            {module.name}
-                          </span>
-                          <span className="progress-modal-test-status">
-                            {module.tests.length > 0 ? `${module.tests.length} tests` : 'No tests yet'}
-                          </span>
-                        </button>
-                        {expandedTests[module.name] && module.tests.length > 0 && (
-                          <div className="progress-modal-test-details">
+                {canViewMoreDetails && (
+                  <section className="progress-user-more" data-user-detail-reveal>
+                    <button
+                      type="button"
+                      className="progress-user-more-toggle"
+                      onClick={handleToggleMoreDetails}
+                      aria-expanded={isMoreDetailsOpen}
+                      aria-controls="progress-user-more-details"
+                    >
+                      <span className="progress-user-more-copy">
+                        <strong>More Details</strong>
+                        <small>Account audit, app profile, learning progress, and assessment history</small>
+                      </span>
+                      <span className={`progress-user-more-chevron ${isMoreDetailsOpen ? 'open' : ''}`} aria-hidden="true">
+                        <FiChevronDown />
+                      </span>
+                    </button>
+
+                    {isMoreDetailsOpen && (
+                      <div
+                        id="progress-user-more-details"
+                        ref={moreDetailsRef}
+                        className="progress-user-more-panel"
+                      >
+                        <section className="progress-user-group">
+                          <h4><FiActivity className="progress-modal-section-icon" aria-hidden="true" />Account and Audit</h4>
+                          <dl className="progress-user-meta">
                             <div>
-                              {module.tests.map((test, idx) => (
-                                <div key={idx} style={{ marginBottom: idx < module.tests.length - 1 ? '0.8rem' : '0' }}>
-                                  <div style={{ fontWeight: '600', color: '#1f2937' }}>{test.name}</div>
-                                  <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                                    Score: {test.score}/10 | Date: {formatDate(test.date)}
-                                  </div>
+                              <dt className="progress-user-label">Account Type</dt>
+                              <dd>
+                                <span className={`progress-account-type-badge ${selectedUser.accountType.toLowerCase().replace(/\s+/g, '-')}`}>
+                                  {selectedUser.accountType}
+                                </span>
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="progress-user-label">Username</dt>
+                              <dd>{selectedUser.username}</dd>
+                            </div>
+                            <div>
+                              <dt className="progress-user-label">Registration</dt>
+                              <dd>{formatProfileLabel(selectedUser.registrationStatus)}</dd>
+                            </div>
+                            <div>
+                              <dt className="progress-user-label">Date Created</dt>
+                              <dd>{formatLongDate(selectedUser.dateCreated)}</dd>
+                            </div>
+                            <div>
+                              <dt className="progress-user-label">Last Activity</dt>
+                              <dd>{formatLongDate(selectedUser.lastActivityAt)}</dd>
+                            </div>
+                            <div>
+                              <dt className="progress-user-label">Terms Agreement</dt>
+                              <dd>
+                                {selectedUser.termsAccepted
+                                  ? `Accepted${selectedUser.termsAcceptedAt ? ` on ${formatLongDate(selectedUser.termsAcceptedAt)}` : ''}`
+                                  : 'Not accepted'}
+                              </dd>
+                            </div>
+                          </dl>
+                        </section>
+
+                        <section className="progress-user-group">
+                          <h4><FiGlobe className="progress-modal-section-icon" aria-hidden="true" />App and Location</h4>
+                          <dl className="progress-user-meta">
+                            <div>
+                              <dt className="progress-user-label">Location</dt>
+                              <dd>
+                                {selectedUser.location}
+                                {selectedUser.locationKey !== 'outside' && (
+                                  <small className="progress-modal-value-note">
+                                    {selectedUser.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'Barangay not specified' : `Barangay ${selectedUser.barangay}`}
+                                  </small>
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt className="progress-user-label">App Language</dt>
+                              <dd>{getLanguageLabel(selectedUser.appLanguageCode)}</dd>
+                            </div>
+                            <div>
+                              <dt className="progress-user-label">Last Simulation</dt>
+                              <dd>{selectedUser.lastSimulation}</dd>
+                            </div>
+                          </dl>
+                        </section>
+
+                        <section className="progress-user-group">
+                          <h4><FiBarChart2 className="progress-modal-section-icon" aria-hidden="true" />Learning Progress</h4>
+                          <dl className="progress-user-meta">
+                            <div>
+                              <dt className="progress-user-label">Modules Completed</dt>
+                              <dd>{selectedUser.modulesCompleted}</dd>
+                            </div>
+                            <div>
+                              <dt className="progress-user-label">Overall Progress</dt>
+                              <dd>{selectedUser.overallPercent}%</dd>
+                            </div>
+                            <div>
+                              <dt className="progress-user-label">Last Module Accessed</dt>
+                              <dd>{selectedUser.lastAccessedModule}</dd>
+                            </div>
+                          </dl>
+                        </section>
+
+                        <section className="progress-user-group">
+                          <h4><FiAward className="progress-modal-section-icon" aria-hidden="true" />Learning Milestones</h4>
+                          {getUserMilestones(selectedUser).length === 0 ? (
+                            <p className="progress-modal-milestones-empty">No learning milestones earned yet.</p>
+                          ) : (
+                            <div className="progress-modal-milestone-list">
+                              {getUserMilestones(selectedUser).map((milestone) => (
+                                <div className="progress-modal-milestone" key={milestone.key}>
+                                  <span className="progress-modal-milestone-icon"><FiAward aria-hidden="true" /></span>
+                                  <span>
+                                    <strong>{milestone.label}</strong>
+                                    <small>{milestone.detail}</small>
+                                  </span>
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                          )}
+                        </section>
 
-                <div className="progress-modal-full">
-                  <h4><FiStar className="progress-modal-section-icon" aria-hidden="true" />User Feedback</h4>
-                  {isFeedbackLoading ? (
-                    <p className="progress-modal-feedback-empty">Loading feedback...</p>
-                  ) : userFeedback.length === 0 ? (
-                    <p className="progress-modal-feedback-empty">No feedback submitted yet.</p>
-                  ) : (
-                    <div className="progress-modal-feedback-list">
-                      {userFeedback.map((item) => (
-                        <div key={item.id} className="progress-modal-feedback-card">
-                          <div className="progress-modal-feedback-header">
-                            <span className="progress-modal-feedback-rating">
-                              <FiStar aria-hidden="true" /> {item.rating} / 5
-                            </span>
-                            <span className="progress-modal-feedback-date">
-                              {formatLongDate(item.created_at)}
-                            </span>
+                        <section className="progress-user-group">
+                          <h4><FiBookOpen className="progress-modal-section-icon" aria-hidden="true" />Module Progress</h4>
+                          <div className="progress-modal-modules">
+                            {selectedUser.modules.map((module) => (
+                              <div key={module.name} className="progress-modal-module-card">
+                                <div className="progress-modal-module-header">
+                                  <span className="progress-modal-module-name">{module.name}</span>
+                                  <span className={`progress-modal-module-badge ${module.status === 'In Progress' ? 'in-progress' : module.status === 'Completed' ? 'completed' : 'not-started'}`}>
+                                    {module.status === 'In Progress' ? `${module.progress}%` : module.status}
+                                  </span>
+                                </div>
+                                {module.status === 'In Progress' && (
+                                  <div className="progress-modal-bar">
+                                    <div className="progress-modal-bar-fill" style={{ width: `${module.progress}%` }}></div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                          <p className="progress-modal-feedback-comment">
-                            {item.comment && item.comment.trim() ? item.comment : 'No comment provided.'}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                        </section>
+
+                        <section className="progress-user-group">
+                          <h4><FiCheckCircle className="progress-modal-section-icon" aria-hidden="true" />Test Tracking</h4>
+                          <div className="progress-modal-tests">
+                            {selectedUser.modules.map((module) => (
+                              <div key={module.name}>
+                                <button
+                                  type="button"
+                                  className="progress-modal-test-item"
+                                  onClick={() => toggleTestExpanded(module.name)}
+                                  aria-expanded={Boolean(expandedTests[module.name])}
+                                >
+                                  <span className="progress-modal-test-name">
+                                    <span className={`progress-modal-test-dropdown ${expandedTests[module.name] ? 'open' : ''}`}>
+                                      <FiChevronDown aria-hidden="true" />
+                                    </span>
+                                    {module.name}
+                                  </span>
+                                  <span className="progress-modal-test-status">
+                                    {module.tests.length > 0 ? `${module.tests.length} tests` : 'No tests yet'}
+                                  </span>
+                                </button>
+                                {expandedTests[module.name] && module.tests.length > 0 && (
+                                  <div className="progress-modal-test-details">
+                                    <div>
+                                      {module.tests.map((test, idx) => (
+                                        <div key={idx} style={{ marginBottom: idx < module.tests.length - 1 ? '0.8rem' : '0' }}>
+                                          <div style={{ fontWeight: '600', color: '#1f2937' }}>{test.name}</div>
+                                          <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                                            Score: {test.score}/10 | Date: {formatDate(test.date)}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+
+                        <section className="progress-user-group">
+                          <h4><FiStar className="progress-modal-section-icon" aria-hidden="true" />User Feedback</h4>
+                          {isFeedbackLoading ? (
+                            <p className="progress-modal-feedback-empty">Loading feedback...</p>
+                          ) : userFeedback.length === 0 ? (
+                            <p className="progress-modal-feedback-empty">No feedback submitted yet.</p>
+                          ) : (
+                            <div className="progress-modal-feedback-list">
+                              {userFeedback.map((item) => (
+                                <div key={item.id} className="progress-modal-feedback-card">
+                                  <div className="progress-modal-feedback-header">
+                                    <span className="progress-modal-feedback-rating">
+                                      <FiStar aria-hidden="true" /> {item.rating} / 5
+                                    </span>
+                                    <span className="progress-modal-feedback-date">
+                                      {formatLongDate(item.created_at)}
+                                    </span>
+                                  </div>
+                                  <p className="progress-modal-feedback-comment">
+                                    {item.comment && item.comment.trim() ? item.comment : 'No comment provided.'}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </section>
+                      </div>
+                    )}
+                  </section>
+                )}
               </div>
             </div>
           </div>

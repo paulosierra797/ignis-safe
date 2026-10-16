@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import { getMobileUserLocation, OUTSIDE_DASMARINAS_LOCATION } from './mobileUserLocation';
+import { selectAssessmentAttempts } from './assessmentAttemptsQuery';
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -201,9 +202,10 @@ const buildModuleProgress = ({ profileId, module, moduleProgressRow, attemptsFor
     .map((attempt) => {
       const assessment = assessmentsById[attempt.assessment_id] || {};
       const scorePercent = toNumber(attempt.score, 0);
+      const roundNo = toNumber(attempt.round_no, 1);
       return {
         id: attempt.id,
-        name: formatTestName(assessment.type),
+        name: roundNo > 1 ? `${formatTestName(assessment.type)} · ROUND ${roundNo}` : formatTestName(assessment.type),
         score: Math.max(0, Math.min(10, Math.round(scorePercent / 10))),
         date: getAttemptTimestamp(attempt),
         status: 'COMPLETED',
@@ -276,9 +278,7 @@ export const getProgressPageData = async () => {
       supabase
         .from('module_progress')
         .select('user_id, module_id, pre_test_completed_at, learning_material_completed_at, simulation_completed_at, post_test_completed_at, created_at, updated_at'),
-      supabase
-        .from('assessment_attempts')
-        .select('id, user_id, assessment_id, score, submitted_at, started_at, created_at, status'),
+      selectAssessmentAttempts('id, user_id, assessment_id, score, submitted_at, started_at, created_at, status'),
       supabase
         .from('assessments')
         .select('id, module_id, type, title'),

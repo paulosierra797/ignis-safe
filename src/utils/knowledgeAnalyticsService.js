@@ -2,6 +2,8 @@ import { supabase } from './supabaseClient';
 import { getUsersFromProfiles } from './usersService';
 import { getAccountStatus } from './progressService';
 import { dedupeRequest } from './requestDedupe';
+import { selectAssessmentAttempts } from './assessmentAttemptsQuery';
+import { keepLatestRoundAttempts } from './assessmentHistory';
 
 const ANALYTICS_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 const MAX_SESSION_DURATION_SECONDS = Number(import.meta.env.VITE_MAX_SESSION_DURATION_SECONDS || 7200);
@@ -442,9 +444,7 @@ const fetchAnalyticsBaseData = async () => dedupeRequest('loadAnalyticsBaseData'
     { data: moduleProgress, error: moduleProgressError },
     appSessions,
   ] = await Promise.all([
-    supabase
-      .from('assessment_attempts')
-      .select('id, user_id, assessment_id, started_at, submitted_at, created_at, status, score'),
+    selectAssessmentAttempts('id, user_id, assessment_id, started_at, submitted_at, created_at, status, score'),
     supabase
       .from('assessment_attempt_answers')
       .select('attempt_id, question_id, is_correct, created_at, selected_option_id, answer_text'),
@@ -534,17 +534,29 @@ const buildOverviewRows = ({ attempts, assessmentsById, modulesById, userById, f
 
   const grouped = {};
 
-  (attempts || []).forEach((attempt) => {
+  const filteredAttempts = (attempts || []).filter((attempt) => {
     const assessment = assessmentsById[attempt.assessment_id];
-    if (!assessment) return;
+    if (!assessment) return false;
 
     const moduleData = modulesById[assessment.module_id] || null;
     const userStatus = userById[attempt.user_id]?.status || 'Unknown';
-    const attemptTimestamp = getAttemptTimestamp(attempt);
 
-    if (!includesByPeople(userStatus, peopleFilter)) return;
-    if (!includesByTopic(moduleData, topicFilter)) return;
-    if (!includesByTimeframe(attemptTimestamp, startDate)) return;
+    return includesByPeople(userStatus, peopleFilter)
+      && includesByTopic(moduleData, topicFilter)
+      && includesByTimeframe(getAttemptTimestamp(attempt), startDate);
+  });
+
+  // After a reassessment a learner has attempts in several rounds; pair the
+  // pre- and post-test from the same (latest) round only.
+  const sameRoundAttempts = keepLatestRoundAttempts(
+    filteredAttempts,
+    (attempt) => assessmentsById[attempt.assessment_id].module_id,
+  );
+
+  sameRoundAttempts.forEach((attempt) => {
+    const assessment = assessmentsById[attempt.assessment_id];
+    const moduleData = modulesById[assessment.module_id] || null;
+    const attemptTimestamp = getAttemptTimestamp(attempt);
 
     const key = `${attempt.user_id}-${assessment.module_id}`;
     if (!grouped[key]) {

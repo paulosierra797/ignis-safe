@@ -302,6 +302,17 @@ def is_missing_table_error(error: Exception) -> bool:
     return "pgrst205" in message or "42p01" in message or "does not exist" in message
 
 
+def is_undefined_column_error(error: Exception) -> bool:
+    return "42703" in str(error)
+
+
+def get_attempt_round(attempt: Dict[str, Any]) -> int:
+    try:
+        return int(attempt.get("round_no") or 1)
+    except (TypeError, ValueError):
+        return 1
+
+
 def normalize_simulation_session_row(row: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "admin_id": row.get("admin_id") or row.get("user_id") or row.get("profile_id"),
@@ -354,10 +365,14 @@ def load_analytics_base_data() -> Dict[str, Any]:
     mobile_user_ids = {profile_id for profile_id in profile_ids if profile_id not in admin_ids}
 
     print("Loading attempts...", flush=True)
-    attempts = fetch_all_rows(
-        "assessment_attempts",
-        "id,user_id,assessment_id,started_at,submitted_at,created_at,status,score",
-    )
+    attempt_columns = "id,user_id,assessment_id,started_at,submitted_at,created_at,status,score"
+    try:
+        attempts = fetch_all_rows("assessment_attempts", f"{attempt_columns},round_no")
+    except Exception as error:
+        # round_no only exists once the assessment rounds migration is applied.
+        if not is_undefined_column_error(error):
+            raise
+        attempts = fetch_all_rows("assessment_attempts", attempt_columns)
 
     print("Loading answers...", flush=True)
     answers = fetch_all_rows(
@@ -525,6 +540,7 @@ def build_overview_rows(data: Dict[str, Any], filters: Filters) -> List[Dict[str
     assessments_by_id = {row.get("id"): row for row in data["assessments"]}
     modules_by_id = {row.get("id"): row for row in data["modules"]}
 
+    filtered_attempts: List[Dict[str, Any]] = []
     for attempt in data["attempts"]:
         assessment = assessments_by_id.get(attempt.get("assessment_id"))
         if not assessment:
@@ -532,16 +548,32 @@ def build_overview_rows(data: Dict[str, Any], filters: Filters) -> List[Dict[str
 
         module_data = modules_by_id.get(assessment.get("module_id"))
         user_status = (user_by_id.get(attempt.get("user_id")) or {}).get("status")
-        attempt_timestamp = get_attempt_timestamp(attempt)
 
         if not includes_by_people(user_status, filters.people):
             continue
         if not includes_by_topic(module_data, filters.topic):
             continue
-        if not includes_by_timeframe(attempt_timestamp, start_date):
+        if not includes_by_timeframe(get_attempt_timestamp(attempt), start_date):
             continue
 
+        filtered_attempts.append(attempt)
+
+    # After a reassessment a learner has attempts in several rounds; pair the
+    # pre- and post-test from the same (latest) round only.
+    latest_round: Dict[str, int] = {}
+    for attempt in filtered_attempts:
+        module_id = assessments_by_id[attempt.get("assessment_id")].get("module_id")
+        round_key = f"{attempt.get('user_id')}-{module_id}"
+        latest_round[round_key] = max(latest_round.get(round_key, 1), get_attempt_round(attempt))
+
+    for attempt in filtered_attempts:
+        assessment = assessments_by_id[attempt.get("assessment_id")]
+        module_data = modules_by_id.get(assessment.get("module_id"))
+        attempt_timestamp = get_attempt_timestamp(attempt)
+
         key = f"{attempt.get('user_id')}-{assessment.get('module_id')}"
+        if get_attempt_round(attempt) != latest_round[key]:
+            continue
         if key not in grouped:
             grouped[key] = {
                 "adminId": attempt.get("user_id"),

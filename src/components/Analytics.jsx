@@ -13,6 +13,7 @@ import UserOverviewChart from './UserOverviewChart';
 import KnowledgeGainTrendChart from './KnowledgeGainTrendChart';
 import RiskDistributionChart from './RiskDistributionChart';
 import AIRecommendationsDialog from './AIRecommendationsDialog';
+import BarangayAssessmentHistory from './BarangayAssessmentHistory';
 import {
   getAnalyticsDashboardStats,
   getAnalyticsFilterOptions,
@@ -557,6 +558,8 @@ const isGainPositive = stats.knowledgeGainPercent > 0;
             </div>
           </div>
         </div>
+
+        <BarangayAssessmentHistory />
 
         <AIRecommendationsDialog />
       </div>

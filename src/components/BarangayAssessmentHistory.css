@@ -1,0 +1,518 @@
+.bah {
+  margin-top: 1.5rem;
+}
+
+.bah-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.bah-refresh,
+.bah-primary,
+.bah-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.bah-refresh,
+.bah-secondary {
+  flex-shrink: 0;
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  color: #344054;
+}
+
+.bah-refresh:hover:not(:disabled),
+.bah-secondary:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.bah-primary {
+  border: 1px solid #b42318;
+  background: #b42318;
+  color: #fff;
+}
+
+.bah-primary:hover:not(:disabled) {
+  background: #912018;
+}
+
+.bah-refresh:disabled,
+.bah-primary:disabled,
+.bah-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.bah-refresh:focus-visible,
+.bah-primary:focus-visible,
+.bah-secondary:focus-visible,
+.bah-link:focus-visible {
+  outline: 3px solid rgba(180, 35, 24, 0.2);
+  outline-offset: 2px;
+}
+
+.bah-filters .filter-pill select {
+  max-width: 260px;
+}
+
+.bah-notice {
+  margin-bottom: 0.8rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.bah-notice.is-error {
+  border: 1px solid #fecdca;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.bah-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+
+.bah-stat,
+.bah-card {
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.bah-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 1rem;
+}
+
+.bah-stat span {
+  color: #667085;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.bah-stat strong {
+  color: #172033;
+  font-size: 1.5rem;
+}
+
+.bah-stat small {
+  color: #667085;
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.bah-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+
+.bah-card {
+  min-width: 0;
+  margin-bottom: 0.8rem;
+  padding: 1.25rem;
+}
+
+.bah-grid .bah-card {
+  margin-bottom: 0;
+}
+
+.bah-card h3 {
+  margin: 0;
+  color: #172033;
+  font-size: 0.95rem;
+}
+
+.bah-card .analytics-card-header p {
+  margin: 0.3rem 0 0.9rem;
+  color: #667085;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.bah-empty {
+  margin: 0;
+  padding: 1rem 0;
+  color: #667085;
+  font-size: 0.85rem;
+}
+
+.bah-card.bah-empty {
+  padding: 1.25rem;
+}
+
+.bah-table-wrap {
+  overflow-x: auto;
+}
+
+.bah-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.bah-table th,
+.bah-table td {
+  padding: 0.6rem 0.65rem;
+  border-bottom: 1px solid #eaecf0;
+  text-align: left;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.bah-table thead th {
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bah-table tbody th {
+  color: #172033;
+  font-weight: 600;
+}
+
+.bah-table small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #667085;
+  font-size: 0.72rem;
+  font-weight: 400;
+}
+
+.bah-learner {
+  display: block;
+}
+
+.bah-pill.bah-pill {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #fffaeb;
+  color: #b54708;
+  font-weight: 600;
+}
+
+.bah-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.bah-compare-scores {
+  display: inline-flex;
+  gap: 0.35rem;
+  color: #475467;
+}
+
+.bah-compare-scores strong {
+  color: #172033;
+}
+
+.bah-change {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.bah-change.is-up {
+  color: #15803d;
+}
+
+.bah-change.is-down {
+  color: #b42318;
+}
+
+.bah-change.is-flat {
+  color: #667085;
+}
+
+.bah-trend {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.bah-trend span {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #344054;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.bah-chart {
+  position: relative;
+  height: 260px;
+}
+
+.bah-reassess-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1rem;
+}
+
+.bah-reassess-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.bah-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+}
+
+.bah-fieldset legend {
+  padding: 0 0.3rem;
+  color: #344054;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.bah-fieldset legend small {
+  color: #667085;
+  font-weight: 500;
+}
+
+.bah-picker-tools {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.bah-picker-tools input,
+.bah-reason textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.bah-picker-tools input:focus,
+.bah-reason textarea:focus {
+  border-color: #667085;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(102, 112, 133, 0.12);
+}
+
+.bah-link {
+  flex-shrink: 0;
+  padding: 0.25rem;
+  border: 0;
+  background: none;
+  color: #b42318;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bah-link:disabled {
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
+.bah-picker {
+  max-height: 280px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.bah-picker li + li {
+  border-top: 1px solid #f2f4f7;
+}
+
+.bah-picker label,
+.bah-check {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.45rem 0.2rem;
+  cursor: pointer;
+  font-size: 0.83rem;
+}
+
+.bah-picker input,
+.bah-check input {
+  width: 16px;
+  height: 16px;
+  margin-top: 0.15rem;
+  accent-color: #b42318;
+}
+
+.bah-picker strong {
+  display: block;
+  color: #172033;
+  font-weight: 600;
+}
+
+.bah-picker small {
+  color: #667085;
+  font-size: 0.72rem;
+}
+
+.bah-hint {
+  display: block;
+  margin-top: 0.4rem;
+  color: #667085;
+  font-size: 0.74rem;
+}
+
+.bah-hint.is-error {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.bah-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: #344054;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.bah-reason textarea {
+  resize: vertical;
+  font-weight: 400;
+}
+
+.bah-result {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #f9fafb;
+  font-size: 0.83rem;
+}
+
+.bah-result p {
+  margin: 0 0 0.4rem;
+}
+
+.bah-result ul {
+  margin: 0 0 0.4rem;
+  padding-left: 1.1rem;
+  color: #475467;
+}
+
+.bah-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(3px);
+}
+
+.bah-dialog {
+  width: min(500px, 100%);
+  max-height: calc(100vh - 2.5rem);
+  overflow-y: auto;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  color: #475467;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.bah-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.bah-dialog-header h3 {
+  margin: 0;
+  color: #172033;
+  font-size: 1.15rem;
+}
+
+.bah-dialog ul {
+  margin: 0.3rem 0 0.8rem;
+  padding-left: 1.2rem;
+  color: #172033;
+}
+
+.bah-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+}
+
+@media (max-width: 1100px) {
+  .bah-grid,
+  .bah-reassess-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .bah-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bah-filters .filter-pill select {
+    max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .bah-heading {
+    flex-direction: column;
+  }
+
+  .bah-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .bah-card {
+    padding: 1rem;
+  }
+
+  .bah-dialog-actions {
+    flex-direction: column-reverse;
+  }
+
+  .bah-dialog-actions button {
+    width: 100%;
+  }
+}

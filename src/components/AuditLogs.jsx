@@ -246,6 +246,7 @@ export default function AuditLogs() {
                 <option>Organizational Chart Updated</option>
                 <option>Attendance Export CSV</option>
                 <option>Attendance Export PDF</option>
+                <option>Reassessment Round Opened</option>
               </select>
             </div>
 

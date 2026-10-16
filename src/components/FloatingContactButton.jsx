@@ -163,7 +163,7 @@ export default function FloatingContactButton() {
     <button ref={buttonRef} type="button" className="floating-contact-button"
       onPointerDown={handleDragStart} onPointerMove={handleDragMove} onPointerUp={handleDragEnd} onPointerCancel={handleDragEnd} onLostPointerCapture={handleDragEnd}
       onClick={event => { if (suppressClick.current && event.detail !== 0) { suppressClick.current = false; return; } setOpen(value => !value); }}
-      aria-label={open ? copy.close : copy.messageUs} title={open ? copy.close : copy.messageUs} aria-expanded={open} aria-controls="floating-contact-panel">
+      aria-label={open ? copy.close : copy.messageUs} aria-expanded={open} aria-controls="floating-contact-panel">
       {open ? <FiX aria-hidden="true" /> : <FiMessageCircle aria-hidden="true" />}
     </button>
   </div>;

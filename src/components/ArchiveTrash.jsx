@@ -552,7 +552,6 @@ export default function ArchiveTrash() {
                               type="button"
                               className="at-button at-button--icon"
                               aria-label={`${expanded ? 'Hide' : 'Show'} history for ${item.record_label}`}
-                              title={expanded ? 'Hide history' : 'Show history'}
                               aria-expanded={expanded}
                               aria-controls={`at-history-${item.item_id}`}
                               onClick={() => setExpandedId(expanded ? '' : item.item_id)}

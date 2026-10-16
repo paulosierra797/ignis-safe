@@ -747,7 +747,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                       </button>
                       <div className="aboutus-item-actions">
                         <RecordActions label={`Actions for ${group.title_en}`}>
-                        <button type="button" className="aboutus-icon-btn" onClick={() => startEditGroup(group)} aria-label="Edit district/group" title="Edit"><FiEdit2 aria-hidden="true" /></button>
+                        <button type="button" className="aboutus-icon-btn" onClick={() => startEditGroup(group)} aria-label="Edit district/group"><FiEdit2 aria-hidden="true" /></button>
                         </RecordActions>
                       </div>
                     </div>
@@ -777,7 +777,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                   </button>
                                   <div className="aboutus-item-actions">
                                     <RecordActions label={`Actions for ${entry.name_en}`}>
-                                    <button type="button" className="aboutus-icon-btn" onClick={() => startEditEntry(group.group_key, entry)} aria-label="Edit station" title="Edit"><FiEdit2 aria-hidden="true" /></button>
+                                    <button type="button" className="aboutus-icon-btn" onClick={() => startEditEntry(group.group_key, entry)} aria-label="Edit station"><FiEdit2 aria-hidden="true" /></button>
                                     </RecordActions>
                                   </div>
                                 </div>
@@ -802,7 +802,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                             </div>
                                             <div className="aboutus-item-actions">
                                               <RecordActions label={`Actions for ${phone.display_value}`}>
-                                              <button type="button" className="aboutus-icon-btn" onClick={() => startEditPhone(entry.entry_key, phone)} aria-label="Edit phone" title="Edit"><FiEdit2 aria-hidden="true" /></button>
+                                              <button type="button" className="aboutus-icon-btn" onClick={() => startEditPhone(entry.entry_key, phone)} aria-label="Edit phone"><FiEdit2 aria-hidden="true" /></button>
                                               </RecordActions>
                                             </div>
                                           </>
@@ -925,7 +925,7 @@ function GeneralTextsCard({ notify, reportDirty, requestSave }) {
                     </div>
                     <div className="aboutus-item-actions">
                       <RecordActions label={`Actions for ${row.title_en}`}>
-                      <button type="button" className="aboutus-icon-btn" onClick={() => sections.startEdit(row)} aria-label="Edit section" title="Edit"><FiEdit2 aria-hidden="true" /></button>
+                      <button type="button" className="aboutus-icon-btn" onClick={() => sections.startEdit(row)} aria-label="Edit section"><FiEdit2 aria-hidden="true" /></button>
                       </RecordActions>
                     </div>
                   </>

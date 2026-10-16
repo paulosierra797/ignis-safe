@@ -1046,7 +1046,6 @@ useEffect(() => {
                     onClick={toggleNewPasswordVisibility}
                     aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
                     aria-pressed={showNewPassword}
-                    title={showNewPassword ? 'Hide new password' : 'Show new password'}
                   >
                     {showNewPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                   </button>
@@ -1069,7 +1068,6 @@ useEffect(() => {
                     onClick={toggleConfirmPasswordVisibility}
                     aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
                     aria-pressed={showConfirmPassword}
-                    title={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
                   >
                     {showConfirmPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                   </button>
@@ -1249,7 +1247,6 @@ useEffect(() => {
                       onClick={togglePasswordVisibility}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       aria-pressed={showPassword}
-                      title={showPassword ? 'Hide password' : 'Show password'}
                       disabled={loading}
                     >
                       {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}

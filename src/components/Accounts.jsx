@@ -5419,7 +5419,6 @@ const permissions = getDefaultPermissions(formData.role);
                                 type="button"
                                 onClick={() => handleTogglePersonnelForShift(personnel, false)}
                                 aria-label={`Remove ${formatPersonnelFullName(personnel)} from selection`}
-                                title="Remove from selection"
                               >
                                 <FaTimes aria-hidden="true" />
                               </button>
@@ -5465,7 +5464,6 @@ const permissions = getDefaultPermissions(formData.role);
                                       type="button"
                                       onClick={() => handleRemoveShiftAssignment(assignment.assignment_id)}
                                       aria-label={`Remove ${getPersonnelNameById(personnelId)} from Shift A`}
-                                      title="Remove assignment"
                                     >
                                       <FaTimes aria-hidden="true" />
                                     </button>
@@ -5507,7 +5505,6 @@ const permissions = getDefaultPermissions(formData.role);
                                       type="button"
                                       onClick={() => handleRemoveShiftAssignment(assignment.assignment_id)}
                                       aria-label={`Remove ${getPersonnelNameById(personnelId)} from Shift B`}
-                                      title="Remove assignment"
                                     >
                                       <FaTimes aria-hidden="true" />
                                     </button>

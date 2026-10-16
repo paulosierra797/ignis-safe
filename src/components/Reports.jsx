@@ -471,7 +471,6 @@ export default function Reports() {
                       type="button"
                       onClick={() => handleRemoveFile(index)}
                       aria-label={`Remove ${file.name}`}
-                      title="Remove file"
                     >
                       <FaTimes aria-hidden="true" />
                     </button>

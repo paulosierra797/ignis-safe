@@ -1148,7 +1148,6 @@ export default function PersonnelImportModal({
                                   className="pim-icon-btn"
                                   onClick={(event) => requestRemove(row.id, event)}
                                   aria-label={`Remove row ${rowNumbers[row.id]} from import`}
-                                  title="Remove from import"
                                 >
                                   <FiTrash2 aria-hidden="true" />
                                 </button>

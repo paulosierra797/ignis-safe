@@ -1347,7 +1347,7 @@ export default function Announcements() {
                     if (!event.target.value.trim()) setRecipientSearch('');
                   }} placeholder="Search name or email" />
                 </label>
-                <button type="submit" title="Search specific recipients" aria-label="Search specific recipients"><FiSearch aria-hidden="true" /></button>
+                <button type="submit" aria-label="Search specific recipients"><FiSearch aria-hidden="true" /></button>
               </form>
               {(recipientSearch || searchQuery || audienceHistoryFilter !== 'all') && <button className="history-clear-filter" type="button" onClick={() => {
                 setAudienceHistoryFilter('all'); setRecipientSearch(''); setRecipientSearchInput(''); setSearchQuery('');
@@ -1582,7 +1582,6 @@ export default function Announcements() {
                       className="archived-sort-dir"
                       onClick={() => setArchivedSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
                       aria-label={`Sort direction: ${archivedSortDir === 'asc' ? 'ascending' : 'descending'}`}
-                      title={archivedSortDir === 'asc' ? 'Ascending' : 'Descending'}
                     >
                       {archivedSortField === 'title'
                         ? (archivedSortDir === 'asc' ? 'A → Z' : 'Z → A')

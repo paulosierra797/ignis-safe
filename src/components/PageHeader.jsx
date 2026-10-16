@@ -244,7 +244,6 @@ const PageHeader = ({
           className="sidebar-toggle-btn"
           onClick={toggleMobileSidebar}
           aria-label={isSidebarCollapsed ? 'Expand side bar' : 'Toggle navigation menu'}
-          title={isSidebarCollapsed ? 'Expand side bar' : 'Toggle navigation menu'}
         >
           <FaBars />
         </button>
@@ -302,7 +301,6 @@ const PageHeader = ({
                   className="page-account-edit"
                   onClick={handleOpenProfile}
                   aria-label="Open profile settings"
-                  title="Open profile settings"
                 >
                   <FiEdit2 aria-hidden="true" />
                 </button>

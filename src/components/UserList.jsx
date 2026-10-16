@@ -27,15 +27,10 @@ const getBarangayLabel = (barangay) => (
 const PROGRESS_RULE = 'Each module is worth 100%, split equally between its Pre-Assessment, Learning Materials, and Post-Assessment. Optional 3D Simulations are not counted.';
 
 const TIPS = {
-  list: 'Mobile app users and how far they are in the required learning flow.',
-  name: 'The user’s full name and email address.',
   barangay: 'The barangay the user chose when registering. “Outside Dasma” means outside Dasmariñas City.',
   modules: 'Modules finished out of all modules. A module is finished when its Pre-Assessment, Learning Materials, and Post-Assessment are all done.',
   overall: `Average completion across all modules. ${PROGRESS_RULE}`,
   lastActivity: 'The latest date activity was recorded for this account.',
-  actions: 'View a user’s details, or move the account to Trash.',
-  view: 'View this user’s details and learning history.',
-  trash: 'Move this account to Trash. It can be restored within 30 days.',
 };
 
 export default function UserList({
@@ -84,7 +79,7 @@ export default function UserList({
       <header className="bgy-panel-head">
         <h2 id="usr-list-title">
           <FiUsers aria-hidden="true" />
-          <Tip text={TIPS.list}>User List</Tip>
+          User List
         </h2>
         <span className="usr-count">
           {rows.length === totalUsers ? `${totalUsers} users` : `${rows.length} of ${totalUsers} users`}
@@ -138,7 +133,6 @@ export default function UserList({
             className="bgy-filter-clear"
             onClick={onClear}
             aria-label="Clear filters"
-            title="Clear filters"
           >
             <FiX aria-hidden="true" />
           </button>
@@ -147,12 +141,12 @@ export default function UserList({
 
       <div className="bgy-table" role="table" aria-label="User list">
         <div className="usr-row usr-row--head" role="row">
-          <div role="columnheader"><Tip text={TIPS.name}>Name</Tip></div>
+          <div role="columnheader">Name</div>
           <div role="columnheader"><Tip text={TIPS.barangay}>Barangay</Tip></div>
           <div role="columnheader"><Tip text={TIPS.modules}>Module Progress</Tip></div>
           <div role="columnheader"><Tip text={TIPS.overall}>Overall Progress</Tip></div>
           <div role="columnheader"><Tip text={TIPS.lastActivity}>Last Activity</Tip></div>
-          <div role="columnheader" className="usr-head-action"><Tip text={TIPS.actions}>Actions</Tip></div>
+          <div role="columnheader" className="usr-head-action">Actions</div>
         </div>
 
         {isLoading ? (
@@ -204,26 +198,22 @@ export default function UserList({
               </div>
 
               <div role="cell" className="usr-cell-action">
-                <Tip text={TIPS.view} side="top" focusable={false}>
-                  <button
-                    type="button"
-                    className="bgy-action"
-                    onClick={() => onView(item)}
-                    aria-label={`View details for ${item.name}`}
-                  >
-                    <FiEye aria-hidden="true" />
-                  </button>
-                </Tip>
-                <Tip text={TIPS.trash} side="top" focusable={false}>
-                  <button
-                    type="button"
-                    className="bgy-action usr-action--danger"
-                    onClick={() => onTrash(item)}
-                    aria-label={`Move ${item.name} to Trash`}
-                  >
-                    <FiTrash2 aria-hidden="true" />
-                  </button>
-                </Tip>
+                <button
+                  type="button"
+                  className="bgy-action"
+                  onClick={() => onView(item)}
+                  aria-label={`View details for ${item.name}`}
+                >
+                  <FiEye aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="bgy-action usr-action--danger"
+                  onClick={() => onTrash(item)}
+                  aria-label={`Move ${item.name} to Trash`}
+                >
+                  <FiTrash2 aria-hidden="true" />
+                </button>
               </div>
             </div>
           ))

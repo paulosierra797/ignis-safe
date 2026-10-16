@@ -37,7 +37,6 @@ const TIPS = {
   preAvg: 'Average pre-assessment score, taken before learning. Only counts users who also took the post-assessment.',
   postAvg: 'Average post-assessment score, taken after learning. Only counts users who also took the pre-assessment.',
   gain: 'Post-assessment average minus pre-assessment average. A positive number means users learned something.',
-  action: 'Click to open charts showing whether this barangay is learning, including pre-test vs post-test results.',
 };
 
 const getInitials = (name = '') => name
@@ -214,7 +213,6 @@ export function BarangayOverview({
               className="bgy-filter-clear"
               onClick={() => onFilterChange('All')}
               aria-label="Show all barangays"
-              title="Show all barangays"
             >
               <FiX aria-hidden="true" />
             </button>
@@ -259,7 +257,7 @@ export function BarangayOverview({
           <div role="columnheader"><Tip text={TIPS.notStarted}>Not started</Tip></div>
           <div role="columnheader"><Tip text={TIPS.completionRate}>Completion rate</Tip></div>
           <div role="columnheader"><Tip text={TIPS.gain}>Learning gain</Tip></div>
-          <div role="columnheader"><Tip text={TIPS.action}>Action</Tip></div>
+          <div role="columnheader">Action</div>
         </div>
 
         {isLoading ? (
@@ -312,17 +310,15 @@ export function BarangayOverview({
                 </div>
 
                 <div role="cell" className="bgy-cell-action">
-                  <Tip text={TIPS.action} side="top" focusable={false}>
-                    <button
-                      type="button"
-                      className="bgy-action"
-                      onClick={() => onView(row.barangay)}
-                      aria-label={`View learning charts for ${row.barangay}`}
-                    >
-                      <FiBarChart2 aria-hidden="true" />
-                      <span>View charts</span>
-                    </button>
-                  </Tip>
+                  <button
+                    type="button"
+                    className="bgy-action"
+                    onClick={() => onView(row.barangay)}
+                    aria-label={`View learning charts for ${row.barangay}`}
+                  >
+                    <FiBarChart2 aria-hidden="true" />
+                    <span>View charts</span>
+                  </button>
                 </div>
               </div>
             );
@@ -608,7 +604,6 @@ export function BarangayDetailModal({ details, onClose, onViewUser }) {
                       type="button"
                       className="bgy-member-view"
                       onClick={() => onViewUser(user)}
-                      title={`View ${user.name}'s learning profile`}
                       aria-label={`View learning profile for ${user.name}`}
                     >
                       <FiEye aria-hidden="true" />

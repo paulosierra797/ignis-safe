@@ -242,7 +242,6 @@ export default function ConfirmSignupPage() {
                 onClick={() => setShowPassword((visible) => !visible)}
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
                 aria-pressed={showPassword}
-                title={showPassword ? 'Hide password' : 'Show password'}
                 disabled={isVerifying}
               >
                 {showPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
@@ -265,7 +264,6 @@ export default function ConfirmSignupPage() {
                 onClick={() => setShowConfirmPassword((visible) => !visible)}
                 aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
                 aria-pressed={showConfirmPassword}
-                title={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
                 disabled={isVerifying}
               >
                 {showConfirmPassword ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}

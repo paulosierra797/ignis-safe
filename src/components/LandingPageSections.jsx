@@ -1,7 +1,8 @@
-import { useRef } from 'react';
+import { Suspense, useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { useLandingContent } from '../context/LandingContentContext';
+import { lazyWithRetry as lazy } from '../utils/lazyWithRetry';
 import HeroSection from './HeroSection';
 import TrustAccessibilitySection from './TrustAccessibilitySection';
 import MobileAppDownloadSection from './MobileAppDownloadSection';
@@ -14,11 +15,24 @@ import './LandingMotion.css';
 
 gsap.registerPlugin(useGSAP);
 
+// Chart.js only ships with the Trends section, so it loads as its own chunk
+// instead of weighing down the first landing paint.
+const PublicTrendsSection = lazy(() => import('./PublicTrendsSection'));
+
+function LazyPublicTrendsSection() {
+  return (
+    <Suspense fallback={<section id="trends" aria-hidden="true" style={{ minHeight: 640, background: '#fbfbfc' }} />}>
+      <PublicTrendsSection />
+    </Suspense>
+  );
+}
+
 const LANDING_SECTIONS = {
   hero: { label: 'Main banner', Component: HeroSection },
   trust: { label: 'Trust and accessibility', Component: TrustAccessibilitySection },
   announcements: { label: 'Announcements', Component: LandingAnnouncements },
   'mobile-app': { label: 'Mobile application', Component: MobileAppDownloadSection },
+  trends: { label: 'Public trends', Component: LazyPublicTrendsSection },
   process: { label: 'Application process', Component: ProcessSection },
   about: { label: 'About us', Component: AboutSection },
   contact: { label: 'Contact information', Component: ContactSection },

@@ -349,7 +349,7 @@ export const DEFAULT_LANDING_CONTENT = {
     }
   },
   layout: {
-    sections: ['hero', 'trust', 'announcements', 'mobile-app', 'process', 'about', 'contact', 'faq'],
+    sections: ['hero', 'trust', 'announcements', 'mobile-app', 'trends', 'process', 'about', 'contact', 'faq'],
     hidden: [],
     orderVersion: 2
   },
@@ -471,6 +471,13 @@ const normalizeLandingLayout = (layout) => {
       sections = sections.filter((id) => id !== 'announcements');
       sections.splice(sections.indexOf('mobile-app'), 0, 'announcements');
     }
+  }
+
+  // Layouts saved before the Trends section existed get it right after the
+  // mobile app section instead of appended below the FAQ.
+  if (requestedSections.length > 0 && !requestedSections.includes('trends')) {
+    sections = sections.filter((id) => id !== 'trends');
+    sections.splice(sections.indexOf('mobile-app') + 1, 0, 'trends');
   }
 
   return {

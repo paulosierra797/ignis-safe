@@ -1,13 +1,11 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FiActivity,
   FiAward,
   FiBarChart2,
   FiBookOpen,
   FiCheckCircle,
   FiChevronDown,
   FiEye,
-  FiGlobe,
   FiMail,
   FiMapPin,
   FiPieChart,
@@ -95,22 +93,6 @@ const getActivityDescription = (status) =>
   status === 'Active'
     ? 'Activity recorded within the last 7 days.'
     : 'No activity recorded for 7 consecutive days.';
-
-const formatProfileLabel = (value, fallback = 'Not recorded') => {
-  const normalized = String(value || '').trim();
-  if (!normalized) return fallback;
-
-  return normalized
-    .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-};
-
-const getLanguageLabel = (languageCode) => {
-  const normalized = String(languageCode || '').trim().toLowerCase();
-  if (['tl', 'fil', 'filipino', 'tagalog'].includes(normalized)) return 'Filipino';
-  if (normalized === 'en' || normalized === 'english') return 'English';
-  return formatProfileLabel(normalized);
-};
 
 const getUserMilestones = (user) => {
   const milestones = [];
@@ -411,7 +393,14 @@ export default function Progress() {
         duration: 0.35,
         stagger: 0.05,
         clearProps: 'opacity,visibility,transform',
-      }, '-=0.25');
+      }, '-=0.25')
+      .from(panel.querySelectorAll('.progress-user-meta-bar > span'), {
+        scaleX: 0,
+        transformOrigin: 'left center',
+        duration: 0.6,
+        ease: 'power3.out',
+        clearProps: 'transform',
+      }, '-=0.2');
   }, { scope: userModalRef, dependencies: [isMoreDetailsOpen] });
 
   const handleToggleMoreDetails = () => {
@@ -1188,7 +1177,7 @@ export default function Progress() {
                     >
                       <span className="progress-user-more-copy">
                         <strong>More Details</strong>
-                        <small>Account audit, app profile, learning progress, and assessment history</small>
+                        <small>Activity, learning progress, and assessment history</small>
                       </span>
                       <span className={`progress-user-more-chevron ${isMoreDetailsOpen ? 'open' : ''}`} aria-hidden="true">
                         <FiChevronDown />
@@ -1201,8 +1190,8 @@ export default function Progress() {
                         ref={moreDetailsRef}
                         className="progress-user-more-panel"
                       >
-                        <section className="progress-user-group">
-                          <h4><FiActivity className="progress-modal-section-icon" aria-hidden="true" />Account and Audit</h4>
+                        {/* Overview: one compact grid; fields without data are left out. */}
+                        <section className="progress-user-group" aria-label="Activity and learning overview">
                           <dl className="progress-user-meta">
                             <div>
                               <dt className="progress-user-label">Account Type</dt>
@@ -1212,93 +1201,45 @@ export default function Progress() {
                                 </span>
                               </dd>
                             </div>
-                            <div>
-                              <dt className="progress-user-label">Username</dt>
-                              <dd>{selectedUser.username}</dd>
-                            </div>
-                            <div>
-                              <dt className="progress-user-label">Registration</dt>
-                              <dd>{formatProfileLabel(selectedUser.registrationStatus)}</dd>
-                            </div>
-                            <div>
-                              <dt className="progress-user-label">Date Created</dt>
-                              <dd>{formatLongDate(selectedUser.dateCreated)}</dd>
-                            </div>
-                            <div>
-                              <dt className="progress-user-label">Last Activity</dt>
-                              <dd>{formatLongDate(selectedUser.lastActivityAt)}</dd>
-                            </div>
-                            <div>
-                              <dt className="progress-user-label">Terms Agreement</dt>
-                              <dd>
-                                {selectedUser.termsAccepted
-                                  ? `Accepted${selectedUser.termsAcceptedAt ? ` on ${formatLongDate(selectedUser.termsAcceptedAt)}` : ''}`
-                                  : 'Not accepted'}
-                              </dd>
-                            </div>
-                          </dl>
-                        </section>
-
-                        <section className="progress-user-group">
-                          <h4><FiGlobe className="progress-modal-section-icon" aria-hidden="true" />App and Location</h4>
-                          <dl className="progress-user-meta">
+                            {selectedUser.lastActivityAt && (
+                              <div>
+                                <dt className="progress-user-label">Last Activity</dt>
+                                <dd>{formatLongDate(selectedUser.lastActivityAt)}</dd>
+                              </div>
+                            )}
                             <div>
                               <dt className="progress-user-label">Location</dt>
-                              <dd>
-                                {selectedUser.location}
-                                {selectedUser.locationKey !== 'outside' && (
-                                  <small className="progress-modal-value-note">
-                                    {selectedUser.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'Barangay not specified' : `Barangay ${selectedUser.barangay}`}
-                                  </small>
-                                )}
-                              </dd>
+                              <dd>{selectedUser.location}</dd>
                             </div>
-                            <div>
-                              <dt className="progress-user-label">App Language</dt>
-                              <dd>{getLanguageLabel(selectedUser.appLanguageCode)}</dd>
-                            </div>
-                            <div>
-                              <dt className="progress-user-label">Last Simulation</dt>
-                              <dd>{selectedUser.lastSimulation}</dd>
-                            </div>
-                          </dl>
-                        </section>
-
-                        <section className="progress-user-group">
-                          <h4><FiBarChart2 className="progress-modal-section-icon" aria-hidden="true" />Learning Progress</h4>
-                          <dl className="progress-user-meta">
                             <div>
                               <dt className="progress-user-label">Modules Completed</dt>
-                              <dd>{selectedUser.modulesCompleted}</dd>
+                              <dd>{selectedUser.modulesCompleted} of {selectedUser.modules.length}</dd>
                             </div>
                             <div>
                               <dt className="progress-user-label">Overall Progress</dt>
-                              <dd>{selectedUser.overallPercent}%</dd>
+                              <dd className="progress-user-meta-progress">
+                                <span>{selectedUser.overallPercent}%</span>
+                                <span className="progress-user-meta-bar" aria-hidden="true">
+                                  <span style={{ width: `${selectedUser.overallPercent}%` }} />
+                                </span>
+                              </dd>
                             </div>
                             <div>
-                              <dt className="progress-user-label">Last Module Accessed</dt>
-                              <dd>{selectedUser.lastAccessedModule}</dd>
+                              <dt className="progress-user-label">Simulations</dt>
+                              <dd>
+                                {selectedUser.completedSimulations} completed
+                                {selectedUser.lastSimulation && selectedUser.lastSimulation !== 'Not recorded' && (
+                                  <small className="progress-modal-value-note">Last: {selectedUser.lastSimulation}</small>
+                                )}
+                              </dd>
                             </div>
+                            {selectedUser.lastAccessedModule && selectedUser.lastAccessedModule !== 'N/A' && (
+                              <div>
+                                <dt className="progress-user-label">Last Module Accessed</dt>
+                                <dd>{selectedUser.lastAccessedModule}</dd>
+                              </div>
+                            )}
                           </dl>
-                        </section>
-
-                        <section className="progress-user-group">
-                          <h4><FiAward className="progress-modal-section-icon" aria-hidden="true" />Learning Milestones</h4>
-                          {getUserMilestones(selectedUser).length === 0 ? (
-                            <p className="progress-modal-milestones-empty">No learning milestones earned yet.</p>
-                          ) : (
-                            <div className="progress-modal-milestone-list">
-                              {getUserMilestones(selectedUser).map((milestone) => (
-                                <div className="progress-modal-milestone" key={milestone.key}>
-                                  <span className="progress-modal-milestone-icon"><FiAward aria-hidden="true" /></span>
-                                  <span>
-                                    <strong>{milestone.label}</strong>
-                                    <small>{milestone.detail}</small>
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </section>
 
                         <section className="progress-user-group">
@@ -1323,9 +1264,12 @@ export default function Progress() {
                         </section>
 
                         <section className="progress-user-group">
-                          <h4><FiCheckCircle className="progress-modal-section-icon" aria-hidden="true" />Test Tracking</h4>
+                          <h4><FiCheckCircle className="progress-modal-section-icon" aria-hidden="true" />Assessment History</h4>
+                          {selectedUser.modules.every((module) => module.tests.length === 0) ? (
+                            <p className="progress-modal-feedback-empty">No pre- or post-assessments taken yet.</p>
+                          ) : (
                           <div className="progress-modal-tests">
-                            {selectedUser.modules.map((module) => (
+                            {selectedUser.modules.filter((module) => module.tests.length > 0).map((module) => (
                               <div key={module.name}>
                                 <button
                                   type="button"
@@ -1340,26 +1284,26 @@ export default function Progress() {
                                     {module.name}
                                   </span>
                                   <span className="progress-modal-test-status">
-                                    {module.tests.length > 0 ? `${module.tests.length} tests` : 'No tests yet'}
+                                    {module.tests.length} {module.tests.length === 1 ? 'attempt' : 'attempts'}
                                   </span>
                                 </button>
-                                {expandedTests[module.name] && module.tests.length > 0 && (
-                                  <div className="progress-modal-test-details">
-                                    <div>
-                                      {module.tests.map((test, idx) => (
-                                        <div key={idx} style={{ marginBottom: idx < module.tests.length - 1 ? '0.8rem' : '0' }}>
-                                          <div style={{ fontWeight: '600', color: '#1f2937' }}>{test.name}</div>
-                                          <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-                                            Score: {test.score}/10 | Date: {formatDate(test.date)}
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
+                                {expandedTests[module.name] && (
+                                  <ul className="progress-modal-test-details">
+                                    {module.tests.map((test) => (
+                                      <li key={test.id} className="progress-modal-test-row">
+                                        <span className="progress-modal-test-row-name">{test.name}</span>
+                                        <span className="progress-modal-test-row-meta">
+                                          <strong>{test.score}/10</strong>
+                                          {test.date && <small>{formatDate(test.date)}</small>}
+                                        </span>
+                                      </li>
+                                    ))}
+                                  </ul>
                                 )}
                               </div>
                             ))}
                           </div>
+                          )}
                         </section>
 
                         <section className="progress-user-group">

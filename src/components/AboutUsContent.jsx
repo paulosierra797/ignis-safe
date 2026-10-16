@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { gsap } from 'gsap';
 import RecordActions from './RecordActions';
 import {
   FiEdit2, FiSave, FiX,
-  FiChevronDown, FiChevronRight
+  FiChevronDown, FiChevronRight, FiGlobe
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -14,6 +15,8 @@ import { logAdminActivity } from '../utils/usersService';
 import * as aboutUsService from '../utils/aboutUsService';
 import UnsavedChangesPrompt from './UnsavedChangesPrompt';
 import TranslationControls from './TranslationControls';
+import Hint from './Hint';
+import TranslatorRegistryContext from '../context/TranslatorRegistryContext';
 
 const SAVE_SUCCESS_MESSAGE = 'Changes saved successfully.';
 const UNSAVED_TITLE = 'Unsaved Changes';
@@ -38,13 +41,21 @@ const isFormDirty = (form, baseline) => {
   return [...keys].some((key) => !sameFieldValue(form[key], baseline[key]));
 };
 
-// Each card publishes its own dirty flag to the page shell, which owns the
+// Each tab publishes its own dirty flag to the page shell, which owns the
 // single navigation blocker for the whole About Us screen.
 function useReportDirty(reportDirty, scope, dirty) {
   useEffect(() => {
     reportDirty(scope, dirty);
     return () => reportDirty(scope, false);
   }, [reportDirty, scope, dirty]);
+}
+
+// Hands the page shell a function that saves everything dirty in this tab, so
+// Save Tab / Save All can run it. The latest closure is read through a ref.
+function useRegisterSave(registerSave, scope, save) {
+  const saveRef = useRef(save);
+  useEffect(() => { saveRef.current = save; });
+  useEffect(() => registerSave(scope, () => saveRef.current()), [registerSave, scope]);
 }
 
 const logAboutUsActivity = (currentUser, action, details) => {
@@ -75,8 +86,8 @@ function FieldPair({ label, valueEn, valueTl, onChangeEn, onChangeTl, multiline,
   return (
     <div className="aboutus-field-pair">
       <span className="aboutus-field-pair-label">{label}</span>
-      <div className="aboutus-language-grid aboutus-language-grid--lang">
-        <label className="aboutus-field">
+      <div className="aboutus-language-grid">
+        <label className="aboutus-field aboutus-field--en">
           <span>English</span>
           <Field
             type={multiline ? undefined : 'text'}
@@ -85,7 +96,7 @@ function FieldPair({ label, valueEn, valueTl, onChangeEn, onChangeTl, multiline,
             onChange={(event) => onChangeEn(event.target.value)}
           />
         </label>
-        <label className="aboutus-field">
+        <label className="aboutus-field aboutus-field--tl">
           <span>Filipino</span>
           <Field
             type={multiline ? undefined : 'text'}
@@ -117,6 +128,15 @@ function SingleField({ label, value, onChange, multiline, rows = 2, type = 'text
 
 function MessageBanner({ message }) {
   return <ToastMessage message={message?.text} type={message?.type || 'info'} />;
+}
+
+function EditActions({ onCancel, onSave, busy }) {
+  return (
+    <div className="aboutus-edit-row-actions">
+      <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
+      <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -243,10 +263,10 @@ function useSingletonForm({ load, update, notify, entityLabel }) {
 }
 
 // ---------------------------------------------------------------------------
-// Card 1 — BFP Dasmariñas
+// Tab 1 — BFP Dasmariñas
 // ---------------------------------------------------------------------------
 
-function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
+function PartnerCard({ currentUser, notify, reportDirty, registerSave }) {
   const partner = useSingletonForm({
     load: aboutUsService.getPartnerInfo,
     update: aboutUsService.updatePartnerInfo,
@@ -269,22 +289,24 @@ function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
   const handleSavePartner = async () => {
     const saved = await partner.save();
     if (saved) logAboutUsActivity(currentUser, 'About Us Content Updated', 'Updated BFP Dasmariñas station content.');
+    return saved;
   };
 
   useReportDirty(reportDirty, 'bfp-dasmarinas', partner.isDirty || numbers.isDirty);
+  useRegisterSave(registerSave, 'bfp-dasmarinas', async () => {
+    let ok = true;
+    if (partner.isDirty) ok = (await handleSavePartner()) && ok;
+    if (numbers.isDirty) ok = (await numbers.save()) && ok;
+    return ok;
+  });
 
   return (
-    <section id="bfp-dasmarinas" className="aboutus-card">
-      <header className="aboutus-card-header">
-        <h2>BFP Dasmariñas</h2>
-        <p>Station overview, Fire Marshal, vision &amp; mission, and landline / mobile numbers.</p>
-      </header>
-
+    <div className="aboutus-body">
       {partner.loading || !partner.form ? (
         <div className="aboutus-loading">Loading...</div>
       ) : (
         <>
-          <TranslationControls value={partner.form} onChange={partner.setForm} section="about_us" />
+          <TranslationControls headless value={partner.form} onChange={partner.setForm} section="about_us" />
           <div className="aboutus-subsection">
             <FieldPair label="Station heading" valueEn={partner.form.heading_en} valueTl={partner.form.heading_tl}
               onChangeEn={(v) => partner.setField('heading_en', v)} onChangeTl={(v) => partner.setField('heading_tl', v)} />
@@ -297,14 +319,14 @@ function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
           </div>
 
           <div className="aboutus-subsection">
-            <h3>Fire Marshal</h3>
+            <h3><Hint text="Name and title of the station's Fire Marshal.">Fire Marshal</Hint></h3>
             <SingleField label="Name" value={partner.form.fire_marshal_name} onChange={(v) => partner.setField('fire_marshal_name', v)} />
             <FieldPair label="Title" valueEn={partner.form.fire_marshal_title_en} valueTl={partner.form.fire_marshal_title_tl}
               onChangeEn={(v) => partner.setField('fire_marshal_title_en', v)} onChangeTl={(v) => partner.setField('fire_marshal_title_tl', v)} />
           </div>
 
           <div className="aboutus-subsection">
-            <h3>Vision &amp; Mission</h3>
+            <h3><Hint text="Shown on the About Us page under the station overview.">Vision &amp; Mission</Hint></h3>
             <FieldPair label="Vision label" valueEn={partner.form.vision_label_en} valueTl={partner.form.vision_label_tl}
               onChangeEn={(v) => partner.setField('vision_label_en', v)} onChangeTl={(v) => partner.setField('vision_label_tl', v)} />
             <FieldPair label="Vision" multiline valueEn={partner.form.vision_en} valueTl={partner.form.vision_tl}
@@ -314,29 +336,18 @@ function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
             <FieldPair label="Mission" multiline valueEn={partner.form.mission_en} valueTl={partner.form.mission_tl}
               onChangeEn={(v) => partner.setField('mission_en', v)} onChangeTl={(v) => partner.setField('mission_tl', v)} />
           </div>
-
-          <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSavePartner)} disabled={partner.saving}>
-              <FiSave aria-hidden="true" /> {partner.saving ? 'Saving...' : 'Save BFP Dasmariñas content'}
-            </button>
-          </div>
         </>
       )}
 
       <div className="aboutus-subsection">
-        <h3>Landline &amp; mobile numbers</h3>
-        <p className="aboutus-section-note">
-          These are the saved BFP Dasmariñas contact numbers. Each entry can be edited,
-          but numbers cannot be added or removed here. A number that also appears on the
-          Emergency Contacts card is updated in both places.
-        </p>
+        <h3><Hint text="Existing numbers can be edited, not added or removed. A number shared with Emergency Contacts updates in both places.">Landline &amp; mobile numbers</Hint></h3>
 
         {numbers.loading ? <div className="aboutus-loading">Loading...</div> : (
           <ul className="aboutus-contact-list">
             {numbers.rows.map((row) => (
               <li key={row.contact_key} className={`aboutus-contact-card${numbers.editingId === row.contact_key ? ' is-editing' : ''}`}>
                 {numbers.editingId === row.contact_key ? (
-                  <ContactNumberEditRow form={numbers.form} setField={numbers.setField} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
+                  <ContactNumberEditRow form={numbers.form} setField={numbers.setField} onSave={numbers.save} onCancel={numbers.cancelEdit} busy={numbers.busy} />
                 ) : (
                   <>
                     <div className="aboutus-contact-card-main">
@@ -354,7 +365,7 @@ function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
           </ul>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -366,19 +377,16 @@ function ContactNumberEditRow({ form, setField, onSave, onCancel, busy }) {
         <SingleField label="Display value" value={form.display_value} onChange={(v) => setField('display_value', v)} placeholder="(046) 884-6131" />
         <SingleField label="Dial value" value={form.dial_value} onChange={(v) => setField('dial_value', v)} placeholder="0468846131" />
       </div>
-      <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
-      </div>
+      <EditActions onCancel={onCancel} onSave={onSave} busy={busy} />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Card 2 — Emergency Contacts
+// Tab 2 — Emergency Contacts
 // ---------------------------------------------------------------------------
 
-function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
+function EmergencyCard({ currentUser, notify, reportDirty, registerSave }) {
   const emergency = useSingletonForm({
     load: aboutUsService.getEmergencyInfo,
     update: aboutUsService.updateEmergencyInfo,
@@ -401,22 +409,24 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
   const handleSaveEmergency = async () => {
     const saved = await emergency.save();
     if (saved) logAboutUsActivity(currentUser, 'About Us Content Updated', 'Updated Emergency Contacts content.');
+    return saved;
   };
 
   useReportDirty(reportDirty, 'emergency-contacts', emergency.isDirty || numbers.isDirty);
+  useRegisterSave(registerSave, 'emergency-contacts', async () => {
+    let ok = true;
+    if (emergency.isDirty) ok = (await handleSaveEmergency()) && ok;
+    if (numbers.isDirty) ok = (await numbers.save()) && ok;
+    return ok;
+  });
 
   return (
-    <section id="emergency-contacts" className="aboutus-card">
-      <header className="aboutus-card-header">
-        <h2>Emergency Contacts</h2>
-        <p>Hotline heading, safety note, and the emergency numbers list.</p>
-      </header>
-
+    <div className="aboutus-body">
       {emergency.loading || !emergency.form ? (
         <div className="aboutus-loading">Loading...</div>
       ) : (
         <>
-          <TranslationControls value={emergency.form} onChange={emergency.setForm} section="about_us" />
+          <TranslationControls headless value={emergency.form} onChange={emergency.setForm} section="about_us" />
           <div className="aboutus-subsection">
             <FieldPair label="Heading" valueEn={emergency.form.heading_en} valueTl={emergency.form.heading_tl}
               onChangeEn={(v) => emergency.setField('heading_en', v)} onChangeTl={(v) => emergency.setField('heading_tl', v)} />
@@ -425,29 +435,18 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
             <FieldPair label="Safety note" multiline valueEn={emergency.form.safety_note_en} valueTl={emergency.form.safety_note_tl}
               onChangeEn={(v) => emergency.setField('safety_note_en', v)} onChangeTl={(v) => emergency.setField('safety_note_tl', v)} />
           </div>
-
-          <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSaveEmergency)} disabled={emergency.saving}>
-              <FiSave aria-hidden="true" /> {emergency.saving ? 'Saving...' : 'Save Emergency Contacts content'}
-            </button>
-          </div>
         </>
       )}
 
       <div className="aboutus-subsection">
-        <h3>Emergency numbers</h3>
-        <p className="aboutus-section-note">
-          These are the saved emergency numbers shown to visitors. Each entry can be
-          edited - its label and number - but numbers cannot be
-          added or removed here.
-        </p>
+        <h3><Hint text="Numbers shown to visitors. Existing entries can be edited, not added or removed.">Emergency numbers</Hint></h3>
 
         {numbers.loading ? <div className="aboutus-loading">Loading...</div> : (
           <ul className="aboutus-contact-list">
             {numbers.rows.map((row) => (
               <li key={row.id} className={`aboutus-contact-card${numbers.editingId === row.id ? ' is-editing' : ''}`}>
                 {numbers.editingId === row.id ? (
-                  <EmergencyNumberEditRow form={numbers.form} setField={numbers.setField} setForm={numbers.setForm} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
+                  <EmergencyNumberEditRow form={numbers.form} setField={numbers.setField} setForm={numbers.setForm} onSave={numbers.save} onCancel={numbers.cancelEdit} busy={numbers.busy} />
                 ) : (
                   <>
                     <div className="aboutus-contact-card-main">
@@ -467,14 +466,14 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
           </ul>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
 function EmergencyNumberEditRow({ form, setField, setForm, onSave, onCancel, busy }) {
   return (
     <div className="aboutus-edit-row aboutus-emergency-edit-row">
-      <TranslationControls value={form} onChange={setForm} section="about_us" compact />
+      <TranslationControls headless value={form} onChange={setForm} section="about_us" />
       <div className="aboutus-emergency-editor-grid">
         <SingleField
           label="Number shown to visitors"
@@ -491,24 +490,22 @@ function EmergencyNumberEditRow({ form, setField, setForm, onSave, onCancel, bus
       </div>
       <FieldPair label="Public label" valueEn={form.label_en} valueTl={form.label_tl}
         onChangeEn={(v) => setField('label_en', v)} onChangeTl={(v) => setField('label_tl', v)} />
-      <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
-      </div>
+      <EditActions onCancel={onCancel} onSave={onSave} busy={busy} />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Card 3 — Cavite BFP Directory (groups -> entries -> phones)
+// Tab 3 — Cavite BFP Directory (groups -> entries -> phones)
 // ---------------------------------------------------------------------------
 
 // Collapses an expanded directory accordion once the user has scrolled it fully
 // out of view. `element` is the expanded section's DOM node (null when nothing
-// is expanded). The sticky page header + quick-nav cover the top of the
+// is expanded). The sticky page header + toolbar cover the top of the
 // viewport, so that strip is excluded from what counts as visible. Nothing
 // collapses until the section has been seen on screen at least once, and never
-// while `blocked` (an edit form inside it is open).
+// while `blocked` (an edit form inside it is open). A tab that is switched away
+// from is display:none and never reports visible again until it is reopened.
 function useCollapseWhenOffscreen(element, onCollapse, blocked = false) {
   const onCollapseRef = useRef(onCollapse);
   useEffect(() => { onCollapseRef.current = onCollapse; }, [onCollapse]);
@@ -516,7 +513,7 @@ function useCollapseWhenOffscreen(element, onCollapse, blocked = false) {
   useEffect(() => {
     if (!element || blocked || typeof IntersectionObserver === 'undefined') return undefined;
 
-    const stickyOffset = ['.page-header', '.aboutus-quicknav']
+    const stickyOffset = ['.page-header', '.aboutus-toolbar']
       .reduce((sum, selector) => sum + (document.querySelector(selector)?.offsetHeight ?? 0), 0);
 
     let hasBeenVisible = false;
@@ -524,7 +521,8 @@ function useCollapseWhenOffscreen(element, onCollapse, blocked = false) {
       const { isIntersecting } = entries[entries.length - 1];
       if (isIntersecting) {
         hasBeenVisible = true;
-      } else if (hasBeenVisible) {
+      } else if (hasBeenVisible && element.getClientRects().length > 0) {
+        // Ignore the "not visible" report caused by the tab being hidden.
         onCollapseRef.current();
       }
     }, { rootMargin: `-${stickyOffset}px 0px 0px 0px` });
@@ -534,7 +532,7 @@ function useCollapseWhenOffscreen(element, onCollapse, blocked = false) {
   }, [element, blocked]);
 }
 
-function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
+function DirectoryCard({ currentUser, notify, reportDirty, registerSave }) {
   const info = useSingletonForm({
     load: aboutUsService.getDirectoryInfo,
     update: aboutUsService.updateDirectoryInfo,
@@ -549,13 +547,13 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
 
   // Each open editor keeps the snapshot it started from alongside its form, so
   // dirty means "differs from the last saved Supabase value" here too.
-  const [groupEditing, setGroupEditing] = useState(null); // null | 'new' | group_key
+  const [groupEditing, setGroupEditing] = useState(null); // null | group_key
   const [groupForm, setGroupForm] = useState({});
   const [groupBaseline, setGroupBaseline] = useState(null);
-  const [entryEditing, setEntryEditing] = useState(null); // { groupKey, entryKey|'new' } | null
+  const [entryEditing, setEntryEditing] = useState(null); // { groupKey, entryKey } | null
   const [entryForm, setEntryForm] = useState({});
   const [entryBaseline, setEntryBaseline] = useState(null);
-  const [phoneEditing, setPhoneEditing] = useState(null); // { entryKey, id|'new' } | null
+  const [phoneEditing, setPhoneEditing] = useState(null); // { entryKey, id } | null
   const [phoneForm, setPhoneForm] = useState({});
   const [phoneBaseline, setPhoneBaseline] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -583,6 +581,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   const handleSaveInfo = async () => {
     const saved = await info.save();
     if (saved) logAboutUsActivity(currentUser, 'About Us Content Updated', 'Updated Cavite BFP Directory content.');
+    return saved;
   };
 
   // --- groups ---
@@ -595,16 +594,16 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
 
   const saveGroup = async () => {
     setBusy(true);
-    if (!groups.some((group) => group.group_key === groupEditing)) { setBusy(false); return; }
+    if (!groups.some((group) => group.group_key === groupEditing)) { setBusy(false); return false; }
     const { error } = await aboutUsService.updateDirectoryGroup(groupEditing, { title_en: groupForm.title_en, title_tl: groupForm.title_tl });
     setBusy(false);
 
-    if (error) { notify('error', `Failed to save district/group: ${error}`); return; }
+    if (error) { notify('error', `Failed to save district/group: ${error}`); return false; }
     notify('success', SAVE_SUCCESS_MESSAGE);
     cancelGroupEdit();
     await refreshTree();
+    return true;
   };
-
 
   // --- entries ---
   const startEditEntry = (groupKey, entry) => {
@@ -615,21 +614,21 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   const cancelEntryEdit = () => { setEntryEditing(null); setEntryForm({}); setEntryBaseline(null); };
 
   const saveEntry = async () => {
-    if (!entryEditing) return;
+    if (!entryEditing) return false;
     const { groupKey, entryKey } = entryEditing;
-    if (!groups.find((group) => group.group_key === groupKey)?.entries.some((entry) => entry.entry_key === entryKey)) return;
+    if (!groups.find((group) => group.group_key === groupKey)?.entries.some((entry) => entry.entry_key === entryKey)) return false;
     setBusy(true);
     const { error } = await aboutUsService.updateDirectoryEntry(entryKey, {
       name_en: entryForm.name_en, name_tl: entryForm.name_tl, email: entryForm.email
     });
     setBusy(false);
 
-    if (error) { notify('error', `Failed to save station: ${error}`); return; }
+    if (error) { notify('error', `Failed to save station: ${error}`); return false; }
     notify('success', SAVE_SUCCESS_MESSAGE);
     cancelEntryEdit();
     await refreshTree();
+    return true;
   };
-
 
   // --- phones ---
   const startEditPhone = (entryKey, phone) => {
@@ -640,30 +639,33 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   const cancelPhoneEdit = () => { setPhoneEditing(null); setPhoneForm({}); setPhoneBaseline(null); };
 
   const savePhone = async () => {
-    if (!phoneEditing) return;
+    if (!phoneEditing) return false;
     const { entryKey, id } = phoneEditing;
-    if (!groups.flatMap((group) => group.entries).find((entry) => entry.entry_key === entryKey)?.phones.some((phone) => phone.id === id)) return;
+    if (!groups.flatMap((group) => group.entries).find((entry) => entry.entry_key === entryKey)?.phones.some((phone) => phone.id === id)) return false;
     setBusy(true);
     const { error } = await aboutUsService.updateDirectoryPhone(id, { display_value: phoneForm.display_value, dial_value: phoneForm.dial_value });
     setBusy(false);
 
-    if (error) { notify('error', `Failed to save phone number: ${error}`); return; }
+    if (error) { notify('error', `Failed to save phone number: ${error}`); return false; }
     notify('success', SAVE_SUCCESS_MESSAGE);
     cancelPhoneEdit();
     await refreshTree();
+    return true;
   };
 
+  const groupDirty = groupEditing !== null && isFormDirty(groupForm, groupBaseline);
+  const entryDirty = Boolean(entryEditing) && isFormDirty(entryForm, entryBaseline);
+  const phoneDirty = Boolean(phoneEditing) && isFormDirty(phoneForm, phoneBaseline);
 
-  // --- delete flow (shared confirm modal for all 3 levels) ---
-
-  useReportDirty(
-    reportDirty,
-    'cavite-directory',
-    info.isDirty
-      || (groupEditing !== null && isFormDirty(groupForm, groupBaseline))
-      || (Boolean(entryEditing) && isFormDirty(entryForm, entryBaseline))
-      || (Boolean(phoneEditing) && isFormDirty(phoneForm, phoneBaseline))
-  );
+  useReportDirty(reportDirty, 'cavite-directory', info.isDirty || groupDirty || entryDirty || phoneDirty);
+  useRegisterSave(registerSave, 'cavite-directory', async () => {
+    let ok = true;
+    if (info.isDirty) ok = (await handleSaveInfo()) && ok;
+    if (groupDirty) ok = (await saveGroup()) && ok;
+    if (entryDirty) ok = (await saveEntry()) && ok;
+    if (phoneDirty) ok = (await savePhone()) && ok;
+    return ok;
+  });
 
   // Auto-collapse an expanded district / station when it scrolls out of view.
   // Held open while an edit form anywhere inside it is open.
@@ -689,17 +691,12 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
   );
 
   return (
-    <section id="cavite-directory" className="aboutus-card">
-      <header className="aboutus-card-header">
-        <h2>Cavite BFP Directory</h2>
-        <p>Directory heading, districts/groups, fire stations, emails, and phone numbers.</p>
-      </header>
-
+    <div className="aboutus-body">
       {info.loading || !info.form ? (
         <div className="aboutus-loading">Loading...</div>
       ) : (
         <>
-          <TranslationControls value={info.form} onChange={info.setForm} section="about_us" />
+          <TranslationControls headless value={info.form} onChange={info.setForm} section="about_us" />
           <div className="aboutus-subsection">
             <FieldPair label="Heading" valueEn={info.form.heading_en} valueTl={info.form.heading_tl}
               onChangeEn={(v) => info.setField('heading_en', v)} onChangeTl={(v) => info.setField('heading_tl', v)} />
@@ -708,17 +705,12 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
             <FieldPair label="No-results message" valueEn={info.form.no_results_en} valueTl={info.form.no_results_tl}
               onChangeEn={(v) => info.setField('no_results_en', v)} onChangeTl={(v) => info.setField('no_results_tl', v)} />
           </div>
-          <div className="aboutus-save-bar">
-            <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(handleSaveInfo)} disabled={info.saving}>
-              <FiSave aria-hidden="true" /> {info.saving ? 'Saving...' : 'Save directory content'}
-            </button>
-          </div>
         </>
       )}
 
       <div className="aboutus-subsection">
         <div className="aboutus-list-header">
-          <h3>Districts / groups</h3>
+          <h3><Hint text="Districts, their fire stations, emails and phone numbers.">Districts / groups</Hint></h3>
         </div>
 
         {loadingTree ? <div className="aboutus-loading">Loading...</div> : (
@@ -729,17 +721,14 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                 <li key={group.group_key} className="aboutus-directory-group" ref={isExpanded ? setExpandedGroupEl : undefined}>
                   {groupEditing === group.group_key ? (
                     <div className="aboutus-edit-row">
-                      <TranslationControls value={groupForm} onChange={setGroupForm} section="about_us" compact />
+                      <TranslationControls headless value={groupForm} onChange={setGroupForm} section="about_us" />
                       <FieldPair label="Title" valueEn={groupForm.title_en} valueTl={groupForm.title_tl}
                         onChangeEn={(v) => setGroupForm((f) => ({ ...f, title_en: v }))} onChangeTl={(v) => setGroupForm((f) => ({ ...f, title_tl: v }))} />
-                      <div className="aboutus-edit-row-actions">
-                        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={cancelGroupEdit} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-                        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(saveGroup)} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
-                      </div>
+                      <EditActions onCancel={cancelGroupEdit} onSave={saveGroup} busy={busy} />
                     </div>
                   ) : (
                     <div className="aboutus-item-row aboutus-directory-group-row">
-                      <button type="button" className="aboutus-directory-toggle" onClick={() => setExpandedGroup(isExpanded ? null : group.group_key)}>
+                      <button type="button" className="aboutus-directory-toggle" onClick={() => setExpandedGroup(isExpanded ? null : group.group_key)} aria-expanded={isExpanded}>
                         {isExpanded ? <FiChevronDown aria-hidden="true" /> : <FiChevronRight aria-hidden="true" />}
                         <strong>{group.title_en}</strong>
                         <span className="aboutus-item-sub">{group.entries.length} station{group.entries.length === 1 ? '' : 's'}</span>
@@ -765,10 +754,10 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                           return (
                             <li key={entry.entry_key} className="aboutus-directory-entry" ref={entryExpanded ? setExpandedEntryEl : undefined}>
                               {entryEditing?.groupKey === group.group_key && entryEditing.entryKey === entry.entry_key ? (
-                                <EntryEditRow form={entryForm} setForm={setEntryForm} onSave={() => requestSave(saveEntry)} onCancel={cancelEntryEdit} busy={busy} />
+                                <EntryEditRow form={entryForm} setForm={setEntryForm} onSave={saveEntry} onCancel={cancelEntryEdit} busy={busy} />
                               ) : (
                                 <div className="aboutus-item-row">
-                                  <button type="button" className="aboutus-directory-toggle" onClick={() => setExpandedEntry(entryExpanded ? null : entry.entry_key)}>
+                                  <button type="button" className="aboutus-directory-toggle" onClick={() => setExpandedEntry(entryExpanded ? null : entry.entry_key)} aria-expanded={entryExpanded}>
                                     {entryExpanded ? <FiChevronDown aria-hidden="true" /> : <FiChevronRight aria-hidden="true" />}
                                     <strong>{entry.name_en}</strong>
                                     <span className="aboutus-item-sub">{entry.email}</span>
@@ -793,7 +782,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                                     {entry.phones.map((phone) => (
                                       <li key={phone.id} className="aboutus-item-row aboutus-item-row-compact">
                                         {phoneEditing?.entryKey === entry.entry_key && phoneEditing.id === phone.id ? (
-                                          <PhoneEditRow form={phoneForm} setForm={setPhoneForm} onSave={() => requestSave(savePhone)} onCancel={cancelPhoneEdit} busy={busy} />
+                                          <PhoneEditRow form={phoneForm} setForm={setPhoneForm} onSave={savePhone} onCancel={cancelPhoneEdit} busy={busy} />
                                         ) : (
                                           <>
                                             <div className="aboutus-item-summary">
@@ -827,7 +816,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
           </ul>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -835,14 +824,11 @@ function EntryEditRow({ form, setForm, onSave, onCancel, busy }) {
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   return (
     <div className="aboutus-edit-row">
-      <TranslationControls value={form} onChange={setForm} section="about_us" compact />
+      <TranslationControls headless value={form} onChange={setForm} section="about_us" />
       <FieldPair label="Station name" valueEn={form.name_en} valueTl={form.name_tl}
         onChangeEn={(v) => setField('name_en', v)} onChangeTl={(v) => setField('name_tl', v)} />
       <SingleField label="Email" type="email" value={form.email} onChange={(v) => setField('email', v)} />
-      <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
-      </div>
+      <EditActions onCancel={onCancel} onSave={onSave} busy={busy} />
     </div>
   );
 }
@@ -855,87 +841,111 @@ function PhoneEditRow({ form, setForm, onSave, onCancel, busy }) {
         <SingleField label="Display value" value={form.display_value} onChange={(v) => setField('display_value', v)} />
         <SingleField label="Dial value" value={form.dial_value} onChange={(v) => setField('dial_value', v)} />
       </div>
-      <div className="aboutus-edit-row-actions">
-        <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={onCancel} disabled={busy}><FiX aria-hidden="true" /> Cancel</button>
-        <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={onSave} disabled={busy}><FiSave aria-hidden="true" /> {busy ? 'Saving...' : 'Save'}</button>
-      </div>
+      <EditActions onCancel={onCancel} onSave={onSave} busy={busy} />
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Card 4 — General About Us UI texts (sections)
+// Tab 4 — Website Content (section titles & subtitles)
 // ---------------------------------------------------------------------------
 
-function GeneralTextsCard({ notify, reportDirty, requestSave }) {
-  const sections = useEditableList({
-    load: aboutUsService.listSections,
-    update: (form) => aboutUsService.updateSection(form.section_key, {
-      title_en: form.title_en, title_tl: form.title_tl, subtitle_en: form.subtitle_en, subtitle_tl: form.subtitle_tl,
-    }),
-    getId: (row) => row.section_key,
-    notify,
-    entityLabel: 'section'
-  });
+const SECTION_FIELDS = ['title_en', 'title_tl', 'subtitle_en', 'subtitle_tl'];
 
-  useReportDirty(reportDirty, 'general-texts', sections.isDirty);
+const pickSectionFields = (row) => Object.fromEntries(SECTION_FIELDS.map((key) => [key, row?.[key]]));
+
+// Every section stays editable at once, so Save Tab / Translate Tab cover them
+// all. A section counts as dirty only when it differs from its saved row.
+function WebsiteContentCard({ notify, reportDirty, registerSave }) {
+  const [saved, setSaved] = useState([]);
+  const [drafts, setDrafts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadSections = useCallback(async () => {
+    const { data, error } = await aboutUsService.listSections();
+    if (error) notify('error', `Failed to load section: ${error}`);
+    return data || [];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      const rows = await loadSections();
+      if (!isMounted) return;
+      setSaved(rows);
+      setDrafts(rows);
+      setLoading(false);
+    })();
+    return () => { isMounted = false; };
+  }, [loadSections]);
+
+  const dirtyKeys = useMemo(() => drafts
+    .filter((draft) => isFormDirty(
+      pickSectionFields(draft),
+      pickSectionFields(saved.find((row) => row.section_key === draft.section_key))
+    ))
+    .map((draft) => draft.section_key), [drafts, saved]);
+
+  const setField = (sectionKey, key, value) => setDrafts((current) => current.map((draft) => (
+    draft.section_key === sectionKey ? { ...draft, [key]: value } : draft
+  )));
+
+  const save = async () => {
+    if (dirtyKeys.length === 0) return true;
+    const failed = new Set();
+    for (const sectionKey of dirtyKeys) {
+      const draft = drafts.find((row) => row.section_key === sectionKey);
+      const { error } = await aboutUsService.updateSection(sectionKey, {
+        title_en: draft.title_en, title_tl: draft.title_tl, subtitle_en: draft.subtitle_en, subtitle_tl: draft.subtitle_tl,
+      });
+      if (error) {
+        failed.add(sectionKey);
+        notify('error', `Failed to save section: ${error}`);
+      }
+    }
+
+    const fresh = await loadSections();
+    // Sections that failed keep the admin's edits on screen and stay dirty.
+    setSaved(fresh.length ? fresh : saved);
+    setDrafts((current) => (fresh.length ? fresh : current).map((row) => (
+      failed.has(row.section_key) ? (current.find((draft) => draft.section_key === row.section_key) || row) : row
+    )));
+    if (failed.size === 0) notify('success', SAVE_SUCCESS_MESSAGE);
+    return failed.size === 0;
+  };
+
+  useReportDirty(reportDirty, 'general-texts', dirtyKeys.length > 0);
+  useRegisterSave(registerSave, 'general-texts', save);
 
   return (
-    <section id="general-texts" className="aboutus-card">
-      <header className="aboutus-card-header">
-        <h2>Other Page Text</h2>
-        <p>Section titles and subtitles shown on the About Us page.</p>
-      </header>
-
-      <div className="aboutus-subsection">
-        <h3>Section Titles &amp; Subtitles</h3>
-        {sections.loading ? <div className="aboutus-loading">Loading...</div> : (
-          <ul className="aboutus-item-list">
-            {sections.rows.map((row) => (
-              <li
-                key={row.section_key}
-                className={`aboutus-item-row${sections.editingId === row.section_key ? ' is-editing' : ''}`}
-              >
-                {sections.editingId === row.section_key ? (
-                  <div className="aboutus-edit-row aboutus-section-edit">
-                    <TranslationControls value={sections.form} onChange={sections.setForm} section="about_us" compact />
-                    <div className="aboutus-section-edit-grid">
-                      <div className="aboutus-section-edit-col aboutus-section-edit-col--en">
-                        <h4 className="aboutus-section-edit-lang">English</h4>
-                        <SingleField label="Title" value={sections.form.title_en} onChange={(v) => sections.setField('title_en', v)} />
-                        <SingleField label="Subtitle" value={sections.form.subtitle_en} onChange={(v) => sections.setField('subtitle_en', v)} />
-                      </div>
-                      <div className="aboutus-section-edit-col aboutus-section-edit-col--tl">
-                        <h4 className="aboutus-section-edit-lang">Filipino</h4>
-                        <SingleField label="Title" value={sections.form.title_tl} onChange={(v) => sections.setField('title_tl', v)} />
-                        <SingleField label="Subtitle" value={sections.form.subtitle_tl} onChange={(v) => sections.setField('subtitle_tl', v)} />
-                      </div>
-                    </div>
-                    <div className="aboutus-edit-row-actions">
-                      <button type="button" className="aboutus-btn aboutus-btn-secondary" onClick={sections.cancelEdit} disabled={sections.busy}><FiX aria-hidden="true" /> Cancel</button>
-                      <button type="button" className="aboutus-btn aboutus-btn-primary" onClick={() => requestSave(sections.save)} disabled={sections.busy}><FiSave aria-hidden="true" /> {sections.busy ? 'Saving...' : 'Save'}</button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="aboutus-item-summary">
-                      <strong>{row.title_en}</strong>
-                      <span className="aboutus-item-sub">{row.subtitle_en}</span>
-                      <StatusBadge active={row.is_active} />
-                    </div>
-                    <div className="aboutus-item-actions">
-                      <RecordActions label={`Actions for ${row.title_en}`}>
-                      <button type="button" className="aboutus-icon-btn" onClick={() => sections.startEdit(row)} aria-label="Edit section"><FiEdit2 aria-hidden="true" /></button>
-                      </RecordActions>
-                    </div>
-                  </>
-                )}
+    <div className="aboutus-body">
+      {loading ? <div className="aboutus-loading">Loading...</div> : (
+        <>
+          <TranslationControls
+            headless
+            value={{ items: drafts }}
+            onChange={(next) => setDrafts(next.items)}
+            section="about_us"
+          />
+          <ul className="aboutus-section-list">
+            {drafts.map((draft) => (
+              <li key={draft.section_key} className="aboutus-subsection">
+                <div className="aboutus-section-title">
+                  <h3>{saved.find((row) => row.section_key === draft.section_key)?.title_en || draft.title_en}</h3>
+                  <StatusBadge active={draft.is_active} />
+                </div>
+                <FieldPair label="Title" valueEn={draft.title_en} valueTl={draft.title_tl}
+                  onChangeEn={(v) => setField(draft.section_key, 'title_en', v)} onChangeTl={(v) => setField(draft.section_key, 'title_tl', v)} />
+                <FieldPair label="Subtitle" valueEn={draft.subtitle_en} valueTl={draft.subtitle_tl}
+                  onChangeEn={(v) => setField(draft.section_key, 'subtitle_en', v)} onChangeTl={(v) => setField(draft.section_key, 'subtitle_tl', v)} />
               </li>
             ))}
+            {drafts.length === 0 && <li className="aboutus-empty">No sections found.</li>}
           </ul>
-        )}
-      </div>
-    </section>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -943,7 +953,7 @@ function GeneralTextsCard({ notify, reportDirty, requestSave }) {
 // Page shell
 // ---------------------------------------------------------------------------
 
-function ConfirmSaveModal({ busy, onCancel, onConfirm }) {
+function ConfirmSaveModal({ busy, title, onCancel, onConfirm }) {
   return (
     <div
       className="app-unsaved-overlay"
@@ -954,7 +964,7 @@ function ConfirmSaveModal({ busy, onCancel, onConfirm }) {
     >
       <div className="app-unsaved-dialog">
         <div className="app-unsaved-icon" aria-hidden="true">?</div>
-        <h2 id="aboutusSaveTitle" className="app-unsaved-title">Save Changes?</h2>
+        <h2 id="aboutusSaveTitle" className="app-unsaved-title">{title}</h2>
         <p id="aboutusSaveMessage" className="app-unsaved-message">
           Are you sure you want to save these changes? The updated content will be reflected in the IGNIS SAFE mobile app.
         </p>
@@ -981,24 +991,85 @@ function ConfirmSaveModal({ busy, onCancel, onConfirm }) {
   );
 }
 
-const QUICK_NAV_ITEMS = [
-  { id: 'bfp-dasmarinas', label: 'BFP Dasmariñas' },
-  { id: 'emergency-contacts', label: 'Emergency Contacts' },
-  { id: 'cavite-directory', label: 'Cavite BFP Directory' },
-  { id: 'general-texts', label: 'Other Page Text' },
+const TABS = [
+  { id: 'bfp-dasmarinas', label: 'BFP Dasmariñas', hint: 'Station overview, Fire Marshal, vision & mission, and station numbers.' },
+  { id: 'emergency-contacts', label: 'Emergency Contacts', hint: 'Hotline heading, safety note, and the emergency numbers list.' },
+  { id: 'cavite-directory', label: 'Cavite BFP Directory', hint: 'Directory heading, districts, fire stations, emails, and phone numbers.' },
+  { id: 'general-texts', label: 'Website Content', hint: 'Section titles and subtitles shown on the About Us page.' },
 ];
+
+const TRANSLATE_DIRECTIONS = [
+  { key: 'en-fil', label: 'English → Filipino' },
+  { key: 'fil-en', label: 'Filipino → English' },
+];
+
+// One "Translate" button that asks for a direction, so the same control works
+// for the whole page and for a single tab.
+function TranslateMenu({ label, busy, disabled, onSelect, className = '' }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const close = (event) => {
+      if (event.type === 'keydown' && event.key !== 'Escape') return;
+      if (event.type === 'mousedown' && rootRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('keydown', close);
+    };
+  }, [open]);
+
+  return (
+    <div className="aboutus-menu" ref={rootRef}>
+      <button
+        type="button"
+        className={`aboutus-btn aboutus-btn-secondary ${className}`.trim()}
+        onClick={() => setOpen((current) => !current)}
+        disabled={disabled || busy}
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        {busy ? <span className="aboutus-spinner" aria-hidden="true" /> : <FiGlobe aria-hidden="true" />}
+        {busy ? 'Translating...' : label}
+        <FiChevronDown aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="aboutus-menu-list" role="menu">
+          {TRANSLATE_DIRECTIONS.map((direction) => (
+            <button
+              key={direction.key}
+              type="button"
+              role="menuitem"
+              onClick={() => { setOpen(false); onSelect(direction.key); }}
+            >
+              {direction.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AboutUsContent() {
   const { currentUser } = useUser();
   const [message, setMessage] = useState({ type: '', text: '' });
-  // Dirty flags keyed by card id; any truthy entry means something on this page
+  // Dirty flags keyed by tab id; any truthy entry means something on this page
   // has not reached Supabase yet.
   const [dirtyScopes, setDirtyScopes] = useState({});
-  const [pendingSave, setPendingSave] = useState(null);
+  const [pendingSave, setPendingSave] = useState(null); // { tabIds, title } | null
   const [confirmingSave, setConfirmingSave] = useState(false);
-  const [activeSection, setActiveSection] = useState(QUICK_NAV_ITEMS[0].id);
+  const [activeTab, setActiveTab] = useState(TABS[0].id);
+  const [translating, setTranslating] = useState(false);
+  // Tabs holding translations that still wait for the admin's review.
+  const [reviewTabs, setReviewTabs] = useState({});
 
-  const notify = (type, text) => setMessage({ type, text });
+  const notify = useCallback((type, text) => setMessage({ type, text }), []);
 
   const reportDirty = useCallback((scope, dirty) => {
     setDirtyScopes((current) => (
@@ -1008,30 +1079,84 @@ export default function AboutUsContent() {
     ));
   }, []);
 
+  const hasUnsavedChanges = Object.values(dirtyScopes).some(Boolean);
+
+  // --- save registry: every tab registers one "save what is dirty" function ---
+  const saversRef = useRef({});
+  const registerSave = useCallback((scope, run) => {
+    saversRef.current[scope] = run;
+    return () => { if (saversRef.current[scope] === run) delete saversRef.current[scope]; };
+  }, []);
+
   // Every Save button on this page routes through here, so the confirmation
   // dialog is the only path from a click to a Supabase write.
-  const requestSave = useCallback((run) => setPendingSave(() => run), []);
-
-  const hasUnsavedChanges = Object.values(dirtyScopes).some(Boolean);
+  const requestSave = (tabIds, title) => setPendingSave({ tabIds, title });
 
   const handleConfirmSave = async () => {
     if (!pendingSave) return;
     setConfirmingSave(true);
+    const failedTabs = [];
     try {
-      // The save handlers report their own success/failure through notify() and
-      // leave the edited values on screen when the write fails.
-      await pendingSave();
+      // Each tab's save reports its own success/failure through notify() and
+      // leaves the edited values on screen when a write fails.
+      for (const tabId of pendingSave.tabIds) {
+        const ok = await saversRef.current[tabId]?.();
+        if (ok === false) failedTabs.push(TABS.find((tab) => tab.id === tabId)?.label || tabId);
+      }
+      if (failedTabs.length > 1) notify('error', `Some changes could not be saved: ${failedTabs.join(', ')}.`);
     } finally {
       setConfirmingSave(false);
       setPendingSave(null);
     }
   };
 
+  const dirtyTabIds = TABS.filter((tab) => dirtyScopes[tab.id]).map((tab) => tab.id);
+
+  // --- translate registry: each translation panel inside a tab registers here ---
+  const translatorsRef = useRef({});
+  const registries = useMemo(() => Object.fromEntries(TABS.map((tab) => [tab.id, {
+    register: (api) => {
+      const set = (translatorsRef.current[tab.id] ||= new Set());
+      set.add(api);
+      return () => set.delete(api);
+    },
+  }])), []);
+
+  const translateTabs = async (tabIds, directionKey) => {
+    if (translating) return;
+    setTranslating(true);
+    const totals = { applied: 0, pending: 0, failed: 0 };
+    const review = {};
+    try {
+      // One request at a time keeps usage gentle on the translator's free tier.
+      for (const tabId of tabIds) {
+        for (const api of [...(translatorsRef.current[tabId] || [])]) {
+          const result = await api.translate(directionKey);
+          totals.applied += result.applied;
+          totals.pending += result.pending;
+          if (result.failed) totals.failed += 1;
+          if (result.pending > 0) review[tabId] = true;
+        }
+      }
+    } finally {
+      setTranslating(false);
+    }
+
+    setReviewTabs((current) => ({ ...current, ...review }));
+    const parts = [];
+    if (totals.applied) parts.push(`${totals.applied} draft translation${totals.applied === 1 ? '' : 's'} added.`);
+    if (totals.pending) parts.push(`${totals.pending} replacement${totals.pending === 1 ? '' : 's'} waiting for your review.`);
+    if (totals.failed) parts.push('Some fields could not be translated.');
+    if (parts.length === 0) parts.push('Nothing new to translate.');
+    if (totals.applied) parts.push('Review the drafts, then save.');
+    notify(totals.failed ? 'error' : 'success', parts.join(' '));
+  };
+
   const mainRef = useRef(null);
 
-  // The quick-nav is sticky and pins just under the shared PageHeader. The
+  // The toolbar is sticky and pins just under the shared PageHeader. The
   // header's rendered height changes with viewport / text size, so measure it
-  // and expose it as a CSS variable the nav's `top` offset reads from.
+  // and expose it as a CSS variable the toolbar's `top` offset reads from.
   useEffect(() => {
     const main = mainRef.current;
     const header = main?.querySelector('.page-header');
@@ -1053,19 +1178,56 @@ export default function AboutUsContent() {
     };
   }, []);
 
-  const scrollToSection = (id) => {
-    const target = document.getElementById(id);
-    const main = mainRef.current;
-    if (!target) return;
+  // Subtle entrance whenever a tab opens.
+  useEffect(() => {
+    const panel = mainRef.current?.querySelector('.aboutus-panel:not([hidden])');
+    if (!panel || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const tween = gsap.fromTo(panel, { autoAlpha: 0, y: 10 }, {
+      autoAlpha: 1, y: 0, duration: 0.3, ease: 'power2.out', clearProps: 'transform,opacity,visibility',
+    });
+    return () => tween.kill();
+  }, [activeTab]);
 
-    // Offset the landing position by the sticky header + sticky quick-nav so the
-    // section heading clears both bars instead of hiding behind them.
-    const headerHeight = main?.querySelector('.page-header')?.offsetHeight ?? 0;
-    const navHeight = main?.querySelector('.aboutus-quicknav')?.offsetHeight ?? 0;
-    const offset = headerHeight + navHeight + 16;
-    target.style.scrollMarginTop = `${offset}px`;
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setActiveSection(id);
+  const selectTab = (id) => {
+    setActiveTab(id);
+    setReviewTabs((current) => (current[id] ? { ...current, [id]: false } : current));
+  };
+
+  const handleTabKeyDown = (event) => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const index = TABS.findIndex((tab) => tab.id === activeTab);
+    const next = TABS[(index + step + TABS.length) % TABS.length];
+    selectTab(next.id);
+    document.getElementById(`aboutus-tab-${next.id}`)?.focus();
+  };
+
+  const cardProps = { currentUser, notify, reportDirty, registerSave };
+  const activeMeta = TABS.find((tab) => tab.id === activeTab);
+
+  const renderTab = (tab) => {
+    const Card = {
+      'bfp-dasmarinas': PartnerCard,
+      'emergency-contacts': EmergencyCard,
+      'cavite-directory': DirectoryCard,
+      'general-texts': WebsiteContentCard,
+    }[tab.id];
+    return (
+      <div
+        key={tab.id}
+        id={`aboutus-panel-${tab.id}`}
+        role="tabpanel"
+        aria-labelledby={`aboutus-tab-${tab.id}`}
+        className="aboutus-panel"
+        hidden={activeTab !== tab.id}
+      >
+        {/* Every tab stays mounted, so unsaved edits survive switching tabs. */}
+        <TranslatorRegistryContext.Provider value={registries[tab.id]}>
+          <Card {...cardProps} />
+        </TranslatorRegistryContext.Provider>
+      </div>
+    );
   };
 
   return (
@@ -1077,24 +1239,65 @@ export default function AboutUsContent() {
 
         <MessageBanner message={message} />
 
-        <nav className="aboutus-quicknav" aria-label="About Us content sections">
-          {QUICK_NAV_ITEMS.map((item) => (
+        <div className="aboutus-toolbar">
+          <div className="aboutus-tabs" role="tablist" aria-label="About Us content sections" onKeyDown={handleTabKeyDown}>
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                id={`aboutus-tab-${tab.id}`}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`aboutus-panel-${tab.id}`}
+                tabIndex={activeTab === tab.id ? 0 : -1}
+                className={`aboutus-tab${activeTab === tab.id ? ' is-active' : ''}`}
+                onClick={() => selectTab(tab.id)}
+              >
+                {tab.label}
+                {dirtyScopes[tab.id] && <span className="aboutus-tab-dot" title="Unsaved changes" aria-label="Unsaved changes" />}
+                {reviewTabs[tab.id] && <span className="aboutus-tab-dot is-review" title="Translations to review" aria-label="Translations to review" />}
+              </button>
+            ))}
+          </div>
+          <div className="aboutus-toolbar-actions">
+            <TranslateMenu
+              label="Translate All"
+              busy={translating}
+              onSelect={(directionKey) => translateTabs(TABS.map((tab) => tab.id), directionKey)}
+            />
             <button
-              key={item.id}
               type="button"
-              className={`aboutus-quicknav-item${activeSection === item.id ? ' is-active' : ''}`}
-              aria-current={activeSection === item.id ? 'location' : undefined}
-              onClick={() => scrollToSection(item.id)}
+              className="aboutus-btn aboutus-btn-primary"
+              onClick={() => requestSave(dirtyTabIds, 'Save All Changes?')}
+              disabled={dirtyTabIds.length === 0 || confirmingSave}
             >
-              {item.label}
+              <FiSave aria-hidden="true" /> Save All
             </button>
-          ))}
-        </nav>
+          </div>
+        </div>
 
-        <PartnerCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
-        <EmergencyCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
-        <DirectoryCard currentUser={currentUser} notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
-        <GeneralTextsCard notify={notify} reportDirty={reportDirty} requestSave={requestSave} />
+        <div className="aboutus-surface">
+          <div className="aboutus-panel-head">
+            <h2><Hint text={activeMeta.hint} placement="bottom">{activeMeta.label}</Hint></h2>
+            <div className="aboutus-panel-actions">
+              <TranslateMenu
+                label="Translate Tab"
+                className="aboutus-btn-small"
+                busy={translating}
+                onSelect={(directionKey) => translateTabs([activeTab], directionKey)}
+              />
+              <button
+                type="button"
+                className="aboutus-btn aboutus-btn-outline aboutus-btn-small"
+                onClick={() => requestSave([activeTab], 'Save Tab Changes?')}
+                disabled={!dirtyScopes[activeTab] || confirmingSave}
+              >
+                <FiSave aria-hidden="true" /> Save Tab
+              </button>
+            </div>
+          </div>
+          {TABS.map(renderTab)}
+        </div>
       </div>
 
       <UnsavedChangesPrompt
@@ -1108,6 +1311,7 @@ export default function AboutUsContent() {
       {pendingSave && (
         <ConfirmSaveModal
           busy={confirmingSave}
+          title={pendingSave.title}
           onCancel={() => setPendingSave(null)}
           onConfirm={handleConfirmSave}
         />

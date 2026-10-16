@@ -180,3 +180,14 @@
 @media (prefers-reduced-motion: reduce) {
   .translation-assistant *, .translation-assistant *::before, .translation-assistant *::after { animation: none !important; transition: none !important; }
 }
+
+/* Status + review only; a page-level Translate action drives the translation. */
+.translation-assistant--headless {
+  display: block;
+  margin: 0 0 1rem;
+  padding: 0.7rem 0.85rem;
+  border-color: #eadfe0;
+  background: #fffafa;
+}
+.translation-assistant--headless .translation-assistant-status { margin-top: 0; }
+.translation-assistant--headless .translation-assistant-preview { margin-top: 0.6rem; }

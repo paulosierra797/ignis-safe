@@ -1,7 +1,7 @@
 .aboutus-container {
   display: flex;
   min-height: 100vh;
-  background: #f4f6f9;
+  background: #f5f6f8;
   font-family: 'Poppins', sans-serif;
 }
 
@@ -13,153 +13,307 @@
   overflow-x: clip;
 }
 
-.aboutus-message {
-  margin-bottom: 1.25rem;
-  padding: 0.85rem 1.1rem;
-  border-radius: 10px;
-  font-size: 0.88rem;
-  font-weight: 600;
-}
+/* ---------------------------------------------------------------- toolbar */
 
-.aboutus-message-success {
-  border: 1px solid #a7e0b6;
-  background: #ecfdf3;
-  color: #056b3b;
-}
-
-.aboutus-message-error {
-  border: 1px solid #f3aeae;
-  background: #fef2f2;
-  color: #b42318;
-}
-
-.aboutus-quicknav {
-  /* Stays visible while scrolling, pinned directly under the sticky PageHeader
-     (its measured height comes from --aboutus-header-h, set in AboutUsContent.jsx).
-     z-index sits below the header's 500 so the header always wins any overlap,
-     and above the cards so section content scrolls underneath. */
+/* Tabs on the left, page-wide actions on the right. Sticky, pinned directly
+   under the PageHeader (its measured height comes from --aboutus-header-h, set
+   in AboutUsContent.jsx). z-index sits below the header's 500. */
+.aboutus-toolbar {
   position: sticky;
   top: var(--aboutus-header-h, 76px);
   z-index: 450;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 1.75rem;
-  padding: 0.55rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  background: #fff;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  padding: 0.6rem 0 0.75rem;
+  background: #f5f6f8;
 }
 
-.aboutus-quicknav-item {
+.aboutus-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: 12px;
+  background: #e9ecf1;
+}
+
+.aboutus-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   min-height: 40px;
-  padding: 0.55rem 1.05rem;
-  border: 1px solid transparent;
-  border-radius: 10px;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 9px;
   background: transparent;
-  color: #475467;
+  color: #526077;
   font: inherit;
   font-size: 0.82rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 160ms ease, color 160ms ease;
+  transition: background-color 180ms ease, color 180ms ease, box-shadow 180ms ease;
 }
 
-.aboutus-quicknav-item:hover {
-  background: #f8fafc;
+.aboutus-tab:hover {
   color: #172033;
 }
 
-.aboutus-quicknav-item.is-active {
-  border-color: #fecaca;
-  background: #fff1f2;
+.aboutus-tab.is-active {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
   color: #991b1b;
 }
 
-.aboutus-quicknav-item:focus-visible {
+.aboutus-tab:focus-visible {
   outline: 2px solid #b91c1c;
   outline-offset: 2px;
 }
 
-.aboutus-card {
-  margin-bottom: 2rem;
-  padding: 1.75rem 1.85rem 1.9rem;
-  border: 1px solid #e7ebf1;
+.aboutus-tab-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d97706;
+}
+
+.aboutus-tab-dot.is-review {
+  background: #2563eb;
+}
+
+.aboutus-toolbar-actions,
+.aboutus-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ---------------------------------------------------------------- buttons */
+
+.aboutus-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0.55rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, opacity 160ms ease;
+}
+
+.aboutus-btn:focus-visible {
+  outline: 2px solid #b91c1c;
+  outline-offset: 2px;
+}
+
+.aboutus-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.aboutus-btn-primary {
+  background: #b91c1c;
+  color: #fff;
+}
+
+.aboutus-btn-primary:hover:not(:disabled) {
+  background: #9f1818;
+}
+
+.aboutus-btn-outline {
+  border-color: #e3b9b9;
+  background: #fff;
+  color: #991b1b;
+}
+
+.aboutus-btn-outline:hover:not(:disabled) {
+  background: #fff5f5;
+}
+
+.aboutus-btn-secondary {
+  border-color: #d5dae3;
+  background: #fff;
+  color: #344054;
+}
+
+.aboutus-btn-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.aboutus-btn-small {
+  min-height: 36px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.78rem;
+}
+
+.aboutus-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d5dae3;
+  border-radius: 8px;
+  background: #fff;
+  color: #475467;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.aboutus-icon-btn:hover:not(:disabled) {
+  border-color: #b91c1c;
+  color: #b91c1c;
+}
+
+.aboutus-menu {
+  position: relative;
+}
+
+.aboutus-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  display: flex;
+  min-width: 100%;
+  flex-direction: column;
+  padding: 0.3rem;
+  border: 1px solid #e3e7ee;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+.aboutus-menu-list button {
+  padding: 0.55rem 0.8rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #344054;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.aboutus-menu-list button:hover,
+.aboutus-menu-list button:focus-visible {
+  background: #f3f4f7;
+  outline: none;
+}
+
+.aboutus-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: aboutus-spin 700ms linear infinite;
+}
+
+@keyframes aboutus-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------------------------------------------------------------- surface */
+
+.aboutus-surface {
+  padding: 1.75rem 2rem 2rem;
   border-radius: 16px;
   background: #fff;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
 }
 
-.aboutus-card-header {
-  padding-bottom: 1.1rem;
-  margin-bottom: 1.3rem;
-  border-bottom: 1px solid #eef1f6;
-}
-
-.aboutus-card-header h2 {
+.aboutus-panel-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  margin: 0 0 0.3rem;
-  color: #172033;
-  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
 }
 
-.aboutus-card-header h2::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  margin-right: 0.55rem;
-  border-radius: 50%;
-  background: #b91c1c;
-  flex-shrink: 0;
-}
-
-.aboutus-card-header p {
+.aboutus-panel-head h2 {
   margin: 0;
-  color: #64748b;
-  font-size: 0.88rem;
-  line-height: 1.5;
+  color: #172033;
+  font-size: clamp(1.1rem, 2vw, 1.3rem);
+  font-weight: 700;
 }
 
+.aboutus-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Sections are separated by space and one hairline, not nested boxes. */
 .aboutus-subsection {
-  margin-top: 1.1rem;
-  padding: 1.15rem 1.25rem;
-  border: 1px solid #eef1f6;
-  border-radius: 12px;
-  background: #f9fafc;
+  margin: 0;
 }
 
-.aboutus-subsection:first-of-type {
-  margin-top: 0;
+.aboutus-body > .aboutus-subsection + .aboutus-subsection {
+  padding-top: 1.75rem;
+  border-top: 1px solid #eef0f4;
 }
 
-.aboutus-subsection h3 {
-  margin: 0 0 0.85rem;
-  color: #334155;
-  font-size: 0.95rem;
-  font-weight: 800;
+.aboutus-subsection h3,
+.aboutus-section-title h3 {
+  margin: 0 0 1rem;
+  color: #172033;
+  font-size: 0.98rem;
+  font-weight: 700;
 }
 
 .aboutus-subsection h4 {
   margin: 0 0 0.6rem;
   color: #334155;
   font-size: 0.86rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .aboutus-subsection h5 {
   margin: 0 0 0.5rem;
   color: #475467;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 700;
 }
 
-.aboutus-hint {
-  margin: -0.4rem 0 0.9rem;
-  /* #64748b failed WCAG AA on white (~2.6:1); #64748b clears 4.5:1. */
-  color: #64748b;
-  font-size: 0.78rem;
+.aboutus-section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.aboutus-section-list > .aboutus-subsection + .aboutus-subsection {
+  padding-top: 1.75rem;
+  border-top: 1px solid #eef0f4;
+}
+
+.aboutus-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.aboutus-section-title h3 {
+  margin: 0;
 }
 
 .aboutus-loading,
@@ -170,34 +324,37 @@
   text-align: center;
 }
 
-/* Each card fetches independently and swapped a one-line "Loading…" for a
-   tall form, shifting every card below it (CLS ~0.48). Reserve a realistic
-   height so the load-in barely moves the layout. */
+/* Each tab fetches independently and swapped a one-line "Loading…" for a tall
+   form. Reserve a realistic height so the load-in barely moves the layout. */
 .aboutus-loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 520px;
+  min-height: 320px;
 }
 
+/* ----------------------------------------------------------------- fields */
+
 .aboutus-field-pair {
-  margin-bottom: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.aboutus-field-pair:last-child {
+  margin-bottom: 0;
 }
 
 .aboutus-field-pair-label {
   display: block;
-  margin-bottom: 0.4rem;
-  color: #475467;
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  color: #344054;
+  font-size: 0.84rem;
+  font-weight: 600;
 }
 
 .aboutus-language-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .aboutus-field {
@@ -208,6 +365,11 @@
   margin-bottom: 1rem;
 }
 
+.aboutus-language-grid > .aboutus-field,
+.aboutus-field-pair .aboutus-field {
+  margin-bottom: 0;
+}
+
 .aboutus-field-single {
   max-width: 480px;
 }
@@ -215,47 +377,37 @@
 .aboutus-field > span {
   display: inline-flex;
   align-items: center;
-  width: fit-content;
-  padding: 0.16rem 0.55rem;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #475467;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  gap: 0.4rem;
+  color: #667085;
+  font-size: 0.74rem;
+  font-weight: 600;
 }
 
-/* FieldPair's English/Tagalog grid gets its own color-coded labels so the
-   two languages are easy to tell apart at a glance. */
-.aboutus-language-grid--lang .aboutus-field:nth-of-type(1) > span {
-  background: #eef2ff;
-  color: #3730a3;
+/* A small dot tells English and Filipino apart without coloured pills. */
+.aboutus-field--en > span::before,
+.aboutus-field--tl > span::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
 }
 
-.aboutus-language-grid--lang .aboutus-field:nth-of-type(2) > span {
-  background: #fff7ed;
-  color: #9a3412;
-}
+.aboutus-field--en > span::before { background: #4f46e5; }
+.aboutus-field--tl > span::before { background: #ea580c; }
 
 .aboutus-field input,
 .aboutus-field textarea,
-.aboutus-field select,
-.aboutus-search-input {
+.aboutus-field select {
   box-sizing: border-box;
   width: 100%;
   padding: 0.6rem 0.75rem;
-  border: 1px solid #cfd8e3;
+  border: 1px solid #d5dae3;
   border-radius: 9px;
   background: #fff;
   color: #1f2937;
   font: inherit;
   font-size: 0.86rem;
-}
-
-.aboutus-field select {
-  min-height: 42px;
-  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .aboutus-field textarea {
@@ -265,8 +417,7 @@
 
 .aboutus-field input:focus,
 .aboutus-field textarea:focus,
-.aboutus-field select:focus,
-.aboutus-search-input:focus {
+.aboutus-field select:focus {
   outline: none;
   border-color: #b91c1c;
   box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.1);
@@ -274,104 +425,21 @@
 
 .aboutus-emergency-editor-grid {
   display: grid;
-  grid-template-columns: minmax(150px, 0.7fr) repeat(2, minmax(210px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 .aboutus-emergency-editor-grid .aboutus-field-single {
   max-width: none;
+  margin-bottom: 0;
 }
 
-.aboutus-contact-type {
-  padding: 0.18rem 0.5rem;
-  border-radius: 999px;
-  background: #f1f5f9;
-  color: #475569;
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
+.aboutus-language-grid > .aboutus-field-single {
+  max-width: none;
 }
 
-.aboutus-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin: 0.2rem 0 1rem;
-  color: #344054;
-  font-size: 0.84rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.aboutus-checkbox input {
-  width: 16px;
-  height: 16px;
-  accent-color: #b91c1c;
-}
-
-.aboutus-save-bar {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1.25rem;
-}
-
-.aboutus-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  min-height: 40px;
-  padding: 0.6rem 1.05rem;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  font: inherit;
-  font-size: 0.84rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
-}
-
-.aboutus-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.aboutus-btn-primary {
-  background: linear-gradient(135deg, #b91c1c, #dc2626);
-  box-shadow: 0 7px 16px rgba(185, 28, 28, 0.18);
-  color: #fff;
-}
-
-.aboutus-btn-outline {
-  border-color: #dfb6b6;
-  background: #fff7f7;
-  color: #7f1d1d;
-}
-
-.aboutus-btn-outline:hover:not(:disabled) {
-  border-color: #b91c1c;
-  background: #fdeded;
-}
-
-.aboutus-btn-secondary {
-  border-color: #d0d5dd;
-  background: #fff;
-  color: #344054;
-}
-
-.aboutus-btn-secondary:hover:not(:disabled) {
-  background: #f8fafc;
-}
-
-.aboutus-btn-danger {
-  background: #b42318;
-  color: #fff;
-}
-
-.aboutus-btn-small {
-  min-height: 34px;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.76rem;
-}
+/* ------------------------------------------------------------------ lists */
 
 .aboutus-list-header {
   display: flex;
@@ -383,21 +451,18 @@
 }
 
 .aboutus-list-header h3,
-.aboutus-list-header h4 {
+.aboutus-list-header h4,
+.aboutus-list-header h5 {
   margin: 0;
 }
 
-.aboutus-search-input {
-  max-width: 260px;
-}
-
-.aboutus-item-list,
 .aboutus-directory-groups,
 .aboutus-directory-entry-list,
-.aboutus-directory-phone-list {
+.aboutus-directory-phone-list,
+.aboutus-contact-list {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -409,14 +474,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid #e7ebf1;
+  padding: 0.7rem 0.9rem;
   border-radius: 10px;
-  background: #fff;
+  background: #f7f8fa;
 }
 
 .aboutus-item-row-compact {
-  padding: 0.55rem 0.75rem;
+  padding: 0.5rem 0.75rem;
 }
 
 .aboutus-item-summary {
@@ -426,11 +490,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
-}
-
-.aboutus-item-summary strong {
-  color: #172033;
-  font-size: 0.9rem;
 }
 
 .aboutus-item-sub {
@@ -444,80 +503,19 @@
   gap: 0.35rem;
 }
 
-.aboutus-reorder-buttons {
-  display: inline-flex;
-  gap: 0.2rem;
-  margin-right: 0.2rem;
-}
-
-.aboutus-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid #d0d5dd;
-  border-radius: 8px;
-  background: #fff;
-  color: #475467;
-  cursor: pointer;
-  transition: border-color 160ms ease, color 160ms ease, background-color 160ms ease;
-}
-
-.aboutus-icon-btn:hover:not(:disabled) {
-  border-color: #b91c1c;
-  color: #b91c1c;
-}
-
-.aboutus-icon-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.aboutus-icon-btn-danger:hover:not(:disabled) {
-  border-color: #b42318;
-  background: #fef3f2;
-  color: #b42318;
-}
-
-/* Edit-only contact entries (Landline & mobile numbers, Emergency numbers).
-   Consistent cards: a type badge, an optional label, the number, then one Edit
-   button - no add/delete/reorder controls. */
-.aboutus-section-note {
-  margin: -0.3rem 0 1rem;
-  padding: 0.65rem 0.85rem;
-  border: 1px solid #d7e0ee;
-  border-radius: 10px;
-  background: #f1f5fb;
-  color: #3f4c5f;
-  font-size: 0.78rem;
-  line-height: 1.55;
-}
-
-.aboutus-contact-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 .aboutus-contact-card {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 0.6rem 0.85rem;
-  padding: 0.8rem 1rem;
-  border: 1px solid #e7ebf1;
-  border-radius: 12px;
-  background: #fff;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: #f7f8fa;
 }
 
 .aboutus-contact-card.is-editing {
   padding: 0;
-  border: none;
   background: transparent;
 }
 
@@ -537,20 +535,18 @@
 .aboutus-contact-card-type {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.62rem;
+  padding: 0.18rem 0.6rem;
   border-radius: 999px;
-  background: #eef2ff;
+  background: #eceefb;
   color: #3730a3;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .aboutus-contact-card-label {
   color: #172033;
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .aboutus-contact-card-value {
@@ -559,21 +555,13 @@
   font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 560px) {
-  .aboutus-contact-card {
-    align-items: flex-start;
-  }
-
-  .aboutus-contact-card .aboutus-btn-small {
-    width: 100%;
-    justify-content: center;
-  }
+.aboutus-edit-row {
+  padding: 1.1rem 1.15rem;
+  border-radius: 12px;
+  background: #f7f8fa;
 }
 
-.aboutus-edit-row {
-  padding: 0.95rem 1rem;
-  border: 1px dashed #cbd5e1;
-  border-radius: 10px;
+.aboutus-edit-row .translation-assistant--headless {
   background: #fff;
 }
 
@@ -581,101 +569,16 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
-  margin-top: 0.5rem;
-}
-
-/* Section Titles & Subtitles editor: the list row would otherwise wrap the
-   editor in a second border/padding and size it to its content (leaving a wide
-   empty gap on the right). Drop the row chrome and let the editor fill it. */
-.aboutus-item-row.is-editing {
-  padding: 0;
-  border: none;
-  background: transparent;
-}
-
-.aboutus-item-row.is-editing > .aboutus-edit-row {
-  flex: 1 1 100%;
-  min-width: 0;
-}
-
-/* RecordHover.css tints every record row orange on hover/focus; an open editor
-   is not a record to pick, so keep it neutral. Specificity must beat that
-   file's !important rules. */
-body .aboutus-item-list > .aboutus-item-row.is-editing,
-body .aboutus-item-list > .aboutus-item-row.is-editing:hover,
-body .aboutus-item-list > .aboutus-item-row.is-editing:focus-within {
-  border: none !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-  transform: none;
-}
-
-.aboutus-section-edit {
-  box-sizing: border-box;
-  width: 100%;
-}
-
-.aboutus-section-edit-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem 1.25rem;
-}
-
-.aboutus-section-edit-col {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 0.85rem;
-}
-
-.aboutus-section-edit-col .aboutus-field {
-  margin-bottom: 0;
-}
-
-.aboutus-section-edit-col .aboutus-field-single {
-  max-width: none;
-}
-
-.aboutus-section-edit-lang {
-  width: fit-content;
-  margin: 0;
-  padding: 0.16rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
-.aboutus-section-edit-col--en .aboutus-section-edit-lang {
-  background: #eef2ff;
-  color: #3730a3;
-}
-
-.aboutus-section-edit-col--tl .aboutus-section-edit-lang {
-  background: #fff7ed;
-  color: #9a3412;
-}
-
-.aboutus-section-edit .aboutus-edit-row-actions {
   margin-top: 1rem;
-}
-
-@media (max-width: 640px) {
-  .aboutus-section-edit-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 .aboutus-status-pill {
   display: inline-flex;
   align-items: center;
-  padding: 0.18rem 0.6rem;
+  padding: 0.16rem 0.6rem;
   border-radius: 999px;
   font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .aboutus-status-pill.is-active {
@@ -684,21 +587,19 @@ body .aboutus-item-list > .aboutus-item-row.is-editing:focus-within {
 }
 
 .aboutus-status-pill.is-inactive {
-  background: #f2f4f7;
+  background: #eceef2;
   color: #667085;
 }
 
 .aboutus-directory-group {
-  border: 1px solid #e7ebf1;
-  border-radius: 12px;
-  background: #fff;
   overflow: hidden;
+  border-radius: 12px;
+  background: #f7f8fa;
 }
 
 .aboutus-directory-group-row {
-  background: transparent;
-  border: none;
   border-radius: 0;
+  background: transparent;
 }
 
 .aboutus-directory-toggle {
@@ -717,24 +618,20 @@ body .aboutus-item-list > .aboutus-item-row.is-editing:focus-within {
 }
 
 .aboutus-directory-entries {
-  padding: 0.9rem 1rem 1.1rem 2.1rem;
-  border-top: 1px solid #e7ebf1;
+  padding: 0.5rem 1rem 1.1rem 2.1rem;
 }
 
 .aboutus-directory-entry {
-  padding: 0.6rem 0.7rem;
-  border: 1px solid #edf0f4;
-  border-radius: 9px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
   background: #fff;
-}
-
-.aboutus-directory-entry + .aboutus-directory-entry {
-  margin-top: 0.55rem;
 }
 
 .aboutus-directory-phones {
   padding: 0.7rem 0 0 1.8rem;
 }
+
+/* -------------------------------------------------------------- responsive */
 
 @media (max-width: 900px) {
   .aboutus-main {
@@ -742,12 +639,8 @@ body .aboutus-item-list > .aboutus-item-row.is-editing:focus-within {
     padding: 1rem;
   }
 
-  .aboutus-card {
-    padding: 1.25rem 1.1rem 1.4rem;
-  }
-
-  .aboutus-subsection {
-    padding: 0.95rem 1rem;
+  .aboutus-surface {
+    padding: 1.25rem 1.1rem 1.5rem;
   }
 
   .aboutus-directory-entries {
@@ -757,10 +650,6 @@ body .aboutus-item-list > .aboutus-item-row.is-editing:focus-within {
   .aboutus-directory-phones {
     padding-left: 0.75rem;
   }
-
-  .aboutus-emergency-editor-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 640px) {
@@ -768,36 +657,60 @@ body .aboutus-item-list > .aboutus-item-row.is-editing:focus-within {
     padding: 0.65rem;
   }
 
-  .aboutus-quicknav {
+  .aboutus-toolbar {
     top: var(--aboutus-header-h, 64px);
+  }
+
+  .aboutus-tabs {
     display: grid;
+    width: 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.3rem;
-    margin-bottom: 1rem;
-    padding: 0.35rem;
-    border-radius: 10px;
   }
 
-  .aboutus-quicknav-item {
-    min-width: 0;
-    min-height: 38px;
+  .aboutus-tab {
+    justify-content: center;
     padding: 0.45rem 0.35rem;
-    font-size: 0.7rem;
-    line-height: 1.25;
-    white-space: normal;
+    font-size: 0.74rem;
+    text-align: center;
   }
 
-  .aboutus-card {
-    margin-bottom: 1rem;
-    padding: 1rem 0.8rem 1.15rem;
-    border-radius: 12px;
+  .aboutus-toolbar-actions {
+    width: 100%;
   }
 
-  .aboutus-subsection {
-    padding: 0.8rem 0.7rem;
+  .aboutus-toolbar-actions > *,
+  .aboutus-toolbar-actions .aboutus-menu {
+    flex: 1;
   }
 
-  .aboutus-language-grid {
+  .aboutus-toolbar-actions .aboutus-menu > .aboutus-btn {
+    width: 100%;
+  }
+
+  .aboutus-menu-list {
+    right: auto;
+    left: 0;
+  }
+
+  .aboutus-language-grid,
+  .aboutus-emergency-editor-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .aboutus-contact-card {
+    align-items: flex-start;
+  }
+
+  .aboutus-contact-card .aboutus-btn-small {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aboutus-tab,
+  .aboutus-btn,
+  .aboutus-field input,
+  .aboutus-field textarea {
+    transition: none;
   }
 }

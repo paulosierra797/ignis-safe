@@ -81,7 +81,7 @@ export default function TranslationControls({
           : `Add ${direction.sourceLabel} text to a paired field first.`,
       });
       requestAnimationFrame(revealStatus);
-      return;
+      return { applied: 0, pending: 0, skipped, failed: false };
     }
 
     const directionKey = `${direction.sourceLanguage}-${direction.targetLanguage}`;
@@ -98,9 +98,10 @@ export default function TranslationControls({
       setBusyDirection('');
       setStatus({ type: 'error', text: error });
       requestAnimationFrame(revealStatus);
-      return;
+      return { applied: 0, pending: 0, skipped, failed: true, error };
     }
 
+    let outcome = { applied: 0, pending: 0, skipped, failed: false };
     try {
       // Editors stay usable during the network request. Apply into the latest
       // render so typing elsewhere cannot be rolled back by a slower response.
@@ -136,13 +137,32 @@ export default function TranslationControls({
       if (skipped) parts.push(`${skipped} existing value${skipped === 1 ? '' : 's'} stayed unchanged.`);
       if (affectedSummary) parts.push(affectedSummary);
       setStatus({ type: 'success', text: `${parts.join(' ')}${overwriteIdx.length ? '' : remaining}` });
+      outcome = { applied: appliedCount, pending: overwriteIdx.length, skipped, failed: false };
     } catch {
       setStatus({ type: 'error', text: 'Translation returned an incomplete result. Your text is unchanged and manual editing is still available.' });
+      outcome = { applied: 0, pending: 0, skipped, failed: true };
     } finally {
       setBusyDirection('');
       requestAnimationFrame(revealStatus);
     }
+    return outcome;
   };
+
+  // Lets a page-level Translate action drive this panel (see
+  // TranslatorRegistryContext). The latest handler is read through a ref so the
+  // registration itself stays stable.
+  const registry = useContext(TranslatorRegistryContext);
+  const translateRef = useRef(null);
+  useEffect(() => { translateRef.current = handleTranslate; });
+  useEffect(() => {
+    if (!registry) return undefined;
+    return registry.register({
+      translate: (directionKey) => {
+        const direction = DIRECTIONS.find((d) => `${d.sourceLanguage}-${d.targetLanguage}` === directionKey);
+        return direction ? translateRef.current(direction) : Promise.resolve({ applied: 0, pending: 0, skipped: 0, failed: false });
+      },
+    });
+  }, [registry]);
 
   const confirmReplace = () => {
     if (!pending) return;
@@ -171,17 +191,19 @@ export default function TranslationControls({
     requestAnimationFrame(revealStatus);
   };
 
+  if (headless && !status && !pending) return null;
+
   return (
-    <aside className={`translation-assistant${compact ? ' translation-assistant--compact' : ''}${bare ? ' translation-assistant--bare' : ''}`} aria-busy={Boolean(busyDirection)}>
-      <div className="translation-assistant-copy">
+    <aside className={`translation-assistant${headless ? ' translation-assistant--headless' : ''}${compact ? ' translation-assistant--compact' : ''}${bare ? ' translation-assistant--bare' : ''}`} aria-busy={Boolean(busyDirection)}>
+      {!headless && <div className="translation-assistant-copy">
         <Hint
           className="translation-assistant-kicker"
           text={helperText || 'Fills blank fields with a draft. Edited source text can refresh its translation after you confirm. Nothing is saved until you save.'}
         >
           <FiRefreshCw aria-hidden="true" /> {scopeLabel}
         </Hint>
-      </div>
-      <div className="translation-assistant-actions">
+      </div>}
+      {!headless && <div className="translation-assistant-actions">
         {DIRECTIONS.map((direction) => {
           const key = `${direction.sourceLanguage}-${direction.targetLanguage}`;
           return (
@@ -200,7 +222,7 @@ export default function TranslationControls({
             </button>
           );
         })}
-      </div>
+      </div>}
       {status && (
         <div
           ref={statusRef}

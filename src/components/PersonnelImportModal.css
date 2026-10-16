@@ -177,6 +177,16 @@
   background: #f59e0b;
 }
 
+.pim-btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+}
+
+.pim-btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
 .pim-btn-ghost {
   background: #ffffff;
   border-color: #e2e8f0;
@@ -312,16 +322,16 @@
 .pim-col-first { width: 16%; }
 .pim-col-last { width: 15%; }
 .pim-col-email { width: auto; }
-.pim-col-role { width: 6.75rem; }
+.pim-col-role { width: 8.25rem; }
 .pim-col-rank { width: 7rem; }
-.pim-col-contact { width: 8rem; }
+.pim-col-contact { width: 8.25rem; }
 .pim-col-actions { width: 2.5rem; }
 
 .pim-table th {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 0.55rem 0.4rem;
+  padding: 0.6rem 0.8rem;
   background: #f8fafc;
   color: #64748b;
   font-size: 0.72rem;
@@ -333,8 +343,15 @@
 }
 
 .pim-table td {
-  padding: 0.2rem 0.25rem;
+  padding: 0.3rem 0.35rem;
   vertical-align: middle;
+}
+
+/* Number and remove columns hold a single centred control. */
+.pim-table th:first-child,
+.pim-table th:last-child {
+  padding-inline: 0;
+  text-align: center;
 }
 
 .pim-table tbody tr + tr td {
@@ -383,7 +400,7 @@
   line-height: 1.25;
 }
 
-.pim-num {
+.pim-table td.pim-num {
   padding-inline: 0.15rem;
   text-align: center;
 }
@@ -428,17 +445,59 @@ select.pim-input {
   padding-inline: 0.3rem 0.1rem;
 }
 
-/* Where supported, the select shrinks to its value so the arrow sits right beside it. */
-@supports (field-sizing: content) {
-  select.pim-input {
-    field-sizing: content;
-    width: auto;
-    max-width: 100%;
-  }
+/* Role is a short fixed list: let the whole value show, never an ellipsis. */
+select.pim-input {
+  text-overflow: clip;
+  cursor: pointer;
 }
 
 .pim-input:hover {
-  background: #f8fafc;
+  background: #f1f5f9;
+}
+
+/* Text fields: a pencil fades in on hover and steps aside once typing starts. */
+.pim-field {
+  position: relative;
+}
+
+.pim-field .pim-input {
+  padding-right: 1.65rem;
+  cursor: text;
+}
+
+.pim-field-pencil {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  width: 0.8rem;
+  height: 0.8rem;
+  color: #94a3b8;
+  opacity: 0;
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.pim-field:hover .pim-field-pencil {
+  opacity: 1;
+}
+
+.pim-field:focus-within .pim-field-pencil {
+  opacity: 0;
+}
+
+/* Touch screens have no hover, so keep a faint hint visible. */
+@media (hover: none) {
+  .pim-field-pencil {
+    opacity: 0.55;
+  }
+}
+
+.pim-hint {
+  flex: 0 0 auto;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
 }
 
 .pim-input:focus {
@@ -541,14 +600,130 @@ select.pim-input {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #94a3b8;
+  color: #dc2626;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .pim-icon-btn:hover {
   background: #fef2f2;
-  color: #b42318;
+  color: #b91c1c;
+}
+
+/* Remove-from-import confirmation. Portaled above the dialog and its tooltips. */
+.pim-rm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.pim-rm-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: min(440px, 100%);
+  max-height: 100%;
+  padding: 1.5rem;
+  overflow-y: auto;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.3);
+}
+
+.pim-rm-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.pim-rm-head h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #111827;
+}
+
+.pim-rm-head p {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.pim-rm-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 1.1rem;
+}
+
+.pim-rm-details {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0.5rem;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.pim-rm-row {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.88rem;
+}
+
+.pim-rm-row dt {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.pim-rm-row dd {
+  margin: 0;
+  color: #111827;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.pim-rm-row dd.is-empty {
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.pim-rm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+@media (max-width: 480px) {
+  .pim-rm-card {
+    padding: 1.25rem;
+  }
+
+  .pim-rm-row {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+
+  .pim-rm-actions .pim-btn {
+    flex: 1 1 0;
+  }
 }
 
 .pim-sr {
@@ -688,7 +863,7 @@ select.pim-input {
 
   .pim-col-first { width: 15%; }
   .pim-col-last { width: 14%; }
-  .pim-col-contact { width: 7.5rem; }
+  .pim-col-contact { width: 8rem; }
 }
 
 /* Phones and small tablets: a readable minimum width, scrolled inside the table area. */
@@ -727,7 +902,8 @@ select.pim-input {
 @media (prefers-reduced-motion: reduce) {
   .pim-drop,
   .pim-btn,
-  .pim-input {
+  .pim-input,
+  .pim-field-pencil {
     transition: none;
   }
 }

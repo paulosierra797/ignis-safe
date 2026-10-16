@@ -7,6 +7,7 @@ import {
   FiCheckCircle,
   FiChevronDown,
   FiDownload,
+  FiEdit2,
   FiFileText,
   FiRefreshCw,
   FiTrash2,
@@ -445,6 +446,92 @@ function RankCombobox({ value, onChange, error, errorId, ariaLabel, rowId }) {
   );
 }
 
+// Confirmation before a row leaves the import preview. Only the preview changes; no account is touched.
+function RemoveConfirmDialog({ details, onCancel, onConfirm }) {
+  const overlayRef = useRef(null);
+  const cardRef = useRef(null);
+  const cancelRef = useRef(null);
+  const confirmRef = useRef(null);
+  const titleId = useId();
+  const descId = useId();
+
+  useLayoutEffect(() => {
+    cancelRef.current?.focus();
+    if (prefersReducedMotion()) return undefined;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(overlayRef.current, { opacity: 0 }, { opacity: 1, duration: 0.18, ease: 'power1.out' });
+      gsap.fromTo(
+        cardRef.current,
+        { opacity: 0, y: 12, scale: 0.97 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power3.out' }
+      );
+      gsap.from('.pim-rm-row', { opacity: 0, y: 6, duration: 0.25, stagger: 0.04, delay: 0.12, ease: 'power2.out' });
+    }, overlayRef);
+    return () => ctx.revert();
+  }, []);
+
+  // Keep Tab inside the two buttons while the dialog is open.
+  const handleKeyDown = (event) => {
+    if (event.key !== 'Tab') return;
+    const first = cancelRef.current;
+    const last = confirmRef.current;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  };
+
+  const fields = [
+    ['Full Name', details.name],
+    ['Email', details.email],
+    ['Role', details.role],
+    ['Rank', details.rank],
+    ['Contact Number', details.contact]
+  ];
+
+  return createPortal(
+    <div
+      className="pim-rm-overlay"
+      ref={overlayRef}
+      onMouseDown={(event) => { if (event.target === event.currentTarget) onCancel(); }}
+    >
+      <div
+        className="pim-rm-card"
+        ref={cardRef}
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        onKeyDown={handleKeyDown}
+      >
+        <div className="pim-rm-head">
+          <span className="pim-rm-icon" aria-hidden="true"><FiTrash2 /></span>
+          <div>
+            <h4 id={titleId}>Remove this account from the import?</h4>
+            <p id={descId}>Only this import preview changes. Existing accounts are not affected.</p>
+          </div>
+        </div>
+        <dl className="pim-rm-details">
+          {fields.map(([label, value]) => (
+            <div className="pim-rm-row" key={label}>
+              <dt>{label}</dt>
+              <dd className={value ? '' : 'is-empty'}>{value || 'Not provided'}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="pim-rm-actions">
+          <button type="button" ref={cancelRef} className="pim-btn pim-btn-ghost" onClick={onCancel}>Cancel</button>
+          <button type="button" ref={confirmRef} className="pim-btn pim-btn-danger" onClick={onConfirm}>Remove</button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export default function PersonnelImportModal({
   existingEmails = [],
   isSuperAdmin = false,
@@ -459,6 +546,7 @@ export default function PersonnelImportModal({
   const [isDragging, setIsDragging] = useState(false);
   const [errorsOnly, setErrorsOnly] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [pendingRemoveId, setPendingRemoveId] = useState(null);
 
   const overlayRef = useRef(null);
   const dialogRef = useRef(null);
@@ -466,6 +554,7 @@ export default function PersonnelImportModal({
   const barRef = useRef(null);
   const fileInputRef = useRef(null);
   const runningRef = useRef(false);
+  const removeTriggerRef = useRef(null);
 
   const isImporting = phase === 'importing';
 
@@ -580,11 +669,14 @@ export default function PersonnelImportModal({
   useEffect(() => {
     const onKeyDown = (event) => {
       // The rank list handles its own Escape (preventDefault) so it closes alone.
-      if (event.key === 'Escape' && !event.defaultPrevented) handleClose();
+      if (event.key !== 'Escape' || event.defaultPrevented) return;
+      // The removal prompt sits on top, so Escape dismisses it first.
+      if (pendingRemoveId) setPendingRemoveId(null);
+      else handleClose();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [handleClose]);
+  }, [handleClose, pendingRemoveId]);
 
   // Removing every pending row sends the user back to upload.
   useEffect(() => {
@@ -682,6 +774,46 @@ export default function PersonnelImportModal({
   const removeRow = (id) => {
     setRows((previous) => previous.filter((row) => row.id !== id));
   };
+
+  const pendingRow = pendingRemoveId ? rows.find((row) => row.id === pendingRemoveId) : null;
+
+  const requestRemove = (id, event) => {
+    removeTriggerRef.current = event.currentTarget;
+    setPendingRemoveId(id);
+  };
+
+  const cancelRemove = () => {
+    const trigger = removeTriggerRef.current;
+    removeTriggerRef.current = null;
+    setPendingRemoveId(null);
+    requestAnimationFrame(() => { if (trigger?.isConnected) trigger.focus(); });
+  };
+
+  const confirmRemove = () => {
+    const id = pendingRemoveId;
+    removeTriggerRef.current = null;
+    setPendingRemoveId(null);
+    if (!id) return;
+    const rowEl = stageRef.current?.querySelector(`[data-row-id="${id}"]`);
+    if (rowEl && !prefersReducedMotion()) {
+      gsap.to(rowEl, { opacity: 0, x: 16, duration: 0.22, ease: 'power2.in', onComplete: () => removeRow(id) });
+    } else {
+      removeRow(id);
+    }
+  };
+
+  const removeDetails = pendingRow ? (() => {
+    const role = normalizeRole(pendingRow.role);
+    const rankCode = pendingRow.rank.trim();
+    const rankOption = RANK_OPTIONS.find((option) => option.code === rankCode);
+    return {
+      name: `${pendingRow.first_name} ${pendingRow.last_name}`.trim().replace(/\s+/g, ' '),
+      email: pendingRow.email.trim(),
+      role: ROLE_LABELS[role] || pendingRow.role.trim(),
+      rank: rankOption ? rankOption.label : rankCode,
+      contact: pendingRow.contact_number.trim()
+    };
+  })() : null;
 
   // A row jumps to its new rank group; hand focus back to its rank field afterwards.
   const focusRankRowRef = useRef(null);
@@ -797,15 +929,18 @@ export default function PersonnelImportModal({
     const error = validation[row.id]?.[field];
     return (
       <>
-        <input
-          className={`pim-input${error ? ' is-invalid' : ''}`}
-          value={row[field]}
-          onChange={(event) => updateRow(row.id, field, event.target.value)}
-          aria-label={`${field.replace('_', ' ')}, row ${rowNumbers[row.id]}`}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? `pim-err-${row.id}-${field}` : undefined}
-          {...props}
-        />
+        <div className="pim-field">
+          <input
+            className={`pim-input${error ? ' is-invalid' : ''}`}
+            value={row[field]}
+            onChange={(event) => updateRow(row.id, field, event.target.value)}
+            aria-label={`${field.replace('_', ' ')}, row ${rowNumbers[row.id]}`}
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? `pim-err-${row.id}-${field}` : undefined}
+            {...props}
+          />
+          <FiEdit2 className="pim-field-pencil" aria-hidden="true" />
+        </div>
         {renderError(row, field)}
       </>
     );
@@ -918,6 +1053,7 @@ export default function PersonnelImportModal({
                 </label>
               </div>
 
+              <p className="pim-hint">Click any field to edit its details.</p>
               <div className="pim-table-wrap">
                 <table className="pim-table">
                   <colgroup>
@@ -952,7 +1088,7 @@ export default function PersonnelImportModal({
                           const errors = validation[row.id];
                           const role = normalizeRole(row.role);
                           return (
-                            <tr key={row.id} className={errors ? 'has-error' : ''}>
+                            <tr key={row.id} data-row-id={row.id} className={errors ? 'has-error' : ''}>
                               <td className="pim-num">
                                 <PimTip
                                   tag="button"
@@ -1010,9 +1146,9 @@ export default function PersonnelImportModal({
                                 <button
                                   type="button"
                                   className="pim-icon-btn"
-                                  onClick={() => removeRow(row.id)}
-                                  aria-label={`Remove row ${rowNumbers[row.id]}`}
-                                  title="Remove row"
+                                  onClick={(event) => requestRemove(row.id, event)}
+                                  aria-label={`Remove row ${rowNumbers[row.id]} from import`}
+                                  title="Remove from import"
                                 >
                                   <FiTrash2 aria-hidden="true" />
                                 </button>
@@ -1134,6 +1270,9 @@ export default function PersonnelImportModal({
           )}
         </div>
       </div>
+      {removeDetails && (
+        <RemoveConfirmDialog details={removeDetails} onCancel={cancelRemove} onConfirm={confirmRemove} />
+      )}
     </div>
   );
 }

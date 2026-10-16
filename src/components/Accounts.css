@@ -1359,14 +1359,6 @@
   gap: 1rem;
 }
 
-.leave-request-group-pending {
-  border-top: 4px solid #f59e0b;
-}
-
-.leave-request-group-history {
-  border-top: 4px solid #64748b;
-}
-
 .account-directory-group-header > span.leave-request-pending-badge {
   background: #fef3c7;
   color: #92400e;
@@ -1431,14 +1423,6 @@
 
 .leave-request-group .request-history-toolbar {
   margin-bottom: 0.75rem;
-}
-
-.profile-request-group-pending {
-  border-top: 4px solid #f59e0b;
-}
-
-.profile-request-group-history {
-  border-top: 4px solid #64748b;
 }
 
 .profile-request-group .account-directory-group-body {
@@ -1734,10 +1718,6 @@
 
 /* Super Admin section: same card shell as Admin, set apart by a deep-red rule
    and count chip rather than extra panels. */
-.account-directory-group-super-admin {
-  border-top: 3px solid #7f1d1d;
-}
-
 .account-directory-group-super-admin .account-directory-group-header {
   background: #fff;
 }
@@ -3206,7 +3186,7 @@
   align-items: flex-start;
   gap: 1rem;
   padding-bottom: 1.1rem;
-  border-bottom: 2px solid #fee2e2;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .accounts-edit-personnel-heading {
@@ -4871,7 +4851,6 @@
 
 .personnel-profile-header {
   padding: 1.15rem 1.25rem;
-  border-bottom: 4px solid #fbbf24;
   background: #a61e24;
 }
 
@@ -4924,7 +4903,6 @@
   gap: 0.9rem;
   padding: 1rem;
   border: 1px solid #e2e8f0;
-  border-top: 3px solid #c1272d;
   border-radius: 8px;
   background: #ffffff;
 }

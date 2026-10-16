@@ -375,7 +375,6 @@
   width: min(430px, 100%);
   padding: 2rem;
   border: 1px solid rgba(185, 28, 28, 0.12);
-  border-top: 4px solid #b91c1c;
   border-radius: 20px;
   background: #ffffff;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
@@ -396,10 +395,6 @@
   color: #b91c1c;
   font-size: 1.6rem;
   font-weight: 800;
-}
-
-.device-dialog--success {
-  border-top-color: #15803d;
 }
 
 .device-dialog--success .device-dialog-icon {

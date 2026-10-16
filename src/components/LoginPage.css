@@ -57,7 +57,6 @@
   width: 100%;
   max-width: 520px;
   border: 1px solid rgba(185, 28, 28, 0.1);
-  border-top: 4px solid #b91c1c;
   background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2);
   border-radius: 20px;
@@ -250,7 +249,6 @@
   padding: 2.5rem;
   background: rgba(255, 255, 255, 0.98);
   border: 1px solid rgba(185, 28, 28, 0.12);
-  border-top: 4px solid #b91c1c;
   border-radius: 20px;
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.18);
   backdrop-filter: blur(12px);

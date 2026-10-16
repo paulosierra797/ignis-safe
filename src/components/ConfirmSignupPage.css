@@ -33,12 +33,10 @@
 }
 
 .confirm-signup-page--admin .confirm-signup-card {
-  border-top: 5px solid #b91c1c;
   box-shadow: 0 18px 45px rgba(17, 24, 39, 0.28);
 }
 
 .confirm-signup-page--personnel .confirm-signup-card {
-  border-top: 5px solid #f59e0b;
   box-shadow: 0 18px 45px rgba(69, 42, 8, 0.3);
 }
 

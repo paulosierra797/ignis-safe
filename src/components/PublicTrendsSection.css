@@ -112,7 +112,6 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin: clamp(2.5rem, 4vw, 3.5rem) 0 0;
-  border-top: 2px solid #172033;
 }
 
 .trends-stat {
@@ -484,7 +483,6 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.5rem;
   padding-top: 1.35rem;
-  border-top: 2px solid #172033;
 }
 
 .trends-skeleton-stats span,

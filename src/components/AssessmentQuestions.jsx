@@ -4,6 +4,8 @@ import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import ToastMessage from './ToastMessage';
 import TranslationControls from './TranslationControls';
+import Hint from './Hint';
+import { gsap } from 'gsap';
 import './AssessmentQuestions.css';
 import './AppDialog.css';
 import { useUser } from '../context/UserContext';
@@ -373,6 +375,8 @@ export default function AssessmentQuestions() {
   const [pendingDeleteQuestion, setPendingDeleteQuestion] = useState(null);
   const [message, setMessage] = useState({ type: '', text: '' });
   const bypassNavigationRef = useRef(false);
+  const panelRef = useRef(null);
+  const deleteModalRef = useRef(null);
   const questionHighlightTimeoutRef = useRef(null);
   const handledRecommendationTargetRef = useRef('');
   const moduleContextCacheRef = useRef(new Map());
@@ -396,6 +400,19 @@ export default function AssessmentQuestions() {
     || pendingAssessmentId
     || blocker.state === 'blocked'
   );
+
+  // Subtle entrances; skipped for reduced-motion users.
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !panelRef.current) return undefined;
+    const tween = gsap.fromTo(panelRef.current, { autoAlpha: 0, y: 10 }, { autoAlpha: 1, y: 0, duration: 0.4, ease: 'power2.out', clearProps: 'transform,opacity,visibility' });
+    return () => tween.kill();
+  }, []);
+
+  useEffect(() => {
+    if (!pendingDeleteQuestion || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !deleteModalRef.current) return undefined;
+    const tween = gsap.fromTo(deleteModalRef.current, { autoAlpha: 0, y: 14, scale: 0.98 }, { autoAlpha: 1, y: 0, scale: 1, duration: 0.25, ease: 'power2.out', clearProps: 'transform,opacity,visibility' });
+    return () => tween.kill();
+  }, [pendingDeleteQuestion]);
 
   const markQuestionDirty = useCallback((questionId) => {
     setDirtyQuestionIds((current) => {
@@ -659,6 +676,23 @@ export default function AssessmentQuestions() {
       question.id === questionId ? translatedQuestion : question
     )));
     markQuestionDirty(questionId);
+  };
+
+  // Translate All: swap in the translated list, flagging only questions whose
+  // content actually changed. Unsaved edits and correct answers ride along
+  // because translation only fills text fields on the latest state.
+  const applyAllTranslations = (translatedQuestions) => {
+    const previousById = new Map(questions.map((question) => [question.id, JSON.stringify(question)]));
+    const changedIds = translatedQuestions
+      .filter((question) => previousById.get(question.id) !== JSON.stringify(question))
+      .map((question) => question.id);
+    setQuestions(translatedQuestions);
+    if (changedIds.length === 0) return;
+    setDirtyQuestionIds((current) => {
+      const next = new Set(current);
+      changedIds.forEach((id) => next.add(id));
+      return next;
+    });
   };
 
   const setCorrectOption = (questionId, optionKey) => {
@@ -1384,83 +1418,98 @@ export default function AssessmentQuestions() {
           onNavigationRequest={handleHeaderNavigationRequest}
         />
 
-        <section className="assessment-module-context">
-          <div className="assessment-module-heading">
+        <section className="aq-panel" ref={panelRef}>
+          <div className="aq-panel-title">
             <span>{selectedAssessmentLabel || 'Select an assessment'}</span>
-            <h2>{selectedModuleTitle}</h2>
-            <p>Review and update the questions for this learning module.</p>
+            <h2 title={selectedModuleTitle}>{selectedModuleTitle}</h2>
           </div>
 
-          <div className="assessment-question-navigator">
-            <label htmlFor="assessment-question-jump">Quick question access</label>
-            <div className="assessment-question-navigator-controls">
-              <select
-                id="assessment-question-jump"
-                value=""
-                onChange={handleQuestionJump}
-                disabled={isLoadingQuestions || questionNavigatorOptions.length === 0}
-                aria-label="Jump to a question"
-              >
-                <option value="">
-                  {questionNavigatorOptions.length === 0 ? 'No matching questions' : 'Choose a question...'}
-                </option>
-                {questionNavigatorOptions.map((question) => (
-                  <option key={question.id} value={question.id}>
-                    {`Question ${question.question_no} — ${String(question.prompt || '').slice(0, 80)}`}
+          <div className="aq-panel-grid">
+            <div className="aq-selects">
+              <div className="aq-field">
+                <label htmlFor="assessment-filter-select">Select Assessment</label>
+                <select
+                  id="assessment-filter-select"
+                  value={selectedAssessmentId}
+                  onChange={handleAssessmentChange}
+                  disabled={isLoadingAssessments || displayAssessments.length === 0}
+                >
+                  {isLoadingAssessments ? (
+                    <option>Loading...</option>
+                  ) : displayAssessments.length === 0 ? (
+                    <option value="">No assessments found</option>
+                  ) : (
+                    displayAssessments.map((row) => (
+                      <option key={row.id} value={row.id}>
+                        {formatAssessmentLabel(row)}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div className="aq-field">
+                <label htmlFor="assessment-question-jump">Quick Question Access</label>
+                <select
+                  id="assessment-question-jump"
+                  value=""
+                  onChange={handleQuestionJump}
+                  disabled={isLoadingQuestions || questionNavigatorOptions.length === 0}
+                  aria-label="Jump to a question"
+                >
+                  <option value="">
+                    {questionNavigatorOptions.length === 0 ? 'No matching questions' : 'Choose a question...'}
                   </option>
-                ))}
-              </select>
+                  {questionNavigatorOptions.map((question) => (
+                    <option key={question.id} value={question.id}>
+                      {`Question ${question.question_no} — ${String(question.prompt || '').slice(0, 80)}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="aq-tools">
+              <div className="aq-tool">
+                <Hint
+                  className="aq-tool-title"
+                  text="Uses the selected module's learning materials to create unsaved drafts for review. Nothing is stored until you save."
+                >
+                  AI Questions Generator
+                </Hint>
+                <button
+                  className="aq-btn aq-btn--secondary"
+                  type="button"
+                  onClick={handleGenerateQuestions}
+                  disabled={!selectedAssessmentId || isLoadingQuestions || isGenerating}
+                >
+                  {isGenerating && <span className="assessment-generate-spinner" aria-hidden="true" />}
+                  {isGenerating ? 'Generating...' : 'Generate Questions'}
+                </button>
+                {isGenerating && (
+                  <div className="assessment-generate-progress" role="status" aria-live="polite">
+                    {generationProgress?.label || 'Generating questions with AI...'}
+                  </div>
+                )}
+              </div>
+
+              {!isLoadingQuestions && questions.length > 0 && (
+                <div className="aq-tool">
+                  <TranslationControls
+                    key={`${selectedAssessmentId}:${questions.map((question) => question.id).join(',')}`}
+                    value={questions}
+                    onChange={applyAllTranslations}
+                    section="assessment_questions"
+                    scopeLabel="Translate All Questions"
+                    helperText="Translates every question, answer choice and explanation in this assessment. Existing translations are kept unless you edited the source text, and you confirm those first. Correct answers are preserved. Nothing is saved until you save."
+                    bulkLabel="Translate All"
+                    bare
+                  />
+                </div>
+              )}
             </div>
           </div>
         </section>
-
-        <div className="assessment-questions-toolbar">
-          <div className="assessment-filter">
-            <label htmlFor="assessment-filter-select">Select Assessment</label>
-            <select
-              id="assessment-filter-select"
-              value={selectedAssessmentId}
-              onChange={handleAssessmentChange}
-              disabled={isLoadingAssessments || displayAssessments.length === 0}
-            >
-              {isLoadingAssessments ? (
-                <option>Loading...</option>
-              ) : displayAssessments.length === 0 ? (
-                <option value="">No assessments found</option>
-              ) : (
-                displayAssessments.map((row) => (
-                  <option key={row.id} value={row.id}>
-                    {formatAssessmentLabel(row)}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
-
-          <div className="assessment-generator">
-            <label htmlFor="assessment-generate-count">AI questions generator</label>
-            <div className="assessment-generator-controls">
-            
-              <button
-                className="assessment-generate-button"
-                type="button"
-                onClick={handleGenerateQuestions}
-                disabled={!selectedAssessmentId || isLoadingQuestions || isGenerating}
-              >
-                {isGenerating && <span className="assessment-generate-spinner" aria-hidden="true" />}
-                {isGenerating ? 'Generating...' : 'Generate Questions'}
-              </button>
-            </div>
-            {isGenerating && (
-              <div className="assessment-generate-progress" role="status" aria-live="polite">
-                {generationProgress?.label || 'Generating questions with AI...'}
-              </div>
-            )}
-            <p className="assessment-generator-hint">
-              Uses the selected module’s learning materials to create unsaved drafts for review. Nothing is stored until you save.
-            </p>
-          </div>
-        </div>
 
         <ToastMessage message={message.text} type={message.type || 'info'} />
 
@@ -1476,7 +1525,7 @@ export default function AssessmentQuestions() {
           </div>
           <button
             type="button"
-            className="assessment-save-all"
+            className="aq-btn aq-btn--primary"
             onClick={() => handleSaveAllQuestions()}
             disabled={!isDirty || isSavingAll}
           >
@@ -1514,7 +1563,6 @@ export default function AssessmentQuestions() {
                         aria-label="Question number"
                       />
                     </label>
-                    <span className="assessment-question-type-label">Multiple Choice</span>
                     {isQuestionDirty && <span className="assessment-dirty-badge">Unsaved changes</span>}
                     {question._isAiGenerated && <span className="assessment-ai-draft-badge">AI draft</span>}
                     {isGeneratingRow && (
@@ -1527,7 +1575,16 @@ export default function AssessmentQuestions() {
                   <div className="assessment-actions">
                     <button
                       type="button"
-                      className="assessment-generate-one"
+                      className="aq-btn aq-btn--danger"
+                      onClick={() => handleDeleteQuestion(question)}
+                      disabled={isSaving || isGeneratingRow}
+                    >
+                      Delete
+                    </button>
+                    <span className="aq-actions-gap" aria-hidden="true" />
+                    <button
+                      type="button"
+                      className="aq-btn aq-btn--secondary"
                       onClick={() => handleGenerateSingleQuestion(question)}
                       disabled={isSaving || isGenerating || isGeneratingRow}
                     >
@@ -1540,38 +1597,25 @@ export default function AssessmentQuestions() {
                     </button>
                     <button
                       type="button"
-                      className="assessment-save"
+                      className="aq-btn aq-btn--primary"
                       onClick={() => handleSaveQuestion(question)}
                       disabled={isSaving || isGeneratingRow || !isQuestionDirty}
                     >
                       {isSaving ? 'Saving...' : 'Save question'}
-                    </button>
-                    <button
-                      type="button"
-                      className="assessment-delete"
-                      onClick={() => handleDeleteQuestion(question)}
-                      disabled={isSaving || isGeneratingRow}
-                    >
-                      Delete
                     </button>
                   </div>
                 </header>
 
                 <div className="assessment-question-body">
                   <TranslationControls
+                    bare
                     value={question}
                     onChange={(translatedQuestion) => applyQuestionTranslations(question.id, translatedQuestion)}
                     section="assessment_questions"
                     compact
                   />
                   <section className="assessment-edit-section">
-                    <div className="assessment-section-heading">
-                      <span className="assessment-section-number">1</span>
-                      <div>
-                        <h3>Question prompt</h3>
-                        <p>The question shown to personnel during the assessment.</p>
-                      </div>
-                    </div>
+                    <h3 className="assessment-section-heading"><Hint text="The question shown to personnel during the assessment.">Question prompt</Hint></h3>
                     <div className="assessment-language-grid">
                       <label className="assessment-field">
                         <span>English</span>
@@ -1595,13 +1639,7 @@ export default function AssessmentQuestions() {
                   </section>
 
                   <section className="assessment-edit-section">
-                    <div className="assessment-section-heading">
-                      <span className="assessment-section-number">2</span>
-                      <div>
-                        <h3>Choices and correct answer</h3>
-                        <p>Select one correct answer and review both language versions.</p>
-                      </div>
-                    </div>
+                    <h3 className="assessment-section-heading"><Hint text="Select one correct answer and review both language versions.">Choices and correct answer</Hint></h3>
                     <div className="assessment-options-grid">
                       {questionOptions.map((option) => (
                         <div
@@ -1648,13 +1686,7 @@ export default function AssessmentQuestions() {
                   </section>
 
                   <section className="assessment-edit-section">
-                    <div className="assessment-section-heading">
-                      <span className="assessment-section-number">3</span>
-                      <div>
-                        <h3>Answer explanation</h3>
-                        <p>The explanation displayed after answering the question.</p>
-                      </div>
-                    </div>
+                    <h3 className="assessment-section-heading"><Hint text="The explanation displayed after answering the question.">Answer explanation</Hint></h3>
                     <div className="assessment-language-grid">
                       <label className="assessment-field">
                         <span>English</span>
@@ -1683,14 +1715,30 @@ export default function AssessmentQuestions() {
         </div>
 
         {pendingDeleteQuestion && (
-          <div className="assessment-modal-overlay" role="dialog" aria-modal="true">
-            <div className="assessment-modal-box">
-              <h3>Delete Question</h3>
-              <p>Are you sure you want to delete question {pendingDeleteQuestion.question_no}?</p>
+          <div className="assessment-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="aq-delete-title">
+            <div className="assessment-modal-box" ref={deleteModalRef}>
+              <h3 id="aq-delete-title">Delete Question {pendingDeleteQuestion.question_no}?</h3>
+              <div className="aq-delete-details">
+                <p className="aq-delete-prompt">
+                  {pendingDeleteQuestion.prompt || pendingDeleteQuestion.prompt_tl || 'No question text'}
+                </p>
+                <ul className="aq-delete-options">
+                  {(pendingDeleteQuestion.options || []).map((option) => (
+                    <li key={option.option_key} className={option.is_correct ? 'is-correct' : ''}>
+                      <strong>{option.option_key}</strong>
+                      <span>{option.option_text || option.option_text_tl || 'Empty option'}</span>
+                      {option.is_correct && <em>Correct</em>}
+                    </li>
+                  ))}
+                </ul>
+                {pendingDeleteQuestion.explanation && (
+                  <p className="aq-delete-explanation">{pendingDeleteQuestion.explanation}</p>
+                )}
+              </div>
               <div className="assessment-modal-actions">
                 <button
                   type="button"
-                  className="assessment-modal-cancel"
+                  className="aq-btn aq-btn--secondary"
                   onClick={closeDeleteQuestionModal}
                   disabled={Boolean(savingRowIds[pendingDeleteQuestion.id])}
                 >
@@ -1698,11 +1746,11 @@ export default function AssessmentQuestions() {
                 </button>
                 <button
                   type="button"
-                  className="assessment-modal-confirm"
+                  className="aq-btn aq-btn--danger-solid"
                   onClick={confirmDeleteQuestion}
                   disabled={Boolean(savingRowIds[pendingDeleteQuestion.id])}
                 >
-                  {savingRowIds[pendingDeleteQuestion.id] ? 'Deleting...' : 'Delete'}
+                  {savingRowIds[pendingDeleteQuestion.id] ? 'Deleting...' : 'Delete Question'}
                 </button>
               </div>
             </div>
@@ -1730,11 +1778,11 @@ export default function AssessmentQuestions() {
               <div className="assessment-unsaved-actions app-unsaved-actions">
                 <button
                   type="button"
-                  className="assessment-unsaved-btn assessment-unsaved-btn-save app-unsaved-button app-unsaved-button--save"
-                  onClick={handleSaveAndContinue}
+                  className="assessment-unsaved-btn assessment-unsaved-btn-cancel app-unsaved-button app-unsaved-button--cancel"
+                  onClick={handleCancelExit}
                   disabled={isSavingAll}
                 >
-                  {isSavingAll ? 'Saving...' : 'Save All and Continue'}
+                  Cancel
                 </button>
                 <button
                   type="button"
@@ -1746,11 +1794,11 @@ export default function AssessmentQuestions() {
                 </button>
                 <button
                   type="button"
-                  className="assessment-unsaved-btn assessment-unsaved-btn-cancel app-unsaved-button app-unsaved-button--cancel"
-                  onClick={handleCancelExit}
+                  className="assessment-unsaved-btn assessment-unsaved-btn-save app-unsaved-button app-unsaved-button--save"
+                  onClick={handleSaveAndContinue}
                   disabled={isSavingAll}
                 >
-                  Cancel
+                  {isSavingAll ? 'Saving...' : 'Save All and Continue'}
                 </button>
               </div>
             </div>

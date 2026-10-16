@@ -1,5 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+import Hint from './Hint';
+import TranslatorRegistryContext from '../context/TranslatorRegistryContext';
 import { FiArrowRight, FiRefreshCw } from 'react-icons/fi';
 import { translateContent } from '../utils/translationClient';
 import {
@@ -12,8 +14,8 @@ import {
 import './TranslationControls.css';
 
 const DIRECTIONS = [
-  { sourceLanguage: 'en', targetLanguage: 'fil', sourceLabel: 'English', targetLabel: 'Filipino' },
-  { sourceLanguage: 'fil', targetLanguage: 'en', sourceLabel: 'Filipino', targetLabel: 'English' },
+  { sourceLanguage: 'en', targetLanguage: 'fil', sourceLabel: 'English', targetLabel: 'Filipino', sourceCode: 'EN', targetCode: 'FIL' },
+  { sourceLanguage: 'fil', targetLanguage: 'en', sourceLabel: 'Filipino', targetLabel: 'English', sourceCode: 'FIL', targetCode: 'EN' },
 ];
 
 const formatNumber = (value) => new Intl.NumberFormat('en-US').format(Number(value || 0));
@@ -24,7 +26,10 @@ const describePath = (path) => {
   const key = [...path].reverse().find((part) => typeof part === 'string') || 'Field';
   const words = key.replace(/_(en|tl)$/, '').replace(/_/g, ' ').trim();
   const label = words.charAt(0).toUpperCase() + words.slice(1);
-  return index ? `${label} ${index}` : label;
+  if (index) return `${label} ${index}`;
+  // A field inside a list item: say which item so repeated labels stay distinct.
+  const item = path.find((part) => typeof part === 'number');
+  return item === undefined ? label : `${label} (item ${item + 1})`;
 };
 
 export default function TranslationControls({
@@ -32,6 +37,11 @@ export default function TranslationControls({
   onChange,
   section,
   compact = false,
+  bare = false,
+  bulkLabel,
+  // Renders only the status and review UI; a page-level action drives it
+  // through TranslatorRegistryContext instead of its own buttons.
+  headless = false,
   scopeLabel = 'Translation assistant',
   helperText,
   summarizeAffected,
@@ -162,14 +172,14 @@ export default function TranslationControls({
   };
 
   return (
-    <aside className={`translation-assistant${compact ? ' translation-assistant--compact' : ''}`} aria-busy={Boolean(busyDirection)}>
+    <aside className={`translation-assistant${compact ? ' translation-assistant--compact' : ''}${bare ? ' translation-assistant--bare' : ''}`} aria-busy={Boolean(busyDirection)}>
       <div className="translation-assistant-copy">
-        <span className="translation-assistant-kicker"><FiRefreshCw aria-hidden="true" /> {scopeLabel}</span>
-        <p className={compact ? 'is-compact-cue' : undefined}>
-          {helperText || (compact
-            ? 'Draft only · you confirm any replacement.'
-            : 'Fills blank fields with a draft. Edited source text can refresh its translation after you confirm.')}
-        </p>
+        <Hint
+          className="translation-assistant-kicker"
+          text={helperText || 'Fills blank fields with a draft. Edited source text can refresh its translation after you confirm. Nothing is saved until you save.'}
+        >
+          <FiRefreshCw aria-hidden="true" /> {scopeLabel}
+        </Hint>
       </div>
       <div className="translation-assistant-actions">
         {DIRECTIONS.map((direction) => {
@@ -183,9 +193,10 @@ export default function TranslationControls({
               disabled={Boolean(busyDirection)}
             >
               {busyDirection === key ? <span className="translation-assistant-spinner" aria-hidden="true" /> : null}
-              <span>{direction.sourceLabel}</span>
+              {bulkLabel ? <span>{bulkLabel}</span> : null}
+              <span>{bulkLabel ? direction.sourceCode : direction.sourceLabel}</span>
               <FiArrowRight aria-hidden="true" />
-              <span>{direction.targetLabel}</span>
+              <span>{bulkLabel ? direction.targetCode : direction.targetLabel}</span>
             </button>
           );
         })}

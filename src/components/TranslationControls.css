@@ -35,16 +35,6 @@
   font-size: 0.55rem;
   letter-spacing: 0.08em;
 }
-.translation-assistant-copy p {
-  margin: 0.22rem 0 0;
-  color: #667085;
-  font-size: 0.75rem;
-  line-height: 1.45;
-}
-.translation-assistant-copy p.is-compact-cue {
-  margin-top: 0.12rem;
-  font-size: 0.68rem;
-}
 .translation-assistant-actions {
   display: flex;
   flex-wrap: wrap;
@@ -139,7 +129,8 @@
   bottom: 0;
   left: 0;
   height: 3px;
-  background: linear-gradient(90deg, transparent, #b91c2a, transparent);
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(90deg, transparent, #b91c2a, transparent) 0 0 / 60% 100% no-repeat;
   animation: translation-progress 1.1s ease-in-out infinite;
 }
 .translation-assistant-spinner {
@@ -161,11 +152,24 @@
   font-size: 0.7rem;
 }
 
-@keyframes translation-progress { from { transform: translateX(-70%); } to { transform: translateX(70%); } }
+@keyframes translation-progress { from { background-position: -60% 0; } to { background-position: 160% 0; } }
+
+/* Bare: no card of its own, for placing inside an already-framed section. */
+.translation-assistant--bare {
+  grid-template-columns: auto 1fr;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.translation-assistant--bare .translation-assistant-progress { display: none; }
+.translation-assistant--bare .translation-assistant-actions { justify-content: flex-start; }
 @keyframes translation-spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 720px) {
-  .translation-assistant { grid-template-columns: 1fr; }
+  .translation-assistant,
+  .translation-assistant--bare { grid-template-columns: 1fr; }
   .translation-assistant-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: stretch; }
   .translation-assistant-actions button { min-width: 0; padding-inline: 0.5rem; }
   .translation-assistant-status { grid-column: 1; }

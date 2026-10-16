@@ -346,6 +346,19 @@ export const moveAccountToTrash = async (adminId, reason = '') => {
   }
 };
 
+// IDs of permanently protected accounts (the official IGNIS SAFE account).
+// Display only: the database enforces the protection regardless of the UI.
+export const getProtectedAccountIds = async () => {
+  try {
+    const { data, error } = await supabase.rpc('get_protected_account_ids');
+    if (error) throw error;
+    return { data: Array.isArray(data) ? data : [], error: null };
+  } catch (error) {
+    console.warn('Could not load protected account IDs:', error);
+    return { data: [], error: error.message };
+  }
+};
+
 // Grant or revoke Super Admin privileges. Authorization and the audit log entry
 // are enforced server-side by the set_super_admin_privilege RPC.
 export const setSuperAdminPrivilege = async (targetAdminId, grant) => {
@@ -578,7 +591,7 @@ export const getAdminAuditLogs = async () => {
     const [adminRowsRes, activityRowsRes] = await Promise.all([
       supabase
         .from('admin')
-        .select('admin_id, first_name, last_name, email, role, status, created_at, updated_at, last_login')
+        .select('admin_id, first_name, last_name, email, role, is_super_admin, status, created_at, updated_at, last_login')
         .order('updated_at', { ascending: false }),
       supabase
         .from(ADMIN_ACTIVITY_TABLE)
@@ -612,7 +625,7 @@ export const getAdminAuditLogs = async () => {
 
     rows.forEach((row) => {
       const userLabel = `${row.first_name || ''} ${row.last_name || ''}`.trim() || row.email || 'Admin User';
-      const roleLabel = row.role || '-';
+      const roleLabel = row.is_super_admin ? 'Super Admin' : (row.role || '-');
       const statusLabel = row.status || '-';
 
       if (row.created_at) {
@@ -684,6 +697,7 @@ export const getAdminAuditLogs = async () => {
 const capitalizeRoleLabel = (role) => {
   const normalized = String(role || '').trim().toLowerCase();
   if (!normalized) return '—';
+  if (normalized === 'super_admin') return 'Super Admin';
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 };
 

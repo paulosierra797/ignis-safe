@@ -100,6 +100,10 @@ export async function archiveRecord(module, recordId, reason = '') {
     p_reason: String(reason || '').trim() || null
   });
   if (error) throw new Error(toMessage(error, 'Could not archive this record.'));
+  // The database logs and rejects (returns null for) the protected official account.
+  if (!data && (module === 'personnel_accounts' || module === 'mobile_users')) {
+    throw new Error('This is the official IGNIS SAFE system account. It is permanently protected and cannot be deleted.');
+  }
   emitDataChanged({ action: 'archived', module, recordId });
   return data;
 }

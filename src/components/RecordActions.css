@@ -38,5 +38,8 @@
 .record-actions-menu > .record-actions-item:hover:not(:disabled),
 .account-action-menu > button:hover:not(:disabled),
 .admin-report-action-menu > button:hover:not(:disabled) { background: #f1f5f9; }
+/* Locked (protected) action: muted, not destructive-red; still focusable so it can explain itself. */
+.record-actions-menu > .record-actions-item[data-locked] { color: #94a3b8; background: #f8fafc; cursor: not-allowed; }
+.record-actions-menu > .record-actions-item[data-locked]:hover { background: #f1f5f9; }
 .record-actions-trigger:focus-visible, .record-actions-menu > .record-actions-item:focus-visible { outline: 2px solid #b91c1c; outline-offset: 2px; }
 .record-actions-trigger:disabled, .record-actions-menu > button:disabled { opacity: 0.5; cursor: not-allowed; }

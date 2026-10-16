@@ -12,6 +12,7 @@ import {
   FiClock,
   FiEdit3,
   FiInfo,
+  FiLock,
   FiMail,
   FiPhone,
   FiSave,
@@ -30,6 +31,7 @@ import { invitePersonnel } from '../utils/authService';
 import {
   getAllUsers,
   moveAccountToTrash,
+  getProtectedAccountIds,
   logAdminActivity,
   getPersonnelAccountHistory,
   updatePersonnelWorkspaceProfile,
@@ -94,6 +96,9 @@ const EMPTY_PERSONNEL_FORM = {
 const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
 const isSuperAdminAccount = (account) =>
   account?.is_super_admin === true && !account?.is_personnel_workspace_profile;
+const PROTECTED_ACCOUNT_NOTICE = 'This is the official IGNIS SAFE system account. It is permanently protected to maintain administrative access, system continuity, and account recovery. This account cannot be deleted.';
+// Super Admin is shown in place of Admin; the stored Admin role is unchanged.
+const getAccountRoleLabel = (account) => (isSuperAdminAccount(account) ? 'Super Admin' : (account?.role || '—'));
 const getPersonnelInitials = (account) => {
   const first = String(account?.first_name || '').trim().charAt(0);
   const last = String(account?.last_name || '').trim().charAt(0);
@@ -702,6 +707,8 @@ function AccountDirectoryGroup({
   page,
   onPageChange,
   onViewStatus,
+  isProtectedAccount,
+  onShowProtectedNotice,
 }) {
 
   return (
@@ -751,9 +758,23 @@ function AccountDirectoryGroup({
                     <td className="col-rank-role" data-label="Rank/Role">
                       <div className="account-directory-rank-role-cell">
                         <span className="account-directory-rank">{account.rank || '—'}</span>
-                        <span className="account-directory-role">{account.role || '—'}</span>
-                        {isSuperAdminAccount(account) && (
-                          <span className="account-directory-super-admin-badge">Super Admin</span>
+                        {isSuperAdminAccount(account) ? (
+                          <span className="account-directory-role-line">
+                            <span className="account-directory-super-admin-badge">Super Admin</span>
+                            {isProtectedAccount?.(account) && (
+                              <button
+                                type="button"
+                                className="account-protected-lock"
+                                title={PROTECTED_ACCOUNT_NOTICE}
+                                aria-label="Protected account: why can't this be deleted?"
+                                onClick={() => onShowProtectedNotice?.()}
+                              >
+                                <FiLock aria-hidden="true" />
+                              </button>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="account-directory-role">{getAccountRoleLabel(account)}</span>
                         )}
                       </div>
                     </td>
@@ -1105,6 +1126,22 @@ export default function Accounts() {
     setPersonnelPage(1);
     setAdminPage(1);
   };
+
+  // Protected accounts (display only; the database enforces the protection).
+  const [protectedAccountIds, setProtectedAccountIds] = useState([]);
+  const [isProtectedNoticeOpen, setIsProtectedNoticeOpen] = useState(false);
+  const isProtectedAccount = (account) =>
+    !account?.is_personnel_workspace_profile && protectedAccountIds.includes(account?.admin_id);
+
+  useEffect(() => {
+    let cancelled = false;
+    getProtectedAccountIds().then(({ data }) => {
+      if (!cancelled) setProtectedAccountIds(data || []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Fetch accounts on component mount
   useEffect(() => {
@@ -1830,6 +1867,10 @@ export default function Accounts() {
     const targetAccount = accounts.find((account) =>
       String(account.admin_id || account.id) === String(adminId)
     );
+    if (isProtectedAccount(targetAccount)) {
+      setIsProtectedNoticeOpen(true);
+      return;
+    }
     if (String(targetAccount?.role || '').trim().toLowerCase() === 'admin') {
       setDeleteMessage({ type: 'error', text: 'Administrator accounts cannot be deleted.' });
       return;
@@ -2016,6 +2057,12 @@ const handleUpdatePersonnel = async () => {
   if (!updates.first_name || !updates.last_name || !updates.email) {
     setMessage({ type: 'error', text: 'Required fields missing.' });
     return;
+  }
+
+  // Never send the protected account's email or role: both are fixed.
+  if (isProtectedAccount(selectedEditAccount)) {
+    delete updates.email;
+    delete updates.role;
   }
 
   const updateResult = selectedEditAccount.is_personnel_workspace_profile
@@ -3307,12 +3354,22 @@ const permissions = getDefaultPermissions(formData.role);
       && String(account.status || '').trim().toLowerCase() === 'active'
       ? [{ key: 'grant-super-admin', label: 'Grant Super Admin', onSelect: () => handleSuperAdminPrivilege(account, true) }]
       : []),
-    ...(isSuperAdmin && isSuperAdminAccount(account)
+    ...(isSuperAdmin && isSuperAdminAccount(account) && !isProtectedAccount(account)
       ? [{
         key: 'revoke-super-admin',
         label: 'Revoke Super Admin',
         destructive: true,
         onSelect: () => handleSuperAdminPrivilege(account, false)
+      }]
+      : []),
+    ...(isProtectedAccount(account)
+      ? [{
+        key: 'delete-locked',
+        label: 'Delete account',
+        icon: <FiLock aria-hidden="true" />,
+        locked: true,
+        title: PROTECTED_ACCOUNT_NOTICE,
+        onSelect: () => setIsProtectedNoticeOpen(true)
       }]
       : []),
     ...(String(account.role || '').trim().toLowerCase() !== 'admin'
@@ -4238,6 +4295,8 @@ const permissions = getDefaultPermissions(formData.role);
               totalPages={adminTotalPages}
               onPageChange={setAdminPage}
               onViewStatus={openStatusModal}
+              isProtectedAccount={isProtectedAccount}
+              onShowProtectedNotice={() => setIsProtectedNoticeOpen(true)}
             />
             <AccountDirectoryGroup
               title="Personnel Accounts"
@@ -4451,6 +4510,7 @@ const permissions = getDefaultPermissions(formData.role);
       <input
         type="email"
         value={editFormData.email}
+        disabled={isProtectedAccount(selectedEditAccount)}
         onChange={(e) =>
           setEditFormData({
             ...editFormData,
@@ -4459,6 +4519,12 @@ const permissions = getDefaultPermissions(formData.role);
         }
         placeholder="Enter email"
       />
+      {isProtectedAccount(selectedEditAccount) && (
+        <small className="accounts-modal-field-hint accounts-edit-personnel-hint">
+          <FiLock aria-hidden="true" />
+          <span>The official account email is permanently protected.</span>
+        </small>
+      )}
     </div>
 
 
@@ -4499,13 +4565,13 @@ const permissions = getDefaultPermissions(formData.role);
         }
       >
         <option value="personnel">Personnel</option>
-        <option value="admin">Admin</option>
+        <option value="admin">{isSuperAdminAccount(selectedEditAccount) ? 'Super Admin' : 'Admin'}</option>
       </select>
       {isSuperAdminAccount(selectedEditAccount) && (
         <small className="accounts-modal-field-hint accounts-edit-personnel-hint">
           <FiInfo aria-hidden="true" />
           <span>
-            Super Admin accounts keep the Admin role. Revoke Super Admin privileges before changing the role.
+            Super Admin accounts are shown as Super Admin and keep the underlying Admin role.
           </span>
         </small>
       )}
@@ -5682,6 +5748,32 @@ const permissions = getDefaultPermissions(formData.role);
                 <Pagination {...archivePages} label="Archived request pages" />
               </div>
           </ArchiveListModal>
+        )}
+
+        {isProtectedNoticeOpen && (
+          <div className="accounts-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="protected-account-title">
+            <div className="accounts-modal accounts-confirm-modal">
+              <div className="accounts-modal-header">
+                <h3 id="protected-account-title">Protected Account</h3>
+                <CloseButton
+                  className="accounts-modal-close"
+                  onClick={() => setIsProtectedNoticeOpen(false)}
+                  label="Close protected account notice"
+                />
+              </div>
+              <div className="accounts-modal-body">
+                <div className="accounts-protected-notice">
+                  <span className="accounts-protected-notice-icon" aria-hidden="true"><FiLock /></span>
+                  <p>{PROTECTED_ACCOUNT_NOTICE}</p>
+                </div>
+              </div>
+              <div className="accounts-modal-footer">
+                <button className="accounts-modal-draft" onClick={() => setIsProtectedNoticeOpen(false)} autoFocus>
+                  Understood
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {isDeleteUserModalOpen && (

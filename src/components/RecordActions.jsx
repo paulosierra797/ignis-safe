@@ -99,7 +99,8 @@ export default function RecordActions({ children, label = 'Record actions', acti
       {actions.map((action, index) => {
         const Item = action.href ? 'a' : 'button';
         return <Item type={action.href ? undefined : 'button'} href={action.href} target={action.target} rel={action.rel} key={action.key || index} role="menuitem" className="record-actions-item"
-        data-destructive={action.destructive || undefined} disabled={action.disabled} title={action.title}
+        data-destructive={action.destructive || undefined} data-locked={action.locked || undefined}
+        aria-disabled={action.locked || undefined} disabled={action.disabled} title={action.title}
         onClick={event => { setOpen(false); trigger.current?.focus(); action.onSelect?.(event); }}>
         {action.content || <>{action.icon}<span>{action.label}</span></>}
       </Item>;

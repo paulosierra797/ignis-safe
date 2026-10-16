@@ -1653,6 +1653,72 @@
   text-transform: capitalize;
 }
 
+.account-directory-role-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.account-protected-lock {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: help;
+}
+
+.account-protected-lock:hover,
+.account-protected-lock:focus-visible {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.account-protected-lock:focus-visible {
+  outline: 2px solid #b91c1c;
+  outline-offset: 2px;
+}
+
+.account-protected-lock svg {
+  width: 13px;
+  height: 13px;
+}
+
+.accounts-protected-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.accounts-protected-notice p {
+  margin: 0;
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.accounts-protected-notice-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+}
+
 .account-directory-super-admin-badge {
   align-self: flex-start;
   padding: 0.1rem 0.45rem;

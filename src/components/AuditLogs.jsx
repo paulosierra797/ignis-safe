@@ -242,6 +242,7 @@ export default function AuditLogs() {
                 <option>Account Moved to Trash</option>
                 <option>Super Admin Granted</option>
                 <option>Super Admin Revoked</option>
+                <option>Protected Account Deletion Blocked</option>
                 <option>User Login</option>
                 <option>Failed Login Attempt</option>
                 <option>Organizational Chart Updated</option>

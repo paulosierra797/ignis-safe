@@ -36,7 +36,7 @@ def require_admin(authorization: str = Header(default=None)) -> dict:
 
     account_response = (
         supabase.table("admin")
-        .select("admin_id,email,first_name,last_name,role,status")
+        .select("admin_id,email,first_name,last_name,role,status,is_super_admin")
         .eq("admin_id", auth_user_id)
         .limit(1)
         .execute()

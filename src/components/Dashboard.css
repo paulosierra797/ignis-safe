@@ -671,6 +671,20 @@
   row-gap: clamp(3px, 0.7dvh, 8px);
 }
 
+/* Super Admin: a deeper crimson of the Admin red so the two roles are
+   distinguishable at a glance while keeping the same palette. */
+.sidebar--super-admin {
+  background: linear-gradient(180deg, #9f1239 0%, #4c0519 100%);
+}
+
+.sidebar--super-admin .nav-item.active {
+  color: #9f1239;
+}
+
+.sidebar--super-admin .nav-item.active .nav-badge {
+  background: #9f1239;
+}
+
 .sidebar-header {
   display: flex;
   align-items: center;

@@ -2118,8 +2118,10 @@ const handleUpdatePersonnel = async () => {
       rank: finalRank,
       contact_number: contactNumber
     };
+    const submittedRoleLabel = submittedForm.role === 'super_admin' ? 'Super Admin' : submittedForm.role;
     const getDefaultPermissions = (role) => {
   switch (role) {
+    case "super_admin":
     case "admin":
       return [
         "view_dashboard",
@@ -2179,7 +2181,7 @@ const permissions = getDefaultPermissions(formData.role);
             actorName: currentUser?.name || currentUser?.email || 'Admin User',
             action: 'Account Created',
             actionType: 'registration',
-            details: `Created account for ${submittedForm.first_name} ${submittedForm.last_name} (${submittedForm.role}, ${submittedForm.rank}) - ${submittedForm.email}.`,
+            details: `Created account for ${submittedForm.first_name} ${submittedForm.last_name} (${submittedRoleLabel}, ${submittedForm.rank}) - ${submittedForm.email}.`,
             metadata: {
               created_name: `${submittedForm.first_name} ${submittedForm.last_name}`.trim(),
               created_email: submittedForm.email,
@@ -2230,7 +2232,7 @@ const permissions = getDefaultPermissions(formData.role);
         actorName: currentUser?.name || currentUser?.email || 'Admin User',
         action: 'Account Created',
         actionType: 'registration',
-        details: `Created account for ${submittedForm.first_name} ${submittedForm.last_name} (${submittedForm.role}, ${submittedForm.rank}) - ${submittedForm.email}.`,
+        details: `Created account for ${submittedForm.first_name} ${submittedForm.last_name} (${submittedRoleLabel}, ${submittedForm.rank}) - ${submittedForm.email}.`,
         metadata: {
           created_name: `${submittedForm.first_name} ${submittedForm.last_name}`.trim(),
           created_email: submittedForm.email,
@@ -4686,6 +4688,7 @@ const permissions = getDefaultPermissions(formData.role);
                       aria-describedby={formErrors.role ? 'personnel-role-error' : undefined}
                     >
                       <option value="">Select a role...</option>
+                      {isSuperAdmin && <option value="super_admin">Super Admin</option>}
                       <option value="admin">Admin</option>
                       <option value="personnel">Personnel</option>
                     </select>

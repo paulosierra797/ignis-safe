@@ -102,8 +102,8 @@ class CreateUserRequest(BaseModel):
         if value is None:
             return value
         normalized = value.strip().lower()
-        if normalized not in {"admin", "personnel"}:
-            raise ValueError("role must be admin or personnel")
+        if normalized not in {"admin", "personnel", "super_admin"}:
+            raise ValueError("role must be admin, personnel, or super_admin")
         return normalized
 
     @field_validator("rank", "contact_number")
@@ -170,12 +170,25 @@ def build_invite_redirect_url(role: str) -> str:
     ))
 
 
-@router.post("/api/admin/users/create", dependencies=[Depends(require_admin)])
-def create_user(request: CreateUserRequest) -> Dict[str, Any]:
+@router.post("/api/admin/users/create")
+def create_user(
+    request: CreateUserRequest,
+    caller: Dict[str, Any] = Depends(require_admin),
+) -> Dict[str, Any]:
     email = str(request.email or "").strip().lower()
     first_name = str(request.first_name or "").strip()
     last_name = str(request.last_name or "").strip()
-    role = str(request.role or "personnel").strip().lower() or "personnel"
+    requested_role = str(request.role or "personnel").strip().lower() or "personnel"
+    # A Super Admin is an Admin account with the protected is_super_admin flag,
+    # which the database only sets for an active Super Admin caller.
+    create_super_admin = requested_role == "super_admin"
+    role = "admin" if create_super_admin else requested_role
+
+    if create_super_admin and caller.get("is_super_admin") is not True:
+        raise HTTPException(
+            status_code=403,
+            detail="Only a Super Admin can create a Super Admin account.",
+        )
     rank = str(request.rank or "").strip()
     contact_number = str(request.contact_number or "").strip() or None
     permissions = (
@@ -246,6 +259,33 @@ def create_user(request: CreateUserRequest) -> Dict[str, Any]:
         created_admin = (admin_response.data or [None])[0]
         if not created_admin:
             raise HTTPException(status_code=500, detail="Admin profile was not created.")
+
+        if create_super_admin:
+            try:
+                supabase.rpc(
+                    "designate_new_super_admin",
+                    {
+                        "p_actor_admin_id": caller.get("admin_id"),
+                        "p_target_admin_id": auth_user_id,
+                    },
+                ).execute()
+            except Exception as error:
+                # Roll back the new Admin row; the HTTPException handler below
+                # removes the invited auth user.
+                try:
+                    supabase.table("admin").delete().eq("admin_id", auth_user_id).execute()
+                except Exception:
+                    pass
+                if str(getattr(error, "code", "") or "") == "42501":
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Only a Super Admin can create a Super Admin account.",
+                    ) from error
+                raise HTTPException(
+                    status_code=400,
+                    detail="The Super Admin account could not be created. Please try again.",
+                ) from error
+            created_admin = {**created_admin, "is_super_admin": True}
 
         return build_create_response(created_admin, auth_user_id, email)
     except HTTPException:

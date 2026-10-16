@@ -10,10 +10,18 @@ import {
   FiUser
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
 import { useUser } from '../context/UserContext';
 import { useLayout } from '../context/LayoutContext';
 import { ALREADY_FORGOTTEN_DEVICE_MESSAGE } from '../utils/authService';
 import './PageHeader.css';
+
+gsap.registerPlugin(useGSAP);
+
+// Every page mounts its own header, so module scope keeps the Super Admin
+// role chip reveal to once per page load instead of on every navigation.
+let hasRevealedSuperAdminRole = false;
 
 const formatRoleLabel = (role) => {
   if (!role) {
@@ -83,6 +91,34 @@ const PageHeader = ({
     : isSuperAdmin
       ? 'Super Admin'
       : formatRoleLabel(currentUser?.role));
+  const isSuperAdminTheme = variant === 'admin' && isSuperAdmin;
+  const roleRef = useRef(null);
+
+  useGSAP(() => {
+    if (!isSuperAdminTheme || hasRevealedSuperAdminRole || !roleRef.current) {
+      return undefined;
+    }
+
+    const media = gsap.matchMedia();
+    media.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.fromTo(
+        roleRef.current,
+        { autoAlpha: 0, y: 4 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.5,
+          ease: 'power3.out',
+          clearProps: 'opacity,visibility,transform',
+          onComplete: () => {
+            hasRevealedSuperAdminRole = true;
+          }
+        }
+      );
+    });
+    return () => media.revert();
+  }, { dependencies: [isSuperAdminTheme] });
+
   const resolvedUserAvatar = userAvatar ?? currentUser?.avatar_url ?? '/user-avatar.svg';
   const resolvedEmail = currentUser?.email || accountUser?.email || '';
   const resolvedRank = String(currentUser?.rank || '').trim();
@@ -197,10 +233,11 @@ const PageHeader = ({
   };
 
   const variantClass = variant ? `page-header--${variant}` : '';
+  const superAdminClass = isSuperAdminTheme ? 'page-header--super-admin' : '';
   const compactClass = compact ? 'page-header--compact' : '';
 
   return (
-    <div className={`page-header ${variantClass} ${compactClass}`.trim()}>
+    <div className={`page-header ${variantClass} ${superAdminClass} ${compactClass}`.replace(/\s+/g, ' ').trim()}>
       <div className="page-header-left">
         <button
           type="button"
@@ -238,7 +275,7 @@ const PageHeader = ({
             />
             <div className="page-user-info">
               <span className="page-user-name">{resolvedUserName}</span>
-              <span className="page-user-role">{resolvedUserRole}</span>
+              <span className="page-user-role" ref={roleRef}>{resolvedUserRole}</span>
             </div>
           </button>
           {isDropdownOpen && (

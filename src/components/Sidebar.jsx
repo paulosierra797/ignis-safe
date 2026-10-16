@@ -37,7 +37,7 @@ const sidebarScrollPositions = {};
 export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, hasPermission } = useUser();
+  const { currentUser, hasPermission, isSuperAdmin } = useUser();
   const sidebarRef = useRef(null);
   const { isSidebarCollapsed, isMobileSidebarOpen, closeMobileSidebar } = useLayout();
   const [pendingProfileChangeRequests, setPendingProfileChangeRequests] = useState(0);
@@ -253,6 +253,7 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
     : appManagementItems.filter(item => hasPermission(item.permission));
 
   const variantClass = variant ? `sidebar--${variant}` : '';
+  const superAdminClass = variant === 'admin' && isSuperAdmin ? 'sidebar--super-admin' : '';
   const collapsedClass = isSidebarCollapsed ? 'sidebar--collapsed' : '';
   const mobileOpenClass = isMobileSidebarOpen ? 'sidebar--mobile-open' : '';
 
@@ -269,7 +270,7 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
 
       <aside
         ref={sidebarRef}
-        className={`sidebar ${variantClass} ${collapsedClass} ${mobileOpenClass}`.trim()}
+        className={`sidebar ${variantClass} ${superAdminClass} ${collapsedClass} ${mobileOpenClass}`.replace(/\s+/g, ' ').trim()}
         aria-hidden={!isMobileSidebarOpen && undefined}
         onScroll={handleSidebarScroll}
       >

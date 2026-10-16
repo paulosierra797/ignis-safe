@@ -1,0 +1,145 @@
+/* User list: same surface and tokens as the Barangay list (BarangayLearning.css). */
+
+.usr-panel { margin-bottom: var(--progress-section-gap, 1.5rem); }
+
+.usr-count {
+  color: var(--bgy-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Filters ------------------------------------------------------------------ */
+.usr-filters {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1.5fr) repeat(3, minmax(9rem, 1fr)) auto;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+.usr-filters:not(:has(.bgy-filter-clear)) {
+  grid-template-columns: minmax(12rem, 1.5fr) repeat(3, minmax(9rem, 1fr));
+}
+
+.usr-filters .responsive-select {
+  min-height: 40px;
+  padding-block: 0.4rem;
+}
+
+.usr-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--bgy-line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--bgy-ink);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.usr-search::placeholder { color: #94a3b8; }
+
+.usr-search:focus-visible {
+  border-color: #fca5a5;
+  box-shadow: 0 0 0 3px rgba(166, 30, 36, 0.1);
+  outline: none;
+}
+
+/* List --------------------------------------------------------------------- */
+.usr-row {
+  display: grid;
+  grid-template-columns:
+    minmax(11rem, 2fr) minmax(7rem, 1.2fr) minmax(6.5rem, 0.9fr)
+    minmax(8rem, 1.3fr) minmax(6.5rem, 0.9fr) 84px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 10px;
+}
+
+.usr-row--head {
+  color: var(--bgy-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.usr-row--item:nth-child(even) { background: #fafbfd; }
+.usr-row--item:hover { background: #f1f5f9; }
+.usr-row--item.is-muted { color: #94a3b8; }
+
+.usr-head-action { justify-self: end; }
+
+.usr-cell-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.usr-cell-name strong { font-weight: 700; overflow-wrap: anywhere; }
+
+.usr-cell-name small {
+  color: var(--bgy-muted);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.usr-cell { min-width: 0; }
+.usr-cell-label { display: none; }
+
+.usr-text { font-size: 0.88rem; font-weight: 600; }
+
+.bgy-tip.usr-fill { display: flex; width: 100%; }
+.usr-fill .bgy-rate { width: 100%; }
+
+.usr-cell-action {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+}
+
+.bgy-action.usr-action--danger { color: #b91c1c; }
+
+.bgy-action.usr-action--danger:hover,
+.bgy-action.usr-action--danger:focus-visible {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+/* Narrow panel: each user becomes one flat tile. */
+@container (max-width: 860px) {
+  .usr-filters,
+  .usr-filters:not(:has(.bgy-filter-clear)) { grid-template-columns: 1fr 1fr; }
+  .usr-search { grid-column: 1 / -1; }
+
+  .usr-row--head { display: none; }
+
+  .usr-row--item,
+  .usr-row--item:nth-child(even) {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem 1rem;
+    padding: 1rem;
+    background: var(--bgy-tint);
+  }
+
+  .usr-cell-name { grid-column: 1; grid-row: 1; align-self: center; }
+  .usr-cell-name strong { font-size: 1rem; }
+  .usr-cell-action { grid-column: 2; grid-row: 1; }
+
+  .usr-cell { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; }
+  .usr-cell:nth-child(4) { grid-column: 1 / -1; }
+
+  .usr-cell-label {
+    display: block;
+    color: var(--bgy-muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+}
+
+@container (max-width: 480px) {
+  .usr-filters,
+  .usr-filters:not(:has(.bgy-filter-clear)) { grid-template-columns: 1fr; }
+}

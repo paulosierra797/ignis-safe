@@ -50,7 +50,7 @@ const getInitials = (name = '') => name
 const pct = (part, total) => (total > 0 ? (part / total) * 100 : 0);
 
 /* Hover / focus explanation. Keyboard and touch users get it on focus. */
-function Tip({ text, side = 'bottom', focusable = true, className = '', children }) {
+export function Tip({ text, side = 'bottom', focusable = true, className = '', children }) {
   const id = useId();
   const triggerRef = useRef(null);
   const bubbleRef = useRef(null);

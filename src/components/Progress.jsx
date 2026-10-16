@@ -1,7 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  FiAward,
-  FiBarChart2,
   FiBookOpen,
   FiCheckCircle,
   FiChevronDown,
@@ -13,19 +11,16 @@ import { useGSAP } from '@gsap/react';
 import { gsap } from 'gsap';
 import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
-import RecordActions from './RecordActions';
-import Pagination from './Pagination';
+import UserList from './UserList';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import ToastMessage from './ToastMessage';
 import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import { archiveRecord } from '../utils/archiveService';
-import ResponsiveSelect from './ResponsiveSelect';
 import { BarangayDetailModal, BarangayOverview } from './BarangayLearning';
 import { buildLearningDetails } from '../utils/barangayLearning';
 import './Progress.css';
 import {
-  UNSPECIFIED_BARANGAY_LABEL,
   buildBarangaySummary,
   getProgressPageData,
   getUserFeedback,
@@ -92,26 +87,6 @@ const getActivityDescription = (status) =>
     ? 'Activity recorded within the last 7 days.'
     : 'No activity recorded for 7 consecutive days.';
 
-const getUserMilestones = (user) => {
-  const milestones = [];
-  const startedModules = user.modules?.filter((module) => module.progress > 0).length || 0;
-
-  if (startedModules > 0) {
-    milestones.push({ key: 'started', label: 'Training Started', detail: `${startedModules} module${startedModules === 1 ? '' : 's'} accessed` });
-  }
-  if (user.modulesCompleted > 0) {
-    milestones.push({ key: 'modules', label: 'Module Finisher', detail: `${user.modulesCompleted} module${user.modulesCompleted === 1 ? '' : 's'} completed` });
-  }
-  if (user.completedSimulations > 0) {
-    milestones.push({ key: 'simulations', label: 'Simulation Participant', detail: `${user.completedSimulations} simulation${user.completedSimulations === 1 ? '' : 's'} completed` });
-  }
-  if (user.overallPercent >= 100) {
-    milestones.push({ key: 'complete', label: 'Training Complete', detail: 'All available modules completed' });
-  }
-
-  return milestones;
-};
-
 const COMPLETION_RANGES = [
   { label: 'All', min: null, max: null },
   { label: '0%', min: 0, max: 0 },
@@ -154,10 +129,7 @@ export default function Progress() {
   const [searchQuery, setSearchQuery] = useState('');
   const [moduleFilter, setModuleFilter] = useState('All');
   const [barangayFilter, setBarangayFilter] = useState('All');
-  const [locationFilter, setLocationFilter] = useState('All');
   const [completionFilter, setCompletionFilter] = useState('All');
-  const [completionSearchText, setCompletionSearchText] = useState('All');
-  const [isCompletionDropdownOpen, setIsCompletionDropdownOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedBarangay, setSelectedBarangay] = useState(null);
@@ -171,7 +143,6 @@ export default function Progress() {
   const [isTrashing, setIsTrashing] = useState(false);
   const [trashError, setTrashError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const completionBlurTimeoutRef = useRef(null);
   const userModalRef = useRef(null);
   const moreDetailsRef = useRef(null);
   const { currentUser } = useUser();
@@ -236,51 +207,15 @@ export default function Progress() {
   const handleClearFilters = () => {
     setModuleFilter('All');
     setBarangayFilter('All');
-    setLocationFilter('All');
     setCompletionFilter('All');
-    setCompletionSearchText('All');
     setSearchQuery('');
     setBarangayPage(1);
   };
 
-  const completionDropdownOptions = useMemo(() => {
-    const normalizedQuery = completionSearchText.trim().toLowerCase();
-    if (!normalizedQuery || normalizedQuery === completionFilter.toLowerCase()) {
-      return COMPLETION_OPTIONS;
-    }
-    return COMPLETION_OPTIONS.filter((option) =>
-      option.toLowerCase().includes(normalizedQuery)
-    );
-  }, [completionSearchText, completionFilter]);
-
-  const handleCompletionInputFocus = () => {
-    if (completionBlurTimeoutRef.current) {
-      clearTimeout(completionBlurTimeoutRef.current);
-    }
-    setCompletionSearchText('');
-    setIsCompletionDropdownOpen(true);
-  };
-
-  const handleCompletionInputChange = (event) => {
-    setCompletionSearchText(event.target.value);
-    setIsCompletionDropdownOpen(true);
-  };
-
-  const handleCompletionInputBlur = () => {
-    completionBlurTimeoutRef.current = setTimeout(() => {
-      setCompletionSearchText(completionFilter);
-      setIsCompletionDropdownOpen(false);
-    }, 150);
-  };
-
-  const handleSelectCompletionOption = (option) => {
-    if (completionBlurTimeoutRef.current) {
-      clearTimeout(completionBlurTimeoutRef.current);
-    }
-    setCompletionFilter(option);
-    setCompletionSearchText(option);
-    setIsCompletionDropdownOpen(false);
-  };
+  const hasActiveFilters = barangayFilter !== 'All'
+    || moduleFilter !== 'All'
+    || completionFilter !== 'All'
+    || searchQuery.trim() !== '';
 
   const openTrashDialog = (user) => {
     setTrashError('');
@@ -438,19 +373,18 @@ export default function Progress() {
         item.modules.some((module) => module.name === moduleFilter && module.progress > 0);
 
       const matchesBarangay = barangayFilter === 'All' || item.barangay === barangayFilter;
-      const matchesLocation = locationFilter === 'All' || item.locationKey === locationFilter;
 
       const matchesCompletion = matchesCompletionFilter(item.overallPercent, completionFilter);
 
-      return matchesSearch && matchesModule && matchesBarangay && matchesLocation && matchesCompletion;
+      return matchesSearch && matchesModule && matchesBarangay && matchesCompletion;
     });
-  }, [barangayFilter, locationFilter, completionFilter, moduleFilter, progressRows, searchQuery]);
+  }, [barangayFilter, completionFilter, moduleFilter, progressRows, searchQuery]);
 
   // User Progress table pagination: 5 users per page, controls shown only when
   // the filtered list has more than one page. Changing any filter jumps back to
   // the first page (adjusted during render, per the React "you might not need an
   // effect" pattern).
-  const filterSignature = `${barangayFilter}|${locationFilter}|${completionFilter}|${moduleFilter}|${searchQuery}`;
+  const filterSignature = `${barangayFilter}|${completionFilter}|${moduleFilter}|${searchQuery}`;
   const [lastFilterSignature, setLastFilterSignature] = useState(filterSignature);
   if (filterSignature !== lastFilterSignature) {
     setLastFilterSignature(filterSignature);
@@ -525,97 +459,6 @@ export default function Progress() {
           </button>
         </nav>
 
-        {activeView === 'users' && <div className="progress-controls">
-          <div className={`progress-filters progress-filters--${activeView}`}>
-            <div className="progress-filter">
-              <label htmlFor="progress-filter-barangay">Barangay / Location</label>
-              <ResponsiveSelect
-                id="progress-filter-barangay"
-                value={barangayFilter}
-                onChange={(event) => {
-                  setBarangayFilter(event.target.value);
-                  setBarangayPage(1);
-                }}
-                options={barangayOptions.map((value) => ({ value, label: value }))}
-              />
-            </div>
-
-            {activeView === 'users' && <div className="progress-filter">
-              <label htmlFor="progress-filter-location">Location</label>
-              <ResponsiveSelect
-                id="progress-filter-location"
-                value={locationFilter}
-                onChange={(event) => setLocationFilter(event.target.value)}
-                options={[
-                  { value: 'All', label: 'All locations' },
-                  { value: 'dasmarinas', label: 'Dasmariñas City, Cavite' },
-                  { value: 'outside', label: 'Outside Dasmariñas City' },
-                ]}
-              />
-            </div>}
-
-            {activeView === 'users' && <div className="progress-filter">
-              <label htmlFor="progress-filter-module">Filter by Module</label>
-              <ResponsiveSelect
-                id="progress-filter-module"
-                value={moduleFilter}
-                onChange={(event) => setModuleFilter(event.target.value)}
-                options={moduleOptions.map((value) => ({ value, label: value }))}
-              />
-            </div>}
-
-            {activeView === 'users' && <div className="progress-filter progress-filter-searchable">
-              <label htmlFor="progress-filter-completion">Filter by Completion</label>
-              <div className="progress-searchable-select">
-                <input
-                  id="progress-filter-completion"
-                  type="text"
-                  className="progress-searchable-input"
-                  value={isCompletionDropdownOpen ? completionSearchText : completionFilter}
-                  onFocus={handleCompletionInputFocus}
-                  onChange={handleCompletionInputChange}
-                  onBlur={handleCompletionInputBlur}
-                  placeholder="Search completion..."
-                  autoComplete="off"
-                />
-                {isCompletionDropdownOpen && (
-                  <ul className="progress-searchable-options">
-                    {completionDropdownOptions.length === 0 ? (
-                      <li className="progress-searchable-option-empty">No matches</li>
-                    ) : (
-                      completionDropdownOptions.map((option) => (
-                        <li
-                          key={option}
-                          className={`progress-searchable-option ${option === completionFilter ? 'selected' : ''}`}
-                          onMouseDown={() => handleSelectCompletionOption(option)}
-                        >
-                          {option}
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                )}
-              </div>
-            </div>}
-
-            {activeView === 'users' && <div className="progress-filter progress-filter-query">
-              <label htmlFor="progress-user-search">Search Users</label>
-              <input
-                id="progress-user-search"
-                type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search name, email, or location..."
-                autoComplete="off"
-              />
-            </div>}
-
-            <button className="progress-clear" onClick={handleClearFilters}>
-              CLEAR FILTERS
-            </button>
-          </div>
-        </div>}
-
         {activeView === 'barangays' && (
           <BarangayOverview
             rows={visibleBreakdown}
@@ -634,218 +477,59 @@ export default function Progress() {
           />
         )}
 
-        {activeView === 'users' && <div className="progress-table-card progress-users-table">
-          <div className="progress-breakdown-header">
-            <h3>
-              <FiBarChart2 aria-hidden="true" />
-              User Progress
-            </h3>
-            <span className="progress-breakdown-formula">
-              Showing {filteredRows.length} of {totalUsers} users
-            </span>
-          </div>
-          <ToastMessage message={errorMessage} type="error" />
-          <ToastMessage message={successMessage} type="success" />
-          <ArchiveConfirmDialog
-            open={Boolean(trashTarget)}
-            tone="archive"
-            title="Move account to Trash?"
-            description={(
-              <p>
-                They can&apos;t sign in until it&apos;s restored. You can restore it within 30 days.
-                Their learning history is kept.
-              </p>
-            )}
-            recordLabel={trashTarget?.name}
-            recordMeta={trashTarget?.email}
-            reasonPlaceholder="e.g. Duplicate registration"
-            confirmLabel="Move to Trash"
-            busyLabel="Moving…"
-            busy={isTrashing}
-            error={trashError}
-            onConfirm={handleMoveUserToTrash}
-            onClose={closeTrashDialog}
-          />
-          {!isLoading && (
-            <div className="progress-section-pagination progress-section-pagination--users">
-              <Pagination
-                page={safePage}
-                totalItems={filteredRows.length}
-                onPageChange={setCurrentPage}
-                label="Learning profile pages"
-              />
-            </div>
-          )}
-         <div className="progress-desktop-table">
-  <table className="progress-table progress-table--users">
-            <thead>
-              <tr>
-                <th>No.</th>
-                <th>Name</th>
-                <th>Location / Barangay</th>
-                <th>Account Type</th>
-                <th>Module Progress</th>
-                <th>Overall %</th>
-                <th>Last Activity</th>
-                <th>Last Accessed Module</th>
-                <th>Milestones</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan="10" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
-                    Loading progress...
-                  </td>
-                </tr>
-              ) : filteredRows.length === 0 ? (
-                <tr>
-                  <td colSpan="10" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
-                    No progress records found.
-                  </td>
-                </tr>
-              ) : (
-                paginatedRows.map((item, index) => (
-                  <tr key={item.id}>
-                    <td>{(safePage - 1) * USERS_PER_PAGE + index + 1}</td>
-                    <td title={item.name}>{item.name}</td>
-                    <td
-                      title={item.locationKey === 'outside' ? item.location : `${item.barangay}, ${item.location}`}
-                      className={item.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'progress-cell-muted' : ''}
-                    >
-                      {item.barangay}
-                      {item.locationKey !== 'outside' && <small className="progress-location-note">{item.location}</small>}
-                    </td>
-                    <td>
-                      <span className={`progress-account-type-badge ${item.accountType.toLowerCase().replace(/\s+/g, '-')}`}>
-                        {item.accountType}
-                      </span>
-                    </td>
-                    <td>{item.moduleProgress}</td>
-                    <td>{item.overallPercent}%</td>
-                    <td>{formatDate(item.lastActivityAt)}</td>
-                    <td title={item.lastAccessedModule}>{item.lastAccessedModule}</td>
-                    <td title={getUserMilestones(item).map((milestone) => milestone.label).join(', ') || 'No milestones yet'}>
-                      <span className="progress-milestone-count">
-                        <FiAward aria-hidden="true" />
-                        {getUserMilestones(item).length}
-                      </span>
-                    </td>
-                    <td>
-                      <RecordActions label="Learning profile actions">
-                      <button
-                        className="progress-view-btn"
-                        onClick={() => handleViewUser(item)}
-                      >
-                        View details
-                      </button>
-                      <button
-                        type="button"
-                        className="progress-delete-btn"
-                        onClick={() => openTrashDialog(item)}
-                      >
-                        Move to Trash
-                      </button>
-                      </RecordActions>
-                    </td>
-                  </tr>
-                ))
+        {activeView === 'users' && (
+          <>
+            <ToastMessage message={errorMessage} type="error" />
+            <ToastMessage message={successMessage} type="success" />
+            <ArchiveConfirmDialog
+              open={Boolean(trashTarget)}
+              tone="archive"
+              title="Move account to Trash?"
+              description={(
+                <p>
+                  They can&apos;t sign in until it&apos;s restored. You can restore it within 30 days.
+                  Their learning history is kept.
+                </p>
               )}
-            </tbody>
-          </table>
-          </div>
-          <div className="progress-mobile-cards">
-
-  {isLoading ? (
-    <div className="progress-card-empty">
-      Loading progress...
-    </div>
-  ) : filteredRows.length === 0 ? (
-    <div className="progress-card-empty">
-      No progress records found.
-    </div>
-  ) : (
-    paginatedRows.map((item) => (
-      <div className="progress-user-card" key={item.id}>
-
-        <div className="progress-card-header">
-          <div>
-            <h3>{item.name}</h3>
-            <p>{item.email}</p>
-            <span className={`progress-account-type-badge ${item.accountType.toLowerCase().replace(/\s+/g, '-')}`}>
-              {item.accountType}
-            </span>
-          </div>
-
-          <span className="progress-percent">
-            {item.overallPercent}%
-          </span>
-        </div>
-
-
-        <div className="progress-card-row">
-          <span>Location</span>
-          <strong>{item.location}</strong>
-        </div>
-
-        {item.locationKey !== 'outside' && <div className="progress-card-row">
-          <span>Barangay</span>
-          <strong>{item.barangay}</strong>
-        </div>}
-
-
-        <div className="progress-card-row">
-          <span>Last Activity</span>
-          <strong>
-            {formatDate(item.lastActivityAt)}
-          </strong>
-        </div>
-
-
-        <div className="progress-card-row">
-          <span>Last Module</span>
-          <strong>
-            {item.lastAccessedModule}
-          </strong>
-        </div>
-
-
-        <div className="progress-card-row">
-          <span>Modules</span>
-          <strong>
-            {item.moduleProgress}
-          </strong>
-        </div>
-
-        <div className="progress-card-row">
-          <span>Milestones</span>
-          <strong className="progress-mobile-milestone-count">
-            <FiAward aria-hidden="true" /> {getUserMilestones(item).length}
-          </strong>
-        </div>
-
-
-        <RecordActions label="Learning profile actions"><button
-          className="progress-view-btn"
-          onClick={() => handleViewUser(item)}
-        >
-          View details
-        </button>
-        <button
-          type="button"
-          className="progress-delete-btn"
-          onClick={() => openTrashDialog(item)}
-        >
-          Move to Trash
-        </button></RecordActions>
-
-      </div>
-    ))
-  )}
-
-</div>
-        </div>}
+              recordLabel={trashTarget?.name}
+              recordMeta={trashTarget?.email}
+              reasonPlaceholder="e.g. Duplicate registration"
+              confirmLabel="Move to Trash"
+              busyLabel="Moving…"
+              busy={isTrashing}
+              error={trashError}
+              onConfirm={handleMoveUserToTrash}
+              onClose={closeTrashDialog}
+            />
+            <UserList
+              rows={filteredRows}
+              pagedRows={paginatedRows}
+              totalUsers={totalUsers}
+              isLoading={isLoading}
+              page={safePage}
+              onPageChange={setCurrentPage}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              barangayOptions={barangayOptions}
+              barangayFilter={barangayFilter}
+              onBarangayChange={(value) => {
+                setBarangayFilter(value);
+                setBarangayPage(1);
+              }}
+              moduleOptions={moduleOptions}
+              moduleFilter={moduleFilter}
+              onModuleChange={setModuleFilter}
+              completionOptions={COMPLETION_OPTIONS}
+              completionFilter={completionFilter}
+              onCompletionChange={setCompletionFilter}
+              hasActiveFilters={hasActiveFilters}
+              onClear={handleClearFilters}
+              onView={handleViewUser}
+              onTrash={openTrashDialog}
+              formatDate={formatDate}
+            />
+          </>
+        )}
 
         {selectedBarangayDetails && (
           <BarangayDetailModal

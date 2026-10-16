@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { restoreArchivedRecord } from './archiveService';
 
 const REPORTS_TABLE = 'reports';
 const STORAGE_BUCKET = 'report_files';
@@ -469,22 +470,22 @@ export const getAdminArchivedReports = async () => {
   }
 };
 
+// Restores through Archive & Trash so the report returns to the status it had
+// before it was archived. Permanent deletion is only available there.
 export const restoreArchivedReport = async (reportId) => {
-  return updateReportStatus(reportId, 'submitted');
-};
-
-export const permanentlyDeleteReport = async (reportId) => {
   try {
-    const { error } = await supabase
+    await restoreArchivedRecord('reports', reportId);
+    const { data, error } = await supabase
       .from(REPORTS_TABLE)
-      .delete()
-      .eq('report_id', reportId);
+      .select('*')
+      .eq('report_id', reportId)
+      .single();
 
     if (error) throw error;
-    return { error: null };
+    return { data, error: null };
   } catch (error) {
-    console.error('Error deleting archived report:', error);
-    return { error: error.message };
+    console.error('Error restoring archived report:', error);
+    return { data: null, error: error.message };
   }
 };
 

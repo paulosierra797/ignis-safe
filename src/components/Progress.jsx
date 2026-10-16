@@ -23,6 +23,8 @@ import Pagination from './Pagination';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import ToastMessage from './ToastMessage';
+import ArchiveConfirmDialog from './ArchiveConfirmDialog';
+import { archiveRecord } from '../utils/archiveService';
 import ResponsiveSelect from './ResponsiveSelect';
 import './Progress.css';
 import {
@@ -226,6 +228,10 @@ export default function Progress() {
   const [isMoreDetailsOpen, setIsMoreDetailsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [barangayPage, setBarangayPage] = useState(1);
+  const [trashTarget, setTrashTarget] = useState(null);
+  const [isTrashing, setIsTrashing] = useState(false);
+  const [trashError, setTrashError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const completionBlurTimeoutRef = useRef(null);
   const userModalRef = useRef(null);
   const moreDetailsRef = useRef(null);
@@ -335,6 +341,34 @@ export default function Progress() {
     setCompletionFilter(option);
     setCompletionSearchText(option);
     setIsCompletionDropdownOpen(false);
+  };
+
+  const openTrashDialog = (user) => {
+    setTrashError('');
+    setSuccessMessage('');
+    setTrashTarget(user);
+  };
+
+  const closeTrashDialog = () => {
+    if (isTrashing) return;
+    setTrashTarget(null);
+    setTrashError('');
+  };
+
+  const handleMoveUserToTrash = async (reason) => {
+    if (!trashTarget?.id || isTrashing) return;
+    setIsTrashing(true);
+    setTrashError('');
+    try {
+      await archiveRecord('mobile_users', trashTarget.id, reason);
+      setProgressRows((current) => current.filter((row) => row.id !== trashTarget.id));
+      setSuccessMessage(`${trashTarget.name || 'The account'} was moved to Trash. It can be restored from Archive & Trash for 30 days.`);
+      setTrashTarget(null);
+    } catch (error) {
+      setTrashError(error.message);
+    } finally {
+      setIsTrashing(false);
+    }
   };
 
   const handleViewUser = (user) => {
@@ -781,6 +815,27 @@ export default function Progress() {
             </span>
           </div>
           <ToastMessage message={errorMessage} type="error" />
+          <ToastMessage message={successMessage} type="success" />
+          <ArchiveConfirmDialog
+            open={Boolean(trashTarget)}
+            tone="archive"
+            title="Move mobile account to Trash?"
+            description={(
+              <p>
+                The learner can no longer sign in or save progress in the mobile app. The account stays
+                recoverable in Archive &amp; Trash for 30 days, and learning and assessment history is kept.
+              </p>
+            )}
+            recordLabel={trashTarget?.name}
+            recordMeta={trashTarget?.email}
+            reasonPlaceholder="e.g. Duplicate registration"
+            confirmLabel="Move to Trash"
+            busyLabel="Moving..."
+            busy={isTrashing}
+            error={trashError}
+            onConfirm={handleMoveUserToTrash}
+            onClose={closeTrashDialog}
+          />
           {!isLoading && (
             <div className="progress-section-pagination progress-section-pagination--users">
               <Pagination
@@ -854,6 +909,13 @@ export default function Progress() {
                         onClick={() => handleViewUser(item)}
                       >
                         View details
+                      </button>
+                      <button
+                        type="button"
+                        className="progress-delete-btn"
+                        onClick={() => openTrashDialog(item)}
+                      >
+                        Move to Trash
                       </button>
                       </RecordActions>
                     </td>
@@ -939,6 +1001,13 @@ export default function Progress() {
           onClick={() => handleViewUser(item)}
         >
           View details
+        </button>
+        <button
+          type="button"
+          className="progress-delete-btn"
+          onClick={() => openTrashDialog(item)}
+        >
+          Move to Trash
         </button></RecordActions>
 
       </div>

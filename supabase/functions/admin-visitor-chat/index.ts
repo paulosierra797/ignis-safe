@@ -223,6 +223,20 @@ Deno.serve(async (request) => {
 
       const status = body?.status === 'resolved' ? 'resolved' : 'open';
       const now = new Date().toISOString();
+
+      // Reopening un-archives through the database so the Archive & Trash
+      // history attributes the restore to this administrator.
+      if (status === 'open' && conversation.is_archived) {
+        const { error: reopenError } = await serviceClient.rpc('admin_unarchive_visitor_conversation', {
+          p_conversation_id: conversation.id,
+          p_admin_id: admin.admin_id,
+          p_reopen: true,
+        });
+        if (reopenError) throw reopenError;
+        const reopened = await getConversation(conversation.id);
+        return jsonResponse({ data: { conversation: reopened }, error: null });
+      }
+
       // Resolving a conversation archives it automatically, so admins no longer
       // need a separate Archive step. Reopening returns it to the active inbox
       // and cancels any pending deletion (mirrors the 'restore' action).
@@ -285,24 +299,14 @@ Deno.serve(async (request) => {
       const conversation = await getConversation(body?.conversationId);
       if (!conversation) return jsonResponse({ error: 'Conversation not found.' }, 404);
 
-      const now = new Date().toISOString();
-      const { data, error } = await serviceClient
-        .from('visitor_conversations')
-        .update({
-          is_archived: false,
-          archived_at: null,
-          archived_by: null,
-          deletion_requested_at: null,
-          deletion_requested_by: null,
-          delete_after: null,
-          admin_last_read_at: now,
-          updated_at: now,
-        })
-        .eq('id', conversation.id)
-        .select(CONVERSATION_COLUMNS)
-        .single();
+      const { error } = await serviceClient.rpc('admin_unarchive_visitor_conversation', {
+        p_conversation_id: conversation.id,
+        p_admin_id: admin.admin_id,
+        p_reopen: false,
+      });
       if (error) throw error;
-      return jsonResponse({ data: { conversation: data }, error: null });
+      const restored = await getConversation(conversation.id);
+      return jsonResponse({ data: { conversation: restored }, error: null });
     }
 
     if (action === 'schedule-delete') {

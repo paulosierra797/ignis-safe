@@ -907,41 +907,6 @@ export const updateAnnouncement = async (currentUser, announcementId, payload) =
   }
 };
 
-export const deleteAnnouncement = async (currentUser, announcementId) => {
-  try {
-    if (normalizeRole(currentUser?.role) !== 'admin') {
-      throw new Error('Only admin users can delete announcements.');
-    }
-
-    if (!announcementId) throw new Error('Missing announcement id.');
-
-    const { data: deletedRows, error } = await supabase
-      .from(ANNOUNCEMENTS_TABLE)
-      .delete()
-      .eq('announcement_id', announcementId)
-      .select('announcement_id');
-
-    if (error) throw error;
-    if (!deletedRows?.length) throw new Error('Announcement was not found or you are not allowed to delete it.');
-
-    await logAdminActivity({
-      actorId: currentUser.admin_id,
-      actorName: currentUser.name || currentUser.email || 'Admin User',
-      action: 'Announcement Deleted',
-      actionType: 'delete',
-      details: `Announcement ${announcementId} permanently deleted.`,
-      status: 'SUCCESS',
-      metadata: { announcementId }
-    });
-
-    emitDataChanged('announcements', { announcementId, action: 'deleted' });
-    return { data: { announcementId }, error: null };
-  } catch (error) {
-    console.error('Error deleting announcement:', error);
-    return { data: null, error: error.message };
-  }
-};
-
 export const archiveAnnouncement = async (currentUser, announcementId) => {
   try {
     if (normalizeRole(currentUser?.role) !== 'admin') {

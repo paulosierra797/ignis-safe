@@ -1584,50 +1584,13 @@ def health_check() -> Dict[str, str]:
 
 @app.post("/api/admin/users/delete", dependencies=[Depends(require_admin)])
 def delete_user(request: DeleteUserRequest) -> Dict[str, Any]:
-    admin_id = str(request.admin_id).strip()
-
-    account_response = (
-        supabase.table("admin")
-        .select("admin_id, role")
-        .eq("admin_id", admin_id)
-        .maybe_single()
-        .execute()
+    # Accounts are moved to Archive & Trash (public.archive_record) and only
+    # purged by the lifecycle after retention, dependency, and backup checks.
+    # Immediate hard deletion would bypass those checks, so it is retired.
+    raise HTTPException(
+        status_code=410,
+        detail="Immediate account deletion is disabled. Move the account to Archive & Trash instead.",
     )
-    account = account_response.data
-    if not account:
-        raise HTTPException(status_code=404, detail="Account was not found.")
-    if str(account.get("role") or "").strip().lower() == "admin":
-        raise HTTPException(status_code=403, detail="Administrator accounts cannot be deleted.")
-
-    auth_deleted = False
-    auth_error_message: Optional[str] = None
-
-    try:
-      supabase.auth.admin.delete_user(admin_id)
-      auth_deleted = True
-    except Exception as error:
-      lowered_message = str(error).lower()
-      if "not found" not in lowered_message and "does not exist" not in lowered_message:
-          logger.exception("Failed to delete the requested auth user")
-          raise HTTPException(
-              status_code=400,
-              detail="The account could not be deleted. Please try again.",
-          ) from error
-
-    admin_response = supabase.table("admin").delete().eq("admin_id", admin_id).execute()
-    deleted_count = len(admin_response.data or [])
-    if deleted_count == 0:
-        raise HTTPException(status_code=404, detail="No admin row was deleted.")
-
-    return {
-        "data": {
-            "admin_id": admin_id,
-            "deletedCount": deleted_count,
-            "authDeleted": auth_deleted,
-            "authError": None,
-        },
-        "error": None,
-    }
 
 
 from .admin_users import router as admin_users_router

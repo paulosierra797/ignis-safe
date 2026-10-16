@@ -29,7 +29,7 @@ import './AppDialog.css';
 import { invitePersonnel } from '../utils/authService';
 import {
   getAllUsers,
-  deleteUser,
+  moveAccountToTrash,
   logAdminActivity,
   getPersonnelAccountHistory,
   updatePersonnelWorkspaceProfile,
@@ -1856,7 +1856,7 @@ export default function Accounts() {
 
   const confirmDeleteUser = async () => {
     const adminId = pendingDeleteUserId;
-    if (!adminId || deleteConfirmationInput.trim() !== 'Delete') {
+    if (!adminId) {
       return;
     }
 
@@ -1867,32 +1867,28 @@ export default function Accounts() {
       const target = pendingDeleteAccount || accounts.find((account) =>
         String(account.admin_id || account.id) === String(adminId)
       );
-      const { error, deletedCount } = await deleteUser(adminId);
+      const { error } = await moveAccountToTrash(adminId, deleteConfirmationInput);
       if (error) {
-        setDeleteMessage({ type: 'error', text: `Error deleting user: ${error}` });
-        return;
-      }
-
-      if (!deletedCount) {
-        setDeleteMessage({ type: 'error', text: 'Delete request completed but no account was removed. Please check permissions/policies.' });
+        setDeleteMessage({ type: 'error', text: `Could not move the account to Trash: ${error}` });
         return;
       }
 
       await logAdminActivity({
         actorId: currentUser?.admin_id || null,
         actorName: currentUser?.name || currentUser?.email || 'Admin User',
-        action: 'Account Deleted',
+        action: 'Account Moved to Trash',
         actionType: 'archive',
-        details: `Deleted account ${target?.email || adminId}${target?.role ? ` (${target.role})` : ''}.`,
+        details: `Moved account ${target?.email || adminId}${target?.role ? ` (${target.role})` : ''} to Archive & Trash.`,
         metadata: {
-          deleted_admin_id: adminId,
-          deleted_name: `${target?.first_name || ''} ${target?.last_name || ''}`.trim() || null,
-          deleted_email: target?.email || null,
-          deleted_role: target?.role || null
+          trashed_admin_id: adminId,
+          trashed_name: `${target?.first_name || ''} ${target?.last_name || ''}`.trim() || null,
+          trashed_email: target?.email || null,
+          trashed_role: target?.role || null,
+          reason: deleteConfirmationInput.trim() || null
         }
       });
 
-      setDeleteMessage({ type: 'success', text: 'User deleted successfully.' });
+      setDeleteMessage({ type: 'success', text: 'Account moved to Trash. It can be restored from Archive & Trash for 30 days.' });
       fetchAccounts();
 
       setTimeout(() => {
@@ -3323,7 +3319,7 @@ const permissions = getDefaultPermissions(formData.role);
       && !account.is_personnel_workspace_profile
       ? [{
         key: 'delete',
-        label: 'Delete',
+        label: 'Move to Trash',
         destructive: true,
         onSelect: () => handleDeleteUser(account.admin_id || account.id)
       }]
@@ -5692,22 +5688,23 @@ const permissions = getDefaultPermissions(formData.role);
           <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
             <div className="accounts-modal accounts-confirm-modal">
               <div className="accounts-modal-header">
-                <h3>Delete User</h3>
+                <h3>Move Account to Trash</h3>
                 <CloseButton
                   className="accounts-modal-close"
                   onClick={closeDeleteUserModal}
-                  label="Close delete confirmation modal"
+                  label="Close move to Trash confirmation"
                   disabled={isDeleteUserProcessing}
                 />
               </div>
 
               <div className="accounts-modal-body">
                 <p className="accounts-delete-warning">
-                  Are you sure you want to permanently delete this personnel account?
+                  Access is revoked immediately. The account stays recoverable in Archive &amp; Trash for 30 days;
+                  permanent deletion happens only after retention, dependency, and backup checks pass.
                 </p>
 
-                <div className="accounts-delete-preview" aria-label="Personnel account to be deleted">
-                  <div className="accounts-delete-preview-heading">Account to be deleted</div>
+                <div className="accounts-delete-preview" aria-label="Personnel account to move to Trash">
+                  <div className="accounts-delete-preview-heading">Account to move to Trash</div>
                   <strong>
                     {`${pendingDeleteAccount?.first_name || ''} ${pendingDeleteAccount?.last_name || ''}`.trim()
                       || 'Personnel'}
@@ -5720,7 +5717,7 @@ const permissions = getDefaultPermissions(formData.role);
                 </div>
 
                 <label className="accounts-delete-confirm-label" htmlFor="delete-personnel-confirmation">
-                  Type <strong>Delete</strong> to confirm
+                  Reason <span>(optional, shown in Archive &amp; Trash)</span>
                 </label>
                 <input
                   id="delete-personnel-confirmation"
@@ -5728,8 +5725,8 @@ const permissions = getDefaultPermissions(formData.role);
                   type="text"
                   value={deleteConfirmationInput}
                   onChange={(event) => setDeleteConfirmationInput(event.target.value)}
+                  maxLength={500}
                   autoComplete="off"
-                  spellCheck="false"
                   disabled={isDeleteUserProcessing}
                 />
                 {deleteMessage.text && (
@@ -5746,9 +5743,9 @@ const permissions = getDefaultPermissions(formData.role);
                 <button
                   className="delete-btn"
                   onClick={confirmDeleteUser}
-                  disabled={isDeleteUserProcessing || deleteConfirmationInput.trim() !== 'Delete'}
+                  disabled={isDeleteUserProcessing}
                 >
-                  {isDeleteUserProcessing ? 'Deleting...' : 'Delete'}
+                  {isDeleteUserProcessing ? 'Moving...' : 'Move to Trash'}
                 </button>
               </div>
             </div>

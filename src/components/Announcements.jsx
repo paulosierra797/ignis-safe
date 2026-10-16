@@ -14,7 +14,6 @@ import { useUser } from '../context/UserContext';
 import {
   createAnnouncement,
   updateAnnouncement,
-  deleteAnnouncement,
   getAnnouncementsForUser,
   acknowledgeAnnouncement,
   getAudienceLabel,
@@ -192,8 +191,6 @@ export default function Announcements() {
   const [editAnnouncement, setEditAnnouncement] = useState(null);
   const [editForm, setEditForm] = useState({ title: '', content: '' });
   const [savingEdit, setSavingEdit] = useState(false);
-  const [deleteAnnouncementId, setDeleteAnnouncementId] = useState('');
-  const [deletingAnnouncement, setDeletingAnnouncement] = useState(false);
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [archivedLoaded, setArchivedLoaded] = useState(false);
   const [archivedAnnouncements, setArchivedAnnouncements] = useState([]);
@@ -923,23 +920,6 @@ export default function Announcements() {
     await loadAnnouncements();
   };
 
-  const handleDeleteAnnouncement = async () => {
-    if (!deleteAnnouncementId) return;
-    setDeletingAnnouncement(true);
-    const { error } = await deleteAnnouncement(currentUser, deleteAnnouncementId);
-    setDeletingAnnouncement(false);
-
-    if (error) {
-      setMessage({ type: 'error', text: `Failed to delete announcement: ${error}` });
-      return;
-    }
-
-    setAnnouncements((current) => current.filter((item) => item.announcement_id !== deleteAnnouncementId));
-    setArchivedAnnouncements((current) => current.filter((item) => item.announcement_id !== deleteAnnouncementId));
-    setDeleteAnnouncementId('');
-    setMessage({ type: 'success', text: 'Announcement permanently deleted.' });
-  };
-
   const handleNudgePersonnel = async (personnelIds, targetAnnouncementId = acknowledgementModalId) => {
     const announcement = announcements.find(
       (row) => row.announcement_id === targetAnnouncementId
@@ -1529,16 +1509,6 @@ export default function Announcements() {
                           }
                         />
                       )}
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          className="announcement-delete-button"
-                          onClick={() => setDeleteAnnouncementId(announcement.announcement_id)}
-                        >
-                          <FiTrash2 aria-hidden="true" />
-                          Delete
-                        </button>
-                      )}
                     </RecordActions>
                   </div>
 
@@ -1569,7 +1539,7 @@ export default function Announcements() {
           description="Review archived announcements and restore them to the active list."
           count={archivedLoaded ? archivedAnnouncements.length : 0}
           onClose={toggleArchivedPanel}
-          busy={Boolean(restoringId) || Boolean(deleteAnnouncementId)}
+          busy={Boolean(restoringId)}
           size="regular"
         >
             {!archivedLoading && archivedAnnouncements.length > 0 && (
@@ -1710,11 +1680,12 @@ export default function Announcements() {
                         {isAdmin && (
                           <button
                             type="button"
-                            className="archived-delete-button"
-                            onClick={() => setDeleteAnnouncementId(announcement.announcement_id)}
+                            className="archived-manage-button"
+                            onClick={() => navigate('/dashboard/archive-trash')}
+                            title="Deletion countdown and permanent deletion are managed in Archive & Trash."
                           >
                             <FiTrash2 aria-hidden="true" />
-                            Delete
+                            Manage in Archive &amp; Trash
                           </button>
                         )}
                       </RecordActions>
@@ -1797,20 +1768,6 @@ export default function Announcements() {
                 <button type="submit" className="announcement-manage-save" disabled={savingEdit}>{savingEdit ? 'Saving...' : 'Save Changes'}</button>
               </div>
             </form>
-          </section>
-        </div>
-      )}
-
-      {deleteAnnouncementId && (
-        <div className="announcement-manage-modal-overlay">
-          <section className="announcement-delete-confirm" role="alertdialog" aria-modal="true" aria-labelledby="deleteAnnouncementTitle">
-            <div className="history-confirm-heading"><h2 id="deleteAnnouncementTitle">Delete this announcement?</h2><CloseButton label="Close delete confirmation" onClick={() => setDeleteAnnouncementId('')} disabled={deletingAnnouncement} /></div>
-            <p className="history-selected-title">{[...announcements, ...archivedAnnouncements].find(row => row.announcement_id === deleteAnnouncementId)?.title}</p>
-            <p>This permanently removes the announcement and its related recipient and acknowledgment records. This action cannot be undone.</p>
-            <div className="announcement-manage-modal-actions">
-              <button type="button" className="announcement-manage-cancel" onClick={() => setDeleteAnnouncementId('')} disabled={deletingAnnouncement}>Cancel</button>
-              <button type="button" className="announcement-manage-delete" onClick={handleDeleteAnnouncement} disabled={deletingAnnouncement}>{deletingAnnouncement ? 'Deleting...' : 'Delete Permanently'}</button>
-            </div>
           </section>
         </div>
       )}

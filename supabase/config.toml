@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.record-login-audit]
 verify_jwt = false
+
+[functions.archive-maintenance]
+verify_jwt = false

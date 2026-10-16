@@ -33,6 +33,7 @@ const loadHistory = () => import('./components/History');
 const loadAdminReports = () => import('./components/AdminReports');
 const loadVisitorMessages = () => import('./components/VisitorMessages');
 const loadLandingPageEditor = () => import('./components/LandingPageEditorView');
+const loadArchiveTrash = () => import('./components/ArchiveTrash');
 
 const Dashboard = lazy(loadDashboard);
 const ProtectedRoute = lazy(() => import('./components/ProtectedRoute'));
@@ -64,6 +65,7 @@ const ConfirmSignupPage = lazy(() => import('./components/ConfirmSignupPage'));
 const SendMessagePage = lazy(() => import('./components/SendMessagePage'));
 const VisitorMessages = lazy(loadVisitorMessages);
 const LandingPageEditorView = lazy(loadLandingPageEditor);
+const ArchiveTrash = lazy(loadArchiveTrash);
 const AppSessionTracker = lazy(() => import('./components/AppSessionTracker'));
 const LandingPageSections = lazy(() => import('./components/LandingPageSections'));
 const FloatingContactButton = lazy(() => import('./components/FloatingContactButton'));
@@ -86,6 +88,7 @@ const ROUTE_PRELOADERS = {
   '/dashboard/chart': loadChart,
   '/dashboard/about-us': loadAboutUsContent,
   '/dashboard/audit-logs': loadAuditLogs,
+  '/dashboard/archive-trash': loadArchiveTrash,
   '/personnel/operations': loadPersonnelOperations,
   '/personnel/profile': loadPersonnelProfile,
   '/personnel/history': loadHistory,
@@ -280,6 +283,7 @@ function AppRoutes() {
               <Route path="/dashboard/users" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="manage_users"><Progress /></ProtectedRoute>} />
               <Route path="/dashboard/progress" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="view_progress"><Progress /></ProtectedRoute>} />
               <Route path="/dashboard/audit-logs" element={<ProtectedRoute allowedRoles={['admin']}><AuditLogs /></ProtectedRoute>} />
+              <Route path="/dashboard/archive-trash" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="view_audit_logs"><ArchiveTrash /></ProtectedRoute>} />
               <Route path="/dashboard/announcements" element={<ProtectedRoute allowedRoles={['admin']}><Announcements /></ProtectedRoute>} />
               <Route path="/dashboard/landing-page-editor" element={<ProtectedRoute allowedRoles={['admin']} requiredPermission="manage_users"><LandingPageEditorView /></ProtectedRoute>} />
               <Route path="/dashboard/visitor-messages" element={<ProtectedRoute allowedRoles={['admin']}><VisitorMessages /></ProtectedRoute>} />

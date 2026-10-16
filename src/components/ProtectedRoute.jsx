@@ -49,7 +49,9 @@ export default function ProtectedRoute({ children, requiredPermission, allowedRo
     && acknowledgementResult.hasPending;
 
   const normalizedStatus = String(currentUser?.status || '').trim().toLowerCase();
-  const isDeactivated = normalizedStatus === 'inactive' || normalizedStatus === 'suspended';
+  const isDeactivated = normalizedStatus === 'inactive'
+    || normalizedStatus === 'suspended'
+    || normalizedStatus === 'archived';
 
   useEffect(() => {
     if (!isDeactivated) return;

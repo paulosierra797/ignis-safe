@@ -453,7 +453,8 @@ const handleLogin = async (e) => {
     const isAuthorizedBackofficeAccount = Boolean(loginProfile)
       && (authenticatedRole === 'admin' || authenticatedRole === 'personnel')
       && authenticatedStatus !== 'inactive'
-      && authenticatedStatus !== 'suspended';
+      && authenticatedStatus !== 'suspended'
+      && authenticatedStatus !== 'archived';
 
     if (!isAuthorizedBackofficeAccount) {
       try {
@@ -763,7 +764,8 @@ const handleVerify = async (e) => {
         || (verifiedRole === 'personnel' && verifiedStatus !== 'inactive' && verifiedStatus !== 'suspended')
       )
       && verifiedStatus !== 'inactive'
-      && verifiedStatus !== 'suspended';
+      && verifiedStatus !== 'suspended'
+      && verifiedStatus !== 'archived';
 
     if (!isStillAuthorized) {
       try {

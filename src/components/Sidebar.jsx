@@ -14,6 +14,7 @@ import {
   FaQuestionCircle,
   FaSitemap,
   FaTachometerAlt,
+  FaTrashRestore,
   FaUserCog,
   FaUsers
 } from 'react-icons/fa';
@@ -228,6 +229,7 @@ export default function Sidebar({ variant = 'admin', onNavigationRequest }) {
     { id: 'assessment-questions', icon: FaQuestionCircle, label: 'Assessment Questions', path: '/dashboard/assessment-questions', permission: 'manage_users' },
     { id: 'about-us', icon: FaInfoCircle, label: 'About Us Content', path: '/dashboard/about-us', permission: 'manage_users' },
     { id: 'audit-logs', icon: FaClipboardList, label: 'Audit Logs', path: '/dashboard/audit-logs', permission: 'view_audit_logs' },
+    { id: 'archive-trash', icon: FaTrashRestore, label: 'Archive & Trash', path: '/dashboard/archive-trash', permission: 'view_audit_logs' },
   ];
 
   const personnelMenuItems = [

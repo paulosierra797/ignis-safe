@@ -377,7 +377,7 @@ export default function AdminReports() {
 
     setArchivedReports((current) => current.filter((item) => item.report_id !== report.report_id));
     if (data) setReports((current) => [data, ...current.filter((item) => item.report_id !== data.report_id)]);
-    setMessage({ type: 'success', text: 'Report restored to Submitted Reports.' });
+    setMessage({ type: 'success', text: 'Report restored to its previous status.' });
     setProcessingId('');
   };
 

@@ -1,11 +1,11 @@
 import { supabase } from './supabaseClient';
 import { dedupeRequest } from './requestDedupe';
+import { archiveRecord } from './archiveService';
 
 const ADMIN_ACTIVITY_TABLE = 'admin_activity_logs';
 const SHIFT_SCHEDULE_TABLE = 'shift_schedule';
 const PERSONNEL_WORKSPACE_TABLE = 'personnel_workspace_profiles';
 const SHIFT_SCHEDULE_KEY = 'main';
-const ADMIN_API_URL = String(import.meta.env.VITE_ANALYTICS_API_URL || '').replace(/\/+$/, '');
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
 
 const emitDataChanged = (scope, detail = {}) => {
@@ -117,38 +117,6 @@ export const updatePersonnelWorkspaceProfile = async (adminId, updates) => {
     console.error('Error updating personnel workspace profile:', error);
     return { data: null, error: error.message };
   }
-};
-
-const callAdminApi = async (endpoint, payload = null) => {
-  if (!ADMIN_API_URL) return null;
-
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) throw sessionError;
-
-  const accessToken = sessionData?.session?.access_token;
-  if (!accessToken) {
-    throw new Error('Please sign in as an administrator to continue.');
-  }
-
-  const headers = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${accessToken}`,
-  };
-
-  const response = await fetch(`${ADMIN_API_URL}${endpoint}`, {
-    method: payload ? 'POST' : 'GET',
-    headers,
-    body: payload ? JSON.stringify(payload) : undefined,
-  });
-
-  const responseBody = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    const detail = responseBody?.detail || responseBody?.error || `Request failed (${response.status})`;
-    throw new Error(detail);
-  }
-
-  return responseBody;
 };
 
 export const getShiftScheduleConfig = async () => dedupeRequest('getShiftScheduleConfig', async () => {
@@ -280,7 +248,8 @@ export const getAllUsers = async ({ includePersonnelWorkspaceProfiles = false } 
       if (accountsResult.error) throw accountsResult.error;
       if (profilesResult.error) throw profilesResult.error;
 
-      const accounts = accountsResult.data || [];
+      // Accounts in Archive & Trash are managed there, not in normal lists.
+      const accounts = (accountsResult.data || []).filter((account) => account.status !== 'Archived');
       if (!includePersonnelWorkspaceProfiles) {
         return { data: accounts, error: null };
       }
@@ -358,54 +327,21 @@ export const updateUser = async (adminId, updates) => {
   }
 };
 
-// Delete admin
-export const deleteUser = async (adminId) => {
+// Soft-deletes a personnel account: access is revoked immediately and the
+// account stays recoverable in Archive & Trash for its recovery period.
+// Administrator and Super Admin accounts are rejected server-side.
+export const moveAccountToTrash = async (adminId, reason = '') => {
   try {
     const normalizedAdminId = String(adminId || '').trim();
     if (!normalizedAdminId) {
-      return { data: null, deletedCount: 0, error: 'Missing admin ID.' };
+      return { data: null, error: 'Missing admin ID.' };
     }
 
-    if (ADMIN_API_URL) {
-      const response = await callAdminApi('/api/admin/users/delete', { admin_id: normalizedAdminId });
-      return {
-        data: response?.data || null,
-        deletedCount: response?.data?.deletedCount || 0,
-        error: response?.error || null
-      };
-    }
-
-    const { data: targetAccount, error: lookupError } = await supabase
-      .from('admin')
-      .select('role')
-      .eq('admin_id', normalizedAdminId)
-      .maybeSingle();
-
-    if (lookupError) throw lookupError;
-    if (!targetAccount) {
-      return { data: null, deletedCount: 0, error: 'Account was not found.' };
-    }
-    if (String(targetAccount.role || '').trim().toLowerCase() === 'admin') {
-      return { data: null, deletedCount: 0, error: 'Administrator accounts cannot be deleted.' };
-    }
-
-    const { data, error } = await supabase
-      .from('admin')
-      .delete()
-      .eq('admin_id', normalizedAdminId)
-      .select('admin_id');
-
-    if (error) throw error;
-
-    const deletedCount = Array.isArray(data) ? data.length : 0;
-    if (deletedCount === 0) {
-      throw new Error('No account was deleted. Check admin table DELETE policy (RLS) and target user ID.');
-    }
-
-    emitDataChanged('users', { action: 'delete', admin_id: normalizedAdminId });
-    return { data, deletedCount, error: null };
+    const itemId = await archiveRecord('personnel_accounts', normalizedAdminId, reason);
+    emitDataChanged('users', { action: 'trash', admin_id: normalizedAdminId });
+    return { data: { itemId }, error: null };
   } catch (error) {
-    console.error('Error deleting admin:', error);
+    console.error('Error moving account to Trash:', error);
     return { data: null, error: error.message };
   }
 };

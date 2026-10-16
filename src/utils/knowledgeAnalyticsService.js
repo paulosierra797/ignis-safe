@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import { getUsersFromProfiles } from './usersService';
-import { getAccountStatus } from './progressService';
+import { getAccountStatus, getModuleCompletionPercent } from './progressService';
 import { dedupeRequest } from './requestDedupe';
 import { selectAssessmentAttempts } from './assessmentAttemptsQuery';
 import { keepLatestRoundAttempts } from './assessmentHistory';
@@ -452,7 +452,7 @@ const fetchAnalyticsBaseData = async () => dedupeRequest('loadAnalyticsBaseData'
     supabase.from('modules').select('id, module_no, title'),
     supabase
       .from('module_progress')
-      .select('user_id, module_id, pre_test_completed_at, simulation_completed_at, post_test_completed_at'),
+      .select('user_id, module_id, pre_test_completed_at, learning_material_completed_at, simulation_completed_at, post_test_completed_at'),
     fetchAppSessions(),
   ]);
 
@@ -1176,13 +1176,7 @@ export const getAnalyticsChartsData = async (filters = {}) => {
       const bucket = completionAccumulator[row.module_id];
       if (!bucket) return;
 
-      const stepsDone = [
-        Boolean(row.pre_test_completed_at),
-        Boolean(row.simulation_completed_at),
-        Boolean(row.post_test_completed_at),
-      ].filter(Boolean).length;
-
-      bucket.completionSum += round((stepsDone / 3) * 100, 2);
+      bucket.completionSum += getModuleCompletionPercent(row, 2);
       bucket.simulationDone += Number(Boolean(row.simulation_completed_at));
       bucket.count += 1;
     });

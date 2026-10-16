@@ -182,13 +182,25 @@ export const getAccountStatus = (lastActivityAt) => {
     : 'Inactive';
 };
 
-const buildModuleProgress = ({ profileId, module, moduleProgressRow, attemptsForUser, assessmentsById }) => {
-  const preDone = Boolean(moduleProgressRow?.pre_test_completed_at);
-  const simulationDone = Boolean(moduleProgressRow?.simulation_completed_at);
-  const postDone = Boolean(moduleProgressRow?.post_test_completed_at);
+// A module is complete once its three required activities are recorded in
+// module_progress. The 3D simulation is optional and repeatable, so it never
+// counts toward completion.
+const MODULE_COMPLETION_WEIGHTS = [
+  ['pre_test_completed_at', 33.33],
+  ['learning_material_completed_at', 33.33],
+  ['post_test_completed_at', 33.34],
+];
 
-  const completedSteps = [preDone, simulationDone, postDone].filter(Boolean).length;
-  const progress = round((completedSteps / 3) * 100, 0);
+export const getModuleCompletionPercent = (moduleProgressRow, decimals = 0) => round(
+  MODULE_COMPLETION_WEIGHTS.reduce(
+    (sum, [field, weight]) => sum + (moduleProgressRow?.[field] ? weight : 0),
+    0,
+  ),
+  decimals,
+);
+
+const buildModuleProgress = ({ profileId, module, moduleProgressRow, attemptsForUser, assessmentsById }) => {
+  const progress = getModuleCompletionPercent(moduleProgressRow);
 
   let status = 'Not yet Started';
   if (progress >= 100) status = 'Completed';

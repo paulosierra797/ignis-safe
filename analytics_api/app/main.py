@@ -395,7 +395,7 @@ def load_analytics_base_data() -> Dict[str, Any]:
     print("Loading module_progress...", flush=True)
     module_progress = fetch_all_rows(
         "module_progress",
-        "user_id,module_id,pre_test_completed_at,simulation_completed_at,post_test_completed_at",
+        "user_id,module_id,pre_test_completed_at,learning_material_completed_at,simulation_completed_at,post_test_completed_at",
     )
 
     print("Loading simulation_sessions...", flush=True)
@@ -1122,14 +1122,14 @@ def build_charts(data: Dict[str, Any], filters: Filters) -> Dict[str, Any]:
         if not bucket:
             continue
 
-        steps_done = sum(
-            [
-                bool(row.get("pre_test_completed_at")),
-                bool(row.get("simulation_completed_at")),
-                bool(row.get("post_test_completed_at")),
-            ]
+        # Required activities only; the optional 3D simulation never counts
+        # toward completion (mirrors getModuleCompletionPercent on the web).
+        completion_percent = (
+            (33.33 if row.get("pre_test_completed_at") else 0)
+            + (33.33 if row.get("learning_material_completed_at") else 0)
+            + (33.34 if row.get("post_test_completed_at") else 0)
         )
-        bucket["completionSum"] += round_value((steps_done / 3) * 100, 2)
+        bucket["completionSum"] += round_value(completion_percent, 2)
         bucket["count"] += 1
 
     completion_by_module = {

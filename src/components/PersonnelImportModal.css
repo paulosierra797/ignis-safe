@@ -6,33 +6,37 @@
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(3px);
 }
 
+/* One size for all five steps so the dialog never jumps between them. */
 .pim-modal {
   display: flex;
   flex-direction: column;
-  width: min(980px, 100%);
-  max-height: calc(100vh - 2.5rem);
+  width: min(95vw, 1760px);
+  height: min(920px, calc(100vh - 2.5rem));
+  height: min(920px, calc(100dvh - 2.5rem));
   background: #ffffff;
-  border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  border-radius: 20px;
+  box-shadow: 0 32px 80px rgba(15, 23, 42, 0.3);
   overflow: hidden;
 }
 
 .pim-header {
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.25rem 1.5rem 0.5rem;
+  padding: 1.5rem 2rem 0.5rem;
 }
 
 .pim-header h3 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
   color: #111827;
 }
 
@@ -47,11 +51,27 @@
 
 .pim-stage {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 1rem;
   min-height: 0;
-  padding: 0.75rem 1.5rem 1.5rem;
+  padding: 0.75rem 2rem 1.5rem;
   overflow-y: auto;
+}
+
+/* Review and results pin summary, toolbar and footer; only the list scrolls. */
+.pim-stage.is-review,
+.pim-stage.is-results {
+  overflow: hidden;
+}
+
+.pim-stage.is-importing {
+  justify-content: center;
+}
+
+.pim-stage.is-upload .pim-drop {
+  flex: 1 1 auto;
+  justify-content: center;
 }
 
 .pim-muted {
@@ -176,6 +196,7 @@
 /* Summary */
 .pim-summary {
   display: flex;
+  flex: 0 0 auto;
   flex-wrap: wrap;
   gap: 0.75rem;
 }
@@ -183,8 +204,8 @@
 .pim-stat {
   display: flex;
   flex-direction: column;
-  min-width: 110px;
-  padding: 0.65rem 1rem;
+  min-width: 130px;
+  padding: 0.7rem 1.1rem;
   border-radius: 12px;
   background: #f1f5f9;
   color: #334155;
@@ -213,6 +234,7 @@
 
 .pim-toolbar {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -235,26 +257,26 @@
   cursor: pointer;
 }
 
-/* Editable table */
+/* Editable table: fills the stage, scrolls vertically, columns size to content. */
 .pim-table-wrap {
-  max-height: 46vh;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 .pim-table {
   width: 100%;
-  min-width: 860px;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 .pim-table th {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 0.6rem 0.5rem;
+  padding: 0.75rem 0.6rem;
   background: #f8fafc;
   color: #64748b;
   font-size: 0.72rem;
@@ -262,10 +284,11 @@
   letter-spacing: 0.04em;
   text-align: left;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .pim-table td {
-  padding: 0.3rem 0.35rem;
+  padding: 0.35rem 0.4rem;
   vertical-align: middle;
 }
 
@@ -283,7 +306,7 @@
 }
 
 .pim-num {
-  width: 2.2rem;
+  width: 3rem;
   color: #94a3b8;
   text-align: center;
   font-variant-numeric: tabular-nums;
@@ -292,13 +315,18 @@
 .pim-input {
   width: 100%;
   min-width: 0;
-  padding: 0.45rem 0.55rem;
+  padding: 0.55rem 0.65rem;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: #1f2937;
   font: inherit;
+  text-overflow: clip;
   transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+select.pim-input {
+  min-width: 11rem;
 }
 
 .pim-input:hover {
@@ -363,9 +391,11 @@
 
 .pim-footer {
   display: flex;
+  flex: 0 0 auto;
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 0.6rem;
+  padding-top: 0.25rem;
 }
 
 /* Confirm */
@@ -410,8 +440,10 @@
 /* Results */
 .pim-results {
   display: grid;
+  flex: 1 1 auto;
+  align-content: start;
   gap: 1rem;
-  max-height: 46vh;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -460,14 +492,42 @@
   color: #b42318;
 }
 
+@media (max-width: 1024px) {
+  .pim-overlay {
+    padding: 0.75rem;
+  }
+
+  .pim-modal {
+    width: 100%;
+    height: calc(100vh - 1.5rem);
+    height: calc(100dvh - 1.5rem);
+  }
+
+  .pim-header,
+  .pim-stage {
+    padding-inline: 1.25rem;
+  }
+}
+
 @media (max-width: 640px) {
   .pim-overlay {
     padding: 0.5rem;
   }
 
+  .pim-modal {
+    height: calc(100vh - 1rem);
+    height: calc(100dvh - 1rem);
+    border-radius: 16px;
+  }
+
   .pim-header,
   .pim-stage {
     padding-inline: 1rem;
+  }
+
+  .pim-stat {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   .pim-footer .pim-btn {

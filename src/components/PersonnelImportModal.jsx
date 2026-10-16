@@ -240,6 +240,15 @@ export default function PersonnelImportModal({
   const failedRows = rows.filter((row) => row.status === 'failed');
   const visibleRows = errorsOnly ? activeRows.filter((row) => validation[row.id]) : activeRows;
 
+  // Size each editable column to its longest value so nothing is clipped.
+  const columnChars = useMemo(() => {
+    const floors = { first_name: 14, last_name: 14, email: 28, rank: 10, contact_number: 13 };
+    return Object.fromEntries(Object.entries(floors).map(([field, floor]) => [
+      field,
+      Math.min(64, activeRows.reduce((max, row) => Math.max(max, String(row[field] || '').length), floor))
+    ]));
+  }, [activeRows]);
+
   // ---- Animations ----
   useEffect(() => {
     if (prefersReducedMotion()) return undefined;
@@ -485,6 +494,7 @@ export default function PersonnelImportModal({
     return (
       <input
         className={`pim-input${error ? ' is-invalid' : ''}`}
+        style={{ minWidth: `calc(${columnChars[field] || 12}ch + 1.5rem)` }}
         value={row[field]}
         onChange={(event) => updateRow(row.id, field, event.target.value)}
         aria-label={`${field.replace('_', ' ')}, row ${rowNumbers[row.id]}`}
@@ -536,7 +546,7 @@ export default function PersonnelImportModal({
           />
         </header>
 
-        <div className="pim-stage" ref={stageRef}>
+        <div className={`pim-stage is-${phase}`} ref={stageRef}>
           {phase === 'upload' && (
             <>
               <div className="pim-guide">

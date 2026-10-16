@@ -1,8 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+import { Line } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Tooltip,
+  Legend,
+} from 'chart.js';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
+import Hint from './Hint';
 import AIRecommendationsDialog from './AIRecommendationsDialog';
 import { getPersonnelOverviewStats, getUsersFromProfiles } from '../utils/usersService';
 import { getAnalyticsDashboardStats, getAnalyticsChartsData } from '../utils/knowledgeAnalyticsService';
@@ -11,6 +24,10 @@ import { getManilaToday, getMonthKeyInTimeZone } from '../utils/dateUtils';
 import { formatStatusLabel } from '../utils/statusUtils';
 import './Dashboard.css';
 import './InsightsSurface.css';
+import './DashboardOverview.css';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
+gsap.registerPlugin(useGSAP);
 
 const DEFAULT_ANALYTICS_STATS = {
   activeUsers: 0,
@@ -52,16 +69,6 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const getBarHeights = (values) => {
-  const safeValues = (values || []).map((value) => toNumber(value, 0));
-  const maxValue = Math.max(...safeValues, 0);
-
-  return safeValues.map((value) => {
-    if (maxValue <= 0) return 12;
-    return Math.max(12, Math.round((value / maxValue) * 100));
-  });
-};
-
 const clampPercent = (value) => Math.min(100, Math.max(0, toNumber(value, 0)));
 
 const getKnowledgeLevel = (value) => {
@@ -71,17 +78,26 @@ const getKnowledgeLevel = (value) => {
   return 'Proficient';
 };
 
-function DashboardSectionHeader({ eyebrow, title, description }) {
-  return (
-    <div className="dashboard-section-heading">
-      <div>
-        <span>{eyebrow}</span>
-        <h3>{title}</h3>
-      </div>
-      <p>{description}</p>
-    </div>
-  );
-}
+const percentOf = (value, total) => (total > 0 ? clampPercent((toNumber(value, 0) / total) * 100) : 0);
+
+const RING_RADIUS = 32;
+
+const LINE_OPTIONS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { mode: 'index', intersect: false },
+  plugins: {
+    legend: {
+      position: 'top',
+      align: 'start',
+      labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, color: '#667085', font: { family: 'Poppins', size: 11 } },
+    },
+  },
+  scales: {
+    y: { beginAtZero: true, ticks: { precision: 0, color: '#667085', font: { size: 11 } }, grid: { color: 'rgba(152, 162, 179, 0.18)' } },
+    x: { ticks: { color: '#667085', font: { size: 11 } }, grid: { display: false } },
+  },
+};
 
 
 export default function Dashboard() {
@@ -109,7 +125,6 @@ export default function Dashboard() {
   });
   const knowledgeGain = analyticsStats.knowledgeGainPercent;
 const isNegative = knowledgeGain < 0;
-const gainColor = isNegative ? "#ef4444" : "#22c55e"; // red : green
   const startingKnowledge = analyticsStats.startingKnowledge;
 
 let startingColor = "#22c55e"; // Green
@@ -390,7 +405,6 @@ if (currentKnowledge < 40) {
 
   const recentActivityLabels = activityTrendsData.labels;
   const recentActivityValues = activityTrendsData.submitted;
-  const activityBarHeights = getBarHeights(recentActivityValues);
 
   const completionRows = chartsData.completionByModule.labels
     .map((label, index) => ({
@@ -402,18 +416,109 @@ if (currentKnowledge < 40) {
 
   const knowledgeGainPrefix = analyticsStats.knowledgeGainPercent > 0 ? '+' : '';
 
-  const handleCardKeyDown = (event, path) => {
+  // Ignore keys pressed on a nested control (tooltip label, select) so they do not trigger the card.
+  const handleActivateKeyDown = (event, action) => {
+    if (event.target !== event.currentTarget) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      navigate(path);
+      action();
     }
   };
+
+  const handleCardKeyDown = (event, path) => handleActivateKeyDown(event, () => navigate(path));
+
+  const mainRef = useRef(null);
+
+  // Subtle entrance only; skipped when reduced motion is preferred.
+  useGSAP(() => {
+    const media = gsap.matchMedia();
+    media.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.from('.ov-reveal', { y: 12, opacity: 0, duration: 0.5, stagger: 0.07, ease: 'power3.out', clearProps: 'transform,opacity' });
+    });
+    return () => media.revert();
+  }, { scope: mainRef });
+
+  const gainClass = isNegative ? 'is-negative' : 'is-positive';
+  const attendance = clampPercent(personnelStats.attendancePercentage);
+  const ringCircumference = 2 * Math.PI * RING_RADIUS;
+  const totalPersonnel = toNumber(personnelStats.totalPersonnel, 0);
+  const show = (loading, value) => (loading ? '...' : value);
+
+  const lineData = {
+    labels: activityTrendsLoading ? [] : recentActivityLabels,
+    datasets: [
+      {
+        label: 'Started',
+        data: activityTrendsLoading ? [] : activityTrendsData.started,
+        borderColor: '#94a3b8',
+        backgroundColor: '#94a3b8',
+        borderWidth: 2,
+        tension: 0.35,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+      },
+      {
+        label: 'Submitted',
+        data: activityTrendsLoading ? [] : recentActivityValues,
+        borderColor: '#b91c1c',
+        backgroundColor: '#b91c1c',
+        borderWidth: 2.5,
+        tension: 0.35,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+      },
+    ],
+  };
+
+  const registrationMax = Math.max(mobileStats.newRegistrationsCurrent, mobileStats.newRegistrationsPrevious, 1);
+
+  const personnelRows = [
+    {
+      key: 'onDuty',
+      label: 'On Duty',
+      hint: 'Assigned today and not on approved leave.',
+      value: todayPersonnel.onDuty.length,
+      loading: todayPersonnelLoading,
+      onActivate: () => setIsOnDutyModalOpen(true),
+      aria: 'View personnel on duty today',
+    },
+    {
+      key: 'onLeave',
+      label: 'On Leave',
+      hint: 'Personnel on approved leave today.',
+      value: todayPersonnel.onLeave.length,
+      loading: todayPersonnelLoading,
+      tone: 'warn',
+      onActivate: () => setIsOnLeaveModalOpen(true),
+      aria: 'View personnel on leave today',
+    },
+    {
+      key: 'shiftA',
+      label: 'Shift A',
+      hint: 'Personnel assigned to Shift A today.',
+      value: shiftAssignments.shiftA.length,
+      loading: shiftAssignmentsLoading,
+      tone: 'neutral',
+      onActivate: () => setIsShiftAModalOpen(true),
+      aria: 'View personnel assigned to Shift A today',
+    },
+    {
+      key: 'shiftB',
+      label: 'Shift B',
+      hint: 'Personnel assigned to Shift B today.',
+      value: shiftAssignments.shiftB.length,
+      loading: shiftAssignmentsLoading,
+      tone: 'neutral',
+      onActivate: () => setIsShiftBModalOpen(true),
+      aria: 'View personnel assigned to Shift B today',
+    },
+  ];
 
   return (
     <div className="dashboard-container">
       <Sidebar />
 
-      <div className="dashboard-main">
+      <div className="dashboard-main" ref={mainRef}>
         <PageHeader
           title="Dashboard"
           searchQuery={searchQuery}
@@ -426,468 +531,266 @@ if (currentKnowledge < 40) {
           </div>
         )}
 
-        {/* Personnel Metrics Section */}
-        <div className="metrics-section">
-          <DashboardSectionHeader
-            eyebrow="Today"
-            title="Personnel Operations"
-            description="Current staffing, attendance, duty, and leave information for today's operations."
-          />
-          <div className="metrics-grid">
-            <div
-              className="metric-card clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate('/dashboard/accounts?tab=personnel')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/accounts?tab=personnel')}
-              aria-label="Open Personnel Directory"
-            >
-              <div className="metric-icon personnel">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M8.5 11C10.7091 11 12.5 9.20914 12.5 7C12.5 4.79086 10.7091 3 8.5 3C6.29086 3 4.5 4.79086 4.5 7C4.5 9.20914 6.29086 11 8.5 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="metric-content">
-                <p className="metric-label">Total Personnel</p>
-                <div className="metric-value">
-                  <span className="main-number">{personnelStats.totalPersonnel}</span>
+        <div className="ov-stack">
+          {/* Personnel Operations */}
+          <section className="ov-panel ov-reveal">
+            <h3 className="ov-title">
+              <Hint text="Staffing, attendance, duty and leave for today.">Personnel Operations</Hint>
+            </h3>
+            <div className="ov-personnel">
+              <div className="ov-kpis">
+                <div
+                  className="ov-kpi ov-clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate('/dashboard/accounts?tab=personnel')}
+                  onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/accounts?tab=personnel')}
+                  aria-label="Open Personnel Directory"
+                >
+                  <Hint text="All registered personnel accounts."><span className="ov-label">Total Personnel</span></Hint>
+                  <strong className="ov-number">{personnelStats.totalPersonnel}</strong>
                 </div>
-                <p className="metric-description">Overall registered personnel accounts.</p>
-              </div>
-            </div>
 
-            <div
-              className="metric-card clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => setIsShiftAModalOpen(true)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  setIsShiftAModalOpen(true);
-                }
-              }}
-              aria-label="View personnel assigned to Shift A today"
-            >
-              <div className="metric-icon duty">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="metric-content">
-                <p className="metric-label">Shift A</p>
-                <div className="metric-value">
-                  <span className="main-number">{shiftAssignmentsLoading ? '...' : shiftAssignments.shiftA.length}</span>
+                <div
+                  className="ov-kpi ov-ring-kpi ov-clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate('/attendance-admin')}
+                  onKeyDown={(event) => handleCardKeyDown(event, '/attendance-admin')}
+                  aria-label="Open Attendance page"
+                >
+                  <svg className="ov-ring" viewBox="0 0 80 80" aria-hidden="true">
+                    <circle className="ov-ring-track" cx="40" cy="40" r={RING_RADIUS} />
+                    <circle
+                      className="ov-ring-fill"
+                      cx="40"
+                      cy="40"
+                      r={RING_RADIUS}
+                      strokeDasharray={ringCircumference}
+                      strokeDashoffset={ringCircumference * (1 - attendance / 100)}
+                    />
+                  </svg>
+                  <div>
+                    <Hint text="Share of expected personnel who logged attendance today."><span className="ov-label">Today's Attendance</span></Hint>
+                    <strong className="ov-number">{attendance}<small>%</small></strong>
+                  </div>
                 </div>
-                <p className="metric-description">Personnel assigned to Shift A for today's duty schedule.</p>
               </div>
-            </div>
 
-            <div
-              className="metric-card clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => setIsShiftBModalOpen(true)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  setIsShiftBModalOpen(true);
-                }
-              }}
-              aria-label="View personnel assigned to Shift B today"
-            >
-              <div className="metric-icon duty">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M12 6V12L16 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="metric-content">
-                <p className="metric-label">Shift B</p>
-                <div className="metric-value">
-                  <span className="main-number">{shiftAssignmentsLoading ? '...' : shiftAssignments.shiftB.length}</span>
-                </div>
-                <p className="metric-description">Personnel assigned to Shift B for today's duty schedule.</p>
+              <div className="ov-bars">
+                {personnelRows.map((row) => (
+                  <div
+                    key={row.key}
+                    className="ov-row ov-clickable"
+                    role="button"
+                    tabIndex={0}
+                    onClick={row.onActivate}
+                    onKeyDown={(event) => handleActivateKeyDown(event, row.onActivate)}
+                    aria-label={row.aria}
+                  >
+                    <div className="ov-row-top">
+                      <Hint text={row.hint}><span className="ov-label">{row.label}</span></Hint>
+                      <strong>{show(row.loading, row.value)}</strong>
+                    </div>
+                    <div className="ov-track">
+                      <span
+                        className={`ov-fill ${row.tone ? `is-${row.tone}` : ''}`}
+                        style={{ width: `${row.loading ? 0 : percentOf(row.value, totalPersonnel)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+          </section>
 
-            <div
-              className="metric-card clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate('/attendance-admin')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/attendance-admin')}
-              aria-label="Open Attendance page"
-            >
-              <div className="metric-icon attendance">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 11L12 14L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="metric-content">
-                <p className="metric-label">Today's Attendance</p>
-                <div className="metric-value">
-                  <span className="main-number">{personnelStats.attendancePercentage}</span>
-                  <span className="percentage-sign">%</span>
+          <div className="ov-two">
+            {/* Mobile Learning Activity */}
+            <section className="ov-panel ov-reveal">
+              <h3 className="ov-title">
+                <Hint text="How many learners joined, use the app, and finish training.">Mobile Learning Activity</Hint>
+              </h3>
+              <div className="ov-kpis ov-kpis--row">
+                <div
+                  className="ov-kpi ov-clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate('/dashboard/users?view=users')}
+                  onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/users?view=users')}
+                  aria-label="Open Users page"
+                >
+                  <Hint text="All learner accounts in the mobile app."><span className="ov-label">Total Registered</span></Hint>
+                  <strong className="ov-number">{show(mobileStatsLoading, mobileStats.totalRegistered)}</strong>
+                  <span className={`ov-sub ${mobileStats.registeredThisMonth > 0 ? 'is-positive' : ''}`}>
+                    {show(mobileStatsLoading, `${mobileStats.registeredThisMonth > 0 ? '+' : ''}${mobileStats.registeredThisMonth} this month`)}
+                  </span>
                 </div>
-                <div className="progress-bar">
-                  <div className="progress-fill" style={{ width: `${personnelStats.attendancePercentage}%` }}></div>
+                <div
+                  className="ov-kpi ov-clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate('/dashboard/analytics')}
+                  onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
+                  aria-label="Open Analytics page"
+                >
+                  <Hint text="Learners who used the app today."><span className="ov-label">Active Today</span></Hint>
+                  <strong className="ov-number">{show(mobileStatsLoading, mobileStats.activeUsersToday)}</strong>
+                  <span className="ov-sub">{show(mobileStatsLoading, `This week: ${mobileStats.activeUsersThisWeek}`)}</span>
                 </div>
-                <p className="metric-description">Share of expected personnel who recorded attendance today.</p>
               </div>
-            </div>
 
-            <div
-              className="metric-card clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => setIsOnDutyModalOpen(true)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  setIsOnDutyModalOpen(true);
-                }
-              }}
-              aria-label="View personnel on duty today"
-            >
-              <div className="metric-icon duty">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M9 11L12 14L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M21 12V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="metric-content">
-                <p className="metric-label">On Duty Today</p>
-                <div className="metric-value">
-                  <span className="main-number">{todayPersonnelLoading ? '...' : todayPersonnel.onDuty.length}</span>
+              <div className="ov-bars">
+                <div
+                  className="ov-row ov-clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate('/dashboard/users?view=users')}
+                  onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/users?view=users')}
+                  aria-label="Open Users page"
+                >
+                  <div className="ov-row-top">
+                    <Hint text="Accounts created in the last 30 days, compared with the 30 days before."><span className="ov-label">New Registrations</span></Hint>
+                  </div>
+                  <div className="ov-compare">
+                    <span className="ov-compare-label">Last 30 days</span>
+                    <div className="ov-track"><span className="ov-fill" style={{ width: `${mobileStatsLoading ? 0 : percentOf(mobileStats.newRegistrationsCurrent, registrationMax)}%` }} /></div>
+                    <strong>{show(mobileStatsLoading, mobileStats.newRegistrationsCurrent)}</strong>
+                  </div>
+                  <div className="ov-compare">
+                    <span className="ov-compare-label">30 days before</span>
+                    <div className="ov-track"><span className="ov-fill is-neutral" style={{ width: `${mobileStatsLoading ? 0 : percentOf(mobileStats.newRegistrationsPrevious, registrationMax)}%` }} /></div>
+                    <strong>{show(mobileStatsLoading, mobileStats.newRegistrationsPrevious)}</strong>
+                  </div>
                 </div>
-                <p className="metric-description">Assigned personnel available for duty after approved leave is considered.</p>
-              </div>
-            </div>
 
-            <div
-              className="metric-card clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => setIsOnLeaveModalOpen(true)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  setIsOnLeaveModalOpen(true);
-                }
-              }}
-              aria-label="View personnel on leave today"
-            >
-              <div className="metric-icon leave">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M3 10H21M7 3V6M17 3V6M6.2 21H17.8C18.9201 21 19.4802 21 19.908 20.782C20.2843 20.5903 20.5903 20.2843 20.782 19.908C21 19.4802 21 18.9201 21 17.8V8.2C21 7.07989 21 6.51984 20.782 6.09202C20.5903 5.71569 20.2843 5.40973 19.908 5.21799C19.4802 5 18.9201 5 17.8 5H6.2C5.0799 5 4.51984 5 4.09202 5.21799C3.71569 5.40973 3.40973 5.71569 3.21799 6.09202C3 6.51984 3 7.07989 3 8.2V17.8C3 18.9201 3 19.4802 3.21799 19.908C3.40973 20.2843 3.71569 20.5903 4.09202 20.782C4.51984 21 5.07989 21 6.2 21Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="metric-content">
-                <p className="metric-label">On Leave Today</p>
-                <div className="metric-value">
-                  <span className="main-number">{todayPersonnelLoading ? '...' : todayPersonnel.onLeave.length}</span>
+                <div
+                  className="ov-row ov-clickable"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate('/dashboard/progress?view=users')}
+                  onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/progress?view=users')}
+                  aria-label="Open Progress page"
+                >
+                  <div className="ov-row-top">
+                    <Hint text="Average completion across all training modules."><span className="ov-label">Training Completion</span></Hint>
+                    <strong>{show(mobileStatsLoading, `${mobileStats.trainingCompletionPercent}%`)}</strong>
+                  </div>
+                  <div className="ov-track">
+                    <span className="ov-fill" style={{ width: `${mobileStatsLoading ? 0 : clampPercent(mobileStats.trainingCompletionPercent)}%` }} />
+                  </div>
                 </div>
-                <p className="metric-description">Personnel covered by an approved leave period today.</p>
               </div>
-            </div>
+            </section>
+
+            {/* Knowledge Journey */}
+            <section className="ov-panel ov-reveal">
+              <h3 className="ov-title">
+                <Hint text="Average score before training compared with the latest score.">Knowledge Journey</Hint>
+              </h3>
+              <div
+                className="ov-journey ov-clickable"
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate('/dashboard/analytics')}
+                onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
+                aria-label="Open detailed learning analytics"
+              >
+                <div className="ov-kpi">
+                  <Hint text="Change from the starting score to the latest score."><span className="ov-label">Change</span></Hint>
+                  <strong className={`ov-number ${gainClass}`}>
+                    {show(analyticsLoading, `${knowledgeGainPrefix}${knowledgeGain}%`)}
+                  </strong>
+                </div>
+                <div className="ov-row">
+                  <div className="ov-row-top">
+                    <Hint text="Average score before learners began training."><span className="ov-label">Starting</span></Hint>
+                    <strong>{show(analyticsLoading, `${startingKnowledge}%`)}</strong>
+                  </div>
+                  <div className="ov-track ov-track--lg">
+                    <span className="ov-fill" style={{ width: `${analyticsLoading ? 0 : clampPercent(startingKnowledge)}%`, background: startingColor }} />
+                  </div>
+                  <span className="ov-sub">{getKnowledgeLevel(startingKnowledge)}</span>
+                </div>
+                <div className="ov-row">
+                  <div className="ov-row-top">
+                    <Hint text="Average of the latest learner scores."><span className="ov-label">Current</span></Hint>
+                    <strong>{show(analyticsLoading, `${currentKnowledge}%`)}</strong>
+                  </div>
+                  <div className="ov-track ov-track--lg">
+                    <span className="ov-fill" style={{ width: `${analyticsLoading ? 0 : clampPercent(currentKnowledge)}%`, background: currentColor }} />
+                  </div>
+                  <span className="ov-sub">{getKnowledgeLevel(currentKnowledge)}</span>
+                </div>
+              </div>
+            </section>
           </div>
-        </div>
 
-        {/* Mobile App Users Section */}
-        <div className="metrics-section">
-          <DashboardSectionHeader
-            eyebrow="Engagement"
-            title="Mobile Learning Activity"
-            description="Registration, recent use, and training completion across mobile learners."
-          />
-          <div className="metrics-grid-4">
-            <div
-              className="metric-card compact clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate('/dashboard/users?view=users')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/users?view=users')}
-              aria-label="Open Users page"
-            >
-              <div className="metric-icon users">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89317 18.7122 8.75608 18.1676 9.45768C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="metric-content">
-                <p className="metric-label">Total Registered</p>
-                <div className="metric-value">
-                  <span className="main-number">{mobileStatsLoading ? '...' : mobileStats.totalRegistered}</span>
-                </div>
-                <span className={`metric-trend ${mobileStats.registeredThisMonth > 0 ? 'positive' : ''}`}>
-                  {mobileStatsLoading
-                    ? '...'
-                    : `${mobileStats.registeredThisMonth > 0 ? '+' : ''}${mobileStats.registeredThisMonth} this month`}
-                </span>
-                <p className="metric-description">All learner accounts currently registered in the mobile application.</p>
-              </div>
-            </div>
-
-            <div
-              className="metric-card compact clickable"
+          {/* Learning Performance */}
+          <div className="ov-two ov-two--wide">
+            <section
+              className="ov-panel ov-reveal ov-clickable"
               role="button"
               tabIndex={0}
               onClick={() => navigate('/dashboard/analytics')}
               onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
               aria-label="Open Analytics page"
             >
-              <div className="metric-icon active-users">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <circle cx="19" cy="7" r="4" fill="#22c55e"/>
-                </svg>
+              <div className="ov-title-row">
+                <h3 className="ov-title">
+                  <Hint text="Training attempts started and submitted in each period.">Learning Activity</Hint>
+                </h3>
+                <select
+                  className="ov-select"
+                  value={activityTimeframe}
+                  aria-label="Learning activity timeframe"
+                  onClick={(event) => event.stopPropagation()}
+                  onMouseDown={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                  onChange={(event) => {
+                    event.stopPropagation();
+                    setActivityTimeframe(event.target.value);
+                  }}
+                >
+                  {ACTIVITY_TIMEFRAME_OPTIONS.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
               </div>
-              <div className="metric-content">
-                <p className="metric-label">Active Users Today</p>
-                <div className="metric-value">
-                  <span className="main-number">{mobileStatsLoading ? '...' : mobileStats.activeUsersToday}</span>
-                </div>
-                <span className="metric-detail">
-                  {mobileStatsLoading ? '...' : `This Week: ${mobileStats.activeUsersThisWeek}`}
-                </span>
-                <p className="metric-description">Learners who opened and used the application during the selected day.</p>
+              <div className="ov-chart">
+                <Line data={lineData} options={LINE_OPTIONS} />
               </div>
-            </div>
+            </section>
 
-            <div
-              className="metric-card compact clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate('/dashboard/users?view=users')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/users?view=users')}
-              aria-label="Open Users page"
-            >
-              <div className="metric-icon registrations">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M8.5 11C10.7091 11 12.5 9.20914 12.5 7C12.5 4.79086 10.7091 3 8.5 3C6.29086 3 4.5 4.79086 4.5 7C4.5 9.20914 6.29086 11 8.5 11Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M20 8V14M17 11H23" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="metric-content">
-                <p className="metric-label">New Registrations</p>
-                <div className="metric-value">
-                  <span className="main-number">{mobileStatsLoading ? '...' : mobileStats.newRegistrationsCurrent}</span>
-                </div>
-                <span className="metric-comparison">
-                  {mobileStatsLoading ? '...' : `Last Month: ${mobileStats.newRegistrationsPrevious}`}
-                </span>
-                <p className="metric-description">Accounts created during the most recent 30-day period.</p>
-              </div>
-            </div>
-
-            <div
-              className="metric-card compact clickable"
+            <section
+              className="ov-panel ov-reveal ov-clickable"
               role="button"
               tabIndex={0}
               onClick={() => navigate('/dashboard/progress?view=users')}
               onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/progress?view=users')}
               aria-label="Open Progress page"
             >
-              <div className="metric-icon completion">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M22 11.08V12C21.9988 14.1564 21.3005 16.2547 20.0093 17.9818C18.7182 19.7088 16.9033 20.9725 14.8354 21.5839C12.7674 22.1953 10.5573 22.1219 8.53447 21.3746C6.51168 20.6273 4.78465 19.2461 3.61096 17.4371C2.43727 15.628 1.87979 13.4881 2.02168 11.3363C2.16356 9.18455 2.99721 7.13631 4.39828 5.49706C5.79935 3.85781 7.69279 2.71537 9.79619 2.24013C11.8996 1.7649 14.1003 1.98232 16.07 2.85999" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M22 4L12 14.01L9 11.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="metric-content">
-                <p className="metric-label">Training Completion</p>
-                <div className="metric-value">
-                  <span className="main-number">{mobileStatsLoading ? '...' : mobileStats.trainingCompletionPercent}</span>
-                  <span className="percentage-sign">%</span>
-                </div>
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${mobileStatsLoading ? 0 : mobileStats.trainingCompletionPercent}%` }}
-                  ></div>
-                </div>
-                <p className="metric-description">Average module completion across the available training content.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <section className="dashboard-knowledge-section">
-          <DashboardSectionHeader
-            eyebrow="Learning outcome"
-            title="Knowledge Journey"
-            description="A direct comparison of average learner scores before training and their latest measured scores."
-          />
-          <div
-            className="knowledge-journey"
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate('/dashboard/analytics')}
-            onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
-            aria-label="Open detailed learning analytics"
-          >
-            <div className="knowledge-score">
-              <div
-                className="knowledge-ring"
-                style={{
-                  '--knowledge-value': `${clampPercent(startingKnowledge)}%`,
-                  '--knowledge-color': startingColor,
-                }}
-              >
-                <div>
-                  <strong>{analyticsLoading ? '...' : `${startingKnowledge}%`}</strong>
-                  <span>Starting</span>
-                </div>
-              </div>
-              <div className="knowledge-score-copy">
-                <strong>Starting Knowledge</strong>
-                <span>{getKnowledgeLevel(startingKnowledge)}</span>
-                <p>Average baseline score recorded before learners completed training.</p>
-              </div>
-            </div>
-
-            <div className="knowledge-change">
-              <span className="knowledge-change-label">Measured change</span>
-              <strong style={{ color: gainColor }}>
-                {analyticsLoading ? '...' : `${knowledgeGainPrefix}${knowledgeGain}%`}
-              </strong>
-              <div className="knowledge-change-track" aria-hidden="true">
-                <span style={{ left: `${clampPercent(startingKnowledge)}%`, background: startingColor }} />
-                <span style={{ left: `${clampPercent(currentKnowledge)}%`, background: currentColor }} />
-              </div>
-              <p>
-                {isNegative
-                  ? 'Latest scores are below the starting average and may need closer review.'
-                  : 'Latest scores are above the starting average, showing learning improvement.'}
-              </p>
-            </div>
-
-            <div className="knowledge-score">
-              <div
-                className="knowledge-ring"
-                style={{
-                  '--knowledge-value': `${clampPercent(currentKnowledge)}%`,
-                  '--knowledge-color': currentColor,
-                }}
-              >
-                <div>
-                  <strong>{analyticsLoading ? '...' : `${currentKnowledge}%`}</strong>
-                  <span>Current</span>
-                </div>
-              </div>
-              <div className="knowledge-score-copy">
-                <strong>Current Knowledge</strong>
-                <span>{getKnowledgeLevel(currentKnowledge)}</span>
-                <p>Average latest score after completed assessments and learning activity.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Charts Section */}
-        <DashboardSectionHeader
-          eyebrow="Trends"
-          title="Learning Performance"
-          description="Recent submitted activity and module completion, shown together for quick comparison."
-        />
-        <div className="charts-section">
-          <div
-            className="chart-card clickable chart-card--activity"
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate('/dashboard/analytics')}
-            onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
-            aria-label="Open Analytics page"
-          >
-            <div className="chart-header">
-              <div>
-                <h3>Submitted Learning Activity</h3>
-                <p>Number of completed and submitted attempts in each period.</p>
-              </div>
-              <select
-                className="chart-select"
-                value={activityTimeframe}
-                aria-label="User Activity Trends timeframe"
-                onClick={(event) => event.stopPropagation()}
-                onMouseDown={(event) => event.stopPropagation()}
-                onKeyDown={(event) => event.stopPropagation()}
-                onChange={(event) => {
-                  event.stopPropagation();
-                  setActivityTimeframe(event.target.value);
-                }}
-              >
-                {ACTIVITY_TIMEFRAME_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {option}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="chart-body">
-              <div className="bar-chart">
-                {(recentActivityLabels.length > 0 ? recentActivityLabels : ['-', '-', '-', '-', '-', '-', '-']).map((label, index) => (
-                  <div key={index} className="bar-wrapper">
-                    <div className="bar" style={{ height: `${activityBarHeights[index] || 12}%` }}>
-                      <span className="bar-value">{activityTrendsLoading ? '...' : (recentActivityValues[index] || 0)}</span>
-                    </div>
-                    <span className="bar-label">{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="chart-card clickable"
-            role="button"
-            tabIndex={0}
-            onClick={() => navigate('/dashboard/progress?view=users')}
-            onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/progress?view=users')}
-            aria-label="Open Progress page"
-          >
-            <div className="chart-header">
-              <div>
-                <h3>Completion by Module</h3>
-                <p>Percentage of learners who completed each training module.</p>
-              </div>
-            </div>
-            <div className="chart-body">
-              <div className="stats-list">
+              <h3 className="ov-title">
+                <Hint text="Share of learners who finished each module.">Completion by Module</Hint>
+              </h3>
+              <div className="ov-bars ov-bars--scroll">
                 {completionRows.length === 0 ? (
-                  <div className="stat-item">
-                    <div className="stat-info">
-                      <span className="stat-label">No module progress data available</span>
-                      <span className="stat-percent">0%</span>
-                    </div>
-                    <div className="stat-bar">
-                      <div className="stat-bar-fill in-progress" style={{ width: '0%' }}></div>
-                    </div>
-                  </div>
+                  <p className="ov-empty">{chartsLoading ? 'Loading...' : 'No module progress data yet.'}</p>
                 ) : completionRows.map((row) => (
-                  <div className="stat-item" key={row.label}>
-                    <div className="stat-info">
-                      <span className="stat-label">{row.label}</span>
-                      <span className="stat-percent">{chartsLoading ? '...' : `${Math.round(row.value)}%`}</span>
+                  <div className="ov-row" key={row.label}>
+                    <div className="ov-row-top">
+                      <span className="ov-label">{row.label}</span>
+                      <strong>{show(chartsLoading, `${Math.round(row.value)}%`)}</strong>
                     </div>
-                    <div className="stat-bar">
-                      <div
-                        className={`stat-bar-fill ${row.value >= 80 ? 'completed' : 'in-progress'}`}
-                        style={{ width: `${Math.max(0, Math.min(100, row.value))}%` }}
-                      ></div>
+                    <div className="ov-track">
+                      <span
+                        className={`ov-fill ${row.value >= 80 ? '' : 'is-warn'}`}
+                        style={{ width: `${chartsLoading ? 0 : clampPercent(row.value)}%` }}
+                      />
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           </div>
         </div>
 

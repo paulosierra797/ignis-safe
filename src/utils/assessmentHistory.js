@@ -41,9 +41,15 @@ export const scoreChange = (previous, current) => {
 
 const hasResult = (record) => record.preScore !== null || record.postScore !== null;
 
-export const filterRecords = (records = [], { barangay = ALL_FILTER, moduleId = ALL_FILTER, round = ALL_FILTER } = {}) => (
+export const filterRecords = (records = [], {
+  barangay = ALL_FILTER,
+  userId = ALL_FILTER,
+  moduleId = ALL_FILTER,
+  round = ALL_FILTER,
+} = {}) => (
   records.filter((record) => (
     (barangay === ALL_FILTER || record.barangay === barangay)
+    && (userId === ALL_FILTER || record.userId === userId)
     && (moduleId === ALL_FILTER || record.moduleId === moduleId)
     && (round === ALL_FILTER || record.roundNo === Number(round))
   ))
@@ -87,6 +93,43 @@ export const buildRoundTrend = (records = []) => {
   return Array.from(byRound.entries())
     .sort(([a], [b]) => a - b)
     .map(([roundNo, roundRecords]) => ({ roundNo, ...summarizeRecords(roundRecords) }));
+};
+
+// Summary field plotted for each chart metric.
+export const METRIC_FIELDS = { pre: 'averagePre', post: 'averagePost', gain: 'averageGain' };
+
+// One line per group (barangay, module...) across assessment rounds. `rounds`
+// is the shared x-axis (every round with a submitted result); each series has
+// one summary per round, or null when that group has no result in the round.
+export const buildRoundSeries = (records = [], getGroupKey) => {
+  const taken = records.filter(hasResult);
+  const rounds = Array.from(new Set(taken.map((record) => record.roundNo))).sort((a, b) => a - b);
+  const groups = new Map();
+  taken.forEach((record) => {
+    const key = getGroupKey(record);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(record);
+  });
+
+  const series = Array.from(groups.entries()).map(([key, groupRecords]) => {
+    const byRound = new Map(buildRoundTrend(groupRecords).map((point) => [point.roundNo, point]));
+    return { key, points: rounds.map((roundNo) => byRound.get(roundNo) || null) };
+  });
+  return { rounds, series };
+};
+
+// Barangays ordered by how many distinct learners have results there (most
+// first). Charts take colors from this order on the unfiltered data, so a
+// barangay keeps its color when other filters change.
+export const rankBarangays = (records = []) => {
+  const learners = new Map();
+  records.filter(hasResult).forEach((record) => {
+    if (!learners.has(record.barangay)) learners.set(record.barangay, new Set());
+    learners.get(record.barangay).add(record.userId);
+  });
+  return Array.from(learners.entries())
+    .sort(([nameA, a], [nameB, b]) => (b.size - a.size) || nameA.localeCompare(nameB))
+    .map(([barangay]) => barangay);
 };
 
 // Barangay-level summary rows. `records` drives the headline measures (so the

@@ -2,10 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ALL_FILTER,
+  METRIC_FIELDS,
   buildLearnerComparisons,
+  buildRoundSeries,
   buildRoundTrend,
   filterRecords,
   keepLatestRoundAttempts,
+  rankBarangays,
   scoreChange,
   summarizeByBarangay,
   summarizeRecords,
@@ -57,6 +60,25 @@ test('filters combine barangay, module and round', () => {
   assert.equal(filterRecords(records, { round: '2' }).length, 2);
   assert.equal(filterRecords(records, { barangay: 'Burol I', round: '1' }).length, 1);
   assert.equal(filterRecords(records, { moduleId: 'other' }).length, 0);
+});
+
+test('learner filter narrows to one learner', () => {
+  assert.equal(filterRecords(records, { userId: 'u1' }).length, 2);
+  assert.equal(filterRecords(records, { userId: 'u3', round: '1' }).length, 1);
+});
+
+test('round series share one round axis and use null for missing rounds', () => {
+  const { rounds, series } = buildRoundSeries(records, (row) => row.barangay);
+  assert.deepEqual(rounds, [1, 2]);
+  const salawag = series.find((line) => line.key === 'Salawag');
+  assert.deepEqual(salawag.points.map((point) => point?.[METRIC_FIELDS.post] ?? null), [70, 90]);
+  assert.equal(salawag.points[0].learners, 2);
+  const burol = series.find((line) => line.key === 'Burol I');
+  assert.deepEqual(burol.points.map((point) => point?.[METRIC_FIELDS.pre] ?? null), [80, null]);
+});
+
+test('barangays rank by distinct learners, then name', () => {
+  assert.deepEqual(rankBarangays(records), ['Salawag', 'Burol I']);
 });
 
 test('barangay summary keeps its own round history and skips empty groups', () => {

@@ -123,12 +123,29 @@ export const normalizePublicTrends = (raw) => {
 
   return {
     generatedAt: raw.generated_at || null,
+    // The About Us meaning of "IGNIS SAFE", as written by the admins. Empty
+    // strings mean "not provided" so the tooltip simply leaves that line out.
+    about: {
+      meanings: (Array.isArray(raw.about?.meanings) ? raw.about.meanings : [])
+        .map((row) => ({
+          termEn: String(row?.term_en || '').trim(),
+          termTl: String(row?.term_tl || '').trim(),
+          bodyEn: String(row?.body_en || '').trim(),
+          bodyTl: String(row?.body_tl || '').trim(),
+        }))
+        .filter((row) => row.termEn && (row.bodyEn || row.bodyTl)),
+      togetherEn: String(raw.about?.together_en || '').trim(),
+      togetherTl: String(raw.about?.together_tl || '').trim(),
+    },
     minGroupSize: toCount(raw.min_group_size),
     registeredLearners: toCount(raw.registered_learners),
     registrationsByMonth: normalizeMonthSeries(raw.registrations_by_month, ['total']),
     barangays: {
       represented: toCount(raw.barangays?.represented),
       officialTotal: toCount(raw.barangays?.official_total),
+      representedNames: (Array.isArray(raw.barangays?.represented_names) ? raw.barangays.represented_names : [])
+        .filter((name) => typeof name === 'string' && name.trim() !== '')
+        .map((name) => name.trim()),
       byMonth: normalizeMonthSeries(raw.barangays?.by_month, ['total']),
     },
     completedModules: toCount(raw.completed_modules),

@@ -11,7 +11,7 @@ import { getLandingUiCopy } from '../utils/landingLanguage';
 // Order matches the actual DOM order of sections on the landing page — the
 // scroll-spy loop below relies on this order, which is independent of the
 // order these ids are presented in the nav.
-const SCROLL_SECTION_IDS = ['home', 'announcements', 'mobile-app', 'process', 'about', 'contact', 'faq'];
+const SCROLL_SECTION_IDS = ['home', 'announcements', 'mobile-app', 'trends', 'process', 'about', 'contact', 'faq'];
 
 const PRIMARY_NAV_ITEMS = [
   { id: 'home', labelKey: 'home' }
@@ -19,6 +19,7 @@ const PRIMARY_NAV_ITEMS = [
 
 const RESOURCE_MENU_ITEMS = [
   { id: 'mobile-app', labelKey: 'mobileApp', type: 'section' },
+  { id: 'trends', labelKey: 'communityTrends', type: 'section' },
   { id: 'announcements', labelKey: 'announcements', type: 'section' },
   { id: 'process', labelKey: 'onlineApplication', type: 'section' }
 ];
@@ -187,7 +188,7 @@ export default function Header() {
   const isContactActive =
     (isLandingPage && activeSection === 'contact') || location.pathname === '/send-message';
   const isResourcesActive = isLandingPage
-    && ['mobile-app', 'announcements', 'process'].includes(activeSection);
+    && ['mobile-app', 'trends', 'announcements', 'process'].includes(activeSection);
   const suppressTrackingRef = useRef(false);
   const suppressTimeoutRef = useRef(null);
   // Hash present the moment this Header instance mounts — set when a

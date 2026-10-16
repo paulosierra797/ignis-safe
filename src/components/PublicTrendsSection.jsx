@@ -11,9 +11,10 @@ import {
 } from 'chart.js';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { FiBarChart2, FiInfo, FiRefreshCw, FiShield } from 'react-icons/fi';
+import { FiBarChart2, FiDownload, FiInfo, FiRefreshCw, FiShield } from 'react-icons/fi';
 import { useLandingContent } from '../context/LandingContentContext';
 import { getPublicTrends } from '../utils/publicContentService';
+import { MOBILE_APP_RELEASE } from '../utils/mobileAppRelease';
 import { MANILA_TIME_ZONE } from '../utils/dateUtils';
 import './PublicTrendsSection.css';
 
@@ -31,10 +32,16 @@ const COPY = {
   english: {
     locale: 'en-PH',
     eyebrow: 'Community Trends',
-    title: 'How Dasmariñas is learning fire safety',
+    title: 'How Dasmariñas Uses IGNIS SAFE',
     intro: 'Live totals from IGNIS SAFE learning records. Every number here is counted directly from the database and describes groups of learners, never individual people.',
     updated: 'Updated',
-    privacy: 'Only combined totals are published. No names, contact details, birthdays, or individual scores are ever shown.',
+    privacy: 'Only combined totals are published. No names, contact details, birthdays, or individual scores are shown.',
+    moreInfo: 'More about',
+    brand: {
+      question: 'What does IGNIS SAFE mean?',
+      summary: 'IGNIS SAFE is a fire-safety learning mobile app. It is available for Android only.',
+      download: 'Download for Android',
+    },
     loading: 'Loading community trends…',
     errorTitle: 'Trends are temporarily unavailable',
     errorText: 'We could not load the latest records. Please try again in a moment.',
@@ -46,12 +53,19 @@ const COPY = {
     explainRead: 'How to read it',
     tableCaption: 'Data table',
     month: 'Month',
-    points: 'pts',
     stats: {
-      learners: { label: 'Registered learners', hint: 'Verified mobile app accounts' },
-      barangays: { label: 'Barangays represented', hint: 'Official barangays of Dasmariñas', of: 'of' },
-      modules: { label: 'Completed modules', hint: 'Pre-test, lesson, and post-test finished' },
-      difference: { label: 'Average assessment difference', hint: 'Post-test average minus pre-test average', empty: 'Not enough data yet' },
+      learners: {
+        label: 'Registered learners',
+        hint: 'Verified mobile app accounts',
+        tip: 'The number of people with a verified IGNIS SAFE account. To join, download the IGNIS SAFE mobile app, create an account, and confirm your email.',
+      },
+      barangays: {
+        label: 'Barangays represented',
+        hint: 'Official barangays of Dasmariñas',
+        of: 'of',
+        tip: 'How many barangays have at least one registered learner, out of all official barangays in Dasmariñas.',
+        listTitle: 'Which barangays have learners?',
+      },
     },
     participation: {
       title: 'Participation over time',
@@ -86,10 +100,16 @@ const COPY = {
   tagalog: {
     locale: 'fil-PH',
     eyebrow: 'Mga Trend sa Komunidad',
-    title: 'Paano natututo ng kaligtasan sa sunog ang Dasmariñas',
+    title: 'Paano Ginagamit ng Dasmariñas ang IGNIS SAFE',
     intro: 'Mga kasalukuyang kabuuan mula sa mga talaan ng pag-aaral sa IGNIS SAFE. Bawat numero rito ay direktang binilang mula sa database at naglalarawan ng grupo ng mga mag-aaral, hindi ng iisang tao.',
     updated: 'Na-update',
-    privacy: 'Pinagsamang kabuuan lamang ang inilalathala. Hindi kailanman ipinapakita ang pangalan, contact details, kaarawan, o indibidwal na score.',
+    privacy: 'Pinagsamang kabuuan lamang ang inilalathala. Hindi ipinapakita ang pangalan, contact details, kaarawan, o indibidwal na score.',
+    moreInfo: 'Higit pa tungkol sa',
+    brand: {
+      question: 'Ano ang ibig sabihin ng IGNIS SAFE?',
+      summary: 'Ang IGNIS SAFE ay isang mobile app para sa pag-aaral ng kaligtasan sa sunog. Para lamang ito sa Android.',
+      download: 'I-download para sa Android',
+    },
     loading: 'Kinukuha ang mga trend sa komunidad…',
     errorTitle: 'Pansamantalang hindi makita ang mga trend',
     errorText: 'Hindi namin makuha ang pinakabagong talaan. Pakisubukang muli mamaya.',
@@ -101,12 +121,19 @@ const COPY = {
     explainRead: 'Paano ito basahin',
     tableCaption: 'Talahanayan ng datos',
     month: 'Buwan',
-    points: 'puntos',
     stats: {
-      learners: { label: 'Mga rehistradong mag-aaral', hint: 'Beripikadong account sa mobile app' },
-      barangays: { label: 'Mga barangay na kinakatawan', hint: 'Opisyal na mga barangay ng Dasmariñas', of: 'sa' },
-      modules: { label: 'Mga natapos na module', hint: 'Tapos ang pre-test, aralin, at post-test' },
-      difference: { label: 'Average na pagbabago sa assessment', hint: 'Average ng post-test bawas ang average ng pre-test', empty: 'Kulang pa ang datos' },
+      learners: {
+        label: 'Mga rehistradong mag-aaral',
+        hint: 'Beripikadong account sa mobile app',
+        tip: 'Ang bilang ng mga taong may beripikadong IGNIS SAFE account. Para sumali, i-download ang IGNIS SAFE mobile app, gumawa ng account, at kumpirmahin ang iyong email.',
+      },
+      barangays: {
+        label: 'Mga barangay na kinakatawan',
+        hint: 'Opisyal na mga barangay ng Dasmariñas',
+        of: 'sa',
+        tip: 'Ilang barangay ang may kahit isang rehistradong mag-aaral, mula sa lahat ng opisyal na barangay ng Dasmariñas.',
+        listTitle: 'Aling mga barangay ang may mag-aaral?',
+      },
     },
     participation: {
       title: 'Pakikilahok sa paglipas ng panahon',
@@ -172,18 +199,6 @@ const formatUpdatedAt = (value, locale) => {
     timeStyle: 'short',
     timeZone: MANILA_TIME_ZONE,
   }).format(date);
-};
-
-const formatScore = (value, locale) => new Intl.NumberFormat(locale, {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 1,
-}).format(value);
-
-const formatSignedScore = (value, locale) => {
-  const formatted = formatScore(Math.abs(value), locale);
-  if (value > 0) return `+${formatted}`;
-  if (value < 0) return `−${formatted}`;
-  return formatted;
 };
 
 const hexToRgb = (hex) => [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16)).join(', ');
@@ -343,10 +358,10 @@ function TrendsTip({ content, className = '', bubbleClassName = '', expandable =
     return () => gsap.killTweensOf(bubble);
   }, [open]);
 
+  // Focus is tracked on the wrapper, so tabbing from the trigger into a link
+  // inside the bubble keeps it open instead of closing it first.
   const triggerProps = {
     'aria-describedby': id,
-    onFocus: () => setFocused(true),
-    onBlur: () => setFocused(false),
     onClick: () => {
       if (pinned) close();
       else setPinned(true);
@@ -360,12 +375,58 @@ function TrendsTip({ content, className = '', bubbleClassName = '', expandable =
       className={`trends-tip ${className}`.trim()}
       onPointerEnter={(event) => { if (event.pointerType === 'mouse') setHovered(true); }}
       onPointerLeave={(event) => { if (event.pointerType === 'mouse') setHovered(false); }}
+      onFocus={() => setFocused(true)}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
+      }}
     >
       {children(triggerProps)}
       <span ref={bubbleRef} id={id} role="tooltip" className={`trends-tip-bubble ${bubbleClassName}`.trim()}>
         {content}
       </span>
     </span>
+  );
+}
+
+// "IGNIS SAFE" in the heading. The meanings come from the About Us records in
+// Supabase (English or Filipino to match the selected language); nothing is hardcoded.
+function BrandTip({ copy, about, language }) {
+  const filipino = language === 'tagalog';
+  const pick = (english, filipinoText) => (filipino && filipinoText ? filipinoText : english);
+  const meanings = about?.meanings || [];
+  const together = pick(about?.togetherEn, about?.togetherTl);
+
+  const content = (
+    <div className="trends-brand">
+      <strong>{copy.brand.question}</strong>
+      {meanings.length > 0 ? (
+        <dl>
+          {meanings.map((item) => (
+            <div key={item.termEn}>
+              <dt>{pick(item.termEn, item.termTl)}</dt>
+              <dd>{pick(item.bodyEn, item.bodyTl)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {together ? <p>{together}</p> : null}
+      <p>{copy.brand.summary}</p>
+      <a href={MOBILE_APP_RELEASE.downloadUrl} download={MOBILE_APP_RELEASE.fileName} className="trends-brand-download">
+        <FiDownload aria-hidden="true" />
+        {copy.brand.download}
+      </a>
+    </div>
+  );
+
+  return (
+    <TrendsTip content={content} bubbleClassName="is-brand" expandable>
+      {(tipProps) => (
+        <button type="button" className="trends-brand-trigger" {...tipProps}>
+          <span>IGNIS SAFE</span>
+          <FiInfo aria-hidden="true" />
+        </button>
+      )}
+    </TrendsTip>
   );
 }
 
@@ -461,13 +522,34 @@ function TrendsFigure({ index, title, subtitle, copy, section, children }) {
   );
 }
 
-function TrendsStat({ label, hint, value, countTo, suffix, muted = false }) {
+// Headline figure. The label always explains itself on hover/focus/tap; when
+// `valueTip` is given, the number itself also opens a tip (used for the barangay names).
+function TrendsStat({ label, hint, labelTip, moreInfo, value, countTo, suffix, valueTip }) {
+  const number = <span data-count-to={countTo}>{value}</span>;
+
   return (
-    <div className={`trends-stat${muted ? ' is-muted' : ''}`}>
-      <dt>{label}</dt>
+    <div className="trends-stat">
+      <dt>
+        <TrendsTip content={labelTip} bubbleClassName="is-small">
+          {(tipProps) => (
+            <button type="button" className="trends-title-button" aria-label={`${moreInfo} ${label}`} {...tipProps}>
+              <span>{label}</span>
+              <FiInfo aria-hidden="true" />
+            </button>
+          )}
+        </TrendsTip>
+      </dt>
       <dd>
         <span className="trends-stat-value">
-          <span data-count-to={countTo}>{value}</span>
+          {valueTip ? (
+            <TrendsTip content={valueTip} bubbleClassName="is-list">
+              {(tipProps) => (
+                <button type="button" className="trends-stat-number" aria-label={`${value} ${label}`} {...tipProps}>
+                  {number}
+                </button>
+              )}
+            </TrendsTip>
+          ) : number}
           {suffix ? <small>{suffix}</small> : null}
         </span>
         <span className="trends-stat-hint">{hint}</span>
@@ -480,7 +562,7 @@ function TrendsSkeleton({ label }) {
   return (
     <div className="trends-skeleton" role="status" aria-label={label}>
       <div className="trends-skeleton-stats">
-        {[0, 1, 2, 3].map((item) => <span key={item} />)}
+        {[0, 1].map((item) => <span key={item} />)}
       </div>
       <div className="trends-skeleton-chart" />
     </div>
@@ -646,6 +728,8 @@ export default function PublicTrendsSection() {
     return <div className="trends-chart">{chartsInView ? chart : null}</div>;
   };
 
+  const [titleBefore, titleAfter = ''] = copy.title.split('IGNIS SAFE');
+
   const coveragePercent = data && data.barangays.officialTotal > 0
     ? Math.min(100, Math.round((data.barangays.represented / data.barangays.officialTotal) * 100))
     : 0;
@@ -654,11 +738,13 @@ export default function PublicTrendsSection() {
     <section className="trends" id="trends" aria-labelledby="trends-title" ref={sectionRef}>
       <div className="trends-container">
         <header className="trends-heading" data-trends-reveal>
-          <div>
-            <p className="trends-eyebrow">{copy.eyebrow}</p>
-            <h2 id="trends-title">{copy.title}</h2>
-            <p className="trends-intro">{copy.intro}</p>
-          </div>
+          <p className="trends-eyebrow">{copy.eyebrow}</p>
+          <h2 id="trends-title">
+            {titleBefore}
+            <BrandTip copy={copy} about={data?.about} language={language} />
+            {titleAfter}
+          </h2>
+          <p className="trends-intro">{copy.intro}</p>
           <div className="trends-meta">
             <p className="trends-privacy">
               <FiShield aria-hidden="true" />
@@ -692,39 +778,30 @@ export default function PublicTrendsSection() {
               <TrendsStat
                 label={copy.stats.learners.label}
                 hint={copy.stats.learners.hint}
+                labelTip={copy.stats.learners.tip}
+                moreInfo={copy.moreInfo}
                 value={formatCount(data.registeredLearners)}
                 countTo={data.registeredLearners}
               />
               <TrendsStat
                 label={copy.stats.barangays.label}
                 hint={copy.stats.barangays.hint}
+                labelTip={copy.stats.barangays.tip}
+                moreInfo={copy.moreInfo}
                 value={formatCount(data.barangays.represented)}
                 countTo={data.barangays.represented}
                 suffix={data.barangays.officialTotal > 0
                   ? `${copy.stats.barangays.of} ${formatCount(data.barangays.officialTotal)}`
                   : null}
+                valueTip={data.barangays.representedNames.length > 0 ? (
+                  <div className="trends-names">
+                    <strong>{copy.stats.barangays.listTitle}</strong>
+                    <ul>
+                      {data.barangays.representedNames.map((name) => <li key={name}>{name}</li>)}
+                    </ul>
+                  </div>
+                ) : null}
               />
-              <TrendsStat
-                label={copy.stats.modules.label}
-                hint={copy.stats.modules.hint}
-                value={formatCount(data.completedModules)}
-                countTo={data.completedModules}
-              />
-              {data.assessment.averageDifference === null ? (
-                <TrendsStat
-                  label={copy.stats.difference.label}
-                  hint={copy.stats.difference.hint}
-                  value={copy.stats.difference.empty}
-                  muted
-                />
-              ) : (
-                <TrendsStat
-                  label={copy.stats.difference.label}
-                  hint={copy.stats.difference.hint}
-                  value={formatSignedScore(data.assessment.averageDifference, locale)}
-                  suffix={copy.points}
-                />
-              )}
             </dl>
 
             <div className="trends-grid">

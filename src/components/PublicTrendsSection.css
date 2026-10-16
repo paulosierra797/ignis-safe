@@ -16,9 +16,14 @@
 /* Heading */
 .trends-heading {
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
-  gap: clamp(1.5rem, 4vw, 4rem);
+  column-gap: clamp(1.5rem, 4vw, 4rem);
+}
+
+.trends-heading > .trends-eyebrow,
+.trends-heading > h2 {
+  grid-column: 1 / -1;
 }
 
 .trends-eyebrow {
@@ -31,13 +36,21 @@
 }
 
 .trends-heading h2 {
-  max-width: 760px;
   margin: 0;
   color: #172033;
-  font-size: clamp(1.8rem, 3.4vw, 2.8rem);
+  font-size: clamp(1.7rem, 6.4vw, 2.2rem);
   line-height: 1.12;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   text-wrap: balance;
+}
+
+/* Desktop: the heading stays on a single line; the size scales with the viewport. */
+@media (min-width: 1025px) {
+  .trends-heading h2 {
+    font-size: clamp(2rem, 3.4vw, 3rem);
+    white-space: nowrap;
+    text-wrap: nowrap;
+  }
 }
 
 .trends-intro {
@@ -50,29 +63,30 @@
 
 .trends-meta {
   display: grid;
-  gap: 0.85rem;
-  justify-items: start;
+  gap: 0.35rem;
+  justify-items: end;
+  max-width: 400px;
+  text-align: right;
 }
 
+/* Quiet footnote: small, muted, no box */
 .trends-privacy {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  gap: 0.6rem;
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 0.4rem;
   margin: 0;
-  padding: 0.85rem 1rem;
-  border: 1px solid #e0e5ec;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #475467;
-  font-size: 0.76rem;
-  line-height: 1.55;
+  color: #8a94a6;
+  font-size: 0.68rem;
+  line-height: 1.5;
 }
 
 .trends-privacy svg {
-  width: 18px;
-  height: 18px;
-  margin-top: 1px;
-  color: #a8171c;
+  flex: none;
+  width: 12px;
+  height: 12px;
+  margin-top: 0.2em;
+  color: #98a2b3;
 }
 
 .trends-updated {
@@ -81,7 +95,7 @@
   gap: 0.5rem;
   margin: 0;
   color: #667085;
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   font-variant-numeric: tabular-nums;
 }
 
@@ -107,21 +121,28 @@
   to { transform: scale(1.6); opacity: 0; }
 }
 
-/* Headline figures: an editorial strip, not a row of cards */
+/* Headline figures: two balanced panels that fill the row */
 .trends-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: clamp(2.5rem, 4vw, 3.5rem) 0 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.85rem, 2vw, 1.5rem);
+  margin: clamp(1.75rem, 3vw, 2.5rem) 0 0;
 }
 
 .trends-stat {
   min-width: 0;
-  padding: 1.35rem 1.5rem 0 0;
+  padding: clamp(1.25rem, 2.4vw, 1.75rem);
+  border: 1px solid #e0e5ec;
+  border-radius: 18px;
+  background: #ffffff;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 
-.trends-stat + .trends-stat {
-  padding-left: 1.5rem;
-  border-left: 1px solid #e0e5ec;
+@media (hover: hover) {
+  .trends-stat:hover {
+    box-shadow: 0 18px 40px -26px rgba(16, 24, 40, 0.28);
+    transform: translateY(-2px);
+  }
 }
 
 .trends-stat dt {
@@ -156,13 +177,28 @@
   letter-spacing: 0;
 }
 
-.trends-stat.is-muted .trends-stat-value {
-  min-height: clamp(2.2rem, 4vw, 3.3rem);
-  align-items: center;
-  color: #667085;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0;
+/* The number itself opens the barangay list */
+.trends-stat-number {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: help;
+  border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s ease;
+}
+
+.trends-stat-number:hover {
+  color: #a8171c;
+}
+
+.trends-stat-number:focus-visible {
+  outline: 3px solid rgba(168, 23, 28, 0.3);
+  outline-offset: 4px;
 }
 
 .trends-stat-hint {
@@ -178,7 +214,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(2.5rem, 4vw, 3.5rem) clamp(2rem, 4vw, 3.5rem);
-  margin-top: clamp(3rem, 5vw, 4.5rem);
+  margin-top: clamp(2rem, 4vw, 3rem);
 }
 
 .trends-figure {
@@ -254,14 +290,11 @@
   align-items: center;
   gap: 0.5rem;
   min-height: 28px;
-  border-bottom: 1px dotted rgba(71, 84, 103, 0.45);
-  transition: color 0.2s ease, border-color 0.2s ease;
+  transition: color 0.2s ease;
 }
 
-.trends-legend-item:hover,
-.trends-legend-item[aria-describedby]:focus-visible {
+.trends-legend-item:hover {
   color: #172033;
-  border-bottom-color: #172033;
 }
 
 .trends-legend-swatch {
@@ -454,6 +487,162 @@
   margin-top: 6px;
 }
 
+/* Heading trigger: plain text that warms to the brand red; no underline */
+.trends-brand-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: help;
+  border-radius: 8px;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.2s ease;
+}
+
+.trends-brand-trigger svg {
+  flex: none;
+  width: 0.38em;
+  height: 0.38em;
+  min-width: 12px;
+  min-height: 12px;
+  align-self: flex-start;
+  margin-top: 0.3em;
+  color: #98a2b3;
+  transition: color 0.2s ease;
+}
+
+.trends-brand-trigger:hover,
+.trends-brand-trigger[aria-expanded='true'] {
+  color: #a8171c;
+}
+
+.trends-brand-trigger:hover svg,
+.trends-brand-trigger[aria-expanded='true'] svg {
+  color: #a8171c;
+}
+
+.trends-brand-trigger:focus-visible {
+  outline: 3px solid rgba(168, 23, 28, 0.3);
+  outline-offset: 4px;
+}
+
+/* The heading is nowrap and large; the bubble must not inherit either */
+.trends-tip-bubble {
+  white-space: normal;
+  text-wrap: wrap;
+  text-transform: none;
+}
+
+.trends-tip-bubble.is-brand {
+  width: min(22rem, calc(100vw - 16px));
+  margin-top: 10px;
+  padding: 1rem 1.1rem;
+  font-weight: 450;
+}
+
+.trends-brand {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.trends-brand strong {
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.trends-brand dl {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+}
+
+.trends-brand dl div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.trends-brand dt {
+  color: #ff9a9d;
+  font-weight: 700;
+}
+
+.trends-brand dd {
+  margin: 0;
+}
+
+.trends-brand p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.trends-brand-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  justify-self: start;
+  min-height: 36px;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #172033;
+  font-size: 0.76rem;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.trends-brand-download svg {
+  width: 14px;
+  height: 14px;
+}
+
+.trends-brand-download:hover {
+  background: #a8171c;
+  color: #ffffff;
+}
+
+.trends-brand-download:focus-visible {
+  outline: 3px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
+}
+
+.trends-tip-bubble.is-list {
+  width: min(19rem, calc(100vw - 16px));
+  margin-top: 8px;
+  padding: 0.9rem 1rem;
+}
+
+.trends-names strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: #ff9a9d;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trends-names ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trends-names li {
+  overflow-wrap: anywhere;
+}
+
 .trends-info {
   display: grid;
   gap: 0.65rem;
@@ -480,9 +669,8 @@
 
 .trends-skeleton-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.5rem;
-  padding-top: 1.35rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.85rem, 2vw, 1.5rem);
 }
 
 .trends-skeleton-stats span,
@@ -577,22 +765,15 @@
     align-items: start;
   }
 
-  .trends-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .trends-meta {
+    justify-items: start;
+    max-width: none;
+    margin-top: 0.85rem;
+    text-align: left;
   }
 
-  .trends-stat:nth-child(3) {
-    padding-left: 0;
-    border-left: 0;
-  }
-
-  .trends-stat:nth-child(n + 3) {
-    margin-top: 1.5rem;
-    border-top: 1px solid #e0e5ec;
-  }
-
-  .trends-skeleton-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .trends-privacy {
+    justify-content: flex-start;
   }
 
   .trends-grid {
@@ -606,16 +787,9 @@
     padding: 0 1rem;
   }
 
-  .trends-stat {
-    padding-right: 0.75rem;
-  }
-
-  .trends-stat + .trends-stat {
-    padding-left: 0.75rem;
-  }
-
-  .trends-stat:nth-child(3) {
-    padding-left: 0;
+  .trends-stats,
+  .trends-skeleton-stats {
+    grid-template-columns: 1fr;
   }
 
   .trends-chart,

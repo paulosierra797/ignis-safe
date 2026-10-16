@@ -1112,8 +1112,7 @@ body.sidebar-collapsed .nav-section {
   width: calc(100% - 1rem);
   margin: 0 0.5rem 0.35rem;
   padding: 0.4rem 0.5rem;
-  border-left: 3px solid #fbbf24;
-  border-radius: 0 6px 6px 0;
+  border-radius: 6px;
   background: rgba(255, 255, 255, 0.1);
   font-size: 0.68rem;
   font-weight: 700;

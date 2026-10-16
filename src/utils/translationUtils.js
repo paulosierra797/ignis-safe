@@ -29,10 +29,17 @@ const getPairKeys = (object, key, sourceLanguage, targetLanguage) => {
   return null;
 };
 
-const collectStringPairs = (source, target, sourcePath, targetPath, pairs) => {
+const pathKey = (path) => JSON.stringify(path);
+
+const collectStringPairs = (source, target, sourcePath, targetPath, pairs, baseline) => {
   if (typeof source === 'string') {
-    if (source.trim() && isBlank(target)) {
+    if (!source.trim()) return;
+    if (isBlank(target)) {
       pairs.push({ sourcePath, targetPath, text: source });
+    } else if (baseline && Object.hasOwn(baseline, pathKey(sourcePath)) && baseline[pathKey(sourcePath)] !== source) {
+      // Source was edited since it was loaded or last translated, so the
+      // existing translation is probably stale. Flag it for a confirmed overwrite.
+      pairs.push({ sourcePath, targetPath, text: source, existing: target });
     }
     return;
   }
@@ -40,15 +47,17 @@ const collectStringPairs = (source, target, sourcePath, targetPath, pairs) => {
   if (!Array.isArray(source)) return;
   source.forEach((item, index) => {
     const targetItem = Array.isArray(target) ? target[index] : undefined;
-    collectStringPairs(item, targetItem, [...sourcePath, index], [...targetPath, index], pairs);
+    collectStringPairs(item, targetItem, [...sourcePath, index], [...targetPath, index], pairs, baseline);
   });
 };
 
 /**
- * Collects only bilingual text whose counterpart is blank. Pair order follows
- * object/array insertion order so an API response can be applied positionally.
+ * Collects bilingual text whose counterpart is blank, plus (when a baseline is
+ * given) text edited since the baseline whose counterpart already has content;
+ * those carry `existing`. Pair order follows object/array insertion order so an
+ * API response can be applied positionally.
  */
-export function collectTranslationPairs(value, sourceLanguage, targetLanguage) {
+export function collectTranslationPairs(value, sourceLanguage, targetLanguage, baseline) {
   const pairs = [];
 
   const visit = (node, path = []) => {
@@ -68,6 +77,7 @@ export function collectTranslationPairs(value, sourceLanguage, targetLanguage) {
           [...path, sourceKey],
           [...path, targetKey],
           pairs,
+          baseline,
         );
       }
       visit(node[key], [...path, key]);
@@ -109,8 +119,10 @@ export function applyTranslationResults(value, pairs, translations) {
     let currentSource = next;
     pair.sourcePath.forEach((part) => { currentSource = currentSource?.[part]; });
     // Ignore stale provider results if the admin changed the source while the
-    // request was running, and continue to protect any target they filled.
-    if (currentSource !== pair.text || !isBlank(currentTarget)) return;
+    // request was running, and protect any target they changed since: blank
+    // targets must still be blank, confirmed overwrites must be unchanged.
+    if (currentSource !== pair.text) return;
+    if (pair.existing === undefined ? !isBlank(currentTarget) : currentTarget !== pair.existing) return;
 
     const translation = String(translations[index] || '');
     if (!translation.trim()) return;
@@ -119,6 +131,32 @@ export function applyTranslationResults(value, pairs, translations) {
   });
 
   return { value: next, appliedCount };
+}
+
+export const translationPathKey = pathKey;
+
+/**
+ * Records the current text of every translatable string, keyed by path, so a
+ * later edit to a source field can be told apart from untouched loaded content.
+ */
+export function snapshotTranslatableText(value) {
+  const snapshot = {};
+  const visit = (node, path = []) => {
+    if (typeof node === 'string') {
+      if (node.trim()) snapshot[pathKey(path)] = node;
+      return;
+    }
+    if (Array.isArray(node)) {
+      node.forEach((item, index) => visit(item, [...path, index]));
+      return;
+    }
+    if (!node || typeof node !== 'object') return;
+    Object.keys(node).forEach((key) => {
+      if (!NON_TEXT_FIELD.test(key)) visit(node[key], [...path, key]);
+    });
+  };
+  visit(value);
+  return snapshot;
 }
 
 export function countExistingTranslationTargets(value, sourceLanguage, targetLanguage) {

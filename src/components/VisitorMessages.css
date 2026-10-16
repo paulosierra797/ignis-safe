@@ -191,7 +191,6 @@
 
 .visitor-conversation-item:hover { background: #fafbfc; }
 .visitor-conversation-item.is-selected {
-  border-left: 3px solid #b91c1c;
   background: #fff5f5;
 }
 

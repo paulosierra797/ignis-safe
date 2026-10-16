@@ -295,7 +295,6 @@
 
 .personnel-picker-checkbox-item.is-selected {
   background: #fff1f0;
-  box-shadow: inset 3px 0 0 #b91c1c;
 }
 
 .personnel-picker-checkbox-item.is-unavailable {

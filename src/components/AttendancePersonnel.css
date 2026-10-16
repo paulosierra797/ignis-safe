@@ -112,7 +112,6 @@
 
 .qr-important {
   background: rgba(214, 69, 61, 0.08);
-  border-left: 3px solid var(--ember);
   padding: 16px 18px;
   border-radius: 10px;
   font-size: 15px;

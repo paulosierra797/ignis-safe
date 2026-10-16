@@ -418,9 +418,6 @@
   background: #f9fafb;
 }
 
-.bah-table tbody tr.is-focused th {
-  box-shadow: inset 3px 0 0 var(--bah-accent);
-}
 
 .bah-table tbody th {
   color: var(--bah-ink);

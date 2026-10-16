@@ -63,3 +63,24 @@ test('ignores stale results when the source changes while translation is pending
   assert.equal(result.value.prompt, 'Updated question');
   assert.equal(result.value.prompt_tl, '');
 });
+
+test('flags edited source text for confirmed overwrite and guards the existing target', async () => {
+  const { snapshotTranslatableText } = await import('./translationUtils.js');
+  const loaded = { heading_en: 'Fire Station', heading_tl: 'Istasyon ng Bumbero', other_en: 'Same', other_tl: 'Pareho' };
+  const baseline = snapshotTranslatableText(loaded);
+  assert.equal(collectTranslationPairs(loaded, 'en', 'fil', baseline).length, 0);
+
+  const edited = { ...loaded, heading_en: 'Fire Station Philippines' };
+  const pairs = collectTranslationPairs(edited, 'en', 'fil', baseline);
+  assert.equal(pairs.length, 1);
+  assert.equal(pairs[0].existing, 'Istasyon ng Bumbero');
+
+  const ok = applyTranslationResults(edited, pairs, ['Istasyon ng Bumbero Pilipinas']);
+  assert.equal(ok.value.heading_tl, 'Istasyon ng Bumbero Pilipinas');
+  assert.equal(ok.value.other_tl, 'Pareho');
+
+  const typedMeanwhile = { ...edited, heading_tl: 'Manual na bersyon' };
+  const kept = applyTranslationResults(typedMeanwhile, pairs, ['Istasyon ng Bumbero Pilipinas']);
+  assert.equal(kept.appliedCount, 0);
+  assert.equal(kept.value.heading_tl, 'Manual na bersyon');
+});

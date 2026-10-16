@@ -86,7 +86,6 @@
   flex-direction: column;
   gap: 2px;
   padding: 10px 12px;
-  border-left: 3px solid var(--dialog-accent);
   border-radius: 10px;
   background: var(--dialog-accent-soft);
 }

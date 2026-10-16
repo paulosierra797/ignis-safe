@@ -12,7 +12,8 @@ const TONE_ICONS = {
 };
 
 // Shared confirmation for archive, restore, and irreversible deletion.
-// `confirmPhrase` makes the admin type a word before an irreversible action.
+// `confirmPhrase` makes the admin type a word before an irreversible action;
+// `showReason={false}` hides the note field for quick, reversible actions.
 // The panel mounts only while open, so its fields start empty every time.
 export default function ArchiveConfirmDialog({ open, ...props }) {
   return open ? <ArchiveConfirmPanel {...props} /> : null;
@@ -27,9 +28,10 @@ function ArchiveConfirmPanel({
   reasonLabel = 'Reason',
   reasonPlaceholder = '',
   reasonRequired = false,
+  showReason = true,
   confirmPhrase = '',
   confirmLabel = 'Confirm',
-  busyLabel = 'Working...',
+  busyLabel = 'Working…',
   busy = false,
   error = '',
   onConfirm,
@@ -39,6 +41,7 @@ function ArchiveConfirmPanel({
   const [phrase, setPhrase] = useState('');
   const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
+  const confirmRef = useRef(null);
   const busyRef = useRef(busy);
   const onCloseRef = useRef(onClose);
   const titleId = useId();
@@ -62,7 +65,7 @@ function ArchiveConfirmPanel({
     });
 
     const focusTimer = window.setTimeout(() => {
-      (firstFieldRef.current || dialogRef.current?.querySelector('button:not(:disabled)'))?.focus();
+      (firstFieldRef.current || confirmRef.current)?.focus();
     }, 30);
 
     const onKeyDown = (event) => {
@@ -96,7 +99,7 @@ function ArchiveConfirmPanel({
   }, []);
 
   const Icon = TONE_ICONS[tone] || FiArchive;
-  const reasonMissing = reasonRequired && !reason.trim();
+  const reasonMissing = showReason && reasonRequired && !reason.trim();
   const phraseMissing = Boolean(confirmPhrase) && phrase.trim() !== confirmPhrase;
   const canConfirm = !busy && !reasonMissing && !phraseMissing;
 
@@ -137,27 +140,31 @@ function ArchiveConfirmPanel({
             </div>
           )}
 
-          <label className="archive-dialog-label" htmlFor={reasonId}>
-            {reasonLabel}
-            {!reasonRequired && <span> (optional)</span>}
-          </label>
-          <textarea
-            id={reasonId}
-            ref={firstFieldRef}
-            className="archive-dialog-input"
-            rows={3}
-            maxLength={500}
-            value={reason}
-            placeholder={reasonPlaceholder}
-            onChange={(event) => setReason(event.target.value)}
-            disabled={busy}
-            required={reasonRequired}
-          />
+          {showReason && (
+            <>
+              <label className="archive-dialog-label" htmlFor={reasonId}>
+                {reasonLabel}
+                {!reasonRequired && <span> (optional)</span>}
+              </label>
+              <textarea
+                id={reasonId}
+                ref={firstFieldRef}
+                className="archive-dialog-input"
+                rows={2}
+                maxLength={500}
+                value={reason}
+                placeholder={reasonPlaceholder}
+                onChange={(event) => setReason(event.target.value)}
+                disabled={busy}
+                required={reasonRequired}
+              />
+            </>
+          )}
 
           {confirmPhrase && (
             <>
               <label className="archive-dialog-label" htmlFor={phraseId}>
-                Type <strong>{confirmPhrase}</strong> to confirm
+                Type <strong>{confirmPhrase}</strong> to continue
               </label>
               <input
                 id={phraseId}
@@ -176,7 +183,7 @@ function ArchiveConfirmPanel({
 
         <footer className="archive-dialog-footer">
           <button type="button" className="archive-dialog-cancel" onClick={onClose} disabled={busy}>Cancel</button>
-          <button type="submit" className="archive-dialog-confirm" disabled={!canConfirm} aria-busy={busy || undefined}>
+          <button ref={confirmRef} type="submit" className="archive-dialog-confirm" disabled={!canConfirm} aria-busy={busy || undefined}>
             {busy ? busyLabel : confirmLabel}
           </button>
         </footer>

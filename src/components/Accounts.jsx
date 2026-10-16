@@ -97,7 +97,7 @@ const EMPTY_PERSONNEL_FORM = {
 const isPersonnelAccount = (account) => String(account?.role || '').toLowerCase() === 'personnel';
 const isSuperAdminAccount = (account) =>
   account?.is_super_admin === true && !account?.is_personnel_workspace_profile;
-const PROTECTED_ACCOUNT_NOTICE = 'This is the official IGNIS SAFE system account. It is permanently protected to maintain administrative access, system continuity, and account recovery. This account cannot be deleted.';
+const PROTECTED_ACCOUNT_NOTICE = "This is the main IGNIS SAFE account. It keeps admin access and recovery working, so it can't be deleted.";
 // Super Admin is shown in place of Admin; the stored Admin role is unchanged.
 const getAccountRoleLabel = (account) => (isSuperAdminAccount(account) ? 'Super Admin' : (account?.role || '—'));
 const getPersonnelInitials = (account) => {
@@ -1828,8 +1828,8 @@ export default function Accounts() {
     setPendingConfirmAction({
       action: 'archive-request-history',
       payload: { type, request },
-      title: `Archive ${type === 'leave' ? 'Leave' : 'Profile'} Request`,
-      message: `Archive this ${label} for ${request.personnel_name || 'this personnel member'}? It will move to the archive list and can be restored later.`,
+      title: 'Archive this request?',
+      message: `The ${label} from ${request.personnel_name || 'this personnel'} will be hidden from history. You can restore it anytime.`,
       confirmLabel: 'Archive'
     });
     setIsConfirmActionModalOpen(true);
@@ -1903,7 +1903,7 @@ export default function Accounts() {
       return;
     }
     if (String(targetAccount?.role || '').trim().toLowerCase() === 'admin') {
-      setDeleteMessage({ type: 'error', text: 'Administrator accounts cannot be deleted.' });
+      setDeleteMessage({ type: 'error', text: "Admin accounts can't be deleted." });
       return;
     }
 
@@ -1941,7 +1941,7 @@ export default function Accounts() {
       );
       const { error } = await moveAccountToTrash(adminId, deleteConfirmationInput);
       if (error) {
-        setDeleteMessage({ type: 'error', text: `Could not move the account to Trash: ${error}` });
+        setDeleteMessage({ type: 'error', text: `Couldn't move the account to Trash. ${error}` });
         return;
       }
 
@@ -1960,7 +1960,7 @@ export default function Accounts() {
         }
       });
 
-      setDeleteMessage({ type: 'success', text: 'Account moved to Trash. It can be restored from Archive & Trash for 30 days.' });
+      setDeleteMessage({ type: 'success', text: 'Account moved to Trash. You can restore it within 30 days.' });
       fetchAccounts();
 
       setTimeout(() => {
@@ -1971,7 +1971,7 @@ export default function Accounts() {
         setDeleteMessage({ type: '', text: '' });
       }, 900);
     } catch (err) {
-      setDeleteMessage({ type: 'error', text: err.message || 'Error deleting user.' });
+      setDeleteMessage({ type: 'error', text: err.message || "Couldn't move the account to Trash." });
     } finally {
       setIsDeleteUserProcessing(false);
     }
@@ -5742,7 +5742,7 @@ const permissions = getDefaultPermissions(formData.role);
             title={requestArchiveType === 'leave'
               ? 'Leave Request Archive'
               : 'Profile Change Request Archive'}
-            description="Review archived requests and restore them to their history list."
+            description="Restore a request to put it back in history."
             count={(requestArchiveType === 'leave'
               ? archivedLeaveRequests
               : archivedProfileChangeRequests).length}
@@ -5840,7 +5840,7 @@ const permissions = getDefaultPermissions(formData.role);
           <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
             <div className="accounts-modal accounts-confirm-modal">
               <div className="accounts-modal-header">
-                <h3>Move Account to Trash</h3>
+                <h3>Move account to Trash?</h3>
                 <CloseButton
                   className="accounts-modal-close"
                   onClick={closeDeleteUserModal}
@@ -5851,12 +5851,11 @@ const permissions = getDefaultPermissions(formData.role);
 
               <div className="accounts-modal-body">
                 <p className="accounts-delete-warning">
-                  Access is revoked immediately. The account stays recoverable in Archive &amp; Trash for 30 days;
-                  permanent deletion happens only after retention, dependency, and backup checks pass.
+                  They lose access right away. You can restore the account from Archive &amp; Trash within 30 days.
                 </p>
 
                 <div className="accounts-delete-preview" aria-label="Personnel account to move to Trash">
-                  <div className="accounts-delete-preview-heading">Account to move to Trash</div>
+                  <div className="accounts-delete-preview-heading">Account</div>
                   <strong>
                     {`${pendingDeleteAccount?.first_name || ''} ${pendingDeleteAccount?.last_name || ''}`.trim()
                       || 'Personnel'}
@@ -5869,7 +5868,7 @@ const permissions = getDefaultPermissions(formData.role);
                 </div>
 
                 <label className="accounts-delete-confirm-label" htmlFor="delete-personnel-confirmation">
-                  Reason <span>(optional, shown in Archive &amp; Trash)</span>
+                  Reason <span>(optional)</span>
                 </label>
                 <input
                   id="delete-personnel-confirmation"
@@ -5897,7 +5896,7 @@ const permissions = getDefaultPermissions(formData.role);
                   onClick={confirmDeleteUser}
                   disabled={isDeleteUserProcessing}
                 >
-                  {isDeleteUserProcessing ? 'Moving...' : 'Move to Trash'}
+                  {isDeleteUserProcessing ? 'Moving…' : 'Move to Trash'}
                 </button>
               </div>
             </div>

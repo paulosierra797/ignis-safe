@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import gsap from 'gsap';
 import { FiArchive } from 'react-icons/fi';
 import CloseButton from './CloseButton';
 import './ArchiveListModal.css';
@@ -20,6 +21,7 @@ export default function ArchiveListModal({
   const titleId = id ? `${id}-title` : generatedTitleId;
   const onCloseRef = useRef(onClose);
   const busyRef = useRef(busy);
+  const dialogRef = useRef(null);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -39,9 +41,18 @@ export default function ArchiveListModal({
 
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', closeOnEscape);
+
+    const media = gsap.matchMedia();
+    media.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.fromTo(dialogRef.current, { y: 16, opacity: 0 }, {
+        y: 0, opacity: 1, duration: 0.3, ease: 'power3.out', clearProps: 'transform,opacity'
+      });
+    });
+
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener('keydown', closeOnEscape);
+      media.revert();
     };
   }, [open]);
 
@@ -55,6 +66,7 @@ export default function ArchiveListModal({
       }}
     >
       <section
+        ref={dialogRef}
         id={id}
         className={`shared-archive-dialog shared-archive-dialog--${size}`}
         role="dialog"
@@ -65,7 +77,7 @@ export default function ArchiveListModal({
           <div className="shared-archive-heading">
             <span className="shared-archive-icon" aria-hidden="true"><FiArchive /></span>
             <div>
-              <span className="shared-archive-eyebrow">Archived records</span>
+              <span className="shared-archive-eyebrow">Archive</span>
               <h2 id={titleId}>{title}</h2>
               {description && <p>{description}</p>}
             </div>

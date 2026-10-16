@@ -1,9 +1,9 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import {
-  FiAlertTriangle, FiArchive, FiChevronDown, FiClock, FiCpu, FiDatabase, FiDownload,
-  FiHardDrive, FiRotateCcw, FiSearch, FiShield, FiTrash2, FiUser
+  FiAlertTriangle, FiArchive, FiBarChart2, FiChevronDown, FiCpu, FiDownload, FiLock,
+  FiRotateCcw, FiSearch, FiShield, FiTrash2, FiUser
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -25,32 +25,33 @@ gsap.registerPlugin(useGSAP);
 
 const RING_RADIUS = 17;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const EVENT_LABELS = {
   archived: 'Archived',
   soft_deleted: 'Moved to Trash',
   restored: 'Restored',
-  purged: 'Permanently deleted',
-  deleted: 'Deleted directly',
-  purge_blocked: 'Deletion on hold',
-  purge_failed: 'Deletion failed',
-  policy_updated: 'Policy updated',
+  purged: 'Deleted forever',
+  deleted: 'Deleted',
+  purge_blocked: 'Put on hold',
+  purge_failed: 'Delete failed',
+  policy_updated: 'Settings changed',
   backup_confirmed: 'Backup confirmed'
 };
 
 const STATUS_FILTERS = [
-  { value: 'all', label: 'All statuses' },
+  { value: 'all', label: 'Any status' },
   { value: 'archived', label: 'Archived' },
   { value: 'soft_deleted', label: 'In Trash' },
-  { value: 'due', label: 'Awaiting cleanup' },
-  { value: 'queued', label: 'Queued for deletion' },
-  { value: 'blocked', label: 'Deletion on hold' }
+  { value: 'due', label: 'Ready to delete' },
+  { value: 'queued', label: 'Deleting soon' },
+  { value: 'blocked', label: 'On hold' }
 ];
 
 const SORTS = [
-  { value: 'deletion', label: 'Deletion date (soonest)' },
-  { value: 'newest', label: 'Archived (newest)' },
-  { value: 'oldest', label: 'Archived (oldest)' },
+  { value: 'deletion', label: 'Deletes soonest' },
+  { value: 'newest', label: 'Newest first' },
+  { value: 'oldest', label: 'Oldest first' },
   { value: 'name', label: 'Name (A–Z)' }
 ];
 
@@ -66,11 +67,37 @@ const escapeCsv = (value) => {
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 };
 
+const daysLeftLabel = (days) => {
+  if (days == null) return 'No date set';
+  if (days === 0) return 'Deleting soon';
+  return `${days} ${days === 1 ? 'day' : 'days'} left`;
+};
+
+// Mirrors the server's purge checks that the page can see, so the Delete
+// button explains itself up front. The server still runs every check.
+const getDeleteBlock = (item, policy, isSuperAdmin, now) => {
+  if (item.lifecycle.key === 'purging') return 'Deleting now…';
+  if (!isSuperAdmin) return 'Only a Super Admin can delete for good.';
+  if (!policy) return '';
+  const adminTrashed = !policy.is_protected && item.disposition === 'soft_deleted' && item.actor_type === 'admin';
+  if (!policy.purge_enabled && !adminTrashed) return `Deleting is turned off for ${policy.label}.`;
+  if (policy.is_protected && policy.retention_days == null) return 'Keep period not set yet.';
+  if (policy.retention_days != null) {
+    const start = new Date(item.record_created_at || item.archived_at).getTime();
+    const keepUntil = start + policy.retention_days * DAY_MS;
+    if (Number.isFinite(keepUntil) && keepUntil > now) return `Must be kept until ${formatDate(keepUntil)}.`;
+  }
+  const backupAt = policy.backup_confirmed_at ? new Date(policy.backup_confirmed_at).getTime() : null;
+  const archivedAt = new Date(item.archived_at).getTime();
+  if (backupAt == null || (Number.isFinite(archivedAt) && backupAt < archivedAt)) return 'Needs a newer backup first.';
+  return '';
+};
+
 function CountdownRing({ days, total }) {
   const ratio = days == null ? 0 : Math.min(1, Math.max(0, days / Math.max(total, 1)));
   const tone = days == null || days <= 2 ? 'critical' : days <= 7 ? 'warning' : 'calm';
   return (
-    <div className={`at-ring at-ring--${tone}`} role="img" aria-label={days == null ? 'Deletion date unknown' : `${days} of ${total} recovery days left`}>
+    <div className={`at-ring at-ring--${tone}`} role="img" aria-label={days == null ? 'No deletion date' : `${days} of ${total} days left`}>
       <svg viewBox="0 0 44 44" aria-hidden="true">
         <circle className="at-ring-track" cx="22" cy="22" r={RING_RADIUS} />
         <circle
@@ -90,14 +117,13 @@ function CountdownRing({ days, total }) {
   );
 }
 
-function ActorPill({ type, name }) {
+function Actor({ type, name }) {
   const Icon = type === 'system' ? FiCpu : FiUser;
-  const label = type === 'system' ? 'System' : type === 'user' ? 'User' : 'Admin';
+  const label = type === 'system' ? 'System' : name || (type === 'user' ? 'User' : 'Admin');
   return (
-    <span className={`at-actor at-actor--${type || 'admin'}`}>
+    <span className="at-actor">
       <Icon aria-hidden="true" />
-      <span className="at-actor-type">{label}</span>
-      {type !== 'system' && name && <span className="at-actor-name">{name}</span>}
+      <span>{label}</span>
     </span>
   );
 }
@@ -112,7 +138,8 @@ export default function ArchiveTrash() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [toast, setToast] = useState({ type: '', text: '' });
-  const [activeTab, setActiveTab] = useState('trash');
+  const [activeTab, setActiveTab] = useState('items');
+  const [showCharts, setShowCharts] = useState(false);
   const [search, setSearch] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -214,9 +241,7 @@ export default function ArchiveTrash() {
       total: decoratedItems.length,
       dueSoon: decoratedItems.filter((item) => item.remainingDays != null && item.remainingDays <= 7).length,
       onHold: decoratedItems.filter((item) => item.lifecycle.key === 'blocked').length,
-      autoDeleted: decoratedItems.filter((item) => item.module === 'mobile_users' && item.actor_type === 'system').length,
-      databaseBytes: Number(overview?.database_bytes) || 0,
-      fileBytes
+      storageBytes: (Number(overview?.database_bytes) || 0) + fileBytes
     };
   }, [decoratedItems, overview]);
 
@@ -226,23 +251,23 @@ export default function ArchiveTrash() {
     .sort()
     .pop() || null, [archivablePolicies]);
 
-  // Entrance and countdown motion; respects reduced-motion preferences.
+  // Subtle entrance and countdown motion; skipped when reduced motion is preferred.
   useGSAP(() => {
     if (loading) return undefined;
     const media = gsap.matchMedia();
     media.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.from('.at-reveal', { y: 14, opacity: 0, duration: 0.5, stagger: 0.07, ease: 'power3.out', clearProps: 'transform,opacity' });
+      gsap.from('.at-reveal', { y: 12, opacity: 0, duration: 0.5, stagger: 0.06, ease: 'power3.out', clearProps: 'transform,opacity' });
     });
     return () => media.revert();
   }, { scope, dependencies: [loading] });
 
   const pageKey = itemPages.items.map((item) => item.item_id).join(',');
   useGSAP(() => {
-    if (loading || activeTab !== 'trash') return undefined;
+    if (loading || activeTab !== 'items') return undefined;
     const media = gsap.matchMedia();
     media.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.from('.at-item', { y: 10, opacity: 0, duration: 0.35, stagger: 0.04, ease: 'power2.out', clearProps: 'transform,opacity' });
-      gsap.from('.at-ring-progress', { strokeDashoffset: RING_CIRCUMFERENCE, duration: 0.9, stagger: 0.04, ease: 'power2.out' });
+      gsap.from('.at-item', { y: 8, opacity: 0, duration: 0.35, stagger: 0.035, ease: 'power2.out', clearProps: 'transform,opacity' });
+      gsap.from('.at-ring-progress', { strokeDashoffset: RING_CIRCUMFERENCE, duration: 0.9, stagger: 0.035, ease: 'power2.out' });
     });
     return () => media.revert();
   }, { scope, dependencies: [loading, activeTab, pageKey] });
@@ -250,10 +275,33 @@ export default function ArchiveTrash() {
   useGSAP(() => {
     const media = gsap.matchMedia();
     media.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.from('.at-panel', { y: 8, opacity: 0, duration: 0.3, ease: 'power2.out', clearProps: 'transform,opacity' });
+      gsap.from('.at-panel', { y: 6, opacity: 0, duration: 0.3, ease: 'power2.out', clearProps: 'transform,opacity' });
     });
     return () => media.revert();
   }, { scope, dependencies: [activeTab], revertOnUpdate: true });
+
+  useGSAP(() => {
+    if (!showCharts) return undefined;
+    const media = gsap.matchMedia();
+    media.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.from('.at-chart', { y: 10, opacity: 0, duration: 0.4, stagger: 0.06, ease: 'power2.out', clearProps: 'transform,opacity' });
+    });
+    return () => media.revert();
+  }, { scope, dependencies: [showCharts] });
+
+  useGSAP(() => {
+    if (!expandedId) return undefined;
+    const media = gsap.matchMedia();
+    media.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.from('.at-item-history > li', { x: -6, opacity: 0, duration: 0.3, stagger: 0.04, ease: 'power2.out', clearProps: 'transform,opacity' });
+    });
+    return () => media.revert();
+  }, { scope, dependencies: [expandedId] });
+
+  const openDialog = (next) => {
+    setDialogError('');
+    setDialog(next);
+  };
 
   const closeDialog = () => {
     if (dialogBusy) return;
@@ -268,13 +316,13 @@ export default function ArchiveTrash() {
     try {
       if (dialog.kind === 'restore') {
         await restoreArchiveItem(dialog.item.item_id, reason);
-        setToast({ type: 'success', text: `"${dialog.item.record_label}" was restored. Its scheduled deletion is cancelled.` });
+        setToast({ type: 'success', text: `"${dialog.item.record_label}" restored.` });
       } else if (dialog.kind === 'purge') {
         await purgeArchiveItem(dialog.item.item_id, reason);
-        setToast({ type: 'success', text: `"${dialog.item.record_label}" was permanently deleted. The deletion is recorded in History.` });
+        setToast({ type: 'success', text: `"${dialog.item.record_label}" deleted forever.` });
       } else if (dialog.kind === 'backup') {
         await confirmArchiveBackup(reason);
-        setToast({ type: 'success', text: 'Backup confirmation recorded. Items archived before now may be purged once all other checks pass.' });
+        setToast({ type: 'success', text: 'Backup confirmed.' });
       }
       setDialog(null);
       await loadAll();
@@ -300,7 +348,7 @@ export default function ArchiveTrash() {
         delete next[policy.module];
         return next;
       });
-      setToast({ type: 'success', text: `${policy.label} retention policy saved.` });
+      setToast({ type: 'success', text: `${policy.label} settings saved.` });
       await loadAll();
     } catch (error) {
       setToast({ type: 'error', text: error.message });
@@ -310,7 +358,7 @@ export default function ArchiveTrash() {
   };
 
   const exportHistory = () => {
-    const header = ['Date', 'Event', 'Module', 'Record', 'By', 'Actor type', 'Reason'];
+    const header = ['Date', 'Action', 'Section', 'Item', 'By', 'Actor type', 'Reason'];
     const rows = filteredEvents.map((event) => [
       formatDateTime(event.occurred_at), EVENT_LABELS[event.event_type] || event.event_type, moduleLabel(event.module),
       event.record_label, event.actor_name, event.actor_type, event.reason
@@ -327,9 +375,9 @@ export default function ArchiveTrash() {
   };
 
   const tabs = [
-    { id: 'trash', label: 'Trash', count: metrics.total },
+    { id: 'items', label: 'Items', count: metrics.total },
     { id: 'history', label: 'History', count: events.length },
-    { id: 'policies', label: 'Retention policies' }
+    { id: 'settings', label: 'Settings' }
   ];
 
   const onTabKeyDown = (event) => {
@@ -345,33 +393,39 @@ export default function ArchiveTrash() {
       <Sidebar />
       <main className="archive-trash-main" ref={scope}>
         <PageHeader title="Archive & Trash" />
-        <ToastMessage message={loadError ? `Failed to load Archive & Trash: ${loadError}` : ''} type="error" />
+        <ToastMessage message={loadError ? `Couldn't load Archive & Trash. ${loadError}` : ''} type="error" />
         <ToastMessage message={toast.text} type={toast.type || 'info'} />
 
         <section className="at-hero at-reveal" aria-labelledby="at-hero-title">
           <div className="at-hero-copy">
-            <span className="at-eyebrow"><FiShield aria-hidden="true" /> Storage &amp; recovery</span>
             <h2 id="at-hero-title">
-              {loading ? 'Loading archived records…' : (
-                <><span className="at-hero-number">{metrics.total}</span> {metrics.total === 1 ? 'record is' : 'records are'} recoverable</>
+              {loading ? 'Loading…' : metrics.total === 0 ? 'Nothing here right now' : (
+                <><span className="at-hero-number">{metrics.total}</span> {metrics.total === 1 ? 'item' : 'items'} you can restore</>
               )}
             </h2>
-            <p>
-              Archived and deleted records stay recoverable for 30 days. After that, permanent deletion runs
-              only when retention, dependency, backup, and file checks all pass. Every step is logged.
-            </p>
+            <p>Items stay here for 30 days. Restore them anytime before then.</p>
           </div>
-          <dl className="at-metrics">
-            <div className="at-metric"><dt><FiClock aria-hidden="true" /> Deleting within 7 days</dt><dd>{metrics.dueSoon}</dd></div>
-            <div className="at-metric"><dt><FiAlertTriangle aria-hidden="true" /> On hold</dt><dd>{metrics.onHold}</dd></div>
-            <div className="at-metric"><dt><FiCpu aria-hidden="true" /> Auto-removed inactive accounts</dt><dd>{metrics.autoDeleted}</dd></div>
-            <div className="at-metric"><dt><FiDatabase aria-hidden="true" /> Database</dt><dd>{formatBytes(metrics.databaseBytes)}</dd></div>
-            <div className="at-metric"><dt><FiHardDrive aria-hidden="true" /> File storage</dt><dd>{formatBytes(metrics.fileBytes)}</dd></div>
+          <dl className="at-stats">
+            <div className="at-stat"><dt>Deleting this week</dt><dd>{metrics.dueSoon}</dd></div>
+            <div className="at-stat"><dt>On hold</dt><dd>{metrics.onHold}</dd></div>
+            <div className="at-stat"><dt>Storage used</dt><dd>{formatBytes(metrics.storageBytes)}</dd></div>
           </dl>
+          {overview && (
+            <button
+              type="button"
+              className="at-button at-button--ghost at-charts-toggle"
+              aria-expanded={showCharts}
+              aria-controls="at-charts"
+              onClick={() => setShowCharts((value) => !value)}
+            >
+              <FiBarChart2 aria-hidden="true" /> {showCharts ? 'Hide charts' : 'Show charts'}
+              <FiChevronDown aria-hidden="true" className={showCharts ? 'is-flipped' : ''} />
+            </button>
+          )}
         </section>
 
-        {!loading && overview && (
-          <section className="at-charts at-reveal" aria-label="Storage and archive charts">
+        {showCharts && overview && (
+          <section id="at-charts" className="at-charts" aria-label="Storage and activity charts">
             <StorageGrowthChart growth={overview.file_growth || []} />
             <StorageCompositionChart databaseBytes={overview.database_bytes} buckets={overview.buckets || []} />
             <ArchiveActivityChart trend={overview.event_trend || []} />
@@ -399,104 +453,118 @@ export default function ArchiveTrash() {
             ))}
           </div>
 
-          {activeTab === 'trash' && (
-            <div id="at-panel-trash" role="tabpanel" aria-labelledby="at-tab-trash" className="at-panel">
+          {activeTab === 'items' && (
+            <div id="at-panel-items" role="tabpanel" aria-labelledby="at-tab-items" className="at-panel">
               <div className="at-toolbar">
-                <label className="at-field at-field--search">
-                  <span>Search</span>
-                  <span className="at-search">
-                    <FiSearch aria-hidden="true" />
-                    <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, reason, or admin" />
-                  </span>
+                <label className="at-search">
+                  <FiSearch aria-hidden="true" />
+                  <span className="at-sr-only">Search items</span>
+                  <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or reason" />
                 </label>
-                <label className="at-field">
-                  <span>Module</span>
+                <label className="at-select">
+                  <span className="at-sr-only">Section</span>
                   <select value={moduleFilter} onChange={(event) => setModuleFilter(event.target.value)}>
-                    <option value="all">All modules</option>
+                    <option value="all">All sections</option>
                     {archivablePolicies.map((policy) => <option key={policy.module} value={policy.module}>{policy.label}</option>)}
                   </select>
                 </label>
-                <label className="at-field">
-                  <span>Status</span>
+                <label className="at-select">
+                  <span className="at-sr-only">Status</span>
                   <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                     {STATUS_FILTERS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 </label>
-                <label className="at-field">
-                  <span>Sort by</span>
+                <label className="at-select">
+                  <span className="at-sr-only">Sort</span>
                   <select value={sort} onChange={(event) => setSort(event.target.value)}>
                     {SORTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 </label>
               </div>
 
+              {!isSuperAdmin && filteredItems.length > 0 && (
+                <p className="at-note"><FiLock aria-hidden="true" /> You can restore items. Only a Super Admin can delete them for good.</p>
+              )}
+
               {loading ? (
-                <div className="at-empty">Loading archived records…</div>
+                <div className="at-empty">Loading…</div>
               ) : filteredItems.length === 0 ? (
                 <div className="at-empty">
                   <FiArchive aria-hidden="true" />
-                  <strong>{items.length ? 'No records match these filters.' : 'Archive & Trash is empty.'}</strong>
-                  <span>{items.length ? 'Try a different search or filter.' : 'Archived records from any module will appear here.'}</span>
+                  <strong>{items.length ? 'No matches' : 'Nothing here'}</strong>
+                  <span>{items.length ? 'Try another search or filter.' : 'Archived and deleted items will show up here.'}</span>
                 </div>
               ) : (
-                <ul className="at-list" aria-label="Archived and deleted records">
+                <ul className="at-list" aria-label="Archived and deleted items">
                   {itemPages.items.map((item) => {
                     const history = eventsByItem.get(item.item_id) || [];
                     const expanded = expandedId === item.item_id;
-                    const protectedModule = policyByModule.get(item.module)?.is_protected;
+                    const policy = policyByModule.get(item.module);
+                    const purging = item.lifecycle.key === 'purging';
+                    const deleteBlock = getDeleteBlock(item, policy, isSuperAdmin, now);
+                    const hintId = `at-hint-${item.item_id}`;
                     return (
                       <li key={item.item_id} className={`at-item at-item--${item.lifecycle.key}`}>
                         <CountdownRing days={item.remainingDays} total={item.recoveryDays} />
                         <div className="at-item-main">
                           <div className="at-item-title">
                             <strong>{item.record_label}</strong>
-                            <span className="at-module">{moduleLabel(item.module)}</span>
-                            {protectedModule && <span className="at-protected" title="Retention-protected record"><FiShield aria-hidden="true" /> Protected</span>}
+                            <span className={`at-status at-status--${item.lifecycle.key}`}>{item.lifecycle.label}</span>
+                            {policy?.is_protected && <span className="at-chip" title="Kept for a set time before it can be deleted"><FiShield aria-hidden="true" /> Protected</span>}
                           </div>
-                          {item.record_context && <span className="at-item-context">{item.record_context}</span>}
-                          <span className="at-item-reason">{item.reason || 'No reason provided'}</span>
+                          <span className="at-item-meta">{moduleLabel(item.module)}{item.record_context ? ` · ${item.record_context}` : ''}</span>
+                          {item.reason && <span className="at-item-reason">“{item.reason}”</span>}
                           {item.purge_block_reason && (
-                            <span className="at-item-hold"><FiAlertTriangle aria-hidden="true" /> {item.purge_block_reason}</span>
+                            <span className="at-item-hold"><FiAlertTriangle aria-hidden="true" /> On hold: {item.purge_block_reason}</span>
                           )}
                         </div>
-                        <dl className="at-item-facts">
-                          <div><dt>{item.disposition === 'soft_deleted' ? 'Deleted by' : 'Archived by'}</dt><dd><ActorPill type={item.actor_type} name={item.archived_by_name} /></dd></div>
-                          <div><dt>Date</dt><dd>{formatDateTime(item.archived_at)}</dd></div>
-                          <div><dt>Permanent deletion</dt><dd>{formatDate(item.purge_after)}</dd></div>
-                          <div><dt>Status</dt><dd><span className={`at-status at-status--${item.lifecycle.key}`}>{item.lifecycle.label}</span></dd></div>
-                        </dl>
+                        <div className="at-item-when">
+                          <strong className={`at-days at-days--${item.remainingDays != null && item.remainingDays <= 7 ? 'soon' : 'later'}`}>
+                            {daysLeftLabel(item.remainingDays)}
+                          </strong>
+                          <span>Deletes {formatDate(item.purge_after)}</span>
+                          <span className="at-item-by">
+                            {item.disposition === 'soft_deleted' ? 'Deleted' : 'Archived'} {formatDate(item.archived_at)} by <Actor type={item.actor_type} name={item.archived_by_name} />
+                          </span>
+                        </div>
                         <div className="at-item-actions">
-                          <button
-                            type="button"
-                            className="at-button at-button--restore"
-                            onClick={() => { setDialogError(''); setDialog({ kind: 'restore', item }); }}
-                            disabled={item.lifecycle.key === 'purging'}
-                          >
-                            <FiRotateCcw aria-hidden="true" /> Restore
-                          </button>
-                          {isSuperAdmin && (
+                          <div className="at-item-buttons">
+                            <button
+                              type="button"
+                              className="at-button at-button--primary"
+                              onClick={() => openDialog({ kind: 'restore', item })}
+                              disabled={purging}
+                              title={purging ? 'Deleting now…' : undefined}
+                            >
+                              <FiRotateCcw aria-hidden="true" /> Restore
+                            </button>
                             <button
                               type="button"
                               className="at-button at-button--danger"
-                              onClick={() => { setDialogError(''); setDialog({ kind: 'purge', item }); }}
-                              disabled={item.lifecycle.key === 'purging'}
+                              onClick={() => openDialog({ kind: 'purge', item })}
+                              disabled={Boolean(deleteBlock)}
+                              title={deleteBlock || 'Delete for good'}
+                              aria-describedby={deleteBlock && isSuperAdmin ? hintId : undefined}
                             >
-                              <FiTrash2 aria-hidden="true" /> Delete permanently
+                              <FiTrash2 aria-hidden="true" /> Delete
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            className="at-button at-button--ghost"
-                            aria-expanded={expanded}
-                            aria-controls={`at-history-${item.item_id}`}
-                            onClick={() => setExpandedId(expanded ? '' : item.item_id)}
-                          >
-                            History <FiChevronDown aria-hidden="true" className={expanded ? 'is-flipped' : ''} />
-                          </button>
+                            <button
+                              type="button"
+                              className="at-button at-button--icon"
+                              aria-label={`${expanded ? 'Hide' : 'Show'} history for ${item.record_label}`}
+                              title={expanded ? 'Hide history' : 'Show history'}
+                              aria-expanded={expanded}
+                              aria-controls={`at-history-${item.item_id}`}
+                              onClick={() => setExpandedId(expanded ? '' : item.item_id)}
+                            >
+                              <FiChevronDown aria-hidden="true" className={expanded ? 'is-flipped' : ''} />
+                            </button>
+                          </div>
+                          {deleteBlock && isSuperAdmin && <span id={hintId} className="at-hint">{deleteBlock}</span>}
                         </div>
                         {expanded && (
                           <ol id={`at-history-${item.item_id}`} className="at-item-history">
-                            {history.length === 0 && <li>No events recorded yet.</li>}
+                            {history.length === 0 && <li>No history yet.</li>}
                             {history.map((event) => (
                               <li key={event.event_id} className={`at-timeline-event at-timeline-event--${event.event_type}`}>
                                 <span className="at-timeline-dot" aria-hidden="true" />
@@ -519,24 +587,22 @@ export default function ArchiveTrash() {
           {activeTab === 'history' && (
             <div id="at-panel-history" role="tabpanel" aria-labelledby="at-tab-history" className="at-panel">
               <div className="at-toolbar">
-                <label className="at-field at-field--search">
-                  <span>Search</span>
-                  <span className="at-search">
-                    <FiSearch aria-hidden="true" />
-                    <input type="search" value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Record, reason, or actor" />
-                  </span>
+                <label className="at-search">
+                  <FiSearch aria-hidden="true" />
+                  <span className="at-sr-only">Search history</span>
+                  <input type="search" value={historySearch} onChange={(event) => setHistorySearch(event.target.value)} placeholder="Search by item, reason, or person" />
                 </label>
-                <label className="at-field">
-                  <span>Event</span>
+                <label className="at-select">
+                  <span className="at-sr-only">Action</span>
                   <select value={historyType} onChange={(event) => setHistoryType(event.target.value)}>
-                    <option value="all">All events</option>
+                    <option value="all">All actions</option>
                     {Object.entries(EVENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                 </label>
-                <label className="at-field">
-                  <span>Module</span>
+                <label className="at-select">
+                  <span className="at-sr-only">Section</span>
                   <select value={historyModule} onChange={(event) => setHistoryModule(event.target.value)}>
-                    <option value="all">All modules</option>
+                    <option value="all">All sections</option>
                     {policies.map((policy) => <option key={policy.module} value={policy.module}>{policy.label}</option>)}
                     <option value="system">System</option>
                   </select>
@@ -545,24 +611,22 @@ export default function ArchiveTrash() {
                   <FiDownload aria-hidden="true" /> Export CSV
                 </button>
               </div>
-              <p className="at-note">
-                History is append-only and is kept after records are permanently deleted, so every archive, restore, and deletion stays auditable.
-              </p>
+              <p className="at-note">Every action is saved here, even after an item is deleted.</p>
               {filteredEvents.length === 0 ? (
-                <div className="at-empty"><strong>No events match these filters.</strong></div>
+                <div className="at-empty"><strong>No matches</strong><span>Try another search or filter.</span></div>
               ) : (
                 <div className="at-table-wrap">
                   <table className="at-table">
                     <thead>
-                      <tr><th scope="col">Date &amp; time</th><th scope="col">Event</th><th scope="col">Record</th><th scope="col">By</th><th scope="col">Reason</th></tr>
+                      <tr><th scope="col">When</th><th scope="col">Action</th><th scope="col">Item</th><th scope="col">By</th><th scope="col">Reason</th></tr>
                     </thead>
                     <tbody>
                       {eventPages.items.map((event) => (
                         <tr key={event.event_id}>
-                          <td data-label="Date & time">{formatDateTime(event.occurred_at)}</td>
-                          <td data-label="Event"><span className={`at-event at-event--${event.event_type}`}>{EVENT_LABELS[event.event_type] || event.event_type}</span></td>
-                          <td data-label="Record"><strong>{event.record_label || '—'}</strong><span className="at-table-sub">{moduleLabel(event.module)}</span></td>
-                          <td data-label="By"><ActorPill type={event.actor_type} name={event.actor_name} /></td>
+                          <td data-label="When">{formatDateTime(event.occurred_at)}</td>
+                          <td data-label="Action"><span className={`at-event at-event--${event.event_type}`}>{EVENT_LABELS[event.event_type] || event.event_type}</span></td>
+                          <td data-label="Item"><strong>{event.record_label || '—'}</strong><span className="at-table-sub">{moduleLabel(event.module)}</span></td>
+                          <td data-label="By"><Actor type={event.actor_type} name={event.actor_name} /></td>
                           <td data-label="Reason">{event.reason || '—'}</td>
                         </tr>
                       ))}
@@ -574,83 +638,93 @@ export default function ArchiveTrash() {
             </div>
           )}
 
-          {activeTab === 'policies' && (
-            <div id="at-panel-policies" role="tabpanel" aria-labelledby="at-tab-policies" className="at-panel">
+          {activeTab === 'settings' && (
+            <div id="at-panel-settings" role="tabpanel" aria-labelledby="at-tab-settings" className="at-panel">
               <div className="at-backup">
                 <div>
-                  <h3><FiShield aria-hidden="true" /> Backup verification</h3>
+                  <h3><FiShield aria-hidden="true" /> Backup</h3>
                   <p>
                     {latestBackup
-                      ? <>Last confirmed backup: <strong>{formatDateTime(latestBackup)}</strong>. Only records archived before this time can be permanently deleted.</>
-                      : <>No backup has been confirmed. Permanent deletion stays disabled for every module until a Super Admin confirms one.</>}
+                      ? <>Last confirmed <strong>{formatDateTime(latestBackup)}</strong>. Only items moved here before then can be deleted.</>
+                      : <>No backup confirmed yet. Nothing can be deleted until a Super Admin confirms one.</>}
                   </p>
                 </div>
-                {isSuperAdmin && (
-                  <button type="button" className="at-button at-button--primary" onClick={() => { setDialogError(''); setDialog({ kind: 'backup' }); }}>
-                    Confirm backup
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="at-button at-button--primary"
+                  onClick={() => openDialog({ kind: 'backup' })}
+                  disabled={!isSuperAdmin}
+                  title={isSuperAdmin ? undefined : 'Only a Super Admin can confirm a backup.'}
+                >
+                  Confirm backup
+                </button>
               </div>
-              {!isSuperAdmin && <p className="at-note">Retention policies can only be changed by a Super Admin.</p>}
+              {!isSuperAdmin && <p className="at-note"><FiLock aria-hidden="true" /> Only a Super Admin can change these settings.</p>}
               <div className="at-table-wrap">
                 <table className="at-table at-policies">
                   <thead>
-                    <tr><th scope="col">Module</th><th scope="col">Recovery</th><th scope="col">Retention (days)</th><th scope="col">Permanent deletion</th>{isSuperAdmin && <th scope="col"><span className="at-sr-only">Save</span></th>}</tr>
+                    <tr>
+                      <th scope="col">Section</th>
+                      <th scope="col">Restore window</th>
+                      <th scope="col">Keep for (days)</th>
+                      <th scope="col">Deleting</th>
+                      {isSuperAdmin && <th scope="col"><span className="at-sr-only">Save</span></th>}
+                    </tr>
                   </thead>
                   <tbody>
                     {policies.map((policy) => {
                       const draft = getPolicyDraft(policy);
                       const dirty = Boolean(policyDrafts[policy.module]);
                       return (
-                        <Fragment key={policy.module}>
-                          <tr>
-                            <td data-label="Module">
-                              <strong>{policy.label}</strong>
-                              {policy.is_protected && <span className="at-protected"><FiShield aria-hidden="true" /> Protected</span>}
-                              <span className="at-table-sub">{policy.description}</span>
-                              {policy.module === 'mobile_users' && policy.inactivity_days && (
-                                <span className="at-table-sub">Inactive for {policy.inactivity_days} days → Trash automatically (tracked since {formatDate(policy.inactivity_tracking_since)}). Admin, Super Admin, and Personnel accounts are never removed for inactivity.</span>
-                              )}
-                            </td>
-                            <td data-label="Recovery">{policy.is_archivable ? `${policy.recovery_days} days` : '—'}</td>
-                            <td data-label="Retention (days)">
-                              {isSuperAdmin ? (
-                                <input
-                                  type="number"
-                                  min="1"
-                                  max="36500"
-                                  className="at-input"
-                                  aria-label={`${policy.label} retention in days`}
-                                  value={draft.retentionDays}
-                                  placeholder={policy.is_protected ? 'Required' : 'None'}
-                                  onChange={(event) => setPolicyDrafts((current) => ({ ...current, [policy.module]: { ...draft, retentionDays: event.target.value } }))}
-                                />
-                              ) : (policy.retention_days ?? (policy.is_protected ? 'Not approved' : 'None'))}
-                            </td>
-                            <td data-label="Permanent deletion">
-                              {isSuperAdmin ? (
-                                <label className="at-switch">
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(draft.purgeEnabled)}
-                                    onChange={(event) => setPolicyDrafts((current) => ({ ...current, [policy.module]: { ...draft, purgeEnabled: event.target.checked } }))}
-                                  />
-                                  <span className="at-switch-track" aria-hidden="true" />
-                                  <span>{draft.purgeEnabled ? 'Approved' : 'Disabled'}</span>
-                                </label>
-                              ) : (
-                                <span className={`at-status at-status--${policy.purge_enabled ? 'archived' : 'blocked'}`}>{policy.purge_enabled ? 'Approved' : 'Disabled'}</span>
-                              )}
-                            </td>
-                            {isSuperAdmin && (
-                              <td data-label="">
-                                <button type="button" className="at-button at-button--ghost" disabled={!dirty || savingPolicy === policy.module} onClick={() => savePolicy(policy)}>
-                                  {savingPolicy === policy.module ? 'Saving…' : 'Save'}
-                                </button>
-                              </td>
+                        <tr key={policy.module}>
+                          <td data-label="Section">
+                            <strong>{policy.label}</strong>
+                            {policy.is_protected && <span className="at-chip"><FiShield aria-hidden="true" /> Protected</span>}
+                            <span className="at-table-sub">{policy.description}</span>
+                            {policy.module === 'mobile_users' && policy.inactivity_days && (
+                              <span className="at-table-sub">
+                                Unused for {policy.inactivity_days} days? Moved to Trash automatically (since {formatDate(policy.inactivity_tracking_since)}). Staff accounts are never affected.
+                              </span>
                             )}
-                          </tr>
-                        </Fragment>
+                          </td>
+                          <td data-label="Restore window">{policy.is_archivable ? `${policy.recovery_days} days` : '—'}</td>
+                          <td data-label="Keep for (days)">
+                            {isSuperAdmin ? (
+                              <input
+                                type="number"
+                                min="1"
+                                max="36500"
+                                className="at-input"
+                                aria-label={`${policy.label}: keep for how many days`}
+                                value={draft.retentionDays}
+                                placeholder={policy.is_protected ? 'Required' : 'None'}
+                                onChange={(event) => setPolicyDrafts((current) => ({ ...current, [policy.module]: { ...draft, retentionDays: event.target.value } }))}
+                              />
+                            ) : (policy.retention_days ?? (policy.is_protected ? 'Not set' : 'None'))}
+                          </td>
+                          <td data-label="Deleting">
+                            {isSuperAdmin ? (
+                              <label className="at-switch">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(draft.purgeEnabled)}
+                                  onChange={(event) => setPolicyDrafts((current) => ({ ...current, [policy.module]: { ...draft, purgeEnabled: event.target.checked } }))}
+                                />
+                                <span className="at-switch-track" aria-hidden="true" />
+                                <span>{draft.purgeEnabled ? 'Allowed' : 'Off'}</span>
+                              </label>
+                            ) : (
+                              <span className={`at-status at-status--${policy.purge_enabled ? 'soft_deleted' : 'archived'}`}>{policy.purge_enabled ? 'Allowed' : 'Off'}</span>
+                            )}
+                          </td>
+                          {isSuperAdmin && (
+                            <td data-label="">
+                              <button type="button" className="at-button at-button--ghost" disabled={!dirty || savingPolicy === policy.module} onClick={() => savePolicy(policy)}>
+                                {savingPolicy === policy.module ? 'Saving…' : 'Save'}
+                              </button>
+                            </td>
+                          )}
+                        </tr>
                       );
                     })}
                   </tbody>
@@ -663,11 +737,11 @@ export default function ArchiveTrash() {
         <ArchiveConfirmDialog
           open={dialog?.kind === 'restore'}
           tone="restore"
-          title="Restore this record?"
-          description={<p>The record returns to its module with its previous state, and the scheduled permanent deletion is cancelled.</p>}
+          title="Restore this item?"
+          description={<p>It goes back to {dialog?.item ? moduleLabel(dialog.item.module) : 'its section'} and won&apos;t be deleted.</p>}
           recordLabel={dialog?.item?.record_label}
-          recordMeta={dialog?.item ? `${moduleLabel(dialog.item.module)} · deletion was scheduled for ${formatDate(dialog.item.purge_after)}` : ''}
-          reasonLabel="Restore note"
+          recordMeta={dialog?.item ? daysLeftLabel(dialog.item.remainingDays) : ''}
+          showReason={false}
           confirmLabel="Restore"
           busyLabel="Restoring…"
           busy={dialogBusy}
@@ -678,19 +752,15 @@ export default function ArchiveTrash() {
         <ArchiveConfirmDialog
           open={dialog?.kind === 'purge'}
           tone="danger"
-          title="Permanently delete this record?"
-          description={(
-            <>
-              <p><strong>This cannot be undone.</strong> The record and its stored files are erased and cannot be recovered from Archive &amp; Trash.</p>
-              <p>The server refuses the deletion unless the module&apos;s deletion is approved, retention has elapsed, a backup was confirmed after this record was archived, and no protected history depends on it.</p>
-            </>
-          )}
+          title="Delete forever?"
+          description={<p><strong>This can&apos;t be undone.</strong> The item and its files will be erased.</p>}
           recordLabel={dialog?.item?.record_label}
-          recordMeta={dialog?.item ? `${moduleLabel(dialog.item.module)} · ${dialog.item.storage_objects?.length || 0} attached file(s)` : ''}
-          reasonLabel="Reason for permanent deletion"
+          recordMeta={dialog?.item ? `${moduleLabel(dialog.item.module)} · ${dialog.item.storage_objects?.length || 0} file(s)` : ''}
+          reasonLabel="Reason"
+          reasonPlaceholder="e.g. Duplicate record"
           reasonRequired
           confirmPhrase="DELETE"
-          confirmLabel="Delete permanently"
+          confirmLabel="Delete forever"
           busyLabel="Deleting…"
           busy={dialogBusy}
           error={dialogError}
@@ -700,16 +770,15 @@ export default function ArchiveTrash() {
         <ArchiveConfirmDialog
           open={dialog?.kind === 'backup'}
           tone="archive"
-          title="Confirm a current backup?"
+          title="Confirm backup?"
           description={(
             <p>
-              Confirm only after verifying that a database and Storage backup exists as of now (for example in the
-              Supabase dashboard under Database → Backups). Records archived before this moment become eligible for
-              permanent deletion once their other checks pass.
+              Only confirm after checking that today&apos;s backup exists (Supabase → Database → Backups).
+              Items moved here before now can then be deleted.
             </p>
           )}
-          reasonLabel="Backup reference"
-          reasonPlaceholder="e.g. Daily backup Oct 16, 2026 verified in Supabase"
+          reasonLabel="Backup note"
+          reasonPlaceholder="e.g. Daily backup, Oct 17 — checked"
           reasonRequired
           confirmLabel="Confirm backup"
           busyLabel="Saving…"

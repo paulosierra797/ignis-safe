@@ -502,7 +502,7 @@ export default function Announcements() {
       ? await getArchivedAnnouncements(currentUser)
       : await getArchivedAnnouncementsForPersonnel(effectiveUser);
     if (error) {
-      setMessage({ type: 'error', text: `Failed to load archived announcements: ${error}` });
+      setMessage({ type: 'error', text: `Couldn't load archived announcements. ${error}` });
     } else {
       setArchivedAnnouncements(data || []);
       setArchivedLoaded(true);
@@ -849,7 +849,7 @@ export default function Announcements() {
     if (!isAdmin) {
       const targetAnnouncement = announcements.find((row) => row.announcement_id === archiveModalId);
       if (!targetAnnouncement?.acknowledged_by_current_user) {
-        setMessage({ type: 'error', text: 'Please acknowledge this announcement before archiving it.' });
+        setMessage({ type: 'error', text: 'Acknowledge this announcement first, then archive it.' });
         setArchiveModalId('');
         return;
       }
@@ -862,7 +862,7 @@ export default function Announcements() {
     setArchiving(false);
 
     if (error) {
-      setMessage({ type: 'error', text: `Failed to archive announcement: ${error}` });
+      setMessage({ type: 'error', text: `Couldn't archive the announcement. ${error}` });
       return;
     }
 
@@ -882,7 +882,7 @@ export default function Announcements() {
     setRestoringId('');
 
     if (error) {
-      setMessage({ type: 'error', text: `Failed to restore announcement: ${error}` });
+      setMessage({ type: 'error', text: `Couldn't restore the announcement. ${error}` });
       return;
     }
 
@@ -1536,7 +1536,7 @@ export default function Announcements() {
           open={archivedOpen}
           id="announcementArchiveList"
           title={isAdmin ? 'Announcement Archive' : 'Archived Announcements'}
-          description="Review archived announcements and restore them to the active list."
+          description="Restore an announcement to show it again."
           count={archivedLoaded ? archivedAnnouncements.length : 0}
           onClose={toggleArchivedPanel}
           busy={Boolean(restoringId)}
@@ -1682,10 +1682,10 @@ export default function Announcements() {
                             type="button"
                             className="archived-manage-button"
                             onClick={() => navigate('/dashboard/archive-trash')}
-                            title="Deletion countdown and permanent deletion are managed in Archive & Trash."
+                            title="See when it will be deleted, or delete it now."
                           >
                             <FiTrash2 aria-hidden="true" />
-                            Manage in Archive &amp; Trash
+                            Open in Archive &amp; Trash
                           </button>
                         )}
                       </RecordActions>
@@ -1704,7 +1704,7 @@ export default function Announcements() {
           <div className="announcement-confirm-modal-card" role="alertdialog" aria-modal="true" aria-labelledby="archiveAnnouncementTitle">
             <div className="history-confirm-heading"><h3 id="archiveAnnouncementTitle">Archive this announcement?</h3><CloseButton label="Close archive confirmation" onClick={() => setArchiveModalId('')} disabled={archiving} /></div>
             <p className="history-selected-title">{announcements.find(row => row.announcement_id === archiveModalId)?.title}</p>
-            <p>You can restore it later from Archived Announcements.</p>
+            <p>You can restore it anytime.</p>
             <div className="announcement-confirm-modal-actions">
               <button
                 type="button"

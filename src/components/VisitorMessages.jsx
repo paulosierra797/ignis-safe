@@ -251,7 +251,7 @@ export default function VisitorMessages() {
             <h2>{archivedView ? 'Archived Conversations' : 'Website Conversations'}</h2>
             <p>
               {archivedView
-                ? 'Review archived visitor messages, restore conversations, or manage scheduled deletion.'
+                ? 'Restore a conversation, or see when it will be deleted.'
                 : 'Read and reply to messages sent through the public website. Visitor names and emails are shown for clear follow-up.'}
             </p>
           </div>
@@ -320,7 +320,7 @@ export default function VisitorMessages() {
                     </span>
                     <span className="visitor-conversation-preview">{conversation.last_message_preview}</span>
                     {conversation.delete_after && (
-                      <span className="visitor-conversation-delete-status">Scheduled for deletion {formatListTime(conversation.delete_after)}</span>
+                      <span className="visitor-conversation-delete-status">Deletes {formatListTime(conversation.delete_after)}</span>
                     )}
                     </span>
                   </button>
@@ -341,7 +341,7 @@ export default function VisitorMessages() {
                         disabled={updatingArchive || Boolean(conversation.delete_after)}
                       >
                         <FiTrash2 aria-hidden="true" />
-                        {conversation.delete_after ? 'Scheduled for deletion' : 'Delete conversation'}
+                        {conversation.delete_after ? 'Deletion scheduled' : 'Delete'}
                       </button>
                     </RecordActions>
                   </div>
@@ -393,7 +393,7 @@ export default function VisitorMessages() {
                           disabled={updatingArchive || Boolean(thread.conversation.delete_after)}
                         >
                           <FiTrash2 />
-                          {thread.conversation.delete_after ? 'Scheduled for deletion' : 'Delete conversation'}
+                          {thread.conversation.delete_after ? 'Deletion scheduled' : 'Delete'}
                         </button>
                       </>
                     ) : (
@@ -499,16 +499,16 @@ export default function VisitorMessages() {
               <FiX />
             </button>
             <span className="visitor-delete-modal-icon"><FiAlertTriangle /></span>
-            <p className="visitor-delete-modal-eyebrow">30-DAY RECOVERY PERIOD</p>
+            <p className="visitor-delete-modal-eyebrow">30 DAYS TO RESTORE</p>
             <h2 id="visitor-delete-title">Delete this conversation?</h2>
             <p>
-              The conversation with <strong>{pendingDeletion.visitor_name}</strong> will remain in the archive for 30 days.
-              You can restore it during that period. Afterward, the conversation and all of its messages will be permanently deleted.
+              The chat with <strong>{pendingDeletion.visitor_name}</strong> moves to Archives. You can restore it within 30 days.
+              After that, it&apos;s deleted for good.
             </p>
             <div className="visitor-delete-modal-actions">
               <button type="button" onClick={() => setPendingDeletion(null)} disabled={updatingArchive}>Cancel</button>
               <button type="button" onClick={handleScheduleDeletion} disabled={updatingArchive}>
-                <FiTrash2 /> {updatingArchive ? 'Scheduling...' : 'Schedule deletion'}
+                <FiTrash2 /> {updatingArchive ? 'Deleting…' : 'Delete'}
               </button>
             </div>
           </section>

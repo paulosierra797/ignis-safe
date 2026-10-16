@@ -12,7 +12,7 @@ button.archive-control.archive-control {
   padding: 0;
   gap: 8px;
   border: 1px solid #b91c1c;
-  border-radius: 8px;
+  border-radius: 10px;
   background: #b91c1c;
   color: #ffffff;
   font: inherit;
@@ -49,7 +49,7 @@ button.archive-control.archive-control:hover:not(:disabled) {
 }
 
 button.archive-control.archive-control:focus-visible {
-  outline: 3px solid #1d4ed8;
+  outline: 3px solid rgba(185, 28, 28, 0.35);
   outline-offset: 3px;
 }
 

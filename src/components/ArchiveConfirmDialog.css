@@ -19,20 +19,16 @@
   max-height: calc(100dvh - 32px);
   overflow: hidden;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 28px 70px rgba(15, 23, 42, 0.3);
   font-family: 'Poppins', sans-serif;
 }
 
-.archive-dialog--restore {
-  --dialog-accent: #047857;
-  --dialog-accent-soft: #ecfdf5;
-}
-
-.archive-dialog--archive {
-  --dialog-accent: #b45309;
-  --dialog-accent-soft: #fffbeb;
+/* Archive and restore use the base red; permanent deletion goes one shade deeper. */
+.archive-dialog--danger {
+  --dialog-accent: #991b1b;
+  --dialog-accent-soft: #fee2e2;
 }
 
 .archive-dialog-header {
@@ -90,10 +86,9 @@
   flex-direction: column;
   gap: 2px;
   padding: 10px 12px;
-  border: 1px solid #e8edf2;
   border-left: 3px solid var(--dialog-accent);
-  border-radius: 8px;
-  background: #f8fafc;
+  border-radius: 10px;
+  background: var(--dialog-accent-soft);
 }
 
 .archive-dialog-record strong {
@@ -151,16 +146,14 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 14px 20px;
-  border-top: 1px solid #eef2f6;
-  background: #fcfcfd;
+  padding: 4px 20px 20px;
 }
 
 .archive-dialog-cancel,
 .archive-dialog-confirm {
   min-height: 42px;
   padding: 0 18px;
-  border-radius: 8px;
+  border-radius: 10px;
   font: inherit;
   font-size: 0.85rem;
   font-weight: 700;
@@ -185,7 +178,7 @@
 }
 
 .archive-dialog-confirm:hover:not(:disabled) {
-  filter: brightness(0.94);
+  filter: brightness(0.9);
 }
 
 .archive-dialog-cancel:focus-visible,

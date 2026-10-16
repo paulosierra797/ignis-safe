@@ -1,24 +1,23 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Bar, Line } from 'react-chartjs-2';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
   PointElement,
   LineElement,
-  BarElement,
   Filler,
   Tooltip,
 } from 'chart.js';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { FiBarChart2, FiRefreshCw, FiShield } from 'react-icons/fi';
+import { FiBarChart2, FiInfo, FiRefreshCw, FiShield } from 'react-icons/fi';
 import { useLandingContent } from '../context/LandingContentContext';
 import { getPublicTrends } from '../utils/publicContentService';
 import { MANILA_TIME_ZONE } from '../utils/dateUtils';
 import './PublicTrendsSection.css';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Filler, Tooltip);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 gsap.registerPlugin(useGSAP);
 
 // Validated categorical pair (CVD separation and contrast pass on white).
@@ -47,7 +46,6 @@ const COPY = {
     explainRead: 'How to read it',
     tableCaption: 'Data table',
     month: 'Month',
-    module: 'Module',
     points: 'pts',
     stats: {
       learners: { label: 'Registered learners', hint: 'Verified mobile app accounts' },
@@ -60,48 +58,29 @@ const COPY = {
       subtitle: 'Valid learning activities each month',
       activities: 'Learning activities',
       learners: 'Active learners',
-      shows: 'Each month’s count of completed learning actions (submitted pre-tests and post-tests, finished lessons, and completed simulations), together with how many different learners took part.',
-      means: 'A rising line means more residents are actively learning with IGNIS SAFE. A dip means there was less activity that month.',
-      read: 'Read from left (oldest) to right (newest). Hover over or tap a month to see its exact numbers. The latest month is still in progress, so its count can still grow.',
+      activitiesHint: 'Tests, lessons, and simulations finished that month.',
+      learnersHint: 'Different people who took part that month.',
+      shows: 'How much learning happened each month.',
+      means: 'A higher line means more people are learning.',
+      read: 'Go left to right, oldest to newest. Tap a point for the numbers. The last month is still counting.',
     },
     registrations: {
       title: 'Registered learners over time',
       subtitle: 'Running total of verified accounts',
       series: 'Registered learners',
-      shows: 'The running total of residents who created and verified an IGNIS SAFE account, month by month.',
-      means: 'Growth shows the program reaching more people. Because it is a running total, the line can only stay level or go up.',
-      read: 'The right end of the line is today’s total. Steeper parts mean more people signed up that month.',
+      shows: 'How many people have signed up so far.',
+      means: 'A rising line means the program is reaching more people.',
+      read: 'The far right is today’s total. A steeper climb means more sign-ups.',
     },
     barangays: {
       title: 'Barangays represented',
       subtitle: 'Barangays with at least one registered learner',
       series: 'Barangays represented',
       coverage: (count, total, percent) => `${count} of ${total} official barangays (${percent}%)`,
-      shows: 'How many of the official barangays of Dasmariñas have at least one registered learner, based on the barangay each learner entered in their profile.',
-      means: 'More barangays means fire safety learning is spreading across the city instead of staying in a few areas.',
-      read: 'Each step up means a new barangay joined. The bar underneath compares today’s total with all official barangays.',
-    },
-    modules: {
-      title: 'Module activity',
-      subtitle: 'Learners who started and completed each module',
-      started: 'Started (took the pre-test)',
-      completed: 'Completed',
-      shows: 'For each module, how many learners took the pre-test and how many finished the whole module: pre-test, lesson, and post-test.',
-      means: 'Longer bars mean more learners are taking that module. A large gap between the two bars means many learners have started but not finished yet.',
-      read: 'Compare the blue bar (started) with the red bar (completed) on each row. Hover over or tap a bar for the exact count.',
-    },
-    assessment: {
-      title: 'Average assessment difference',
-      subtitle: 'Average pre-test score compared with post-test score',
-      pre: 'Pre-test average',
-      post: 'Post-test average',
-      overall: 'All modules',
-      headline: (pre, post, records) => `Post-test average ${post} vs. pre-test average ${pre}, from ${records} comparable results.`,
-      waiting: (count, min) => `This graph appears once at least ${min} learners have completed both the pre-test and the post-test of a module, so that no one’s individual score can be identified. Comparable results so far: ${count} of ${min}.`,
-      axis: 'Average score (out of 100)',
-      shows: 'The average score before studying a module (pre-test) beside the average score after it (post-test). Only learners who completed both tests for the same module are counted.',
-      means: 'When the post-test bar is taller, learners scored higher after the lesson, a sign the modules are helping. The difference is in percentage points.',
-      read: 'Scores are out of 100. A module appears only when at least 5 learners have both scores, so no individual result can be identified.',
+      coverageHint: 'Barangays with a learner, out of all barangays in the city.',
+      shows: 'How many barangays have at least one learner.',
+      means: 'More barangays means learning is spreading across the city.',
+      read: 'Each step up is a new barangay. The bar below shows how close we are to all of them.',
     },
   },
   tagalog: {
@@ -122,7 +101,6 @@ const COPY = {
     explainRead: 'Paano ito basahin',
     tableCaption: 'Talahanayan ng datos',
     month: 'Buwan',
-    module: 'Module',
     points: 'puntos',
     stats: {
       learners: { label: 'Mga rehistradong mag-aaral', hint: 'Beripikadong account sa mobile app' },
@@ -135,48 +113,29 @@ const COPY = {
       subtitle: 'Mga beripikadong gawain sa pag-aaral bawat buwan',
       activities: 'Mga gawain sa pag-aaral',
       learners: 'Mga aktibong mag-aaral',
-      shows: 'Ang bilang ng mga natapos na gawain sa pag-aaral bawat buwan (naipasang pre-test at post-test, natapos na aralin, at natapos na simulation), kasama kung ilang magkakaibang mag-aaral ang lumahok.',
-      means: 'Kapag tumataas ang linya, mas maraming residente ang aktibong nag-aaral gamit ang IGNIS SAFE. Kapag bumaba, mas kaunti ang naging gawain sa buwang iyon.',
-      read: 'Basahin mula kaliwa (pinakaluma) pakanan (pinakabago). I-hover o i-tap ang isang buwan para makita ang eksaktong bilang. Hindi pa tapos ang pinakahuling buwan kaya maaari pang tumaas ang bilang nito.',
+      activitiesHint: 'Mga test, aralin, at simulation na natapos sa buwang iyon.',
+      learnersHint: 'Mga magkakaibang taong lumahok sa buwang iyon.',
+      shows: 'Gaano karaming pag-aaral ang nangyari bawat buwan.',
+      means: 'Kapag mas mataas ang linya, mas maraming tao ang nag-aaral.',
+      read: 'Basahin mula kaliwa pakanan, pinakaluma hanggang pinakabago. I-tap ang tuldok para sa bilang. Bilang pa rin ang huling buwan.',
     },
     registrations: {
       title: 'Mga rehistradong mag-aaral sa paglipas ng panahon',
       subtitle: 'Tumatakbong kabuuan ng mga beripikadong account',
       series: 'Mga rehistradong mag-aaral',
-      shows: 'Ang tumatakbong kabuuan ng mga residenteng gumawa at nag-verify ng IGNIS SAFE account, buwan-buwan.',
-      means: 'Ipinapakita ng paglago na mas maraming tao ang naaabot ng programa. Dahil tumatakbong kabuuan ito, maaari lamang manatili o tumaas ang linya.',
-      read: 'Ang dulong kanan ng linya ang kabuuan ngayon. Ang mas matarik na bahagi ay nangangahulugang mas maraming nag-sign up sa buwang iyon.',
+      shows: 'Ilang tao na ang nag-sign up hanggang ngayon.',
+      means: 'Kapag tumataas ang linya, mas maraming tao ang naaabot ng programa.',
+      read: 'Ang dulong kanan ang kabuuan ngayon. Mas matarik, mas maraming nag-sign up.',
     },
     barangays: {
       title: 'Mga barangay na kinakatawan',
       subtitle: 'Mga barangay na may kahit isang rehistradong mag-aaral',
       series: 'Mga barangay na kinakatawan',
       coverage: (count, total, percent) => `${count} sa ${total} opisyal na barangay (${percent}%)`,
-      shows: 'Kung ilan sa mga opisyal na barangay ng Dasmariñas ang may kahit isang rehistradong mag-aaral, batay sa barangay na inilagay ng bawat mag-aaral sa kanilang profile.',
-      means: 'Kapag mas maraming barangay, mas lumalaganap ang pag-aaral tungkol sa kaligtasan sa sunog sa buong lungsod at hindi lamang sa iilang lugar.',
-      read: 'Bawat pagtaas ng linya ay nangangahulugang may bagong barangay na sumali. Inihahambing ng bar sa ibaba ang kabuuan ngayon sa lahat ng opisyal na barangay.',
-    },
-    modules: {
-      title: 'Aktibidad sa bawat module',
-      subtitle: 'Mga mag-aaral na nagsimula at nakatapos ng bawat module',
-      started: 'Nagsimula (kumuha ng pre-test)',
-      completed: 'Natapos',
-      shows: 'Para sa bawat module, kung ilang mag-aaral ang kumuha ng pre-test at kung ilan ang nakatapos ng buong module: pre-test, aralin, at post-test.',
-      means: 'Ang mas mahabang bar ay nangangahulugang mas maraming mag-aaral ang kumukuha ng module na iyon. Kapag malaki ang agwat ng dalawang bar, marami ang nagsimula pero hindi pa nakakatapos.',
-      read: 'Ihambing ang asul na bar (nagsimula) at pulang bar (natapos) sa bawat hanay. I-hover o i-tap ang bar para sa eksaktong bilang.',
-    },
-    assessment: {
-      title: 'Average na pagbabago sa assessment',
-      subtitle: 'Average na score sa pre-test kumpara sa post-test',
-      pre: 'Average sa pre-test',
-      post: 'Average sa post-test',
-      overall: 'Lahat ng module',
-      headline: (pre, post, records) => `Average sa post-test na ${post} kumpara sa average sa pre-test na ${pre}, mula sa ${records} maihahambing na resulta.`,
-      waiting: (count, min) => `Lalabas ang graph na ito kapag hindi bababa sa ${min} mag-aaral ang nakatapos ng pre-test at post-test ng isang module, para walang indibidwal na score na matukoy. Maihahambing na resulta sa ngayon: ${count} sa ${min}.`,
-      axis: 'Average na score (sa 100)',
-      shows: 'Ang average na score bago pag-aralan ang module (pre-test) katabi ng average na score pagkatapos nito (post-test). Binibilang lamang ang mga mag-aaral na nakatapos ng parehong test sa iisang module.',
-      means: 'Kapag mas mataas ang bar ng post-test, mas mataas ang nakuha ng mga mag-aaral pagkatapos ng aralin, palatandaan na nakatutulong ang mga module. Nasa percentage points ang pagbabago.',
-      read: 'Ang mga score ay mula 0 hanggang 100. Lumalabas lamang ang isang module kapag hindi bababa sa 5 mag-aaral ang may parehong score, kaya walang indibidwal na resulta na matutukoy.',
+      coverageHint: 'Mga barangay na may mag-aaral, mula sa lahat ng barangay sa lungsod.',
+      shows: 'Ilang barangay ang may kahit isang mag-aaral.',
+      means: 'Kapag mas maraming barangay, mas lumalaganap ang pag-aaral sa buong lungsod.',
+      read: 'Bawat pagtaas ay bagong barangay. Ipinapakita ng bar sa ibaba kung gaano na tayo kalapit sa lahat.',
     },
   },
 };
@@ -227,17 +186,6 @@ const formatSignedScore = (value, locale) => {
   return formatted;
 };
 
-// "Module 1 - Fire Extinguisher: Basics, Types, and How to Use" -> "Fire Extinguisher"
-const getModuleTopic = (title) => {
-  const afterDash = String(title || '').split(' - ').slice(1).join(' - ');
-  return afterDash.split(':')[0].trim();
-};
-
-const getModuleLabel = (module) => {
-  const topic = getModuleTopic(module.title);
-  return topic ? [`Module ${module.moduleNo}`, topic] : [`Module ${module.moduleNo}`];
-};
-
 const hexToRgb = (hex) => [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16)).join(', ');
 
 const areaGradient = (hex) => (context) => {
@@ -265,13 +213,6 @@ const TOOLTIP_STYLE = {
 };
 
 const AXIS_TICKS = { color: MUTED, font: { family: 'Poppins', size: 11 } };
-
-const BAR_BASE = {
-  borderRadius: 4,
-  borderSkipped: 'start',
-  categoryPercentage: 0.7,
-  barPercentage: 0.86,
-};
 
 const lineDataset = (label, values, color, overrides = {}) => ({
   label,
@@ -326,13 +267,121 @@ const buildLineOptions = ({ locale, reduceMotion }) => ({
   },
 });
 
+// Only one tip is open at a time; opening one tells the others to close.
+const TIP_OPEN_EVENT = 'trends-tip-open';
+const TIP_EDGE = 8;
+
+// Small on-demand tooltip. It opens on hover (mouse), keyboard focus, or tap/click,
+// and closes on Escape, a second tap, or a tap anywhere outside. It is never shown on its own.
+function TrendsTip({ content, className = '', bubbleClassName = '', expandable = false, children }) {
+  const id = useId();
+  const rootRef = useRef(null);
+  const bubbleRef = useRef(null);
+  const wasOpen = useRef(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const open = hovered || focused || pinned;
+
+  const close = useCallback(() => {
+    setHovered(false);
+    setFocused(false);
+    setPinned(false);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const onPointerDown = (event) => {
+      if (rootRef.current && !rootRef.current.contains(event.target)) close();
+    };
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') close();
+    };
+    const onOtherOpen = (event) => {
+      if (event.detail !== id) close();
+    };
+
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    window.addEventListener(TIP_OPEN_EVENT, onOtherOpen);
+    window.dispatchEvent(new CustomEvent(TIP_OPEN_EVENT, { detail: id }));
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener(TIP_OPEN_EVENT, onOtherOpen);
+    };
+  }, [open, close, id]);
+
+  // Fade/slide in and out, and keep the bubble inside the viewport.
+  useEffect(() => {
+    const bubble = bubbleRef.current;
+    if (!bubble) return undefined;
+    if (!open && !wasOpen.current) return undefined;
+    wasOpen.current = open;
+
+    const quick = prefersReducedMotion();
+    gsap.killTweensOf(bubble);
+
+    if (open) {
+      bubble.style.marginLeft = '0px';
+      const rect = bubble.getBoundingClientRect();
+      const maxRight = document.documentElement.clientWidth - TIP_EDGE;
+      let shift = 0;
+      if (rect.right > maxRight) shift = maxRight - rect.right;
+      if (rect.left + shift < TIP_EDGE) shift = TIP_EDGE - rect.left;
+      bubble.style.marginLeft = `${Math.round(shift)}px`;
+
+      gsap.fromTo(
+        bubble,
+        { autoAlpha: 0, y: quick ? 0 : 6, scale: quick ? 1 : 0.97 },
+        { autoAlpha: 1, y: 0, scale: 1, duration: quick ? 0 : 0.24, ease: 'power3.out' },
+      );
+    } else {
+      gsap.to(bubble, { autoAlpha: 0, y: quick ? 0 : 4, duration: quick ? 0 : 0.16, ease: 'power2.in' });
+    }
+    return () => gsap.killTweensOf(bubble);
+  }, [open]);
+
+  const triggerProps = {
+    'aria-describedby': id,
+    onFocus: () => setFocused(true),
+    onBlur: () => setFocused(false),
+    onClick: () => {
+      if (pinned) close();
+      else setPinned(true);
+    },
+  };
+  if (expandable) triggerProps['aria-expanded'] = open;
+
+  return (
+    <span
+      ref={rootRef}
+      className={`trends-tip ${className}`.trim()}
+      onPointerEnter={(event) => { if (event.pointerType === 'mouse') setHovered(true); }}
+      onPointerLeave={(event) => { if (event.pointerType === 'mouse') setHovered(false); }}
+    >
+      {children(triggerProps)}
+      <span ref={bubbleRef} id={id} role="tooltip" className={`trends-tip-bubble ${bubbleClassName}`.trim()}>
+        {content}
+      </span>
+    </span>
+  );
+}
+
 function TrendsLegend({ items }) {
   return (
-    <ul className="trends-legend" aria-hidden="true">
+    <ul className="trends-legend">
       {items.map((item) => (
         <li key={item.label}>
-          <span className={`trends-legend-swatch is-${item.shape || 'line'}`} style={{ '--swatch': item.color }} />
-          {item.label}
+          <TrendsTip content={item.hint} bubbleClassName="is-small">
+            {(tipProps) => (
+              <button type="button" className="trends-legend-item" {...tipProps}>
+                <span className={`trends-legend-swatch is-${item.shape || 'line'}`} style={{ '--swatch': item.color }} />
+                {item.label}
+              </button>
+            )}
+          </TrendsTip>
         </li>
       ))}
     </ul>
@@ -369,9 +418,9 @@ function TrendsTable({ caption, columns, rows }) {
   );
 }
 
-function TrendsExplanation({ copy, section }) {
+function TrendsInfo({ copy, section }) {
   return (
-    <dl className="trends-explain">
+    <dl className="trends-info">
       <div>
         <dt>{copy.explainShows}</dt>
         <dd>{section.shows}</dd>
@@ -388,20 +437,26 @@ function TrendsExplanation({ copy, section }) {
   );
 }
 
-function TrendsFigure({ index, title, subtitle, className = '', explanation, children }) {
+function TrendsFigure({ index, title, subtitle, copy, section, children }) {
   return (
-    <article className={`trends-figure ${className}`.trim()} data-trends-reveal>
-      <div className="trends-figure-main">
-        <header className="trends-figure-header">
-          <span className="trends-figure-index" aria-hidden="true">{String(index).padStart(2, '0')}</span>
-          <div>
-            <h3>{title}</h3>
-            <p>{subtitle}</p>
-          </div>
-        </header>
-        {children}
-      </div>
-      {explanation}
+    <article className="trends-figure" data-trends-reveal>
+      <header className="trends-figure-header">
+        <span className="trends-figure-index" aria-hidden="true">{String(index).padStart(2, '0')}</span>
+        <div>
+          <h3>
+            <TrendsTip content={<TrendsInfo copy={copy} section={section} />} bubbleClassName="is-info" expandable>
+              {(tipProps) => (
+                <button type="button" className="trends-title-button" {...tipProps}>
+                  <span>{title}</span>
+                  <FiInfo aria-hidden="true" />
+                </button>
+              )}
+            </TrendsTip>
+          </h3>
+          <p>{subtitle}</p>
+        </div>
+      </header>
+      {children}
     </article>
   );
 }
@@ -542,7 +597,6 @@ export default function PublicTrendsSection() {
     if (!data) return null;
 
     const lineOptions = buildLineOptions({ locale, reduceMotion });
-    const barAnimation = reduceMotion ? false : { duration: 1000, easing: 'easeOutQuart' };
 
     const participation = {
       hasData: data.participationByMonth.some((point) => point.activities > 0),
@@ -578,96 +632,7 @@ export default function PublicTrendsSection() {
       },
     };
 
-    const moduleLabels = data.modules.map(getModuleLabel);
-    const modules = {
-      hasData: data.modules.some((module) => module.started > 0 || module.completed > 0),
-      data: {
-        labels: moduleLabels,
-        datasets: [
-          { ...BAR_BASE, maxBarThickness: 16, label: copy.modules.started, data: data.modules.map((m) => m.started), backgroundColor: SERIES_BLUE },
-          { ...BAR_BASE, maxBarThickness: 16, label: copy.modules.completed, data: data.modules.map((m) => m.completed), backgroundColor: SERIES_RED },
-        ],
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: barAnimation,
-        interaction: { mode: 'index', axis: 'y', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            ...TOOLTIP_STYLE,
-            callbacks: { title: (items) => (items[0] ? moduleLabels[items[0].dataIndex].join(' · ') : '') },
-          },
-        },
-        scales: {
-          x: {
-            beginAtZero: true,
-            suggestedMax: 4,
-            grid: { color: GRID },
-            border: { display: false },
-            ticks: { ...AXIS_TICKS, precision: 0, maxTicksLimit: 5 },
-          },
-          y: { grid: { display: false }, border: { color: GRID }, ticks: { ...AXIS_TICKS, color: INK } },
-        },
-      },
-    };
-
-    const assessmentGroups = data.assessment.averageDifference === null
-      ? []
-      : [
-        { label: copy.assessment.overall, pre: data.assessment.averagePre, post: data.assessment.averagePost },
-        ...data.assessmentByModule.map((row) => ({
-          label: `Module ${row.moduleNo}`,
-          pre: row.averagePre,
-          post: row.averagePost,
-        })),
-      ];
-
-    const assessment = {
-      hasData: assessmentGroups.length > 0,
-      groups: assessmentGroups,
-      data: {
-        labels: assessmentGroups.map((group) => group.label),
-        datasets: [
-          { ...BAR_BASE, maxBarThickness: 28, label: copy.assessment.pre, data: assessmentGroups.map((g) => g.pre), backgroundColor: SERIES_BLUE },
-          { ...BAR_BASE, maxBarThickness: 28, label: copy.assessment.post, data: assessmentGroups.map((g) => g.post), backgroundColor: SERIES_RED },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: barAnimation,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            ...TOOLTIP_STYLE,
-            callbacks: {
-              label: (item) => ` ${item.dataset.label}: ${formatScore(item.parsed.y, locale)}`,
-              footer: (items) => {
-                const group = assessmentGroups[items[0]?.dataIndex];
-                return group ? `${formatSignedScore(group.post - group.pre, locale)} ${copy.points}` : '';
-              },
-            },
-          },
-        },
-        scales: {
-          x: { grid: { display: false }, border: { color: GRID }, ticks: { ...AXIS_TICKS, color: INK } },
-          y: {
-            min: 0,
-            max: 100,
-            grid: { color: GRID },
-            border: { display: false },
-            ticks: { ...AXIS_TICKS, stepSize: 25 },
-            title: { display: true, text: copy.assessment.axis, color: MUTED, font: { family: 'Poppins', size: 11 } },
-          },
-        },
-      },
-    };
-
-    return { lineOptions, participation, registrations, barangays, modules, assessment };
+    return { lineOptions, participation, registrations, barangays };
   }, [copy, data, locale, reduceMotion]);
 
   const formatCount = (value) => new Intl.NumberFormat(locale).format(value);
@@ -767,13 +732,13 @@ export default function PublicTrendsSection() {
                 index={1}
                 title={copy.participation.title}
                 subtitle={copy.participation.subtitle}
-                className="is-wide"
-                explanation={<TrendsExplanation copy={copy} section={copy.participation} />}
+                copy={copy}
+                section={copy.participation}
               >
                 {charts.participation.hasData ? (
                   <TrendsLegend items={[
-                    { label: copy.participation.activities, color: SERIES_RED },
-                    { label: copy.participation.learners, color: SERIES_BLUE, shape: 'dash' },
+                    { label: copy.participation.activities, hint: copy.participation.activitiesHint, color: SERIES_RED },
+                    { label: copy.participation.learners, hint: copy.participation.learnersHint, color: SERIES_BLUE, shape: 'dash' },
                   ]}
                   />
                 ) : null}
@@ -796,7 +761,8 @@ export default function PublicTrendsSection() {
                 index={2}
                 title={copy.registrations.title}
                 subtitle={copy.registrations.subtitle}
-                explanation={<TrendsExplanation copy={copy} section={copy.registrations} />}
+                copy={copy}
+                section={copy.registrations}
               >
                 {renderChart(charts.registrations.hasData, (
                   <Line
@@ -817,7 +783,8 @@ export default function PublicTrendsSection() {
                 index={3}
                 title={copy.barangays.title}
                 subtitle={copy.barangays.subtitle}
-                explanation={<TrendsExplanation copy={copy} section={copy.barangays} />}
+                copy={copy}
+                section={copy.barangays}
               >
                 {renderChart(charts.barangays.hasData, (
                   <Line
@@ -839,13 +806,17 @@ export default function PublicTrendsSection() {
                     >
                       <span style={{ width: `${coveragePercent}%` }} />
                     </div>
-                    <p>
-                      {copy.barangays.coverage(
-                        formatCount(data.barangays.represented),
-                        formatCount(data.barangays.officialTotal),
-                        coveragePercent,
+                    <TrendsTip content={copy.barangays.coverageHint} bubbleClassName="is-small">
+                      {(tipProps) => (
+                        <button type="button" className="trends-coverage-label" {...tipProps}>
+                          {copy.barangays.coverage(
+                            formatCount(data.barangays.represented),
+                            formatCount(data.barangays.officialTotal),
+                            coveragePercent,
+                          )}
+                        </button>
                       )}
-                    </p>
+                    </TrendsTip>
                   </div>
                 ) : null}
                 <TrendsTable
@@ -853,98 +824,6 @@ export default function PublicTrendsSection() {
                   columns={[copy.month, copy.barangays.series]}
                   rows={monthRows(data.barangays.byMonth, ['total'])}
                 />
-              </TrendsFigure>
-
-              <TrendsFigure
-                index={4}
-                title={copy.modules.title}
-                subtitle={copy.modules.subtitle}
-                className="is-modules"
-                explanation={<TrendsExplanation copy={copy} section={copy.modules} />}
-              >
-                {charts.modules.hasData ? (
-                  <TrendsLegend items={[
-                    { label: copy.modules.started, color: SERIES_BLUE, shape: 'bar' },
-                    { label: copy.modules.completed, color: SERIES_RED, shape: 'bar' },
-                  ]}
-                  />
-                ) : null}
-                {renderChart(charts.modules.hasData, (
-                  <Bar
-                    data={charts.modules.data}
-                    options={charts.modules.options}
-                    role="img"
-                    aria-label={`${copy.modules.title}. ${copy.modules.subtitle}.`}
-                  />
-                ))}
-                <TrendsTable
-                  caption={`${copy.modules.title}: ${copy.tableCaption}`}
-                  columns={[copy.module, copy.modules.started, copy.modules.completed]}
-                  rows={data.modules.map((module) => [
-                    getModuleLabel(module).join(' · '),
-                    formatCount(module.started),
-                    formatCount(module.completed),
-                  ])}
-                />
-              </TrendsFigure>
-
-              <TrendsFigure
-                index={5}
-                title={copy.assessment.title}
-                subtitle={copy.assessment.subtitle}
-                explanation={<TrendsExplanation copy={copy} section={copy.assessment} />}
-              >
-                {charts.assessment.hasData ? (
-                  <>
-                    <p className="trends-assessment-headline">
-                      <strong>
-                        {formatSignedScore(data.assessment.averageDifference, locale)}
-                        <small>{copy.points}</small>
-                      </strong>
-                      <span>
-                        {copy.assessment.headline(
-                          formatScore(data.assessment.averagePre, locale),
-                          formatScore(data.assessment.averagePost, locale),
-                          formatCount(data.assessment.comparableRecords),
-                        )}
-                      </span>
-                    </p>
-                    <TrendsLegend items={[
-                      { label: copy.assessment.pre, color: SERIES_BLUE, shape: 'bar' },
-                      { label: copy.assessment.post, color: SERIES_RED, shape: 'bar' },
-                    ]}
-                    />
-                  </>
-                ) : null}
-                {renderChart(
-                  charts.assessment.hasData,
-                  (
-                    <Bar
-                      data={charts.assessment.data}
-                      options={charts.assessment.options}
-                      role="img"
-                      aria-label={`${copy.assessment.title}. ${copy.assessment.subtitle}.`}
-                    />
-                  ),
-                  <TrendsEmpty
-                    title={copy.emptyTitle}
-                    text={copy.assessment.waiting(
-                      formatCount(data.assessment.comparableRecords),
-                      formatCount(data.minGroupSize),
-                    )}
-                  />,
-                )}
-                {charts.assessment.hasData ? (
-                  <TrendsTable
-                    caption={`${copy.assessment.title}: ${copy.tableCaption}`}
-                    columns={[copy.module, copy.assessment.pre, copy.assessment.post]}
-                    rows={charts.assessment.groups.map((group) => [
-                      group.label,
-                      formatScore(group.pre, locale),
-                      formatScore(group.post, locale),
-                    ])}
-                  />
-                ) : null}
               </TrendsFigure>
             </div>
           </>

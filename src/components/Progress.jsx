@@ -362,7 +362,7 @@ export default function Progress() {
     try {
       await archiveRecord('mobile_users', trashTarget.id, reason);
       setProgressRows((current) => current.filter((row) => row.id !== trashTarget.id));
-      setSuccessMessage(`${trashTarget.name || 'The account'} was moved to Trash. It can be restored from Archive & Trash for 30 days.`);
+      setSuccessMessage(`${trashTarget.name || 'Account'} moved to Trash. You can restore it within 30 days.`);
       setTrashTarget(null);
     } catch (error) {
       setTrashError(error.message);
@@ -819,18 +819,18 @@ export default function Progress() {
           <ArchiveConfirmDialog
             open={Boolean(trashTarget)}
             tone="archive"
-            title="Move mobile account to Trash?"
+            title="Move account to Trash?"
             description={(
               <p>
-                The learner can no longer sign in or save progress in the mobile app. The account stays
-                recoverable in Archive &amp; Trash for 30 days, and learning and assessment history is kept.
+                They can&apos;t sign in until it&apos;s restored. You can restore it within 30 days.
+                Their learning history is kept.
               </p>
             )}
             recordLabel={trashTarget?.name}
             recordMeta={trashTarget?.email}
             reasonPlaceholder="e.g. Duplicate registration"
             confirmLabel="Move to Trash"
-            busyLabel="Moving..."
+            busyLabel="Moving…"
             busy={isTrashing}
             error={trashError}
             onConfirm={handleMoveUserToTrash}

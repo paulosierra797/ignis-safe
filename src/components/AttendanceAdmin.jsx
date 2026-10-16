@@ -136,28 +136,27 @@ const AttendanceAdmin = () => {
     setExportMessage(null);
   }, [dateFilter, searchPersonal, searchQuery]);
 
-  const confirmArchive = async () => {
-    if (!archiveTarget || archiveBusy) return;
-    const archive = !archiveIds.includes(archiveTarget.id);
+  // Archiving asks first; restoring is safe, so it runs straight from the archive list.
+  const updateArchive = async (item, archive) => {
+    if (!item || archiveBusy) return;
     setArchiveBusy(true);
     setArchiveError('');
     try {
-      await setAttendanceArchived(archiveTarget.id, archive);
-      setArchiveIds(ids => archive ? [...new Set([...ids, archiveTarget.id])] : ids.filter(id => id !== archiveTarget.id));
+      await setAttendanceArchived(item.id, archive);
+      setArchiveIds(ids => archive ? [...new Set([...ids, item.id])] : ids.filter(id => id !== item.id));
       setArchiveTarget(null);
       setArchiveMessage({
         type: 'success',
-        text: archive
-          ? 'Attendance archived. Open Archived Attendance to view or restore it.'
-          : 'Attendance restored to Current Attendance.'
+        text: archive ? 'Attendance archived. You can restore it anytime.' : 'Attendance restored.'
       });
-      await logAdminActivity({ actorId: currentUser?.admin_id, actorName: currentUser?.name || currentUser?.email || 'Admin', action: archive ? 'Archive Attendance' : 'Restore Attendance', actionType: archive ? 'archive' : 'edit', details: `${archive ? 'Archived' : 'Restored'} attendance for ${archiveTarget.name} on ${archiveTarget.date}.` });
+      await logAdminActivity({ actorId: currentUser?.admin_id, actorName: currentUser?.name || currentUser?.email || 'Admin', action: archive ? 'Archive Attendance' : 'Restore Attendance', actionType: archive ? 'archive' : 'edit', details: `${archive ? 'Archived' : 'Restored'} attendance for ${item.name} on ${item.date}.` });
     } catch (error) {
       setArchiveError(error.message);
-      setArchiveMessage({ type: 'error', text: error.message || 'Could not update the attendance archive.' });
+      setArchiveMessage({ type: 'error', text: error.message || "Couldn't update attendance." });
     }
     finally { setArchiveBusy(false); }
   };
+  const confirmArchive = () => updateArchive(archiveTarget, true);
 
   const handleClearFilters = () => {
     setSearchPersonal('');
@@ -455,7 +454,7 @@ const AttendanceAdmin = () => {
           open={archiveOpen}
           id="attendanceArchiveList"
           title="Attendance Archive"
-          description="Review archived attendance records and restore them when needed."
+          description="Restore a record to put it back in the list."
           count={archivedRecordCount}
           onClose={() => {
             setArchiveOpen(false);
@@ -478,7 +477,7 @@ const AttendanceAdmin = () => {
             <p className="attendance-archive-empty">Loading archived attendance...</p>
           ) : archivedAttendance.length === 0 ? (
             <p className="attendance-archive-empty">
-              {archivedRecordCount === 0 ? 'No archived attendance records.' : 'No archived attendance matches your search.'}
+              {archivedRecordCount === 0 ? 'No archived attendance.' : 'No matches.'}
             </p>
           ) : (
             <>
@@ -498,8 +497,8 @@ const AttendanceAdmin = () => {
                     </span>
                     <RecordActions label={`Actions for archived attendance of ${item.name}`}>
                       <button type="button" onClick={() => setSelectedRecord(item)}>View Details</button>
-                      <button type="button" onClick={() => { setArchiveError(''); setArchiveTarget(item); }}>
-                        <FiRotateCcw aria-hidden="true" />Restore
+                      <button type="button" disabled={archiveBusy} onClick={() => updateArchive(item, false)}>
+                        <FiRotateCcw aria-hidden="true" />{archiveBusy ? 'Restoring…' : 'Restore'}
                       </button>
                     </RecordActions>
                   </article>
@@ -512,16 +511,12 @@ const AttendanceAdmin = () => {
 
         {archiveTarget && <div className="attendance-details-overlay attendance-archive-confirm-overlay">
           <section className="attendance-details-modal attendance-archive-dialog" role="alertdialog" aria-modal="true" aria-labelledby="attendanceArchiveTitle">
-            <header className="attendance-details-header"><h2 id="attendanceArchiveTitle">{archiveIds.includes(archiveTarget.id) ? 'Restore' : 'Archive'} attendance?</h2><CloseButton label="Close archive confirmation" disabled={archiveBusy} onClick={() => setArchiveTarget(null)} /></header>
-            <div style={{padding: 24}}><p><strong>{archiveTarget.name}</strong> · {archiveTarget.date}</p><p>The original attendance and verification details will be kept. Archived records can be restored.</p>
+            <header className="attendance-details-header"><h2 id="attendanceArchiveTitle">Archive this attendance?</h2><CloseButton label="Close archive confirmation" disabled={archiveBusy} onClick={() => setArchiveTarget(null)} /></header>
+            <div style={{padding: 24}}><p><strong>{archiveTarget.name}</strong> · {archiveTarget.date}</p><p>It will be hidden from the list. You can restore it anytime.</p>
               {archiveError && <p role="alert">{archiveError}</p>}
               <div className="attendance-archive-confirm-actions">
                 <button type="button" disabled={archiveBusy} onClick={() => setArchiveTarget(null)}>Cancel</button>
-                {archiveIds.includes(archiveTarget.id) ? (
-                  <button type="button" disabled={archiveBusy} onClick={confirmArchive}>{archiveBusy ? 'Saving...' : 'Restore'}</button>
-                ) : (
-                  <ArchiveButton showLabel label="Archive" busy={archiveBusy} onClick={confirmArchive} />
-                )}
+                <ArchiveButton showLabel label="Archive" busy={archiveBusy} onClick={confirmArchive} />
               </div>
             </div>
           </section>

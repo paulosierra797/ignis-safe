@@ -48,11 +48,11 @@ export const getRemainingRecoveryDays = (purgeAfter, now = Date.now()) => {
 // Lifecycle status shown to admins, derived from the registry row.
 export const getArchiveItemStatus = (item, now = Date.now()) => {
   if (item.status === 'restored') return { key: 'restored', label: 'Restored' };
-  if (item.status === 'purged') return { key: 'purged', label: 'Permanently deleted' };
-  if (item.purge_state === 'purging') return { key: 'purging', label: 'Deleting' };
-  if (item.purge_state === 'awaiting_files') return { key: 'queued', label: 'Queued for deletion' };
-  if (item.purge_state === 'blocked') return { key: 'blocked', label: 'Deletion on hold' };
-  if (new Date(item.purge_after).getTime() <= now) return { key: 'due', label: 'Awaiting cleanup' };
+  if (item.status === 'purged') return { key: 'purged', label: 'Deleted forever' };
+  if (item.purge_state === 'purging') return { key: 'purging', label: 'Deleting now' };
+  if (item.purge_state === 'awaiting_files') return { key: 'queued', label: 'Deleting soon' };
+  if (item.purge_state === 'blocked') return { key: 'blocked', label: 'On hold' };
+  if (new Date(item.purge_after).getTime() <= now) return { key: 'due', label: 'Ready to delete' };
   return item.disposition === 'soft_deleted'
     ? { key: 'soft_deleted', label: 'In Trash' }
     : { key: 'archived', label: 'Archived' };
@@ -63,7 +63,7 @@ export async function getArchivePolicies() {
     .from('archive_policies')
     .select('*')
     .order('label');
-  if (error) throw new Error(toMessage(error, 'Could not load retention policies.'));
+  if (error) throw new Error(toMessage(error, "Couldn't load settings."));
   return data || [];
 }
 
@@ -89,7 +89,7 @@ export async function getArchiveEvents({ limit = 2000 } = {}) {
 
 export async function getStorageOverview() {
   const { data, error } = await supabase.rpc('get_storage_overview');
-  if (error) throw new Error(toMessage(error, 'Could not load storage usage.'));
+  if (error) throw new Error(toMessage(error, "Couldn't load storage use."));
   return data || {};
 }
 
@@ -99,10 +99,10 @@ export async function archiveRecord(module, recordId, reason = '') {
     p_record_id: String(recordId || ''),
     p_reason: String(reason || '').trim() || null
   });
-  if (error) throw new Error(toMessage(error, 'Could not archive this record.'));
+  if (error) throw new Error(toMessage(error, "Couldn't archive this item."));
   // The database logs and rejects (returns null for) the protected official account.
   if (!data && (module === 'personnel_accounts' || module === 'mobile_users')) {
-    throw new Error('This is the official IGNIS SAFE system account. It is permanently protected and cannot be deleted.');
+    throw new Error("This is the main IGNIS SAFE account. It's protected and can't be deleted.");
   }
   emitDataChanged({ action: 'archived', module, recordId });
   return data;
@@ -113,7 +113,7 @@ export async function restoreArchiveItem(itemId, note = '') {
     p_item_id: itemId,
     p_note: String(note || '').trim() || null
   });
-  if (error) throw new Error(toMessage(error, 'Could not restore this item.'));
+  if (error) throw new Error(toMessage(error, "Couldn't restore this item."));
   emitDataChanged({ action: 'restored', itemId });
 }
 
@@ -126,8 +126,8 @@ export async function restoreArchivedRecord(module, recordId, note = '') {
     .eq('record_id', String(recordId || ''))
     .eq('status', 'active')
     .maybeSingle();
-  if (error) throw new Error(toMessage(error, 'Could not find the archived record.'));
-  if (!data) throw new Error('This record is no longer in Archive & Trash.');
+  if (error) throw new Error(toMessage(error, "Couldn't find this item."));
+  if (!data) throw new Error('This item is no longer in Archive & Trash.');
   await restoreArchiveItem(data.item_id, note);
 }
 
@@ -147,7 +147,7 @@ export async function purgeArchiveItem(itemId, reason) {
     body: { action: 'purge', itemId, reason: String(reason || '').trim() }
   });
   if (error) {
-    throw new Error((await readFunctionError(error)) || toMessage(error, 'Permanent deletion failed.'));
+    throw new Error((await readFunctionError(error)) || toMessage(error, "Couldn't delete this item."));
   }
   if (data?.error) throw new Error(data.error);
   emitDataChanged({ action: 'purged', itemId });
@@ -161,13 +161,13 @@ export async function updateArchivePolicy(module, { purgeEnabled, retentionDays 
     p_purge_enabled: Boolean(purgeEnabled),
     p_retention_days: Number.isFinite(days) ? Math.round(days) : null
   });
-  if (error) throw new Error(toMessage(error, 'Could not update the retention policy.'));
+  if (error) throw new Error(toMessage(error, "Couldn't save settings."));
 }
 
 export async function confirmArchiveBackup(note = '') {
   const { data, error } = await supabase.rpc('confirm_archive_backup', {
     p_note: String(note || '').trim() || null
   });
-  if (error) throw new Error(toMessage(error, 'Could not record the backup confirmation.'));
+  if (error) throw new Error(toMessage(error, "Couldn't confirm the backup."));
   return data;
 }

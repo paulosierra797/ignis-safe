@@ -358,7 +358,7 @@ export default function AdminReports() {
 
     setReports((current) => current.filter((report) => report.report_id !== archiveReport.report_id));
     if (data) setArchivedReports((current) => [data, ...current.filter((report) => report.report_id !== data.report_id)]);
-    setMessage({ type: 'success', text: 'Report archived. Open the report archive to view or restore it.' });
+    setMessage({ type: 'success', text: 'Report archived. You can restore it anytime.' });
     setArchiveReport(null);
     setProcessingId('');
   };
@@ -377,7 +377,7 @@ export default function AdminReports() {
 
     setArchivedReports((current) => current.filter((item) => item.report_id !== report.report_id));
     if (data) setReports((current) => [data, ...current.filter((item) => item.report_id !== data.report_id)]);
-    setMessage({ type: 'success', text: 'Report restored to its previous status.' });
+    setMessage({ type: 'success', text: 'Report restored.' });
     setProcessingId('');
   };
 
@@ -659,7 +659,7 @@ export default function AdminReports() {
             open={archiveOpen}
             id="reportArchiveList"
             title="Report Archive"
-            description="Review archived reports and restore them to the submitted report list."
+            description="Restore a report to put it back in the list."
             count={archivedReports.length}
             onClose={() => {
               setArchiveOpen(false);
@@ -684,7 +684,7 @@ export default function AdminReports() {
               <p className="report-archive-empty">Loading archived reports...</p>
             ) : filteredArchivedReports.length === 0 ? (
               <p className="report-archive-empty">
-                {archivedReports.length === 0 ? 'No archived reports.' : 'No archived reports match your search.'}
+                {archivedReports.length === 0 ? 'No archived reports.' : 'No matches.'}
               </p>
             ) : (
               <>
@@ -716,8 +716,8 @@ export default function AdminReports() {
               <section className="report-archive-confirm" role="alertdialog" aria-modal="true" aria-labelledby="archiveReportTitle">
                 <div className="report-archive-confirm-heading">
                   <div>
-                    <span>Archive report</span>
-                    <h3 id="archiveReportTitle">Move this report to the archive?</h3>
+                    <span>Archive</span>
+                    <h3 id="archiveReportTitle">Archive this report?</h3>
                   </div>
                   <CloseButton
                     label="Close archive confirmation"
@@ -725,7 +725,7 @@ export default function AdminReports() {
                     disabled={Boolean(processingId)}
                   />
                 </div>
-                <p><strong>{archiveReport.title || 'Untitled report'}</strong> will leave the current report list and can be restored later.</p>
+                <p><strong>{archiveReport.title || 'Untitled report'}</strong> will be hidden from the list. You can restore it anytime.</p>
                 {archiveError && <p className="report-archive-confirm-error" role="alert">{archiveError}</p>}
                 <div className="report-archive-confirm-actions">
                   <button type="button" onClick={() => { setArchiveReport(null); setArchiveError(''); }} disabled={Boolean(processingId)}>Cancel</button>

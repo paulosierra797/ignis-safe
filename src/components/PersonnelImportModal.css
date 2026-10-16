@@ -222,6 +222,40 @@
   font-weight: 600;
 }
 
+.pim-stat.is-tip {
+  cursor: help;
+}
+
+.pim-stat.is-tip:focus-visible,
+.pim-num-btn:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+/* Tooltip: portaled to <body>, so it sits above the dialog and is never clipped. */
+.pim-tip {
+  position: fixed;
+  z-index: 2200;
+  max-width: 260px;
+  padding: 0.4rem 0.65rem;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  transform: translateX(-50%);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+  pointer-events: none;
+  animation: pim-tip-in 0.12s ease-out;
+}
+
+@keyframes pim-tip-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .pim-stat.is-error {
   background: #fef2f2;
   color: #b42318;
@@ -266,17 +300,28 @@
   border-radius: 14px;
 }
 
+/* Fixed layout: columns take set widths, so the table always fits the modal. */
 .pim-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
+
+.pim-col-num { width: 2.75rem; }
+.pim-col-first { width: 16%; }
+.pim-col-last { width: 15%; }
+.pim-col-email { width: auto; }
+.pim-col-role { width: 6.75rem; }
+.pim-col-rank { width: 7rem; }
+.pim-col-contact { width: 8rem; }
+.pim-col-actions { width: 2.5rem; }
 
 .pim-table th {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 0.75rem 0.6rem;
+  padding: 0.55rem 0.4rem;
   background: #f8fafc;
   color: #64748b;
   font-size: 0.72rem;
@@ -288,7 +333,7 @@
 }
 
 .pim-table td {
-  padding: 0.35rem 0.4rem;
+  padding: 0.2rem 0.25rem;
   vertical-align: middle;
 }
 
@@ -303,7 +348,7 @@
 /* Rank group headings: one per rank, with its personnel count. */
 .pim-table .pim-group-row th {
   position: static;
-  padding: 0.6rem 0.9rem;
+  padding: 0.45rem 0.75rem;
   background: #f1f5f9;
   color: #334155;
   font-size: 0.8rem;
@@ -330,44 +375,66 @@
   vertical-align: top;
 }
 
-.pim-table td.pim-num {
-  padding-top: 0.95rem;
-}
-
-.pim-table td .pim-icon-btn {
-  margin-top: 0.15rem;
-}
-
 .pim-field-error {
   display: block;
-  margin: 0.2rem 0.2rem 0.1rem;
+  margin: 0.15rem 0.2rem 0.1rem;
   color: #b42318;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   line-height: 1.25;
 }
 
 .pim-num {
-  width: 3rem;
-  color: #94a3b8;
+  padding-inline: 0.15rem;
   text-align: center;
+}
+
+/* Row number: a button so it takes focus and taps, showing its CSV row in a tooltip. */
+.pim-num-btn {
+  display: block;
+  width: 100%;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  font: inherit;
   font-variant-numeric: tabular-nums;
+  cursor: help;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.pim-num-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
 }
 
 .pim-input {
   width: 100%;
   min-width: 0;
-  padding: 0.55rem 0.65rem;
+  height: 2rem;
+  padding: 0.3rem 0.45rem;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: #1f2937;
   font: inherit;
-  text-overflow: clip;
+  line-height: 1.25;
+  text-overflow: ellipsis;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 select.pim-input {
-  min-width: 11rem;
+  padding-inline: 0.3rem 0.1rem;
+}
+
+/* Where supported, the select shrinks to its value so the arrow sits right beside it. */
+@supports (field-sizing: content) {
+  select.pim-input {
+    field-sizing: content;
+    width: auto;
+    max-width: 100%;
+  }
 }
 
 .pim-input:hover {
@@ -388,20 +455,19 @@ select.pim-input {
 /* Searchable rank picker */
 .pim-combo {
   position: relative;
-  min-width: 11rem;
 }
 
 .pim-combo-input {
-  padding-right: 2rem;
+  padding-right: 1.5rem;
   text-overflow: ellipsis;
 }
 
 .pim-combo-chevron {
   position: absolute;
   top: 50%;
-  right: 0.6rem;
-  width: 1rem;
-  height: 1rem;
+  right: 0.4rem;
+  width: 0.9rem;
+  height: 0.9rem;
   color: #94a3b8;
   transform: translateY(-50%);
   pointer-events: none;
@@ -470,8 +536,8 @@ select.pim-input {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 2rem;
+  height: 2rem;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -611,6 +677,24 @@ select.pim-input {
   .pim-header,
   .pim-stage {
     padding-inline: 1.25rem;
+  }
+}
+
+/* Narrow laptops: tighten the fixed columns so desktop still fits without scrolling. */
+@media (max-width: 1180px) {
+  .pim-table {
+    font-size: 0.82rem;
+  }
+
+  .pim-col-first { width: 15%; }
+  .pim-col-last { width: 14%; }
+  .pim-col-contact { width: 7.5rem; }
+}
+
+/* Phones and small tablets: a readable minimum width, scrolled inside the table area. */
+@media (max-width: 899px) {
+  .pim-table {
+    min-width: 820px;
   }
 }
 

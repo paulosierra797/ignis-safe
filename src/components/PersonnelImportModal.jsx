@@ -65,10 +65,13 @@ const parseCsv = (input) => {
   let record = [];
   let field = '';
   let inQuotes = false;
+  let line = 1;
+  let startLine = 1;
 
   for (let i = 0; i < text.length; i += 1) {
     const char = text[i];
     if (inQuotes) {
+      if (char === '\n') line += 1;
       if (char === '"' && text[i + 1] === '"') {
         field += '"';
         i += 1;
@@ -85,14 +88,18 @@ const parseCsv = (input) => {
     } else if (char === '\n' || char === '\r') {
       if (char === '\r' && text[i + 1] === '\n') i += 1;
       record.push(field);
+      record.line = startLine;
       records.push(record);
       record = [];
       field = '';
+      line += 1;
+      startLine = line;
     } else {
       field += char;
     }
   }
   record.push(field);
+  record.line = startLine;
   records.push(record);
 
   return records.filter((cells) => cells.some((cell) => cell.trim() !== ''));
@@ -110,6 +117,11 @@ const normalizeRank = (value) => {
   // Also accept the spelled-out name, e.g. "Fire Officer I".
   const byName = RANK_OPTIONS.find((option) => option.label.toLowerCase().endsWith(` - ${raw.toLowerCase()}`));
   return byName ? byName.code : raw;
+};
+
+const rowTipText = (number, row) => {
+  const name = `${row.first_name} ${row.last_name}`.trim().replace(/\s+/g, ' ');
+  return `CSV Row ${number}${name ? ` — ${name}` : ''}.`;
 };
 
 const RANK_GROUP_TITLES = { unknown: 'Unrecognized rank', none: 'No rank selected' };
@@ -185,6 +197,85 @@ const withTimeout = (promise) => Promise.race([
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+// Hover, keyboard-focus and tap tooltip. Portaled so the scrolling table never clips it.
+function PimTip({ text, tag: Tag = 'span', className, children, ...rest }) {
+  const [pos, setPos] = useState(null);
+  const ref = useRef(null);
+  const pointerRef = useRef('mouse');
+  const tipId = useId();
+  const open = Boolean(pos);
+
+  const show = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const flip = rect.top < 64;
+    setPos({
+      left: Math.min(Math.max(rect.left + rect.width / 2, 138), Math.max(138, window.innerWidth - 138)),
+      ...(flip ? { top: rect.bottom + 8 } : { bottom: window.innerHeight - rect.top + 8 })
+    });
+  }, []);
+  const hide = useCallback(() => setPos(null), []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDown = (event) => {
+      if (!ref.current?.contains(event.target)) hide();
+    };
+    document.addEventListener('pointerdown', onDown);
+    window.addEventListener('scroll', hide, true);
+    window.addEventListener('resize', hide);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('scroll', hide, true);
+      window.removeEventListener('resize', hide);
+    };
+  }, [open, hide]);
+
+  // Mouse and tap focus should not pop the tip on their own; keyboard focus should.
+  const handleFocus = (event) => {
+    let keyboard = true;
+    try {
+      keyboard = event.target.matches(':focus-visible');
+    } catch {
+      keyboard = true;
+    }
+    if (keyboard) show();
+  };
+
+  return (
+    <>
+      {React.createElement(Tag, {
+        ref,
+        className,
+        tabIndex: 0,
+        'aria-describedby': open ? tipId : undefined,
+        onPointerDown: (event) => { pointerRef.current = event.pointerType; },
+        onPointerEnter: (event) => { if (event.pointerType === 'mouse') show(); },
+        onPointerLeave: (event) => { if (event.pointerType === 'mouse') hide(); },
+        onFocus: handleFocus,
+        onBlur: hide,
+        onClick: () => {
+          if (pointerRef.current === 'mouse' || !open) show();
+          else hide();
+        },
+        onKeyDown: (event) => {
+          // Closing the tooltip must not also close the dialog.
+          if (event.key === 'Escape' && open) {
+            event.preventDefault();
+            hide();
+          }
+        },
+        ...rest
+      }, children)}
+      {open && createPortal(
+        <div id={tipId} role="tooltip" className="pim-tip" style={pos}>{text}</div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 // Searchable rank picker. The list is portaled to <body> so the scrolling table never clips it.
 function RankCombobox({ value, onChange, error, errorId, ariaLabel, rowId }) {
@@ -408,8 +499,8 @@ export default function PersonnelImportModal({
       const emailError = validateEmailFormat(email);
       if (emailError) errors.email = emailError;
       else if (existingSet.has(emailKey)) errors.email = 'Email already has an account.';
-      else if (firstSeen.has(emailKey)) errors.email = `Duplicate of row ${firstSeen.get(emailKey)}.`;
-      else firstSeen.set(emailKey, index + 1);
+      else if (firstSeen.has(emailKey)) errors.email = `Duplicate of CSV row ${firstSeen.get(emailKey)}.`;
+      else firstSeen.set(emailKey, row.csv_row ?? index + 1);
 
       if (!role) errors.role = 'Role is required.';
       else if (!ROLE_LABELS[role]) errors.role = 'Choose Admin or Personnel.';
@@ -428,7 +519,7 @@ export default function PersonnelImportModal({
   }, [activeRows, existingSet, isSuperAdmin]);
 
   const rowNumbers = useMemo(
-    () => Object.fromEntries(activeRows.map((row, index) => [row.id, index + 1])),
+    () => Object.fromEntries(activeRows.map((row, index) => [row.id, row.csv_row ?? index + 1])),
     [activeRows]
   );
   const errorCount = activeRows.filter((row) => validation[row.id]).length;
@@ -438,15 +529,6 @@ export default function PersonnelImportModal({
   const visibleRows = errorsOnly ? activeRows.filter((row) => validation[row.id]) : activeRows;
   // Recomputed on every edit, so changing a rank moves the row to its new group.
   const rankGroups = useMemo(() => groupRowsByRank(visibleRows), [visibleRows]);
-
-  // Size each editable column to its longest value so nothing is clipped.
-  const columnChars = useMemo(() => {
-    const floors = { first_name: 14, last_name: 14, email: 28, rank: 10, contact_number: 13 };
-    return Object.fromEntries(Object.entries(floors).map(([field, floor]) => [
-      field,
-      Math.min(64, activeRows.reduce((max, row) => Math.max(max, String(row[field] || '').length), floor))
-    ]));
-  }, [activeRows]);
 
   // ---- Animations ----
   useEffect(() => {
@@ -564,12 +646,13 @@ export default function PersonnelImportModal({
       return;
     }
 
-    const parsed = dataRecords.map((cells) => {
+    const parsed = dataRecords.map((cells, index) => {
       const values = {};
       columns.forEach((key, index) => {
         if (key && values[key] === undefined) values[key] = String(cells[index] ?? '').trim();
       });
       return makeRow({
+        csv_row: cells.line ?? index + 2,
         first_name: values.first_name || '',
         last_name: values.last_name || '',
         email: values.email || '',
@@ -716,7 +799,6 @@ export default function PersonnelImportModal({
       <>
         <input
           className={`pim-input${error ? ' is-invalid' : ''}`}
-          style={{ minWidth: `calc(${columnChars[field] || 12}ch + 1.5rem)` }}
           value={row[field]}
           onChange={(event) => updateRow(row.id, field, event.target.value)}
           aria-label={`${field.replace('_', ' ')}, row ${rowNumbers[row.id]}`}
@@ -743,9 +825,19 @@ export default function PersonnelImportModal({
 
   const summary = (
     <div className="pim-summary" aria-live="polite">
-      <div className="pim-stat"><strong>{activeRows.length}</strong><span>Accounts Ready</span></div>
-      <div className={`pim-stat${errorCount ? ' is-error' : ''}`}><strong>{errorCount}</strong><span>Errors</span></div>
-      <div className="pim-stat is-valid"><strong>{validRows.length}</strong><span>Valid</span></div>
+      <PimTip tag="div" className="pim-stat is-tip" text="Accounts prepared for import.">
+        <strong>{activeRows.length}</strong><span>Accounts Ready</span>
+      </PimTip>
+      <PimTip
+        tag="div"
+        className={`pim-stat is-tip${errorCount ? ' is-error' : ''}`}
+        text="Records requiring correction before import."
+      >
+        <strong>{errorCount}</strong><span>Errors</span>
+      </PimTip>
+      <PimTip tag="div" className="pim-stat is-tip is-valid" text="Records that passed all required checks.">
+        <strong>{validRows.length}</strong><span>Valid</span>
+      </PimTip>
     </div>
   );
 
@@ -828,6 +920,16 @@ export default function PersonnelImportModal({
 
               <div className="pim-table-wrap">
                 <table className="pim-table">
+                  <colgroup>
+                    <col className="pim-col-num" />
+                    <col className="pim-col-first" />
+                    <col className="pim-col-last" />
+                    <col className="pim-col-email" />
+                    <col className="pim-col-role" />
+                    <col className="pim-col-rank" />
+                    <col className="pim-col-contact" />
+                    <col className="pim-col-actions" />
+                  </colgroup>
                   <thead>
                     <tr>
                       <th>#</th><th>First Name</th><th>Last Name</th><th>Email</th>
@@ -851,7 +953,17 @@ export default function PersonnelImportModal({
                           const role = normalizeRole(row.role);
                           return (
                             <tr key={row.id} className={errors ? 'has-error' : ''}>
-                              <td className="pim-num">{rowNumbers[row.id]}</td>
+                              <td className="pim-num">
+                                <PimTip
+                                  tag="button"
+                                  type="button"
+                                  className="pim-num-btn"
+                                  aria-label={`CSV row ${rowNumbers[row.id]}`}
+                                  text={rowTipText(rowNumbers[row.id], row)}
+                                >
+                                  {rowNumbers[row.id]}
+                                </PimTip>
+                              </td>
                               <td>{renderInput(row, 'first_name')}</td>
                               <td>{renderInput(row, 'last_name')}</td>
                               <td>{renderInput(row, 'email', { type: 'email', inputMode: 'email' })}</td>

@@ -70,8 +70,16 @@ import {
 import { useUser } from '../context/UserContext';
 import { getManilaToday } from '../utils/dateUtils';
 import { formatStatusLabel } from '../utils/statusUtils';
+import {
+  NAME_PATTERN,
+  NAME_PATTERN_ATTR,
+  sanitizeContactInput,
+  sanitizeNameInput,
+  validateContactNumber,
+  validateName
+} from '../utils/personnelValidation';
 
-const validPersonnelNamePattern = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
+const validPersonnelNamePattern = NAME_PATTERN;
 const contactNumberRegex = /^09\d{9}$/;
 const gmailAddressRegex = /^[^\s@]+@gmail\.com$/i;
 const GMAIL_VALIDATION_ERROR = 'Please enter a valid Gmail address ending in @gmail.com.';
@@ -1984,9 +1992,9 @@ export default function Accounts() {
     const { id, value } = e.target;
     const fieldName = id.replace('personnel-', '').replace(/-/g, '_');
     const nextValue = fieldName === 'contact_number'
-      ? String(value || '').replace(/\D/g, '').slice(0, 11)
+      ? sanitizeContactInput(value)
       : fieldName === 'first_name' || fieldName === 'last_name'
-        ? String(value || '').replace(/[^A-Za-z ]/g, '')
+        ? sanitizeNameInput(value)
       : value;
 
     setFormData(prev => ({
@@ -1994,7 +2002,20 @@ export default function Accounts() {
       [fieldName]: nextValue
     }));
 
+    // Show format problems while typing; "required" is only reported on submit.
+    let liveError = '';
+    if (nextValue) {
+      if (fieldName === 'first_name') liveError = validateName(nextValue, 'First name');
+      else if (fieldName === 'last_name') liveError = validateName(nextValue, 'Last name');
+      else if (fieldName === 'contact_number' && !'09'.startsWith(nextValue.slice(0, 2))) {
+        liveError = 'Must start with 09.';
+      }
+    }
+
     setFormErrors((prev) => {
+      if (liveError) {
+        return prev[fieldName] === liveError ? prev : { ...prev, [fieldName]: liveError };
+      }
       if (!prev[fieldName] && !(fieldName === 'rank' && prev.rank_custom)) {
         return prev;
       }
@@ -2151,8 +2172,10 @@ const handleUpdatePersonnel = async () => {
     const trimmedEmail = String(formData.email || '').trim();
 
     const requiredErrors = {};
-    if (!firstName) requiredErrors.first_name = 'First name is required.';
-    if (!lastName) requiredErrors.last_name = 'Last name is required.';
+    const firstNameError = validateName(firstName, 'First name');
+    if (firstNameError) requiredErrors.first_name = firstNameError;
+    const lastNameError = validateName(lastName, 'Last name');
+    if (lastNameError) requiredErrors.last_name = lastNameError;
     if (!trimmedEmail) {
       requiredErrors.email = 'Email address is required.';
     } else if (!isValidGmailAddress(trimmedEmail)) {
@@ -2161,25 +2184,16 @@ const handleUpdatePersonnel = async () => {
     if (!formData.role) requiredErrors.role = 'Role is required.';
     if (!selectedRank) requiredErrors.rank = 'Rank designation is required.';
     if (selectedRank === 'OTHER' && !customRank) requiredErrors.rank_custom = 'Custom rank is required.';
-    if (!contactNumber) requiredErrors.contact_number = 'Contact number is required.';
+    const contactError = validateContactNumber(contactNumber);
+    if (contactError) requiredErrors.contact_number = contactError;
 
     setFormErrors(requiredErrors);
 
     if (Object.keys(requiredErrors).length > 0) {
       const message = requiredErrors.email === GMAIL_VALIDATION_ERROR
         ? GMAIL_VALIDATION_ERROR
-        : 'Please fill in all required fields.';
+        : 'Please fix the highlighted fields.';
       setMessage({ type: 'error', text: message });
-      return;
-    }
-
-    if (!validPersonnelNamePattern.test(firstName) || !validPersonnelNamePattern.test(lastName)) {
-      setMessage({ type: 'error', text: 'First name and last name can only contain letters and spaces.' });
-      return;
-    }
-
-    if (!contactNumberRegex.test(contactNumber)) {
-      setMessage({ type: 'error', text: 'Contact number must start with 09 and be exactly 11 digits.' });
       return;
     }
 
@@ -4759,8 +4773,8 @@ const permissions = getDefaultPermissions(formData.role);
                       required
                       aria-invalid={Boolean(formErrors.first_name)}
                       aria-describedby={formErrors.first_name ? 'personnel-first-name-error' : undefined}
-                      pattern="[A-Za-z]+"
-                      title="Use letters only"
+                      pattern={NAME_PATTERN_ATTR}
+                      title="Letters, spaces, hyphens and apostrophes only"
                     />
                     {formErrors.first_name && (
                       <span id="personnel-first-name-error" className="accounts-field-error" role="alert">
@@ -4783,8 +4797,8 @@ const permissions = getDefaultPermissions(formData.role);
                       required
                       aria-invalid={Boolean(formErrors.last_name)}
                       aria-describedby={formErrors.last_name ? 'personnel-last-name-error' : undefined}
-                      pattern="[A-Za-z]+"
-                      title="Use letters only"
+                      pattern={NAME_PATTERN_ATTR}
+                      title="Letters, spaces, hyphens and apostrophes only"
                     />
                     {formErrors.last_name && (
                       <span id="personnel-last-name-error" className="accounts-field-error" role="alert">

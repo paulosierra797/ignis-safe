@@ -1,8 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import gsap from 'gsap';
 import {
   FiAlertCircle,
+  FiCheck,
   FiCheckCircle,
+  FiChevronDown,
   FiDownload,
   FiFileText,
   FiRefreshCw,
@@ -12,6 +15,13 @@ import {
 import CloseButton from './CloseButton';
 import { invitePersonnel } from '../utils/authService';
 import { getAllUsers, logAdminActivity } from '../utils/usersService';
+import { ORG_RANK_OPTIONS } from '../utils/orgChartFields';
+import {
+  sanitizeContactInput,
+  validateContactNumber,
+  validateEmailFormat,
+  validateName
+} from '../utils/personnelValidation';
 import './PersonnelImportModal.css';
 
 const TEMPLATE_HEADERS = ['First Name', 'Last Name', 'Email', 'Role', 'Rank Designation', 'Contact Number'];
@@ -19,15 +29,11 @@ const BOM = String.fromCharCode(0xfeff);
 const MAX_ROWS = 200;
 const MAX_FILE_BYTES = 1024 * 1024;
 const INVITE_TIMEOUT_MS = 30000;
-const RANK_CODES = [
-  'FDIR', 'DFDIR', 'SSUPT', 'SUPT', 'CINSP', 'SINSP', 'INSP',
-  'SFO4', 'SFO3', 'SFO2', 'SFO1', 'FO3', 'FO2', 'FO1'
-];
+// Every BFP rank, highest first. Same list the Personnel pages use.
+const RANK_OPTIONS = ORG_RANK_OPTIONS.map((option) => ({ code: option.value, label: option.label }));
+const RANK_CODES = RANK_OPTIONS.map((option) => option.code);
+const RANK_ORDER = new Map(RANK_CODES.map((code, index) => [code, index]));
 const ROLE_LABELS = { super_admin: 'Super Admin', admin: 'Admin', personnel: 'Personnel' };
-
-const namePattern = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
-const contactPattern = /^09\d{9}$/;
-const gmailPattern = /^[^\s@]+@gmail\.com$/i;
 
 const HEADER_ALIASES = {
   firstname: 'first_name',
@@ -100,7 +106,30 @@ const normalizeRole = (value) => {
 const normalizeRank = (value) => {
   const raw = String(value || '').trim();
   const head = raw.split(/\s+-\s+/)[0].trim().toUpperCase();
-  return RANK_CODES.includes(head) ? head : raw;
+  if (RANK_ORDER.has(head)) return head;
+  // Also accept the spelled-out name, e.g. "Fire Officer I".
+  const byName = RANK_OPTIONS.find((option) => option.label.toLowerCase().endsWith(` - ${raw.toLowerCase()}`));
+  return byName ? byName.code : raw;
+};
+
+const RANK_GROUP_TITLES = { unknown: 'Unrecognized rank', none: 'No rank selected' };
+
+// Rows sharing a rank sit together, highest rank first; each group keeps file order.
+const groupRowsByRank = (list) => {
+  const buckets = new Map();
+  list.forEach((row) => {
+    const rank = row.rank.trim();
+    const key = RANK_ORDER.has(rank) ? rank : rank ? 'unknown' : 'none';
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(row);
+  });
+  return [...RANK_CODES, 'unknown', 'none']
+    .filter((key) => buckets.has(key))
+    .map((key) => ({
+      key,
+      title: RANK_GROUP_TITLES[key] || RANK_OPTIONS[RANK_ORDER.get(key)].label,
+      rows: buckets.get(key)
+    }));
 };
 
 // Spreadsheets drop the leading zero (9171234567) and some use +63 format.
@@ -157,6 +186,174 @@ const withTimeout = (promise) => Promise.race([
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
+// Searchable rank picker. The list is portaled to <body> so the scrolling table never clips it.
+function RankCombobox({ value, onChange, error, errorId, ariaLabel, rowId }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(null); // null = show the saved value
+  const [active, setActive] = useState(0);
+  const [pos, setPos] = useState(null);
+  const inputRef = useRef(null);
+  const listRef = useRef(null);
+  const skipBlurRef = useRef(false);
+  const listId = useId();
+
+  const options = useMemo(() => {
+    const text = (query || '').trim().toLowerCase();
+    return text ? RANK_OPTIONS.filter((option) => option.label.toLowerCase().includes(text)) : RANK_OPTIONS;
+  }, [query]);
+
+  const place = useCallback(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const width = Math.max(rect.width, 280);
+    const below = window.innerHeight - rect.bottom;
+    const flip = below < 220 && rect.top > below;
+    setPos({
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - width - 8)),
+      width,
+      maxHeight: Math.max(120, Math.min(260, (flip ? rect.top : below) - 12)),
+      ...(flip ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 })
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    place();
+    const onMove = (event) => {
+      if (!listRef.current?.contains(event.target)) place();
+    };
+    window.addEventListener('resize', onMove);
+    window.addEventListener('scroll', onMove, true);
+    return () => {
+      window.removeEventListener('resize', onMove);
+      window.removeEventListener('scroll', onMove, true);
+    };
+  }, [open, place]);
+
+  useEffect(() => {
+    if (open) listRef.current?.children[active]?.scrollIntoView({ block: 'nearest' });
+  }, [open, active, options]);
+
+  const openList = () => {
+    skipBlurRef.current = false;
+    if (open) return;
+    setActive(Math.max(0, RANK_OPTIONS.findIndex((option) => option.code === value)));
+    setOpen(true);
+  };
+
+  const close = () => {
+    setOpen(false);
+    setQuery(null);
+  };
+
+  const choose = (code) => {
+    skipBlurRef.current = true;
+    onChange(code, true);
+    close();
+  };
+
+  // Leaving the field keeps an exact typed code or name, clears an emptied field, else reverts.
+  const handleBlur = () => {
+    if (skipBlurRef.current) {
+      skipBlurRef.current = false;
+      close();
+      return;
+    }
+    if (query !== null) {
+      const text = query.trim().toLowerCase();
+      if (!text) {
+        if (value) onChange('', false);
+      } else {
+        const exact = RANK_OPTIONS.find(
+          (option) => option.code.toLowerCase() === text || option.label.toLowerCase() === text
+        );
+        if (exact && exact.code !== value) onChange(exact.code, false);
+      }
+    }
+    close();
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (!open) {
+        openList();
+        return;
+      }
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      setActive((current) => (options.length ? (current + step + options.length) % options.length : 0));
+    } else if (event.key === 'Enter' && open) {
+      event.preventDefault();
+      if (options[active]) choose(options[active].code);
+    } else if (event.key === 'Escape' && open) {
+      // Closing the list must not also close the dialog.
+      event.preventDefault();
+      close();
+    }
+  };
+
+  return (
+    <div className="pim-combo">
+      <input
+        ref={inputRef}
+        className={`pim-input pim-combo-input${error ? ' is-invalid' : ''}`}
+        data-rank-input={rowId}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-autocomplete="list"
+        aria-activedescendant={open && options[active] ? `${listId}-${options[active].code}` : undefined}
+        aria-label={ariaLabel}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? errorId : undefined}
+        autoComplete="off"
+        placeholder="Select rank…"
+        value={query ?? value}
+        onClick={openList}
+        onChange={(event) => {
+          skipBlurRef.current = false;
+          setQuery(event.target.value);
+          setActive(0);
+          setOpen(true);
+        }}
+        onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
+      />
+      <FiChevronDown className="pim-combo-chevron" aria-hidden="true" />
+      {open && pos && createPortal(
+        <ul
+          id={listId}
+          ref={listRef}
+          className="pim-combo-list"
+          role="listbox"
+          aria-label="BFP rank designations"
+          style={pos}
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          {options.length === 0 && <li className="pim-combo-empty" role="presentation">No matching rank</li>}
+          {options.map((option, index) => (
+            <li
+              key={option.code}
+              id={`${listId}-${option.code}`}
+              role="option"
+              aria-selected={option.code === value}
+              className={`pim-combo-option${index === active ? ' is-active' : ''}${option.code === value ? ' is-selected' : ''}`}
+              onMouseEnter={() => setActive(index)}
+              onClick={() => choose(option.code)}
+            >
+              <strong>{option.code}</strong>
+              <span>{option.label.slice(option.code.length + 3)}</span>
+              {option.code === value && <FiCheck aria-hidden="true" />}
+            </li>
+          ))}
+        </ul>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 export default function PersonnelImportModal({
   existingEmails = [],
   isSuperAdmin = false,
@@ -203,26 +400,26 @@ export default function PersonnelImportModal({
       const rank = row.rank.trim();
       const contact = row.contact_number.trim();
 
-      if (!first) errors.first_name = 'First name is required.';
-      else if (!namePattern.test(first)) errors.first_name = 'First name can only contain letters.';
-      if (!last) errors.last_name = 'Last name is required.';
-      else if (!namePattern.test(last)) errors.last_name = 'Last name can only contain letters.';
+      const firstError = validateName(first, 'First name');
+      if (firstError) errors.first_name = firstError;
+      const lastError = validateName(last, 'Last name');
+      if (lastError) errors.last_name = lastError;
 
-      if (!email) errors.email = 'Email is required.';
-      else if (!gmailPattern.test(email)) errors.email = 'Use a valid @gmail.com address.';
-      else if (existingSet.has(emailKey)) errors.email = 'An account with this email already exists.';
-      else if (firstSeen.has(emailKey)) errors.email = `Duplicate of row ${firstSeen.get(emailKey)} in this file.`;
+      const emailError = validateEmailFormat(email);
+      if (emailError) errors.email = emailError;
+      else if (existingSet.has(emailKey)) errors.email = 'Email already has an account.';
+      else if (firstSeen.has(emailKey)) errors.email = `Duplicate of row ${firstSeen.get(emailKey)}.`;
       else firstSeen.set(emailKey, index + 1);
 
       if (!role) errors.role = 'Role is required.';
-      else if (!ROLE_LABELS[role]) errors.role = 'Role must be Admin, Personnel or Super Admin.';
-      else if (role === 'super_admin' && !isSuperAdmin) errors.role = 'Only Super Admins can assign Super Admin.';
+      else if (!ROLE_LABELS[role]) errors.role = 'Choose Admin or Personnel.';
+      else if (role === 'super_admin' && !isSuperAdmin) errors.role = 'Super Admin only.';
 
-      if (!rank) errors.rank = 'Rank designation is required.';
-      else if (rank.length > 40) errors.rank = 'Rank is too long.';
+      if (!rank) errors.rank = 'Rank is required.';
+      else if (!RANK_ORDER.has(rank)) errors.rank = 'Pick a rank from the list.';
 
-      if (!contact) errors.contact_number = 'Contact number is required.';
-      else if (!contactPattern.test(contact)) errors.contact_number = 'Must start with 09 and be 11 digits.';
+      const contactError = validateContactNumber(contact);
+      if (contactError) errors.contact_number = contactError;
 
       if (Object.keys(errors).length) errorsById[row.id] = errors;
     });
@@ -239,6 +436,8 @@ export default function PersonnelImportModal({
   const createdRows = rows.filter((row) => row.status === 'created');
   const failedRows = rows.filter((row) => row.status === 'failed');
   const visibleRows = errorsOnly ? activeRows.filter((row) => validation[row.id]) : activeRows;
+  // Recomputed on every edit, so changing a rank moves the row to its new group.
+  const rankGroups = useMemo(() => groupRowsByRank(visibleRows), [visibleRows]);
 
   // Size each editable column to its longest value so nothing is clipped.
   const columnChars = useMemo(() => {
@@ -298,7 +497,8 @@ export default function PersonnelImportModal({
 
   useEffect(() => {
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') handleClose();
+      // The rank list handles its own Escape (preventDefault) so it closes alone.
+      if (event.key === 'Escape' && !event.defaultPrevented) handleClose();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
@@ -400,6 +600,20 @@ export default function PersonnelImportModal({
     setRows((previous) => previous.filter((row) => row.id !== id));
   };
 
+  // A row jumps to its new rank group; hand focus back to its rank field afterwards.
+  const focusRankRowRef = useRef(null);
+  const updateRank = (id, code, keepFocus) => {
+    if (keepFocus) focusRankRowRef.current = id;
+    updateRow(id, 'rank', code);
+  };
+
+  useEffect(() => {
+    const id = focusRankRowRef.current;
+    if (!id) return;
+    focusRankRowRef.current = null;
+    stageRef.current?.querySelector(`[data-rank-input="${id}"]`)?.focus();
+  }, [rows]);
+
   // ---- Import ----
   const runImport = async (targets) => {
     if (runningRef.current || targets.length === 0) return;
@@ -489,18 +703,29 @@ export default function PersonnelImportModal({
   };
 
   // ---- Render helpers ----
+  const renderError = (row, field) => {
+    const error = validation[row.id]?.[field];
+    return error ? (
+      <span id={`pim-err-${row.id}-${field}`} className="pim-field-error" role="alert">{error}</span>
+    ) : null;
+  };
+
   const renderInput = (row, field, props = {}) => {
     const error = validation[row.id]?.[field];
     return (
-      <input
-        className={`pim-input${error ? ' is-invalid' : ''}`}
-        style={{ minWidth: `calc(${columnChars[field] || 12}ch + 1.5rem)` }}
-        value={row[field]}
-        onChange={(event) => updateRow(row.id, field, event.target.value)}
-        aria-label={`${field.replace('_', ' ')}, row ${rowNumbers[row.id]}`}
-        aria-invalid={Boolean(error)}
-        {...props}
-      />
+      <>
+        <input
+          className={`pim-input${error ? ' is-invalid' : ''}`}
+          style={{ minWidth: `calc(${columnChars[field] || 12}ch + 1.5rem)` }}
+          value={row[field]}
+          onChange={(event) => updateRow(row.id, field, event.target.value)}
+          aria-label={`${field.replace('_', ' ')}, row ${rowNumbers[row.id]}`}
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? `pim-err-${row.id}-${field}` : undefined}
+          {...props}
+        />
+        {renderError(row, field)}
+      </>
     );
   };
 
@@ -556,7 +781,8 @@ export default function PersonnelImportModal({
                 <ul className="pim-muted">
                   <li>Columns: {TEMPLATE_HEADERS.join(', ')}.</li>
                   <li>Role: {isSuperAdmin ? 'Admin, Personnel or Super Admin' : 'Admin or Personnel'}. Email must be a Gmail address.</li>
-                  <li>Rank: {RANK_CODES.join(', ')} or a custom rank. Contact: 09XXXXXXXXX.</li>
+                  <li>Rank: {RANK_CODES.join(', ')}. Contact: 11 digits starting with 09 (09XXXXXXXXX).</li>
+                  <li>Names: letters, spaces, hyphens and apostrophes only.</li>
                   <li>Up to {MAX_ROWS} rows. Each person receives an activation email to set their own password.</li>
                 </ul>
               </div>
@@ -612,64 +838,80 @@ export default function PersonnelImportModal({
                     {visibleRows.length === 0 && (
                       <tr><td colSpan={8} className="pim-empty">No rows with errors.</td></tr>
                     )}
-                    {visibleRows.map((row) => {
-                      const errors = validation[row.id];
-                      const role = normalizeRole(row.role);
-                      return (
-                        <React.Fragment key={row.id}>
-                          <tr className={errors ? 'has-error' : ''}>
-                            <td className="pim-num">{rowNumbers[row.id]}</td>
-                            <td>{renderInput(row, 'first_name')}</td>
-                            <td>{renderInput(row, 'last_name')}</td>
-                            <td>{renderInput(row, 'email', { type: 'email', inputMode: 'email' })}</td>
-                            <td>
-                              <select
-                                className={`pim-input${errors?.role ? ' is-invalid' : ''}`}
-                                value={row.role}
-                                onChange={(event) => updateRow(row.id, 'role', event.target.value)}
-                                aria-label={`role, row ${rowNumbers[row.id]}`}
-                                aria-invalid={Boolean(errors?.role)}
-                              >
-                                <option value="">Select…</option>
-                                {(isSuperAdmin || role === 'super_admin') && (
-                                  <option value="super_admin">Super Admin</option>
-                                )}
-                                <option value="admin">Admin</option>
-                                <option value="personnel">Personnel</option>
-                                {/* Keep an unrecognised value visible so its error is explainable. */}
-                                {row.role && !ROLE_LABELS[role] && <option value={row.role}>{row.role}</option>}
-                              </select>
-                            </td>
-                            <td>{renderInput(row, 'rank', { list: 'pim-rank-options' })}</td>
-                            <td>{renderInput(row, 'contact_number', { inputMode: 'numeric' })}</td>
-                            <td>
-                              <button
-                                type="button"
-                                className="pim-icon-btn"
-                                onClick={() => removeRow(row.id)}
-                                aria-label={`Remove row ${rowNumbers[row.id]}`}
-                                title="Remove row"
-                              >
-                                <FiTrash2 aria-hidden="true" />
-                              </button>
-                            </td>
-                          </tr>
-                          {errors && (
-                            <tr className="pim-error-row">
-                              <td />
-                              <td colSpan={7}>
-                                <FiAlertCircle aria-hidden="true" /> {Object.values(errors).join(' ')}
+                    {rankGroups.map((group) => (
+                      <React.Fragment key={group.key}>
+                        <tr className="pim-group-row">
+                          <th colSpan={8} scope="colgroup">
+                            <span className="pim-group-title">{group.title}</span>
+                            <span className="pim-group-count">{group.rows.length} personnel</span>
+                          </th>
+                        </tr>
+                        {group.rows.map((row) => {
+                          const errors = validation[row.id];
+                          const role = normalizeRole(row.role);
+                          return (
+                            <tr key={row.id} className={errors ? 'has-error' : ''}>
+                              <td className="pim-num">{rowNumbers[row.id]}</td>
+                              <td>{renderInput(row, 'first_name')}</td>
+                              <td>{renderInput(row, 'last_name')}</td>
+                              <td>{renderInput(row, 'email', { type: 'email', inputMode: 'email' })}</td>
+                              <td>
+                                <select
+                                  className={`pim-input${errors?.role ? ' is-invalid' : ''}`}
+                                  value={row.role}
+                                  onChange={(event) => updateRow(row.id, 'role', event.target.value)}
+                                  aria-label={`role, row ${rowNumbers[row.id]}`}
+                                  aria-invalid={Boolean(errors?.role)}
+                                  aria-describedby={errors?.role ? `pim-err-${row.id}-role` : undefined}
+                                >
+                                  <option value="">Select…</option>
+                                  {(isSuperAdmin || role === 'super_admin') && (
+                                    <option value="super_admin">Super Admin</option>
+                                  )}
+                                  <option value="admin">Admin</option>
+                                  <option value="personnel">Personnel</option>
+                                  {/* Keep an unrecognised value visible so its error is explainable. */}
+                                  {row.role && !ROLE_LABELS[role] && <option value={row.role}>{row.role}</option>}
+                                </select>
+                                {renderError(row, 'role')}
+                              </td>
+                              <td>
+                                <RankCombobox
+                                  value={row.rank}
+                                  onChange={(code, keepFocus) => updateRank(row.id, code, keepFocus)}
+                                  error={errors?.rank}
+                                  errorId={`pim-err-${row.id}-rank`}
+                                  ariaLabel={`rank, row ${rowNumbers[row.id]}`}
+                                  rowId={row.id}
+                                />
+                                {renderError(row, 'rank')}
+                              </td>
+                              <td>
+                                {renderInput(row, 'contact_number', {
+                                  inputMode: 'numeric',
+                                  maxLength: 11,
+                                  placeholder: '09XXXXXXXXX',
+                                  onChange: (event) => updateRow(row.id, 'contact_number', sanitizeContactInput(event.target.value))
+                                })}
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className="pim-icon-btn"
+                                  onClick={() => removeRow(row.id)}
+                                  aria-label={`Remove row ${rowNumbers[row.id]}`}
+                                  title="Remove row"
+                                >
+                                  <FiTrash2 aria-hidden="true" />
+                                </button>
                               </td>
                             </tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
+                          );
+                        })}
+                      </React.Fragment>
+                    ))}
                   </tbody>
                 </table>
-                <datalist id="pim-rank-options">
-                  {RANK_CODES.map((code) => <option key={code} value={code} />)}
-                </datalist>
               </div>
 
               <footer className="pim-footer">

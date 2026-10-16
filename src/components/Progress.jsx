@@ -1,17 +1,12 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   FiAward,
   FiBarChart2,
   FiBookOpen,
   FiCheckCircle,
   FiChevronDown,
-  FiEye,
   FiMail,
-  FiMapPin,
-  FiPieChart,
-  FiPlayCircle,
   FiStar,
-  FiUsers,
 } from 'react-icons/fi';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { useGSAP } from '@gsap/react';
@@ -26,13 +21,14 @@ import ToastMessage from './ToastMessage';
 import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import { archiveRecord } from '../utils/archiveService';
 import ResponsiveSelect from './ResponsiveSelect';
+import { BarangayDetailModal, BarangayOverview } from './BarangayLearning';
+import { buildLearningDetails } from '../utils/barangayLearning';
 import './Progress.css';
 import {
   UNSPECIFIED_BARANGAY_LABEL,
   buildBarangaySummary,
   getProgressPageData,
   getUserFeedback,
-  summarizeUsers,
 } from '../utils/progressService';
 
 gsap.registerPlugin(useGSAP);
@@ -146,63 +142,6 @@ const matchesCompletionFilter = (overallPercent, filterValue) => {
 const USERS_PER_PAGE = 10;
 const BARANGAYS_PER_PAGE = 10;
 
-const averagePercent = (values = []) => {
-  const numericValues = values.filter((value) => Number.isFinite(Number(value)));
-  if (numericValues.length === 0) return 0;
-  return Math.round(numericValues.reduce((sum, value) => sum + Number(value), 0) / numericValues.length);
-};
-
-const buildBarangayLearningDetails = (barangay, rows = [], modules = []) => {
-  const users = rows.filter((row) => row.barangay === barangay);
-  const summary = summarizeUsers(users);
-  const latestAssessmentScores = users.flatMap((user) =>
-    (user.modules || []).flatMap((module) => (
-      module.tests?.[0] ? [Number(module.tests[0].score) * 10] : []
-    ))
-  );
-  const usersWithAssessments = users.filter((user) =>
-    user.modules?.some((module) => (module.tests?.length || 0) > 0)
-  ).length;
-
-  const modulePerformance = modules.map((moduleName) => {
-    const moduleRows = users
-      .map((user) => user.modules?.find((module) => module.name === moduleName))
-      .filter(Boolean);
-    const moduleScores = moduleRows.flatMap((module) => (
-      module.tests?.[0] ? [Number(module.tests[0].score) * 10] : []
-    ));
-
-    return {
-      name: moduleName,
-      completed: moduleRows.filter((module) => module.progress >= 100).length,
-      inProgress: moduleRows.filter((module) => module.progress > 0 && module.progress < 100).length,
-      averageProgress: averagePercent(moduleRows.map((module) => module.progress)),
-      knowledgeScore: averagePercent(moduleScores),
-      assessedUsers: moduleScores.length,
-    };
-  });
-
-  const latestActivityTimestamp = users.reduce((latest, user) => {
-    const timestamp = new Date(user.lastActivityAt || 0).getTime();
-    return Number.isFinite(timestamp) ? Math.max(latest, timestamp) : latest;
-  }, 0);
-
-  return {
-    barangay,
-    users,
-    ...summary,
-    activeUsers: users.filter((user) => user.accessStatus === 'Active').length,
-    averageProgress: averagePercent(users.map((user) => user.overallPercent)),
-    knowledgeScore: averagePercent(latestAssessmentScores),
-    assessmentCoverage: summary.registered > 0
-      ? Math.round((usersWithAssessments / summary.registered) * 100)
-      : 0,
-    simulationsCompleted: users.reduce((sum, user) => sum + Number(user.completedSimulations || 0), 0),
-    modulesCompleted: users.reduce((sum, user) => sum + Number(user.modulesCompleted || 0), 0),
-    latestActivityAt: latestActivityTimestamp > 0 ? new Date(latestActivityTimestamp).toISOString() : null,
-    modulePerformance,
-  };
-};
 
 export default function Progress() {
   const location = useLocation();
@@ -560,9 +499,9 @@ export default function Progress() {
 
   const selectedBarangayDetails = useMemo(() => (
     selectedBarangay
-      ? buildBarangayLearningDetails(
+      ? buildLearningDetails(
         selectedBarangay,
-        progressRows,
+        progressRows.filter((row) => row.barangay === selectedBarangay),
         moduleOptions.filter((moduleName) => moduleName !== 'All')
       )
       : null
@@ -586,7 +525,7 @@ export default function Progress() {
           </button>
         </nav>
 
-        <div className="progress-controls">
+        {activeView === 'users' && <div className="progress-controls">
           <div className={`progress-filters progress-filters--${activeView}`}>
             <div className="progress-filter">
               <label htmlFor="progress-filter-barangay">Barangay / Location</label>
@@ -675,134 +614,25 @@ export default function Progress() {
               CLEAR FILTERS
             </button>
           </div>
-        </div>
-
-        {activeView === 'barangays' && <div className="progress-table-card progress-barangay-breakdown">
-          <div className="progress-breakdown-header">
-            <h3>
-              <FiMapPin aria-hidden="true" />
-              Barangay Learning Overview
-            </h3>
-            <span className="progress-breakdown-formula">
-              Select a barangay to view its mobile users and complete learning details
-            </span>
-          </div>
-          <div className="progress-desktop-table">
-            <table className="progress-table progress-table--breakdown">
-              <thead>
-                <tr>
-                  <th>Barangay</th>
-                  <th>Total Registered Users</th>
-                  <th>Completed</th>
-                  <th>In Progress</th>
-                  <th>Not Started</th>
-                  <th>Completion Rate</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
-                      Loading barangay statistics...
-                    </td>
-                  </tr>
-                ) : visibleBreakdown.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" style={{ textAlign: 'center', padding: '1.5rem', color: '#94a3b8' }}>
-                      No barangay records found.
-                    </td>
-                  </tr>
-                ) : (
-                  paginatedBreakdown.map((row) => (
-                    <tr
-                      key={row.barangay}
-                      className={row.barangay === UNSPECIFIED_BARANGAY_LABEL ? 'progress-row-muted' : ''}
-                    >
-                      <td>{row.barangay}</td>
-                      <td>{row.registered}</td>
-                      <td>{row.completed}</td>
-                      <td>{row.inProgress}</td>
-                      <td>{row.notStarted}</td>
-                      <td>
-                        <div className="progress-rate-cell">
-                          <span>{row.completionRate}%</span>
-                          <div className="progress-rate-bar">
-                            <div
-                              className="progress-rate-bar-fill"
-                              style={{ width: `${Math.min(100, row.completionRate)}%` }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="progress-barangay-view-btn"
-                          onClick={() => handleViewBarangay(row.barangay)}
-                          title={`View ${row.barangay} details`}
-                          aria-label={`View learning details for ${row.barangay}`}
-                        >
-                          <FiEye aria-hidden="true" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="progress-mobile-cards">
-            {isLoading ? (
-              <div className="progress-card-empty">Loading barangay statistics...</div>
-            ) : visibleBreakdown.length === 0 ? (
-              <div className="progress-card-empty">No barangay records found.</div>
-            ) : (
-              paginatedBreakdown.map((row) => (
-                <div className="progress-user-card" key={row.barangay}>
-                  <div className="progress-card-header">
-                    <div>
-                      <h3>{row.barangay}</h3>
-                      <p>{row.registered} registered {row.registered === 1 ? 'user' : 'users'}</p>
-                    </div>
-                    <span className="progress-percent">{row.completionRate}%</span>
-                  </div>
-                  <div className="progress-card-row">
-                    <span>Completed</span>
-                    <strong>{row.completed}</strong>
-                  </div>
-                  <div className="progress-card-row">
-                    <span>In Progress</span>
-                    <strong>{row.inProgress}</strong>
-                  </div>
-                  <div className="progress-card-row">
-                    <span>Not Started</span>
-                    <strong>{row.notStarted}</strong>
-                  </div>
-                  <button
-                    type="button"
-                    className="progress-barangay-mobile-view-btn"
-                    onClick={() => handleViewBarangay(row.barangay)}
-                  >
-                    <FiEye aria-hidden="true" />
-                    View barangay details
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-          {!isLoading && (
-            <div className="progress-section-pagination progress-section-pagination--barangays">
-              <Pagination
-                page={safeBarangayPage}
-                totalItems={visibleBreakdown.length}
-                onPageChange={setBarangayPage}
-                label="Barangay completion summary pages"
-              />
-            </div>
-          )}
         </div>}
+
+        {activeView === 'barangays' && (
+          <BarangayOverview
+            rows={visibleBreakdown}
+            pagedRows={paginatedBreakdown}
+            progressRows={progressRows}
+            isLoading={isLoading}
+            page={safeBarangayPage}
+            onPageChange={setBarangayPage}
+            barangayOptions={barangayOptions}
+            barangayFilter={barangayFilter}
+            onFilterChange={(value) => {
+              setBarangayFilter(value);
+              setBarangayPage(1);
+            }}
+            onView={handleViewBarangay}
+          />
+        )}
 
         {activeView === 'users' && <div className="progress-table-card progress-users-table">
           <div className="progress-breakdown-header">
@@ -1018,156 +848,14 @@ export default function Progress() {
         </div>}
 
         {selectedBarangayDetails && (
-          <div className="progress-modal-overlay" onClick={handleCloseBarangay}>
-            <div className="progress-modal progress-barangay-modal" onClick={(event) => event.stopPropagation()}>
-              <div className="progress-modal-header">
-                <div className="progress-modal-heading">
-                  <span className="progress-modal-eyebrow">Barangay Details</span>
-                  <h2>{selectedBarangayDetails.barangay}</h2>
-                  <p>Mobile user participation and learning performance</p>
-                </div>
-                <CloseButton
-                  className="progress-modal-close"
-                  onClick={handleCloseBarangay}
-                  label="Close barangay details"
-                />
-              </div>
-
-              <div className="progress-modal-content progress-barangay-modal-content">
-                <section className="progress-barangay-detail-metrics" aria-label="Barangay summary">
-                  <div>
-                    <span>Registered Users</span>
-                    <strong>{selectedBarangayDetails.registered}</strong>
-                  </div>
-                  <div>
-                    <span>Active Users</span>
-                    <strong>{selectedBarangayDetails.activeUsers}</strong>
-                  </div>
-                  <div>
-                    <span>Average Progress</span>
-                    <strong>{selectedBarangayDetails.averageProgress}%</strong>
-                  </div>
-                  <div>
-                    <span>Completion Rate</span>
-                    <strong>{selectedBarangayDetails.completionRate}%</strong>
-                  </div>
-                  <div>
-                    <span>Knowledge Score</span>
-                    <strong>{selectedBarangayDetails.knowledgeScore}%</strong>
-                  </div>
-                  <div>
-                    <span>Assessment Coverage</span>
-                    <strong>{selectedBarangayDetails.assessmentCoverage}%</strong>
-                  </div>
-                </section>
-
-                <section className="progress-barangay-distribution">
-                  <div className="progress-barangay-detail-heading">
-                    <div>
-                      <h3><FiPieChart aria-hidden="true" />Training Status</h3>
-                      <p>Current learning status of registered mobile users.</p>
-                    </div>
-                    <span>Last activity: {formatLongDate(selectedBarangayDetails.latestActivityAt)}</span>
-                  </div>
-                  <div className="progress-barangay-status-track" aria-label="Training status distribution">
-                    <span
-                      className="is-completed"
-                      style={{ width: `${selectedBarangayDetails.registered ? (selectedBarangayDetails.completed / selectedBarangayDetails.registered) * 100 : 0}%` }}
-                    />
-                    <span
-                      className="is-progress"
-                      style={{ width: `${selectedBarangayDetails.registered ? (selectedBarangayDetails.inProgress / selectedBarangayDetails.registered) * 100 : 0}%` }}
-                    />
-                    <span
-                      className="is-not-started"
-                      style={{ width: `${selectedBarangayDetails.registered ? (selectedBarangayDetails.notStarted / selectedBarangayDetails.registered) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <div className="progress-barangay-status-legend">
-                    <span className="is-completed"><i />Completed <strong>{selectedBarangayDetails.completed}</strong></span>
-                    <span className="is-progress"><i />In Progress <strong>{selectedBarangayDetails.inProgress}</strong></span>
-                    <span className="is-not-started"><i />Not Started <strong>{selectedBarangayDetails.notStarted}</strong></span>
-                    <span><FiCheckCircle aria-hidden="true" />{selectedBarangayDetails.modulesCompleted} modules completed</span>
-                    <span><FiPlayCircle aria-hidden="true" />{selectedBarangayDetails.simulationsCompleted} simulations completed</span>
-                  </div>
-                </section>
-
-                <section className="progress-barangay-detail-section">
-                  <div className="progress-barangay-detail-heading">
-                    <div>
-                      <h3><FiBookOpen aria-hidden="true" />Module Performance</h3>
-                      <p>Progress and the latest recorded assessment score for each module.</p>
-                    </div>
-                  </div>
-                  <div className="progress-barangay-detail-table-wrap">
-                    <table className="progress-barangay-detail-table">
-                      <thead>
-                        <tr>
-                          <th>Module</th>
-                          <th>Completed</th>
-                          <th>In Progress</th>
-                          <th>Average Progress</th>
-                          <th>Knowledge Score</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedBarangayDetails.modulePerformance.map((module) => (
-                          <tr key={module.name}>
-                            <td>{module.name}</td>
-                            <td>{module.completed}</td>
-                            <td>{module.inProgress}</td>
-                            <td>{module.averageProgress}%</td>
-                            <td>{module.assessedUsers > 0 ? `${module.knowledgeScore}%` : 'No results'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-
-                <section className="progress-barangay-detail-section">
-                  <div className="progress-barangay-detail-heading">
-                    <div>
-                      <h3><FiUsers aria-hidden="true" />Mobile Users</h3>
-                      <p>Accounts registered under {selectedBarangayDetails.barangay}.</p>
-                    </div>
-                    <span>{selectedBarangayDetails.registered} total</span>
-                  </div>
-                  {selectedBarangayDetails.users.length === 0 ? (
-                    <p className="progress-barangay-detail-empty">No mobile users are registered under this barangay.</p>
-                  ) : (
-                    <div className="progress-barangay-members">
-                      {selectedBarangayDetails.users.map((user) => (
-                        <div className="progress-barangay-member" key={user.id}>
-                          <span className="progress-barangay-member-avatar" aria-hidden="true">{getUserInitials(user.name)}</span>
-                          <span className="progress-barangay-member-name">
-                            <strong>{user.name}</strong>
-                            <small>{user.email}</small>
-                          </span>
-                          <span className={`progress-barangay-member-status is-${user.completionStatus.toLowerCase().replace(/\s+/g, '-')}`}>
-                            {user.completionStatus}
-                          </span>
-                          <span className="progress-barangay-member-progress">{user.overallPercent}%</span>
-                          <button
-                            type="button"
-                            className="progress-barangay-member-view"
-                            onClick={() => {
-                              handleCloseBarangay();
-                              handleViewUser(user);
-                            }}
-                            title={`View ${user.name}'s learning profile`}
-                            aria-label={`View learning profile for ${user.name}`}
-                          >
-                            <FiEye aria-hidden="true" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
-              </div>
-            </div>
-          </div>
+          <BarangayDetailModal
+            details={selectedBarangayDetails}
+            onClose={handleCloseBarangay}
+            onViewUser={(user) => {
+              handleCloseBarangay();
+              handleViewUser(user);
+            }}
+          />
         )}
 
         {showModal && selectedUser && (

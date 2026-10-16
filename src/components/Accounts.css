@@ -1723,12 +1723,29 @@
   align-self: flex-start;
   padding: 0.1rem 0.45rem;
   border-radius: 999px;
-  background: #fff1f2;
-  border: 1px solid #fecdd3;
-  color: #9f1239;
+  background: #7f1d1d;
+  border: 1px solid #7f1d1d;
+  color: #fff;
   font-size: 0.68rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
   white-space: nowrap;
+}
+
+/* Super Admin section: same card shell as Admin, set apart by a deep-red rule
+   and count chip rather than extra panels. */
+.account-directory-group-super-admin {
+  border-top: 3px solid #7f1d1d;
+}
+
+.account-directory-group-super-admin .account-directory-group-header {
+  background: #fff;
+}
+
+.account-directory-group-super-admin .account-directory-group-header > span {
+  background: #7f1d1d;
+  color: #fff;
+  box-shadow: none;
 }
 
 .account-directory-table .account-directory-status-group {

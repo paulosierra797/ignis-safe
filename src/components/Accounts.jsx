@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useBlocker, useSearchParams } from 'react-router-dom';
+import gsap from 'gsap';
 import { FaCheckCircle, FaChevronDown, FaEye, FaSearch, FaTimes, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import ArchiveButton from './ArchiveButton';
 import ArchiveListModal from './ArchiveListModal';
@@ -710,9 +711,33 @@ function AccountDirectoryGroup({
   isProtectedAccount,
   onShowProtectedNotice,
 }) {
+  const groupRef = useRef(null);
+
+  // Subtle entrance: the section eases in, then its rows follow. Skipped for
+  // users who prefer reduced motion.
+  useEffect(() => {
+    const group = groupRef.current;
+    if (!group) return undefined;
+
+    const media = gsap.matchMedia();
+    media.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.fromTo(group, { y: 12, opacity: 0 }, {
+        y: 0, opacity: 1, duration: 0.45, ease: 'power3.out', clearProps: 'transform,opacity'
+      });
+      const rows = group.querySelectorAll('.account-directory-row');
+      if (rows.length) {
+        gsap.from(rows, {
+          y: 8, opacity: 0, duration: 0.35, stagger: 0.04, delay: 0.08, ease: 'power2.out', clearProps: 'transform,opacity'
+        });
+      }
+    });
+    return () => media.revert();
+  }, []);
+
+  const fallbackName = variant === 'super-admin' ? 'Super Admin' : (variant === 'admin' ? 'Admin' : 'Personnel');
 
   return (
-    <section className={`account-directory-group account-directory-group-${variant}`}>
+    <section ref={groupRef} className={`account-directory-group account-directory-group-${variant}`}>
       <div className="account-directory-group-header">
         <div>
           <h4>{title}</h4>
@@ -741,7 +766,7 @@ function AccountDirectoryGroup({
             <tbody>
               {accounts.map((account) => {
                 const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim()
-                  || (variant === 'admin' ? 'Admin' : 'Personnel');
+                  || fallbackName;
                 const onLeave = isOnLeave(account);
 
                 return (
@@ -877,6 +902,7 @@ export default function Accounts() {
   const [statusFilter, setStatusFilter] = useState('All Status');
   const [personnelPage, setPersonnelPage] = useState(1);
   const [adminPage, setAdminPage] = useState(1);
+  const [superAdminPage, setSuperAdminPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isAddExitConfirmOpen, setIsAddExitConfirmOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
@@ -1126,6 +1152,11 @@ export default function Accounts() {
     setPersonnelPage(1);
     setAdminPage(1);
   };
+
+  // Filters reset the Super Admin list to page 1 too (it shares the same filters).
+  useEffect(() => {
+    setSuperAdminPage(1);
+  }, [personnelSearch, rankFilter, statusFilter]);
 
   // Protected accounts (display only; the database enforces the protection).
   const [protectedAccountIds, setProtectedAccountIds] = useState([]);
@@ -3316,7 +3347,20 @@ const permissions = getDefaultPermissions(formData.role);
     return matchSearch && matchRank && matchStatus;
   });
   const filteredPersonnelAccounts = filteredAccounts.filter(isPersonnelAccount);
-  const filteredAdminAccounts = filteredAccounts.filter((account) => !isPersonnelAccount(account));
+  // Effective role: a Super Admin is listed only under Super Admin Accounts,
+  // although its stored role stays "admin".
+  const filteredSuperAdminAccounts = filteredAccounts.filter(
+    (account) => !isPersonnelAccount(account) && isSuperAdminAccount(account)
+  );
+  const filteredAdminAccounts = filteredAccounts.filter(
+    (account) => !isPersonnelAccount(account) && !isSuperAdminAccount(account)
+  );
+  const superAdminTotalPages = Math.max(1, Math.ceil(filteredSuperAdminAccounts.length / ACCOUNT_PAGE_SIZE));
+  const safeSuperAdminPage = Math.min(superAdminPage, superAdminTotalPages);
+  const paginatedSuperAdminAccounts = filteredSuperAdminAccounts.slice(
+    (safeSuperAdminPage - 1) * ACCOUNT_PAGE_SIZE,
+    safeSuperAdminPage * ACCOUNT_PAGE_SIZE
+  );
   const personnelTotalPages = Math.max(1, Math.ceil(filteredPersonnelAccounts.length / ACCOUNT_PAGE_SIZE));
   const safePersonnelPage = Math.min(personnelPage, personnelTotalPages);
   const paginatedPersonnelAccounts = filteredPersonnelAccounts.slice(
@@ -4280,6 +4324,22 @@ const permissions = getDefaultPermissions(formData.role);
           <div className="account-directory-loading">Loading accounts...</div>
         ) : (
           <div className="accounts-directory-groups">
+            <AccountDirectoryGroup
+              title="Super Admin Accounts"
+              description="Highest-privilege accounts that manage other administrators"
+              accounts={paginatedSuperAdminAccounts}
+              totalCount={filteredSuperAdminAccounts.length}
+              emptyMessage="No Super Admin accounts match the selected filters."
+              getAccountActions={getAccountActions}
+              isOnLeave={isOnLeave}
+              formatLeaveDate={formatLeaveDate}
+              variant="super-admin"
+              page={safeSuperAdminPage}
+              onPageChange={setSuperAdminPage}
+              onViewStatus={openStatusModal}
+              isProtectedAccount={isProtectedAccount}
+              onShowProtectedNotice={() => setIsProtectedNoticeOpen(true)}
+            />
             <AccountDirectoryGroup
               title="Admin Accounts"
               description="Administrative and management accounts"

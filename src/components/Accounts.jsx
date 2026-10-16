@@ -19,6 +19,7 @@ import {
   FiSave,
   FiShield,
   FiSmartphone,
+  FiUpload,
   FiUser,
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
@@ -26,6 +27,7 @@ import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import ExpandableText from './ExpandableText';
 import ToastMessage from './ToastMessage';
+import PersonnelImportModal from './PersonnelImportModal';
 import './Accounts.css';
 import './AppDialog.css';
 import { invitePersonnel } from '../utils/authService';
@@ -904,6 +906,7 @@ export default function Accounts() {
   const [adminPage, setAdminPage] = useState(1);
   const [superAdminPage, setSuperAdminPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAddExitConfirmOpen, setIsAddExitConfirmOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
@@ -3494,9 +3497,15 @@ const permissions = getDefaultPermissions(formData.role);
               </>
             )}
             {activeAccountsTab === 'personnel' && (
-              <button className="add-personnel-btn" onClick={handleOpenAddModal}>
-                Add Personnel
-              </button>
+              <>
+                <button className="import-personnel-btn" onClick={() => setIsImportModalOpen(true)}>
+                  <FiUpload aria-hidden="true" />
+                  Import Personnel
+                </button>
+                <button className="add-personnel-btn" onClick={handleOpenAddModal}>
+                  Add Personnel
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -4709,6 +4718,16 @@ const permissions = getDefaultPermissions(formData.role);
     </div>
   </div>
 )}
+
+        {isImportModalOpen && (
+          <PersonnelImportModal
+            existingEmails={accounts.map((account) => account.email)}
+            isSuperAdmin={isSuperAdmin}
+            currentUser={currentUser}
+            onImported={fetchAccounts}
+            onClose={() => setIsImportModalOpen(false)}
+          />
+        )}
 
         {isAddModalOpen && (
           <div className="accounts-modal-overlay" role="dialog" aria-modal="true">

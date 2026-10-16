@@ -209,6 +209,7 @@ app = FastAPI(title="Ignis Safe Analytics API", version="1.0.0")
 # Additional origins remain configurable for local development and previews.
 DEFAULT_FRONTEND_ORIGINS = (
     "https://ignis-safe.com",
+    "https://ignis-safe-mfje.vercel.app",
     "http://localhost:5173",
 )
 

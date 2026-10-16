@@ -50,17 +50,52 @@ const getInitials = (name = '') => name
 const pct = (part, total) => (total > 0 ? (part / total) * 100 : 0);
 
 /* Hover / focus explanation. Keyboard and touch users get it on focus. */
-function Tip({ text, align = 'center', side = 'bottom', focusable = true, className = '', children }) {
+function Tip({ text, side = 'bottom', focusable = true, className = '', children }) {
   const id = useId();
+  const triggerRef = useRef(null);
+  const bubbleRef = useRef(null);
+
+  // The bubble is position: fixed and clamped to the viewport, so no scroll
+  // container or overflow:hidden ancestor can cut the explanation off.
+  const place = () => {
+    const trigger = triggerRef.current;
+    const bubble = bubbleRef.current;
+    if (!trigger || !bubble) return;
+
+    // Reset first: a containing block (e.g. container-type) can offset "fixed".
+    bubble.style.left = '0px';
+    bubble.style.top = '0px';
+    const origin = bubble.getBoundingClientRect();
+    const anchor = trigger.getBoundingClientRect();
+    const { offsetWidth: width, offsetHeight: height } = bubble;
+    const margin = 8;
+    const gap = 8;
+
+    const left = Math.min(
+      Math.max(anchor.left + anchor.width / 2 - width / 2, margin),
+      Math.max(margin, window.innerWidth - width - margin),
+    );
+    const below = anchor.bottom + gap;
+    const above = anchor.top - gap - height;
+    const fitsBelow = below + height <= window.innerHeight - margin;
+    const fitsAbove = above >= margin;
+    const useAbove = side === 'top' ? (fitsAbove || !fitsBelow) : (!fitsBelow && fitsAbove);
+
+    bubble.style.left = `${left - origin.left}px`;
+    bubble.style.top = `${(useAbove ? above : below) - origin.top}px`;
+  };
 
   return (
     <span
-      className={`bgy-tip bgy-tip--${align} bgy-tip--${side} ${className}`.trim()}
+      ref={triggerRef}
+      className={`bgy-tip ${className}`.trim()}
       tabIndex={focusable ? 0 : undefined}
       aria-describedby={id}
+      onMouseEnter={place}
+      onFocus={place}
     >
       {children}
-      <span role="tooltip" id={id} className="bgy-tip-bubble">{text}</span>
+      <span ref={bubbleRef} role="tooltip" id={id} className="bgy-tip-bubble">{text}</span>
     </span>
   );
 }
@@ -159,7 +194,7 @@ export function BarangayOverview({
       <header className="bgy-panel-head">
         <h2 id="bgy-overview-title">
           <FiMapPin aria-hidden="true" />
-          <Tip text={TIPS.overview} align="start">Barangay Learning Overview</Tip>
+          <Tip text={TIPS.overview}>Barangay Learning Overview</Tip>
         </h2>
 
         <div className="bgy-filter">
@@ -190,7 +225,7 @@ export function BarangayOverview({
       {!isLoading && rows.length > 0 && (
         <div className="bgy-summary">
           <div className="bgy-summary-block">
-            <Tip text={TIPS.registered} align="start" className="bgy-label">Total registered users</Tip>
+            <Tip text={TIPS.registered} className="bgy-label">Total Users</Tip>
             <strong className="bgy-summary-num">{totals.registered}</strong>
           </div>
 
@@ -204,12 +239,12 @@ export function BarangayOverview({
           </div>
 
           <div className="bgy-summary-block">
-            <Tip text={TIPS.completionRate} align="end" className="bgy-label">Completion rate</Tip>
+            <Tip text={TIPS.completionRate} className="bgy-label">Completion rate</Tip>
             <strong className="bgy-summary-num is-green">{totals.completionRate}%</strong>
           </div>
 
           <div className="bgy-summary-block">
-            <Tip text={TIPS.gain} align="end" className="bgy-label">Learning gain</Tip>
+            <Tip text={TIPS.gain} className="bgy-label">Learning gain</Tip>
             <GainChip pair={totals.prePost} />
           </div>
         </div>
@@ -217,14 +252,14 @@ export function BarangayOverview({
 
       <div className="bgy-table" role="table" aria-label="Barangay learning overview">
         <div className="bgy-row bgy-row--head" role="row">
-          <div role="columnheader"><Tip text={TIPS.barangay} align="start">Barangay</Tip></div>
-          <div role="columnheader"><Tip text={TIPS.registered}>Total registered users</Tip></div>
+          <div role="columnheader"><Tip text={TIPS.barangay}>Barangay</Tip></div>
+          <div role="columnheader"><Tip text={TIPS.registered}>Total Users</Tip></div>
           <div role="columnheader"><Tip text={TIPS.completed}>Completed</Tip></div>
           <div role="columnheader"><Tip text={TIPS.inProgress}>In progress</Tip></div>
           <div role="columnheader"><Tip text={TIPS.notStarted}>Not started</Tip></div>
           <div role="columnheader"><Tip text={TIPS.completionRate}>Completion rate</Tip></div>
           <div role="columnheader"><Tip text={TIPS.gain}>Learning gain</Tip></div>
-          <div role="columnheader"><Tip text={TIPS.action} align="end">Action</Tip></div>
+          <div role="columnheader"><Tip text={TIPS.action}>Action</Tip></div>
         </div>
 
         {isLoading ? (
@@ -244,23 +279,23 @@ export function BarangayOverview({
                 <div role="cell" className="bgy-cell-name">{row.barangay}</div>
 
                 <div role="cell" className="bgy-cell">
-                  <span className="bgy-cell-label"><Tip text={TIPS.registered} align="start">Total registered users</Tip></span>
+                  <span className="bgy-cell-label"><Tip text={TIPS.registered}>Total Users</Tip></span>
                   <span className="bgy-count">{row.registered}</span>
                 </div>
                 <div role="cell" className="bgy-cell">
-                  <span className="bgy-cell-label"><Tip text={TIPS.completed} align="start">Completed</Tip></span>
+                  <span className="bgy-cell-label"><Tip text={TIPS.completed}>Completed</Tip></span>
                   <span className="bgy-count is-completed"><i />{row.completed}</span>
                 </div>
                 <div role="cell" className="bgy-cell">
-                  <span className="bgy-cell-label"><Tip text={TIPS.inProgress} align="start">In progress</Tip></span>
+                  <span className="bgy-cell-label"><Tip text={TIPS.inProgress}>In progress</Tip></span>
                   <span className="bgy-count is-progress"><i />{row.inProgress}</span>
                 </div>
                 <div role="cell" className="bgy-cell">
-                  <span className="bgy-cell-label"><Tip text={TIPS.notStarted} align="start">Not started</Tip></span>
+                  <span className="bgy-cell-label"><Tip text={TIPS.notStarted}>Not started</Tip></span>
                   <span className="bgy-count is-not-started"><i />{row.notStarted}</span>
                 </div>
                 <div role="cell" className="bgy-cell">
-                  <span className="bgy-cell-label"><Tip text={TIPS.completionRate} align="start">Completion rate</Tip></span>
+                  <span className="bgy-cell-label"><Tip text={TIPS.completionRate}>Completion rate</Tip></span>
                   <span className="bgy-rate">
                     <b>{row.completionRate}%</b>
                     <span className="bgy-rate-track">
@@ -269,7 +304,7 @@ export function BarangayOverview({
                   </span>
                 </div>
                 <div role="cell" className="bgy-cell">
-                  <span className="bgy-cell-label"><Tip text={TIPS.gain} align="start">Learning gain</Tip></span>
+                  <span className="bgy-cell-label"><Tip text={TIPS.gain}>Learning gain</Tip></span>
                   <span className="bgy-gain-cell">
                     <GainChip pair={prePost} />
                     {prePost && <small>Pre {prePost.pre}% → Post {prePost.post}%</small>}
@@ -277,7 +312,7 @@ export function BarangayOverview({
                 </div>
 
                 <div role="cell" className="bgy-cell-action">
-                  <Tip text={TIPS.action} align="end" side="top" focusable={false}>
+                  <Tip text={TIPS.action} side="top" focusable={false}>
                     <button
                       type="button"
                       className="bgy-action"
@@ -411,6 +446,7 @@ export function BarangayDetailModal({ details, onClose, onViewUser }) {
 
     gsap.timeline({ defaults: { ease: 'power3.out' } })
       .from(modalRef.current, { autoAlpha: 0, y: 18, scale: 0.985, duration: 0.4, clearProps: 'opacity,visibility,transform' })
+      .from('.bgy-modal-icon, .bgy-modal-heading', { autoAlpha: 0, y: 8, duration: 0.35, stagger: 0.06, clearProps: 'opacity,visibility,transform' }, '-=0.25')
       .from('.bgy-reveal', { autoAlpha: 0, y: 10, duration: 0.4, stagger: 0.06, clearProps: 'opacity,visibility,transform' }, '-=0.2')
       .from('.bgy-vbar', { scaleY: 0, transformOrigin: 'bottom center', duration: 0.7, stagger: 0.1, clearProps: 'transform' }, '-=0.3')
       .from('.bgy-hbar-fill', { scaleX: 0, transformOrigin: 'left center', duration: 0.6, stagger: 0.04, clearProps: 'transform' }, '-=0.6')
@@ -440,14 +476,15 @@ export function BarangayDetailModal({ details, onClose, onViewUser }) {
         aria-labelledby="bgy-modal-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="progress-modal-header">
-          <div className="progress-modal-heading">
-            <span className="progress-modal-eyebrow">Barangay Details</span>
+        <div className="bgy-modal-head">
+          <span className="bgy-modal-icon" aria-hidden="true"><FiMapPin /></span>
+          <div className="bgy-modal-heading">
+            <span className="bgy-modal-eyebrow">Barangay Details</span>
             <h2 id="bgy-modal-title">{details.barangay}</h2>
             <p>Is this barangay learning from IGNIS SAFE?</p>
           </div>
           <CloseButton
-            className="progress-modal-close"
+            className="bgy-modal-close"
             onClick={onClose}
             label="Close barangay details"
           />
@@ -469,12 +506,12 @@ export function BarangayDetailModal({ details, onClose, onViewUser }) {
           <section className="bgy-stats bgy-reveal" aria-label="Barangay summary">
             {stats.map((stat) => (
               <div className="bgy-stat" key={stat.key}>
-                <Tip text={stat.tip} align="start" className="bgy-label">{stat.label}</Tip>
+                <Tip text={stat.tip} className="bgy-label">{stat.label}</Tip>
                 <strong className={stat.tone ? `is-${stat.tone}` : ''}>{stat.value}</strong>
               </div>
             ))}
             <div className="bgy-stat">
-              <Tip text={TIPS.gain} align="start" className="bgy-label">Learning improvement</Tip>
+              <Tip text={TIPS.gain} className="bgy-label">Learning improvement</Tip>
               <GainChip pair={details.prePost} />
             </div>
           </section>

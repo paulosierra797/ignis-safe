@@ -93,21 +93,18 @@
   border-radius: 4px;
 }
 
-.bgy-panel-head h2 .bgy-tip,
-.bgy-row--head .bgy-tip,
-.bgy-cell-label .bgy-tip,
-.bgy-label.bgy-tip {
-  text-decoration: underline dotted rgba(100, 116, 139, 0.55);
-  text-underline-offset: 4px;
-}
+/* Labels stay on one line; the hover bubble is never part of that line. */
+.bgy-tip { white-space: nowrap; text-decoration: none; }
 
+/* Placed by JS (fixed + clamped to the viewport) so it is never clipped. */
 .bgy-tip-bubble {
-  --tx: 0;
   --ty: 4px;
-  position: absolute;
-  z-index: 80;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000000;
   width: max-content;
-  max-width: min(15rem, 80vw);
+  max-width: min(16rem, calc(100vw - 16px));
   padding: 0.55rem 0.7rem;
   border-radius: 8px;
   background: #1e293b;
@@ -124,15 +121,9 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translate(var(--tx), var(--ty));
+  transform: translateY(var(--ty));
   transition: opacity 140ms ease, transform 140ms ease, visibility 140ms;
 }
-
-.bgy-tip--bottom .bgy-tip-bubble { top: calc(100% + 8px); }
-.bgy-tip--top .bgy-tip-bubble { bottom: calc(100% + 8px); --ty: -4px; }
-.bgy-tip--start .bgy-tip-bubble { left: 0; }
-.bgy-tip--end .bgy-tip-bubble { right: 0; }
-.bgy-tip--center .bgy-tip-bubble { left: 50%; --tx: -50%; }
 
 .bgy-tip:hover > .bgy-tip-bubble,
 .bgy-tip:focus > .bgy-tip-bubble,
@@ -149,7 +140,7 @@
   align-items: center;
   gap: 1.5rem;
   margin: 1rem 0;
-  padding: 1rem 1.25rem;
+  padding: 1.25rem;
   border-radius: 12px;
   background: var(--bgy-tint);
 }
@@ -252,7 +243,7 @@
 .bgy-row {
   display: grid;
   grid-template-columns:
-    minmax(8.5rem, 1.5fr) minmax(4.5rem, 0.8fr) minmax(4.5rem, 0.7fr) minmax(4.5rem, 0.7fr)
+    minmax(8.5rem, 1.5fr) minmax(5.5rem, 0.8fr) minmax(4.5rem, 0.7fr) minmax(4.5rem, 0.7fr)
     minmax(4.5rem, 0.7fr) minmax(7.5rem, 1.2fr) minmax(8.5rem, 1.2fr) 36px;
   align-items: center;
   gap: 0.75rem;
@@ -393,16 +384,72 @@
 }
 
 /* Detail modal ------------------------------------------------------------ */
-.bgy-modal {
+.progress-modal.bgy-modal {
   width: min(96%, 1040px);
   max-width: 1040px;
+  border: 0;
+  border-radius: 16px;
+  background: #ffffff;
   color: var(--bgy-ink);
+}
+
+/* Clean light header: name first, no solid colour block. */
+.bgy-modal-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: #ffffff;
+}
+
+.bgy-modal-icon {
+  display: grid;
+  flex: 0 0 48px;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #fdecec;
+  color: var(--bgy-brand);
+  font-size: 1.35rem;
+}
+
+.bgy-modal-heading { flex: 1 1 auto; min-width: 0; }
+
+.bgy-modal-eyebrow {
+  display: block;
+  color: var(--bgy-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bgy-modal-heading h2 {
+  margin: 0.15rem 0 0;
+  overflow: hidden;
+  color: var(--bgy-ink);
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bgy-modal-heading p {
+  margin: 0.25rem 0 0;
+  color: var(--bgy-muted);
+  font-size: 0.86rem;
 }
 
 .bgy-modal-body {
   display: grid;
   gap: 1rem;
   align-content: start;
+  min-width: 0;
+  padding: 0 1.5rem 1.5rem;
+  overflow-x: hidden;
   background: #ffffff;
 }
 
@@ -410,7 +457,7 @@
   display: flex;
   align-items: center;
   gap: 0.9rem;
-  padding: 1rem 1.25rem;
+  padding: 1.25rem;
   border-radius: 12px;
   background: #eef2f6;
   color: #334155;
@@ -435,16 +482,17 @@
 
 .bgy-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11.5rem), 1fr));
+  gap: 0.75rem;
 }
 
 .bgy-stat {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.45rem;
-  padding: 0.85rem 1rem;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 1rem;
   border-radius: 12px;
   background: var(--bgy-tint);
 }
@@ -463,7 +511,7 @@
 
 .bgy-chart {
   min-width: 0;
-  padding: 1.1rem 1.25rem;
+  padding: 1.25rem;
   border-radius: 12px;
   background: var(--bgy-tint);
 }
@@ -702,7 +750,11 @@
 
 @media (max-width: 760px) {
   .bgy-charts { grid-template-columns: 1fr; }
-  .bgy-modal-body { padding: 1rem; }
+  .bgy-modal-head { padding: 1rem; gap: 0.75rem; }
+  .bgy-modal-icon { display: none; }
+  .bgy-modal-heading h2 { font-size: 1.3rem; }
+  .bgy-modal-heading p { display: none; }
+  .bgy-modal-body { padding: 0 1rem 1rem; }
   .bgy-chart { padding: 1rem; }
 
   .bgy-member { grid-template-columns: 2.25rem minmax(0, 1fr) 2.25rem; }

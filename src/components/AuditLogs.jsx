@@ -5,13 +5,12 @@ import PageHeader from './PageHeader';
 import ToastMessage from './ToastMessage';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { FaDownload, FaSearch, FaTimes, FaDesktop, FaMobileAlt, FaTabletAlt } from 'react-icons/fa';
+import { FaDownload, FaSearch, FaTimes, FaDesktop, FaMobileAlt, FaTabletAlt, FaEllipsisH, FaInfoCircle } from 'react-icons/fa';
 import './AuditLogs.css';
 import { getAdminAuditLogs } from '../utils/usersService';
 import { formatStatusLabel } from '../utils/statusUtils';
 
 const PAGE_SIZE = 10;
-const DETAILS_TRUNCATE_LENGTH = 70;
 
 const getStatusClass = (status) => {
   const normalized = String(status || '').trim().toLowerCase();
@@ -37,8 +36,21 @@ const DeviceBadge = ({ deviceType }) => {
   );
 };
 
-// Any row carrying at least one piece of captured security metadata should
-// always offer View Details, regardless of how short its details text is.
+const Tip = ({ id, text }) => (
+  <span className="audit-logs-tip" tabIndex={0} aria-describedby={id}>
+    <FaInfoCircle aria-hidden="true" />
+    <span role="tooltip" id={id} className="audit-logs-tip-bubble">{text}</span>
+  </span>
+);
+
+const formatDate = (value) =>
+  new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+const formatTime = (value) =>
+  new Date(value).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+// Rows with captured security metadata get a dedicated Device & session section
+// in the details drawer.
 const hasSecurityMetadata = (log) =>
   Boolean(log?.ipAddress || log?.deviceType || log?.operatingSystem || log?.browser || log?.sessionIdentifier);
 
@@ -89,6 +101,18 @@ export default function AuditLogs() {
 
     loadAuditLogs();
   }, []);
+
+  useEffect(() => {
+    if (!selectedLog) return undefined;
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setSelectedLog(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedLog]);
+
+  const hasActiveFilters =
+    Boolean(filterSearch) || actionFilter !== 'All Actions' || statusFilter !== 'All Statuses' || Boolean(rangeStart);
 
   const totalActivities = auditLogs.length;
   const todaysActivities = useMemo(() => {
@@ -200,101 +224,103 @@ export default function AuditLogs() {
         <ToastMessage message={tableMessage} type="error" />
 
         <div className="audit-logs-stats">
-          <div className="audit-logs-stat-card">
-            <div className="audit-logs-stat-label">Today's Activities</div>
-            <div className="audit-logs-stat-value">{todaysActivities}</div>
+          <div className="audit-logs-stat">
+            <span className="audit-logs-stat-label">Today</span>
+            <span className="audit-logs-stat-value">{todaysActivities}</span>
+            <span className="audit-logs-stat-hint">activities</span>
           </div>
-          <div className="audit-logs-stat-card">
-            <div className="audit-logs-stat-label">Total Activities</div>
-            <div className="audit-logs-stat-value">{totalActivities}</div>
+          <div className="audit-logs-stat">
+            <span className="audit-logs-stat-label">
+              Total
+              <Tip id="audit-tip-total" text="All recorded activities, regardless of the filters below." />
+            </span>
+            <span className="audit-logs-stat-value">{totalActivities}</span>
+            <span className="audit-logs-stat-hint">activities</span>
+          </div>
+          <div className="audit-logs-stat">
+            <span className="audit-logs-stat-label">Showing</span>
+            <span className="audit-logs-stat-value">{filteredLogs.length}</span>
+            <span className="audit-logs-stat-hint">matching filters</span>
           </div>
         </div>
 
-        <div className="audit-logs-filters">
-          <div className="audit-logs-filter-row">
-            <div className="audit-logs-filter-group audit-logs-filter-search">
-              <label className="audit-logs-filter-label" htmlFor="audit-logs-search-input">Search User / Details</label>
-              <div className="audit-logs-search-wrapper">
-                <FaSearch className="audit-logs-search-icon" />
-                <input
-                  id="audit-logs-search-input"
-                  type="text"
-                  placeholder="Search by user or details"
-                  value={filterSearch}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  className="audit-logs-search-input"
-                />
-              </div>
-            </div>
+        <div className="audit-logs-toolbar">
+          <div className="audit-logs-search-wrapper">
+            <FaSearch className="audit-logs-search-icon" aria-hidden="true" />
+            <label className="audit-logs-sr-only" htmlFor="audit-logs-search-input">Search user or details</label>
+            <input
+              id="audit-logs-search-input"
+              type="text"
+              placeholder="Search user or details"
+              value={filterSearch}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="audit-logs-search-input"
+            />
+          </div>
 
-            <div className="audit-logs-filter-group">
-              <label className="audit-logs-filter-label" htmlFor="audit-logs-action-select">Action Type</label>
-              <select
-                id="audit-logs-action-select"
-                value={actionFilter}
-                onChange={(e) => handleActionFilterChange(e.target.value)}
-                className="audit-logs-select"
-              >
-                <option>All Actions</option>
-                <option>Account Created</option>
-                <option>Account Updated</option>
-                <option>Account Deleted</option>
-                <option>Account Moved to Trash</option>
-                <option>Super Admin Granted</option>
-                <option>Super Admin Revoked</option>
-                <option>Protected Account Deletion Blocked</option>
-                <option>User Login</option>
-                <option>Failed Login Attempt</option>
-                <option>Organizational Chart Updated</option>
-                <option>Attendance Export CSV</option>
-                <option>Attendance Export PDF</option>
-                <option>Reassessment Round Opened</option>
-              </select>
-            </div>
+          <label className="audit-logs-sr-only" htmlFor="audit-logs-action-select">Action type</label>
+          <select
+            id="audit-logs-action-select"
+            value={actionFilter}
+            onChange={(e) => handleActionFilterChange(e.target.value)}
+            className="audit-logs-select"
+          >
+            <option>All Actions</option>
+            <option>Account Created</option>
+            <option>Account Updated</option>
+            <option>Account Deleted</option>
+            <option>Account Moved to Trash</option>
+            <option>Super Admin Granted</option>
+            <option>Super Admin Revoked</option>
+            <option>Protected Account Deletion Blocked</option>
+            <option>User Login</option>
+            <option>Failed Login Attempt</option>
+            <option>Organizational Chart Updated</option>
+            <option>Attendance Export CSV</option>
+            <option>Attendance Export PDF</option>
+            <option>Reassessment Round Opened</option>
+          </select>
 
-            <div className="audit-logs-filter-group">
-              <label className="audit-logs-filter-label" htmlFor="audit-logs-status-select">Status</label>
-              <select
-                id="audit-logs-status-select"
-                value={statusFilter}
-                onChange={(e) => handleStatusFilterChange(e.target.value)}
-                className="audit-logs-select"
-              >
-                <option>All Statuses</option>
-                <option>Success</option>
-                <option>Failed</option>
-                <option>Pending</option>
-              </select>
-            </div>
+          <label className="audit-logs-sr-only" htmlFor="audit-logs-status-select">Status</label>
+          <select
+            id="audit-logs-status-select"
+            value={statusFilter}
+            onChange={(e) => handleStatusFilterChange(e.target.value)}
+            className="audit-logs-select"
+          >
+            <option>All Statuses</option>
+            <option>Success</option>
+            <option>Failed</option>
+            <option>Pending</option>
+          </select>
 
-            <div className="audit-logs-filter-group">
-              <label className="audit-logs-filter-label" htmlFor="audit-logs-date-input">Date Range</label>
-              <div className="audit-logs-datepicker-wrapper">
-                <DatePicker
-                  id="audit-logs-date-input"
-                  selectsRange
-                  startDate={rangeStart}
-                  endDate={rangeEnd}
-                  onChange={handleDateRangeChange}
-                  isClearable
-                  dateFormat="dd/MM/yyyy"
-                  placeholderText="dd/mm/yyyy - dd/mm/yyyy"
-                  className="audit-logs-datepicker"
-                />
-              </div>
-            </div>
+          <div className="audit-logs-datepicker-wrapper">
+            <label className="audit-logs-sr-only" htmlFor="audit-logs-date-input">Date range</label>
+            <DatePicker
+              id="audit-logs-date-input"
+              selectsRange
+              startDate={rangeStart}
+              endDate={rangeEnd}
+              onChange={handleDateRangeChange}
+              isClearable
+              dateFormat="dd/MM/yyyy"
+              placeholderText="Date range"
+              className="audit-logs-datepicker"
+            />
+          </div>
 
-            <div className="audit-logs-filter-group audit-logs-filter-actions">
-              <span className="audit-logs-filter-label audit-logs-filter-actions-label">&nbsp;</span>
-              <div className="audit-logs-filter-actions-buttons">
-                <button type="button" className="audit-logs-clear" onClick={handleClearFilters}>
-                  <FaTimes aria-hidden="true" /> Clear Filters
-                </button>
-                <button type="button" className="audit-logs-export" onClick={handleExportCsv} disabled={filteredLogs.length === 0}>
-                  <FaDownload aria-hidden="true" /> Export CSV
-                </button>
-              </div>
-            </div>
+          <div className="audit-logs-toolbar-actions">
+            <button
+              type="button"
+              className="audit-logs-clear"
+              onClick={handleClearFilters}
+              disabled={!hasActiveFilters}
+            >
+              <FaTimes aria-hidden="true" /> Clear
+            </button>
+            <button type="button" className="audit-logs-export" onClick={handleExportCsv} disabled={filteredLogs.length === 0}>
+              <FaDownload aria-hidden="true" /> Export CSV
+            </button>
           </div>
         </div>
 
@@ -302,25 +328,29 @@ export default function AuditLogs() {
           <table className="audit-logs-table">
             <thead>
               <tr>
-                <th className="audit-logs-no-column">NO.</th>
-                <th>TIMESTAMP</th>
-                <th>USER</th>
-                <th>ACTION</th>
-                <th className="audit-logs-device-column">DEVICE</th>
-                <th>DETAILS</th>
-                <th>STATUS</th>
+                <th className="audit-logs-no-column">No.</th>
+                <th>Timestamp</th>
+                <th>User</th>
+                <th>Action</th>
+                <th className="audit-logs-device-column">
+                  Device
+                  <Tip id="audit-tip-device" text="Device type the action was performed from, when captured." />
+                </th>
+                <th>Details</th>
+                <th>Status</th>
+                <th className="audit-logs-menu-column"><span className="audit-logs-sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
               {loadingLogs ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                  <td colSpan="8" className="audit-logs-empty">
                     Loading audit logs...
                   </td>
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: '#9ca3af' }}>
+                  <td colSpan="8" className="audit-logs-empty">
                     No audit logs found matching your filters.
                   </td>
                 </tr>
@@ -328,8 +358,11 @@ export default function AuditLogs() {
                 paginatedLogs.map((log, index) => (
                   <tr key={log.id}>
                     <td className="audit-logs-no-column">{(safePage - 1) * PAGE_SIZE + index + 1}</td>
-                    <td>{new Date(log.timestamp).toLocaleString('en-US')}</td>
-                    <td>{log.user}</td>
+                    <td className="audit-logs-time">
+                      <span className="audit-logs-time-date">{formatDate(log.timestamp)}</span>
+                      <span className="audit-logs-time-clock">{formatTime(log.timestamp)}</span>
+                    </td>
+                    <td className="audit-logs-user">{log.user}</td>
                     <td>
                       <span className={`audit-logs-action-badge ${log.actionType}`}>
                         {log.action}
@@ -340,20 +373,22 @@ export default function AuditLogs() {
                     </td>
                     <td>
                       <div className="audit-logs-details-text">{log.details}</div>
-                      {(String(log.details || '').length > DETAILS_TRUNCATE_LENGTH || hasSecurityMetadata(log)) && (
-                        <button
-                          type="button"
-                          className="audit-logs-view-details-btn"
-                          onClick={() => setSelectedLog(log)}
-                        >
-                          View Details
-                        </button>
-                      )}
                     </td>
                     <td>
                       <span className={`audit-logs-status-badge ${getStatusClass(log.status)}`}>
                         {formatStatusLabel(log.status)}
                       </span>
+                    </td>
+                    <td className="audit-logs-menu-column">
+                      <button
+                        type="button"
+                        className="audit-logs-more-btn"
+                        onClick={() => setSelectedLog(log)}
+                        aria-label={`View details for ${log.action} by ${log.user}`}
+                        aria-haspopup="dialog"
+                      >
+                        <FaEllipsisH aria-hidden="true" />
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -367,39 +402,49 @@ export default function AuditLogs() {
 
       {selectedLog && (
         <div className="audit-logs-modal-overlay" onClick={() => setSelectedLog(null)}>
-          <div className="audit-logs-modal" onClick={(e) => e.stopPropagation()}>
+          <aside
+            className="audit-logs-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="audit-logs-drawer-title"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="audit-logs-modal-header">
-              <h3>Activity Details</h3>
+              <div>
+                <h3 id="audit-logs-drawer-title">Activity details</h3>
+                <p className="audit-logs-modal-sub">
+                  {formatDate(selectedLog.timestamp)} &middot; {formatTime(selectedLog.timestamp)}
+                </p>
+              </div>
               <button
                 type="button"
                 className="audit-logs-modal-close"
                 onClick={() => setSelectedLog(null)}
                 aria-label="Close"
+                autoFocus
               >
-                &times;
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
             <div className="audit-logs-modal-body">
-              <div className="audit-logs-modal-row">
-                <span className="audit-logs-modal-row-label">Timestamp</span>
-                <span>{new Date(selectedLog.timestamp).toLocaleString('en-US')}</span>
-              </div>
-              <div className="audit-logs-modal-row">
-                <span className="audit-logs-modal-row-label">User</span>
-                <span>{selectedLog.user}</span>
-              </div>
-              <div className="audit-logs-modal-row">
-                <span className="audit-logs-modal-row-label">Action</span>
-                <span className={`audit-logs-action-badge ${selectedLog.actionType}`}>
-                  {selectedLog.action}
-                </span>
-              </div>
-              <div className="audit-logs-modal-row">
-                <span className="audit-logs-modal-row-label">Status</span>
+              <div className="audit-logs-modal-badges">
+                <span className={`audit-logs-action-badge ${selectedLog.actionType}`}>{selectedLog.action}</span>
                 <span className={`audit-logs-status-badge ${getStatusClass(selectedLog.status)}`}>
                   {formatStatusLabel(selectedLog.status)}
                 </span>
               </div>
+
+              <dl className="audit-logs-modal-list">
+                <div className="audit-logs-modal-row">
+                  <dt>User</dt>
+                  <dd>{selectedLog.user}</dd>
+                </div>
+                <div className="audit-logs-modal-row">
+                  <dt>Timestamp</dt>
+                  <dd>{new Date(selectedLog.timestamp).toLocaleString('en-US')}</dd>
+                </div>
+              </dl>
+
               <div className="audit-logs-modal-details">
                 <span className="audit-logs-modal-row-label">Details</span>
                 <p>{selectedLog.details}</p>
@@ -407,37 +452,39 @@ export default function AuditLogs() {
 
               {hasSecurityMetadata(selectedLog) && (
                 <div className="audit-logs-modal-section">
-                  <div className="audit-logs-modal-section-title">Device &amp; Session</div>
-                  <div className="audit-logs-modal-section-row">
-                    <span className="audit-logs-modal-row-label">Device</span>
-                    <span>{selectedLog.deviceType || 'Not available'}</span>
-                  </div>
-                  <div className="audit-logs-modal-section-row">
-                    <span className="audit-logs-modal-row-label">OS</span>
-                    <span>{selectedLog.operatingSystem || 'Not available'}</span>
-                  </div>
-                  <div className="audit-logs-modal-section-row">
-                    <span className="audit-logs-modal-row-label">Browser</span>
-                    <span>
-                      {selectedLog.browser
-                        ? `${selectedLog.browser}${selectedLog.browserVersion ? ` ${selectedLog.browserVersion}` : ''}`
-                        : 'Not available'}
-                    </span>
-                  </div>
-                  <div className="audit-logs-modal-section-row">
-                    <span className="audit-logs-modal-row-label">IP Address</span>
-                    <span>{selectedLog.ipAddress || 'Not available'}</span>
-                  </div>
-                  {selectedLog.sessionIdentifier && (
-                    <div className="audit-logs-modal-section-row">
-                      <span className="audit-logs-modal-row-label">Session ID</span>
-                      <span className="audit-logs-modal-session-id">{selectedLog.sessionIdentifier}</span>
+                  <div className="audit-logs-modal-section-title">Device &amp; session</div>
+                  <dl className="audit-logs-modal-list">
+                    <div className="audit-logs-modal-row">
+                      <dt>Device</dt>
+                      <dd>{selectedLog.deviceType || 'Not available'}</dd>
                     </div>
-                  )}
-                  <div className="audit-logs-modal-section-row">
-                    <span className="audit-logs-modal-row-label">Location</span>
-                    <span>{formatLocation(selectedLog.location)}</span>
-                  </div>
+                    <div className="audit-logs-modal-row">
+                      <dt>OS</dt>
+                      <dd>{selectedLog.operatingSystem || 'Not available'}</dd>
+                    </div>
+                    <div className="audit-logs-modal-row">
+                      <dt>Browser</dt>
+                      <dd>
+                        {selectedLog.browser
+                          ? `${selectedLog.browser}${selectedLog.browserVersion ? ` ${selectedLog.browserVersion}` : ''}`
+                          : 'Not available'}
+                      </dd>
+                    </div>
+                    <div className="audit-logs-modal-row">
+                      <dt>IP address</dt>
+                      <dd>{selectedLog.ipAddress || 'Not available'}</dd>
+                    </div>
+                    {selectedLog.sessionIdentifier && (
+                      <div className="audit-logs-modal-row">
+                        <dt>Session ID</dt>
+                        <dd className="audit-logs-modal-session-id">{selectedLog.sessionIdentifier}</dd>
+                      </div>
+                    )}
+                    <div className="audit-logs-modal-row">
+                      <dt>Location</dt>
+                      <dd>{formatLocation(selectedLog.location)}</dd>
+                    </div>
+                  </dl>
                   <p className="audit-logs-modal-security-note">
                     Device/IP/session data is supporting metadata only and does not by itself prove who
                     physically operated this device. The authenticated account above remains the
@@ -446,7 +493,7 @@ export default function AuditLogs() {
                 </div>
               )}
             </div>
-          </div>
+          </aside>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import { useBlocker, useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import ToastMessage from './ToastMessage';
+import TranslationControls from './TranslationControls';
 import './AssessmentQuestions.css';
 import './AppDialog.css';
 import { useUser } from '../context/UserContext';
@@ -653,6 +654,13 @@ export default function AssessmentQuestions() {
     }));
   };
 
+  const applyQuestionTranslations = (questionId, translatedQuestion) => {
+    setQuestions((current) => current.map((question) => (
+      question.id === questionId ? translatedQuestion : question
+    )));
+    markQuestionDirty(questionId);
+  };
+
   const setCorrectOption = (questionId, optionKey) => {
     markQuestionDirty(questionId);
     setQuestions((prev) => prev.map((question) => {
@@ -809,7 +817,7 @@ export default function AssessmentQuestions() {
         attempt,
         maxAttempts,
         label: attempt === 1
-          ? 'Generating questions with AI (English + Tagalog)...'
+          ? 'Generating questions with AI (English + Filipino)...'
           : `Requesting additional unique questions (attempt ${attempt} of ${maxAttempts})...`,
       });
 
@@ -1099,7 +1107,7 @@ export default function AssessmentQuestions() {
     }
 
     if (!String(question.prompt_tl || '').trim()) {
-      setMessage({ type: 'error', text: `Question ${question.question_no}: Tagalog prompt is required.` });
+      setMessage({ type: 'error', text: `Question ${question.question_no}: Filipino prompt is required.` });
       return false;
     }
 
@@ -1122,7 +1130,7 @@ export default function AssessmentQuestions() {
     }
 
     if (filledOptions.some((option) => !String(option.option_text_tl || '').trim())) {
-      setMessage({ type: 'error', text: `Question ${question.question_no}: add Tagalog text for every filled choice.` });
+      setMessage({ type: 'error', text: `Question ${question.question_no}: add Filipino text for every filled choice.` });
       return false;
     }
 
@@ -1550,6 +1558,12 @@ export default function AssessmentQuestions() {
                 </header>
 
                 <div className="assessment-question-body">
+                  <TranslationControls
+                    value={question}
+                    onChange={(translatedQuestion) => applyQuestionTranslations(question.id, translatedQuestion)}
+                    section="assessment_questions"
+                    compact
+                  />
                   <section className="assessment-edit-section">
                     <div className="assessment-section-heading">
                       <span className="assessment-section-number">1</span>
@@ -1569,12 +1583,12 @@ export default function AssessmentQuestions() {
                         />
                       </label>
                       <label className="assessment-field">
-                        <span>Tagalog</span>
+                        <span>Filipino</span>
                         <AutoResizeTextarea
                           value={question.prompt_tl}
                           onChange={(event) => setRowValue(question.id, 'prompt_tl', event.target.value)}
                           rows={3}
-                          aria-label={`Question ${question.question_no} prompt in Tagalog`}
+                          aria-label={`Question ${question.question_no} prompt in Filipino`}
                         />
                       </label>
                     </div>
@@ -1618,13 +1632,13 @@ export default function AssessmentQuestions() {
                               />
                             </label>
                             <label className="assessment-field">
-                              <span>Tagalog</span>
+                              <span>Filipino</span>
                               <AutoResizeTextarea
                                 value={option.option_text_tl}
                                 onChange={(event) => setOptionValue(question.id, option.option_key, 'option_text_tl', event.target.value)}
                                 rows={1}
-                                placeholder={`Option ${option.option_key} in Tagalog`}
-                                aria-label={`Option ${option.option_key} in Tagalog`}
+                                placeholder={`Option ${option.option_key} in Filipino`}
+                                aria-label={`Option ${option.option_key} in Filipino`}
                               />
                             </label>
                           </div>
@@ -1652,12 +1666,12 @@ export default function AssessmentQuestions() {
                         />
                       </label>
                       <label className="assessment-field">
-                        <span>Tagalog</span>
+                        <span>Filipino</span>
                         <AutoResizeTextarea
                           value={question.explanation_tl}
                           onChange={(event) => setRowValue(question.id, 'explanation_tl', event.target.value)}
                           rows={3}
-                          aria-label={`Question ${question.question_no} explanation in Tagalog`}
+                          aria-label={`Question ${question.question_no} explanation in Filipino`}
                         />
                       </label>
                     </div>

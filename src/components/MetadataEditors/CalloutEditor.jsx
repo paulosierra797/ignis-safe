@@ -55,7 +55,7 @@ export default function CalloutEditor({
         ))}
       </div>
     </EditorField>
-    <EditorField label="Callout Lines" language="Tagalog">
+    <EditorField label="Callout Lines" language="Filipino">
       <div className="module-editor-repeater-list">
         {(metadata.lines_tl || []).map((line, index) => (
           <div className="module-editor-repeater-row" key={index}>

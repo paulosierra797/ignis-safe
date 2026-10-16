@@ -13,6 +13,7 @@ import { useUser } from '../context/UserContext';
 import { logAdminActivity } from '../utils/usersService';
 import * as aboutUsService from '../utils/aboutUsService';
 import UnsavedChangesPrompt from './UnsavedChangesPrompt';
+import TranslationControls from './TranslationControls';
 
 const SAVE_SUCCESS_MESSAGE = 'Changes saved successfully.';
 const UNSAVED_TITLE = 'Unsaved Changes';
@@ -85,7 +86,7 @@ function FieldPair({ label, valueEn, valueTl, onChangeEn, onChangeTl, multiline,
           />
         </label>
         <label className="aboutus-field">
-          <span>Tagalog</span>
+          <span>Filipino</span>
           <Field
             type={multiline ? undefined : 'text'}
             rows={multiline ? rows : undefined}
@@ -188,7 +189,7 @@ function useEditableList({
 
   return {
     rows, loading, editingId, form, busy, isDirty,
-    setField, startEdit, cancelEdit, save, refresh
+    setField, setForm, startEdit, cancelEdit, save, refresh
   };
 }
 
@@ -238,7 +239,7 @@ function useSingletonForm({ load, update, notify, entityLabel }) {
 
   const isDirty = isFormDirty(form, baseline);
 
-  return { form, loading, saving, isDirty, setField, save };
+  return { form, loading, saving, isDirty, setField, setForm, save };
 }
 
 // ---------------------------------------------------------------------------
@@ -283,6 +284,7 @@ function PartnerCard({ currentUser, notify, reportDirty, requestSave }) {
         <div className="aboutus-loading">Loading...</div>
       ) : (
         <>
+          <TranslationControls value={partner.form} onChange={partner.setForm} section="about_us" />
           <div className="aboutus-subsection">
             <FieldPair label="Station heading" valueEn={partner.form.heading_en} valueTl={partner.form.heading_tl}
               onChangeEn={(v) => partner.setField('heading_en', v)} onChangeTl={(v) => partner.setField('heading_tl', v)} />
@@ -414,6 +416,7 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
         <div className="aboutus-loading">Loading...</div>
       ) : (
         <>
+          <TranslationControls value={emergency.form} onChange={emergency.setForm} section="about_us" />
           <div className="aboutus-subsection">
             <FieldPair label="Heading" valueEn={emergency.form.heading_en} valueTl={emergency.form.heading_tl}
               onChangeEn={(v) => emergency.setField('heading_en', v)} onChangeTl={(v) => emergency.setField('heading_tl', v)} />
@@ -444,7 +447,7 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
             {numbers.rows.map((row) => (
               <li key={row.id} className={`aboutus-contact-card${numbers.editingId === row.id ? ' is-editing' : ''}`}>
                 {numbers.editingId === row.id ? (
-                  <EmergencyNumberEditRow form={numbers.form} setField={numbers.setField} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
+                  <EmergencyNumberEditRow form={numbers.form} setField={numbers.setField} setForm={numbers.setForm} onSave={() => requestSave(numbers.save)} onCancel={numbers.cancelEdit} busy={numbers.busy} />
                 ) : (
                   <>
                     <div className="aboutus-contact-card-main">
@@ -468,9 +471,10 @@ function EmergencyCard({ currentUser, notify, reportDirty, requestSave }) {
   );
 }
 
-function EmergencyNumberEditRow({ form, setField, onSave, onCancel, busy }) {
+function EmergencyNumberEditRow({ form, setField, setForm, onSave, onCancel, busy }) {
   return (
     <div className="aboutus-edit-row aboutus-emergency-edit-row">
+      <TranslationControls value={form} onChange={setForm} section="about_us" compact />
       <div className="aboutus-emergency-editor-grid">
         <SingleField
           label="Number shown to visitors"
@@ -695,6 +699,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
         <div className="aboutus-loading">Loading...</div>
       ) : (
         <>
+          <TranslationControls value={info.form} onChange={info.setForm} section="about_us" />
           <div className="aboutus-subsection">
             <FieldPair label="Heading" valueEn={info.form.heading_en} valueTl={info.form.heading_tl}
               onChangeEn={(v) => info.setField('heading_en', v)} onChangeTl={(v) => info.setField('heading_tl', v)} />
@@ -724,6 +729,7 @@ function DirectoryCard({ currentUser, notify, reportDirty, requestSave }) {
                 <li key={group.group_key} className="aboutus-directory-group" ref={isExpanded ? setExpandedGroupEl : undefined}>
                   {groupEditing === group.group_key ? (
                     <div className="aboutus-edit-row">
+                      <TranslationControls value={groupForm} onChange={setGroupForm} section="about_us" compact />
                       <FieldPair label="Title" valueEn={groupForm.title_en} valueTl={groupForm.title_tl}
                         onChangeEn={(v) => setGroupForm((f) => ({ ...f, title_en: v }))} onChangeTl={(v) => setGroupForm((f) => ({ ...f, title_tl: v }))} />
                       <div className="aboutus-edit-row-actions">
@@ -829,6 +835,7 @@ function EntryEditRow({ form, setForm, onSave, onCancel, busy }) {
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   return (
     <div className="aboutus-edit-row">
+      <TranslationControls value={form} onChange={setForm} section="about_us" compact />
       <FieldPair label="Station name" valueEn={form.name_en} valueTl={form.name_tl}
         onChangeEn={(v) => setField('name_en', v)} onChangeTl={(v) => setField('name_tl', v)} />
       <SingleField label="Email" type="email" value={form.email} onChange={(v) => setField('email', v)} />
@@ -891,6 +898,7 @@ function GeneralTextsCard({ notify, reportDirty, requestSave }) {
               >
                 {sections.editingId === row.section_key ? (
                   <div className="aboutus-edit-row aboutus-section-edit">
+                    <TranslationControls value={sections.form} onChange={sections.setForm} section="about_us" compact />
                     <div className="aboutus-section-edit-grid">
                       <div className="aboutus-section-edit-col aboutus-section-edit-col--en">
                         <h4 className="aboutus-section-edit-lang">English</h4>
@@ -898,7 +906,7 @@ function GeneralTextsCard({ notify, reportDirty, requestSave }) {
                         <SingleField label="Subtitle" value={sections.form.subtitle_en} onChange={(v) => sections.setField('subtitle_en', v)} />
                       </div>
                       <div className="aboutus-section-edit-col aboutus-section-edit-col--tl">
-                        <h4 className="aboutus-section-edit-lang">Tagalog</h4>
+                        <h4 className="aboutus-section-edit-lang">Filipino</h4>
                         <SingleField label="Title" value={sections.form.title_tl} onChange={(v) => sections.setField('title_tl', v)} />
                         <SingleField label="Subtitle" value={sections.form.subtitle_tl} onChange={(v) => sections.setField('subtitle_tl', v)} />
                       </div>

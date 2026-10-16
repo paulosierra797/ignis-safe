@@ -15,7 +15,7 @@ export default function LearningMaterialTextsEditor({
         onChange={(e) => updateText("text_en", e.target.value)}
       />
     </EditorField>
-    <EditorField label="Learning Material Text" language="Tagalog">
+    <EditorField label="Learning Material Text" language="Filipino">
       <textarea
         className="material-text"
         value={text.text_tl || ""}

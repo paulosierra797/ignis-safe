@@ -69,12 +69,12 @@ export default function PageBannerEditor({
       </div>
     </div>
 
-    {/* Tagalog */}
+    {/* Filipino */}
     <div className="language-card">
-      <h4>Tagalog</h4>
+      <h4>Filipino</h4>
 
       <div className="field">
-        <label>Page Tag (Tagalog)</label>
+        <label>Page Tag (Filipino)</label>
         <input
           type="text"
           className="page-banner"
@@ -86,7 +86,7 @@ export default function PageBannerEditor({
       </div>
 
       <div className="field">
-        <label>Subtitle (Tagalog)</label>
+        <label>Subtitle (Filipino)</label>
         <textarea
           className="banner-desc"
           value={metadata.subtitle_tl || ""}

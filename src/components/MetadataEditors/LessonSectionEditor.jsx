@@ -37,7 +37,7 @@ export default function LessonSectionEditor({ block, page, editedModule, setEdit
           onChange={(event) => updateMetadata(englishField, event.target.value)}
         />
       </EditorField>
-      <EditorField label={label} language="Tagalog">
+      <EditorField label={label} language="Filipino">
         <textarea
           className="lesson-textarea"
           value={metadata[tagalogField] || ''}
@@ -72,7 +72,7 @@ export default function LessonSectionEditor({ block, page, editedModule, setEdit
               ))}
             </div>
           </EditorField>
-          <EditorField label="Bullet Items" language="Tagalog">
+          <EditorField label="Bullet Items" language="Filipino">
             <div className="module-editor-repeater-list">
               {(metadata.bullets_tl || []).map((bullet, index) => (
                 <div className="module-editor-repeater-row" key={`tl-${index}`}>
@@ -102,7 +102,7 @@ export default function LessonSectionEditor({ block, page, editedModule, setEdit
                 onChange={(event) => updateMetadata('action_label_en', event.target.value)}
               />
             </EditorField>
-            <EditorField label="Button Label" language="Tagalog">
+            <EditorField label="Button Label" language="Filipino">
               <input
                 className="lesson-input"
                 value={metadata.action_label_tl || ''}

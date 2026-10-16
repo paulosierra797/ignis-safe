@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import MetadataEditor from './MetadataEditors/MetadataEditor';
 import FireClassDetailsEditor from './MetadataEditors/FireClassDetailsEditor';
 import LearningMaterialsTextEditor from './MetadataEditors/LearningMaterialsTextEditor';
+import TranslationControls from './TranslationControls';
 import {
   BilingualGrid,
   EditorField,
@@ -64,6 +65,48 @@ export default function ModuleEditor({
       )
     : [];
 
+  const moduleTranslationValue = {
+    editedModule,
+    fireGuides: moduleEntry.module_no === 1 ? fireGuides : [],
+    fireClassDetails: moduleEntry.module_no === 1 ? fireClassDetails : [],
+    learningTexts: learningTexts.filter((entry) => entry.module_no === moduleEntry.module_no),
+  };
+
+  const mergeTranslatedRows = (currentRows, translatedRows) => {
+    const translatedById = new Map(translatedRows.map((entry) => [entry.id, entry]));
+    return currentRows.map((entry) => translatedById.get(entry.id) || entry);
+  };
+
+  const applyModuleTranslations = (next) => {
+    setEditedModule(next.editedModule);
+    if (moduleEntry.module_no === 1) {
+      setFireGuides((current) => mergeTranslatedRows(current, next.fireGuides));
+      setFireClassDetails((current) => mergeTranslatedRows(current, next.fireClassDetails));
+    }
+    setLearningTexts((current) => mergeTranslatedRows(current, next.learningTexts));
+  };
+
+  const summarizeModuleTranslationAreas = (pairs, currentValue) => {
+    const areas = new Set();
+    pairs.forEach(({ targetPath }) => {
+      if (targetPath[0] === 'editedModule') {
+        if (targetPath[1] === 'pages') {
+          const pageNo = currentValue.editedModule.pages?.[targetPath[2]]?.page_no;
+          areas.add(pageNo ? `Page ${pageNo}` : 'module pages');
+        } else {
+          areas.add('module details');
+        }
+      }
+      if (targetPath[0] === 'learningTexts') {
+        const pageNo = currentValue.learningTexts?.[targetPath[1]]?.page_no;
+        areas.add(pageNo ? `additional text on Page ${pageNo}` : 'additional learning text');
+      }
+      if (targetPath[0] === 'fireGuides') areas.add('fire class guides');
+      if (targetPath[0] === 'fireClassDetails') areas.add('fire class details');
+    });
+    return areas.size ? `Review these areas before saving: ${[...areas].join(', ')}.` : '';
+  };
+
   const updateModuleField = (field, value) => {
     setEditedModule({ ...editedModule, [field]: value });
   };
@@ -122,6 +165,15 @@ export default function ModuleEditor({
         </div>
       </aside>
 
+      <TranslationControls
+        value={moduleTranslationValue}
+        onChange={applyModuleTranslations}
+        section="learning_materials"
+        scopeLabel="Module-wide translation"
+        helperText="Translates blank fields across every page and collapsed section in this module. Review each affected area before saving."
+        summarizeAffected={summarizeModuleTranslationAreas}
+      />
+
       <EditorSection
         eyebrow="Module settings"
         title="Module details"
@@ -135,7 +187,7 @@ export default function ModuleEditor({
               onChange={(event) => updateModuleField('title', event.target.value)}
             />
           </EditorField>
-          <EditorField label="Module Title" language="Tagalog">
+          <EditorField label="Module Title" language="Filipino">
             <input
               type="text"
               value={editedModule.title_tl || ''}
@@ -149,7 +201,7 @@ export default function ModuleEditor({
               onChange={(event) => updateModuleField('subtitle', event.target.value)}
             />
           </EditorField>
-          <EditorField label="Module Subtitle" language="Tagalog">
+          <EditorField label="Module Subtitle" language="Filipino">
             <input
               type="text"
               value={editedModule.subtitle_tl || ''}
@@ -200,7 +252,7 @@ export default function ModuleEditor({
                   onChange={(event) => updatePageField(page.page_no, 'title_en', event.target.value)}
                 />
               </EditorField>
-              <EditorField label="Page Title" language="Tagalog">
+              <EditorField label="Page Title" language="Filipino">
                 <input
                   type="text"
                   value={editedPage?.title_tl || ''}
@@ -234,7 +286,7 @@ export default function ModuleEditor({
                           }
                         />
                       </EditorField>
-                      <EditorField label="Content" language="Tagalog">
+                      <EditorField label="Content" language="Filipino">
                         <textarea
                           value={editedPage?.blocks.find((entry) => entry.id === block.id)?.text_tl || ''}
                           onChange={(event) =>

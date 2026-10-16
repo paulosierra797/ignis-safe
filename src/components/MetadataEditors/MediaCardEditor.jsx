@@ -151,12 +151,12 @@ export default function MediaCardEditor({
       </div>
     </div>
 
-    {/* Tagalog */}
+    {/* Filipino */}
     <div className="language-card">
-      <h4>Tagalog</h4>
+      <h4>Filipino</h4>
 
       <div className="field">
-        <label>Model Badge (Tagalog)</label>
+        <label>Model Badge (Filipino)</label>
         <input
           className="title"
           type="text"
@@ -166,7 +166,7 @@ export default function MediaCardEditor({
       </div>
 
       <div className="field">
-        <label>Viewer Title (Tagalog)</label>
+        <label>Viewer Title (Filipino)</label>
         <input
           className="title"
           type="text"
@@ -176,7 +176,7 @@ export default function MediaCardEditor({
       </div>
 
       <div className="field">
-        <label>Viewer Subtitle (Tagalog)</label>
+        <label>Viewer Subtitle (Filipino)</label>
         <textarea
           className="desc1"
           value={metadata.viewer_subtitle_tl || ""}
@@ -187,7 +187,7 @@ export default function MediaCardEditor({
       </div>
 
       <div className="field">
-        <label>Subtitle (Tagalog)</label>
+        <label>Subtitle (Filipino)</label>
         <textarea
           className="desc1"
           value={metadata.subtitle_tl || ""}
@@ -196,7 +196,7 @@ export default function MediaCardEditor({
       </div>
 
       <div className="field">
-        <label>Interaction Hint (Tagalog)</label>
+        <label>Interaction Hint (Filipino)</label>
         <input
           className="title"
           type="text"
@@ -208,7 +208,7 @@ export default function MediaCardEditor({
       </div>
 
       <div className="field">
-        <label>Model Alt (Tagalog)</label>
+        <label>Model Alt (Filipino)</label>
         <input
           className="title"
           type="text"
@@ -218,7 +218,7 @@ export default function MediaCardEditor({
       </div>
 
       <div className="field">
-        <label>PASS Heading (Tagalog)</label>
+        <label>PASS Heading (Filipino)</label>
         <input
           className="title"
           type="text"
@@ -284,7 +284,7 @@ export default function MediaCardEditor({
 
       <div>
         <div className="field">
-          <label>Title (Tagalog)</label>
+          <label>Title (Filipino)</label>
           <input
             className="title"
             type="text"
@@ -296,7 +296,7 @@ export default function MediaCardEditor({
         </div>
 
         <div className="field">
-          <label>Description (Tagalog)</label>
+          <label>Description (Filipino)</label>
           <textarea
             className="desc"
             value={step.desc_tl || ""}

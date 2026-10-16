@@ -898,10 +898,6 @@
     padding: 1rem;
   }
 
-  .assessment-language-grid {
-    grid-template-columns: 1fr;
-  }
-
   .assessment-question-header {
     align-items: flex-start;
     flex-direction: column;
@@ -920,6 +916,10 @@
 }
 
 @media (max-width: 600px) {
+  .assessment-language-grid {
+    grid-template-columns: 1fr;
+  }
+
   .assessment-module-context {
     padding: 1rem;
   }

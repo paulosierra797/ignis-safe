@@ -55,7 +55,7 @@ export default function ActionPillsEditor({ block, page, editedModule, setEdited
                   onChange={(event) => updatePill(index, 'label_en', event.target.value)}
                 />
               </EditorField>
-              <EditorField label="Label" language="Tagalog">
+              <EditorField label="Label" language="Filipino">
                 <input
                   className="pill-input"
                   value={pill.label_tl || ''}
@@ -69,7 +69,7 @@ export default function ActionPillsEditor({ block, page, editedModule, setEdited
                   onChange={(event) => updatePill(index, 'popup_title_en', event.target.value)}
                 />
               </EditorField>
-              <EditorField label="Popup Title" language="Tagalog">
+              <EditorField label="Popup Title" language="Filipino">
                 <input
                   className="pill-input"
                   value={pill.popup_title_tl || ''}
@@ -83,7 +83,7 @@ export default function ActionPillsEditor({ block, page, editedModule, setEdited
                   onChange={(event) => updatePill(index, 'popup_body_en', event.target.value)}
                 />
               </EditorField>
-              <EditorField label="Popup Body" language="Tagalog">
+              <EditorField label="Popup Body" language="Filipino">
                 <textarea
                   className="pill-textarea"
                   value={pill.popup_body_tl || ''}
@@ -103,7 +103,7 @@ export default function ActionPillsEditor({ block, page, editedModule, setEdited
                 onChange={(event) => updateWideCard('title_en', event.target.value)}
               />
             </EditorField>
-            <EditorField label="Title" language="Tagalog">
+            <EditorField label="Title" language="Filipino">
               <input
                 className="widecard-title"
                 value={metadata.wide_card?.title_tl || ''}
@@ -117,7 +117,7 @@ export default function ActionPillsEditor({ block, page, editedModule, setEdited
                 onChange={(event) => updateWideCard('subtitle_en', event.target.value)}
               />
             </EditorField>
-            <EditorField label="Subtitle" language="Tagalog">
+            <EditorField label="Subtitle" language="Filipino">
               <textarea
                 className="widecard-subtitle"
                 value={metadata.wide_card?.subtitle_tl || ''}

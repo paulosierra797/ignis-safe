@@ -56,7 +56,7 @@ export default function PassStepEditor({
         onChange={(e) => updateMetadata("desc_en", e.target.value)}
       />
     </EditorField>
-    <EditorField label="Description" language="Tagalog">
+    <EditorField label="Description" language="Filipino">
       <textarea
         className="description"
         value={metadata.desc_tl || ""}
@@ -70,7 +70,7 @@ export default function PassStepEditor({
         onChange={(e) => updateMetadata("video_title_en", e.target.value)}
       />
     </EditorField>
-    <EditorField label="Video Title" language="Tagalog">
+    <EditorField label="Video Title" language="Filipino">
       <input
         className="video-title"
         value={metadata.video_title_tl || ""}

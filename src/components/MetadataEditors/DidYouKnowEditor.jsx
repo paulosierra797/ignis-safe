@@ -81,12 +81,12 @@ export default function DidYouKnowEditor({
       </div>
     </div>
 
-    {/* Tagalog */}
+    {/* Filipino */}
     <div className="language-card">
-      <h4>Tagalog</h4>
+      <h4>Filipino</h4>
 
       <div className="field">
-        <label>Teaser (Tagalog)</label>
+        <label>Teaser (Filipino)</label>
         <textarea
           className="teaser"
           value={metadata.teaser_tl || ""}
@@ -97,7 +97,7 @@ export default function DidYouKnowEditor({
       </div>
 
       <div className="field">
-        <label>Popup Title (Tagalog)</label>
+        <label>Popup Title (Filipino)</label>
         <input
           className="title"
           type="text"
@@ -109,7 +109,7 @@ export default function DidYouKnowEditor({
       </div>
 
       <div className="field">
-        <label>Source Label (Tagalog)</label>
+        <label>Source Label (Filipino)</label>
         <input
           className="title"
           type="text"

@@ -43,7 +43,7 @@ export default function FireClassDetailsEditor({ detail, guide, updateDetail, up
             onChange={(event) => updateDetail('title_en', event.target.value)}
           />
         </EditorField>
-        <EditorField label="Title" language="Tagalog">
+        <EditorField label="Title" language="Filipino">
           <input
             className="title"
             value={detail.title_tl || ''}
@@ -57,7 +57,7 @@ export default function FireClassDetailsEditor({ detail, guide, updateDetail, up
             onChange={(event) => updateDetail('description_en', event.target.value)}
           />
         </EditorField>
-        <EditorField label="Description" language="Tagalog">
+        <EditorField label="Description" language="Filipino">
           <textarea
             className="desc"
             value={detail.description_tl || ''}
@@ -71,7 +71,7 @@ export default function FireClassDetailsEditor({ detail, guide, updateDetail, up
             onChange={(event) => updateDetail('note_en', event.target.value)}
           />
         </EditorField>
-        <EditorField label="Note" language="Tagalog">
+        <EditorField label="Note" language="Filipino">
           <textarea
             className="desc"
             value={detail.note_tl || ''}
@@ -85,7 +85,7 @@ export default function FireClassDetailsEditor({ detail, guide, updateDetail, up
             onChange={(event) => updateDetail('section1_title_en', event.target.value)}
           />
         </EditorField>
-        <EditorField label="Section 1 Title" language="Tagalog">
+        <EditorField label="Section 1 Title" language="Filipino">
           <input
             className="title"
             value={detail.section1_title_tl || ''}
@@ -99,7 +99,7 @@ export default function FireClassDetailsEditor({ detail, guide, updateDetail, up
             onChange={(event) => updateDetail('section2_title_en', event.target.value)}
           />
         </EditorField>
-        <EditorField label="Section 2 Title" language="Tagalog">
+        <EditorField label="Section 2 Title" language="Filipino">
           <input
             className="title"
             value={detail.section2_title_tl || ''}
@@ -114,7 +114,7 @@ export default function FireClassDetailsEditor({ detail, guide, updateDetail, up
         />
         <ArrayEditorField
           label="Examples"
-          language="Tagalog"
+          language="Filipino"
           items={safeGuide.examples_tl}
           onChange={(value) => updateGuide('examples_tl', value)}
         />
@@ -126,7 +126,7 @@ export default function FireClassDetailsEditor({ detail, guide, updateDetail, up
         />
         <ArrayEditorField
           label="Agents"
-          language="Tagalog"
+          language="Filipino"
           items={safeGuide.agents_tl}
           onChange={(value) => updateGuide('agents_tl', value)}
         />

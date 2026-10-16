@@ -72,7 +72,7 @@ export default function ContentSectionEditor({ block, page, editedModule, setEdi
           />
         )}
       </EditorField>
-      <EditorField label={label} language="Tagalog">
+      <EditorField label={label} language="Filipino">
         {type === 'textarea' ? (
           <textarea
             value={metadata.parts[index][tagalogField] || ''}
@@ -112,7 +112,7 @@ export default function ContentSectionEditor({ block, page, editedModule, setEdi
                           }
                         />
                       </EditorField>
-                      <EditorField label="Label" language="Tagalog">
+                      <EditorField label="Label" language="Filipino">
                         <input
                           value={pill.label_tl || ''}
                           onChange={(event) =>
@@ -128,7 +128,7 @@ export default function ContentSectionEditor({ block, page, editedModule, setEdi
                           }
                         />
                       </EditorField>
-                      <EditorField label="Popup Title" language="Tagalog">
+                      <EditorField label="Popup Title" language="Filipino">
                         <input
                           value={pill.popup_title_tl || ''}
                           onChange={(event) =>
@@ -145,7 +145,7 @@ export default function ContentSectionEditor({ block, page, editedModule, setEdi
                           }
                         />
                       </EditorField>
-                      <EditorField label="Popup Body" language="Tagalog">
+                      <EditorField label="Popup Body" language="Filipino">
                         <textarea
                           className="popup-body"
                           value={pill.popup_body_tl || ''}
@@ -200,7 +200,7 @@ export default function ContentSectionEditor({ block, page, editedModule, setEdi
                     ))}
                   </div>
                 </EditorField>
-                <EditorField label="Lines" language="Tagalog">
+                <EditorField label="Lines" language="Filipino">
                   <div className="module-editor-repeater-list">
                     {(part.lines_tl || []).map((line, lineIndex) => (
                       <div className="module-editor-repeater-row" key={lineIndex}>

@@ -18,3 +18,6 @@ verify_jwt = false
 
 [functions.translate-content]
 verify_jwt = true
+
+[functions.backup-recovery]
+verify_jwt = false

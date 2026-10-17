@@ -163,11 +163,3 @@ export async function updateArchivePolicy(module, { purgeEnabled, retentionDays 
   });
   if (error) throw new Error(toMessage(error, "Couldn't save settings."));
 }
-
-export async function confirmArchiveBackup(note = '') {
-  const { data, error } = await supabase.rpc('confirm_archive_backup', {
-    p_note: String(note || '').trim() || null
-  });
-  if (error) throw new Error(toMessage(error, "Couldn't confirm the backup."));
-  return data;
-}

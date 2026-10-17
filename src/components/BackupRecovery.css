@@ -1,0 +1,234 @@
+/* Backup & Recovery panel. Colour tokens come from .archive-trash-container. */
+
+.br {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.br-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--at-line);
+  border-radius: 16px;
+  background: #fafafa;
+}
+
+.br-card-main {
+  min-width: 0;
+}
+
+.br-title,
+.br-subtitle {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.br-subtitle {
+  margin-bottom: 0.75rem;
+}
+
+.br-last-label {
+  margin: 1rem 0 0.15rem;
+  color: var(--at-ink-3);
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.br-last-date {
+  margin: 0 0 0.35rem;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.br-last-date--none {
+  color: var(--at-ink-3);
+}
+
+.br-muted {
+  margin: 0;
+  color: var(--at-ink-2);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.br-error {
+  margin: 0.75rem 0 0;
+  color: var(--at-red-700);
+  font-size: 0.8rem;
+}
+
+.br-locked {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0;
+  color: var(--at-ink-3);
+  font-size: 0.82rem;
+}
+
+.br-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.5rem;
+  border-radius: 12px;
+  background: var(--at-surface);
+}
+
+.br-facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.br-facts dt {
+  color: var(--at-ink-3);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.br-facts dd {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.br-facts dd svg {
+  color: var(--at-ink-3);
+}
+
+.br-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.br-actions .at-button {
+  min-height: 42px;
+  padding: 0 1.1rem;
+}
+
+.br-progress {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: var(--at-surface);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.br-progress small {
+  color: var(--at-ink-3);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.br-progress-track {
+  position: relative;
+  height: 6px;
+  margin-top: 0.6rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--at-red-50);
+}
+
+.br-progress-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  border-radius: 999px;
+  background: var(--at-red-700);
+}
+
+/* History -------------------------------------------------------------------- */
+
+.br-history {
+  min-width: 0;
+}
+
+.br-table th,
+.br-table td {
+  vertical-align: middle;
+}
+
+.br-table td strong {
+  display: block;
+  font-size: 0.82rem;
+}
+
+.br-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--at-line-soft);
+  color: var(--at-ink-2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.br-status--verified {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.br-status--creating {
+  background: var(--at-hold-soft);
+  color: var(--at-hold);
+}
+
+.br-status--failed {
+  background: var(--at-red-50);
+  color: var(--at-red-700);
+}
+
+.br-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+@media (max-width: 900px) {
+  .br-card {
+    grid-template-columns: 1fr;
+    padding: 1.25rem;
+  }
+
+  .br-row-actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 560px) {
+  .br-card {
+    padding: 1rem;
+  }
+
+  .br-actions .at-button {
+    flex: 1 1 100%;
+  }
+}

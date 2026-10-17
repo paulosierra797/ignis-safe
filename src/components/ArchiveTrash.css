@@ -268,7 +268,28 @@
 }
 
 .at-select {
+  display: block;
   min-width: 0;
+}
+
+/* Tooltip wrappers around toolbar controls fill their grid cell. */
+.at-toolbar > .at-tip-anchor {
+  display: block;
+  min-width: 0;
+}
+
+.at-toolbar > .at-tip-anchor > .at-button {
+  width: 100%;
+}
+
+.at-hero h2 .at-tip-anchor {
+  vertical-align: middle;
+}
+
+.at-chip:focus-visible,
+.at-status:focus-visible {
+  outline: 3px solid rgba(185, 28, 28, 0.25);
+  outline-offset: 2px;
 }
 
 .at-select select,
@@ -583,9 +604,10 @@
   outline-offset: 2px;
 }
 
+/* Pointer events pass through so the explanation still shows on hover. */
 .at-button:disabled {
-  cursor: not-allowed;
   opacity: 0.45;
+  pointer-events: none;
 }
 
 .at-button--primary {
@@ -639,7 +661,7 @@
   gap: 0.6rem;
   margin: 0;
   padding: 0.85rem 0 0.15rem 0.25rem;
-  border-top: 1px dashed var(--at-line);
+  border-top: 1px solid var(--at-line-soft);
   list-style: none;
   font-size: 0.78rem;
 }
@@ -724,34 +746,25 @@
   line-height: 1.45;
 }
 
-.at-policies .at-chip {
-  margin-left: 0.4rem;
+/* Wide enough that no label is clipped; narrow screens scroll or stack. */
+.at-policies {
+  min-width: 700px;
 }
 
-.at-backup {
-  display: flex;
+.at-policies td,
+.at-policies th {
+  white-space: nowrap;
+}
+
+.at-policy-name {
+  display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 1rem 1.1rem;
-  border-radius: 10px;
-  background: var(--at-red-50);
+  gap: 0.25rem 0.5rem;
 }
 
-.at-backup h3 {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin: 0 0 0.2rem;
-  font-size: 0.9rem;
-}
-
-.at-backup p {
-  margin: 0;
-  color: var(--at-ink-2);
-  font-size: 0.82rem;
+.at-policy-name > .at-tip-anchor:first-child {
+  font-weight: 700;
 }
 
 .at-switch {
@@ -761,7 +774,12 @@
   gap: 0.55rem;
   font-size: 0.8rem;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
+}
+
+.at-switch > span:last-child {
+  min-width: 4.5rem;
 }
 
 .at-switch input {
@@ -867,6 +885,15 @@
   }
 
   /* Tables become stacked rows. */
+  .at-policies {
+    min-width: 0;
+  }
+
+  .at-policies td,
+  .at-policies th {
+    white-space: normal;
+  }
+
   .at-table thead {
     display: none;
   }

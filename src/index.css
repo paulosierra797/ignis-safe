@@ -63,6 +63,25 @@ button {
   min-width: 0;
 }
 
+/* Native "Choose Files" button: matches the neutral secondary button. Zero specificity, so page styles still win. */
+:where(input[type='file'])::file-selector-button {
+  margin-right: 0.75rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+:where(input[type='file'])::file-selector-button:hover {
+  background: #f3f4f6;
+}
+
 :where(h1, h2, h3, h4, h5, h6, p, label, button) {
   overflow-wrap: anywhere;
 }

@@ -7,6 +7,7 @@ import ArchiveButton from './ArchiveButton';
 import ArchiveListModal from './ArchiveListModal';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
+import Hint from './Hint';
 import ToastMessage from './ToastMessage';
 import { FiRotateCcw, FiSearch } from 'react-icons/fi';
 import { getAttendanceArchiveIds, setAttendanceArchived } from '../utils/attendanceArchiveService';
@@ -318,8 +319,8 @@ const AttendanceAdmin = () => {
             </div>
 
             <div className="filter-actions">
-              <button className="clear-filters-btn" onClick={handleClearFilters}>
-                CLEAR FILTERS
+              <button type="button" className="clear-filters-btn" onClick={handleClearFilters}>
+                Clear Filters
               </button>
             </div>
           </div>
@@ -327,7 +328,7 @@ const AttendanceAdmin = () => {
 
         <div className="attendance-view-heading" aria-live="polite">
           <div>
-            <h2>Current Attendance</h2>
+            <h2><Hint text="Time in and time out records from personnel who scanned the station QR code.">Current Attendance</Hint></h2>
             <p>Review and manage active attendance records.</p>
           </div>
           <span>{filteredAttendance.length} {filteredAttendance.length === 1 ? 'record' : 'records'}</span>
@@ -343,7 +344,7 @@ const AttendanceAdmin = () => {
                 <th>Date</th>
                 <th>Time In</th>
                 <th>Time Out</th>
-                <th>Verification</th>
+                <th><Hint text="Shows if the face and location checks passed when the record was made.">Verification</Hint></th>
                 <th>Details</th>
               </tr>
             </thead>

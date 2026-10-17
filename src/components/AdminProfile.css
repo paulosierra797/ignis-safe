@@ -408,6 +408,17 @@
   cursor: not-allowed;
 }
 
+/* Secondary action beside the red Save button. */
+.save-changes-btn--secondary {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #e5e7eb;
+}
+
+.save-changes-btn--secondary:hover {
+  background: #f3f4f6;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

@@ -414,7 +414,7 @@ export default function AdminProfile() {
                 <div className="profile-actions-row">
                   <button
                     type="button"
-                    className="save-changes-btn"
+                    className="save-changes-btn save-changes-btn--secondary"
                     onClick={handleChangePassword}
                     disabled={savingSecurity}
                   >

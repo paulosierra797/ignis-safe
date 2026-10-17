@@ -2271,15 +2271,26 @@
 }
 
 .accounts-clear-btn {
-  background: #e2e8f0;
-  color: #475569;
-  border: none;
+  background: #ffffff;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 0.7rem 1.2rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.4px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.accounts-clear-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.accounts-clear-btn:focus-visible {
+  outline: 2px solid #b91c1c;
+  outline-offset: 2px;
 }
 
 .accounts-table-card {

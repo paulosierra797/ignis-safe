@@ -5,6 +5,7 @@ import ArchiveButton from './ArchiveButton';
 import ArchiveListModal from './ArchiveListModal';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import Hint from './Hint';
 import CloseButton from './CloseButton';
 import AnnouncementAcknowledgementModal from './AnnouncementAcknowledgementModal';
 import AnnouncementNudgeTracking from './AnnouncementNudgeTracking';
@@ -1305,7 +1306,11 @@ export default function Announcements() {
 
         <div className={`announcement-card list-card${isAdmin ? ' sent-announcement-history' : ''}`}>
           <div className="list-card-header">
-            <h2>{isAdmin ? 'Sent Announcements' : 'Announcement Feed'}</h2>
+            <h2>
+              <Hint text={isAdmin ? 'Announcements that have already been sent.' : 'Messages from the station. Please read and acknowledge each one.'}>
+                {isAdmin ? 'Sent Announcements' : 'Announcement Feed'}
+              </Hint>
+            </h2>
             <div className="list-card-header-actions">
               {!isAdmin && (
                 <ArchiveButton

@@ -8,6 +8,7 @@ import Sidebar from './Sidebar';
 import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
+import Hint from './Hint';
 import ToastMessage from './ToastMessage';
 import { formatStatusLabel } from '../utils/statusUtils';
 import {
@@ -423,7 +424,7 @@ export default function AdminReports() {
         <div className="admin-reports-card">
           <div className="admin-reports-toolbar">
             <div className="admin-reports-toolbar-left">
-              <h2>Submitted Reports</h2>
+              <h2><Hint text="Reports sent by personnel for you to review.">Submitted Reports</Hint></h2>
               <span>{filteredReports.length} records</span>
             </div>
             <div className="admin-reports-toolbar-right">

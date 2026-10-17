@@ -130,8 +130,8 @@
 .aq-btn:focus-visible { outline: 3px solid rgba(185, 28, 28, 0.25); outline-offset: 2px; }
 .aq-btn:disabled { cursor: not-allowed; opacity: 0.55; }
 
-.aq-btn--primary { background: #0f766e; color: #fff; }
-.aq-btn--primary:hover:not(:disabled) { background: #0d6b64; }
+.aq-btn--primary { background: #b91c1c; color: #fff; }
+.aq-btn--primary:hover:not(:disabled) { background: #991b1b; }
 .aq-btn--secondary { border-color: #cfd8e3; background: #fff; color: #334155; }
 .aq-btn--secondary:hover:not(:disabled) { border-color: #94a3b8; background: #f8fafc; }
 .aq-btn--danger { border-color: #fecaca; background: #fff; color: #b91c1c; }

@@ -6,6 +6,7 @@ import Pagination from './Pagination';
 import RecordActions from './RecordActions';
 import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
+import Hint from './Hint';
 import ToastMessage from './ToastMessage';
 import CloseButton from './CloseButton';
 import {
@@ -232,7 +233,7 @@ const AttendancePersonnel = () => {
 
             <div className="qr-hero-card">
               <div className="qr-card-header">
-                <h3>Station QR</h3>
+                <h3><Hint text="Scan this code with your phone to record attendance. A new code appears every 5 minutes.">Station QR</Hint></h3>
                 <span className="qr-chip">LIVE</span>
               </div>
               <div className="qr-code">
@@ -277,7 +278,7 @@ const AttendancePersonnel = () => {
           <div className="attendance-list-table-container" id="attendance-history">
             <div className="table-header">
               <div>
-                <h3>My Attendance</h3>
+                <h3><Hint text="Your recent time in and time out records.">My Attendance</Hint></h3>
                 <p className="attendance-history-summary">
                   {todayStatus?.message || 'Checking today\'s attendance status...'}
                 </p>

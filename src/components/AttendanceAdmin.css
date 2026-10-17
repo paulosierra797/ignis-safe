@@ -46,46 +46,51 @@
   gap: 12px;
 }
 
-.export-csv-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  box-sizing: border-box;
-  padding: 10px 25px;
-  background-color: #28a745;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.export-csv-btn:hover {
-  background-color: #218838;
-}
-
+.export-csv-btn,
 .export-pdf-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 44px;
   box-sizing: border-box;
-  padding: 10px 25px;
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  font-size: 14px;
-  font-weight: 500;
+  padding: 0 1.25rem;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+/* Matches Audit Logs: one red primary action, neutral secondary actions. */
+.export-csv-btn {
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+}
+
+.export-csv-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.export-pdf-btn {
+  border: 1px solid #b91c1c;
+  background: #b91c1c;
+  color: #ffffff;
 }
 
 .export-pdf-btn:hover:not(:disabled) {
-  background-color: #c82333;
+  background: #991b1b;
+  border-color: #991b1b;
+}
+
+.export-csv-btn:focus-visible,
+.export-pdf-btn:focus-visible,
+.attendance-filters-box .clear-filters-btn:focus-visible {
+  outline: 2px solid #b91c1c;
+  outline-offset: 2px;
 }
 
 .export-pdf-btn:disabled {
@@ -255,26 +260,27 @@
   align-items: flex-end;
 }
 
-.clear-filters-btn {
+.attendance-filters-box .clear-filters-btn {
   height: var(--attendance-filter-control-height);
   min-height: var(--attendance-filter-control-height);
-  padding: 0 25px;
-  background-color: #6c757d;
-  color: white;
-  border: none;
-  border-radius: 6px;
+  padding: 0 1.25rem;
+  background: #ffffff;
+  color: #4b5563;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   box-sizing: border-box;
-  font-size: 13px;
+  font-family: inherit;
+  font-size: 0.85rem;
   line-height: 1.2;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
-  letter-spacing: 0.5px;
 }
 
-.clear-filters-btn:hover {
-  background-color: #5a6268;
+.attendance-filters-box .clear-filters-btn:hover {
+  background: #f3f4f6;
+  color: #111827;
 }
 
 .attendance-table-container {
@@ -291,16 +297,19 @@
 }
 
 .attendance-table thead {
-  background-color: #dc3545;
+  background: #f9fafb;
 }
 
 .attendance-table thead th {
-  padding: 15px;
+  padding: 0.75rem 15px;
   text-align: left;
-  font-size: 14px;
+  font-size: 0.72rem;
   font-weight: 600;
-  color: white;
+  letter-spacing: 0.05em;
+  color: #6b7280;
   text-transform: uppercase;
+  border-bottom: 1px solid #e8eaee;
+  white-space: nowrap;
 }
 
 .attendance-table tbody tr {

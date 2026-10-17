@@ -3,6 +3,7 @@ import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import ToastMessage from './ToastMessage';
+import Hint from './Hint';
 import './AppDialog.css';
 import {
   buildLearningMaterialModules,
@@ -464,40 +465,38 @@ try {
         {selectedModuleCard === null && (
           <div className="learning-materials-hero">
             <div>
-              <p className="learning-materials-kicker">Admin access</p>
-              <h2>Review the learning modules exactly as they are structured for the mobile experience.</h2>
-              <p>Use this view to audit module content, page order, block text, and fire-class guide data without leaving the admin workspace.</p>
+              <p className="learning-materials-kicker">Learning modules</p>
+              <h2><Hint text="The lessons learners study in the IGNIS SAFE mobile app.">Mobile App Lessons</Hint></h2>
+              <p>Open a module to check or edit its pages, just as learners see them.</p>
             </div>
 
-            <div>
-              <div className="learning-materials-filter-row">
-                <label htmlFor="module-select">Show module</label>
-                <select id="module-select" className="module-select" value={selectedModule} onChange={(e) => setSelectedModule(e.target.value)}>
-                  <option value="all">All modules</option>
-                  {modules.map((m) => (
-                    <option key={m.module_no} value={m.module_no}>{'Module ' + m.module_no + ' - ' + (m.title || '')}</option>
-                  ))}
-                </select>
-              </div>
+            <div className="learning-materials-filter-row">
+              <label htmlFor="module-select">Show module</label>
+              <select id="module-select" className="module-select" value={selectedModule} onChange={(e) => setSelectedModule(e.target.value)}>
+                <option value="all">All modules</option>
+                {modules.map((m) => (
+                  <option key={m.module_no} value={m.module_no}>{'Module ' + m.module_no + ' - ' + (m.title || '')}</option>
+                ))}
+              </select>
+            </div>
 
-              <div className="learning-materials-stats">
-                <article>
-                  <span>Modules</span>
-                  <strong>{formatCount(displayedModules.length)}</strong>
-                </article>
-                <article>
-                  <span>Pages</span>
-                  <strong>{formatCount(visiblePages)}</strong>
-                </article>
-                <article>
-                  <span>Blocks</span>
-                  <strong>{formatCount(visibleBlocks)}</strong>
-                </article>
-                <article>
-                  <span>Fire guides</span>
-                  <strong>{formatCount(fireGuides.length)}</strong>
-                </article>
-              </div>
+            <div className="learning-materials-stats">
+              <article>
+                <span>Modules</span>
+                <strong>{formatCount(displayedModules.length)}</strong>
+              </article>
+              <article>
+                <span>Pages</span>
+                <strong>{formatCount(visiblePages)}</strong>
+              </article>
+              <article>
+                <span><Hint text="The separate content pieces that make up each page.">Blocks</Hint></span>
+                <strong>{formatCount(visibleBlocks)}</strong>
+              </article>
+              <article>
+                <span><Hint text="Short guides that explain each fire class (type of fire).">Fire guides</Hint></span>
+                <strong>{formatCount(fireGuides.length)}</strong>
+              </article>
             </div>
           </div>
         )}

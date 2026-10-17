@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { FaCheckCircle, FaChevronDown, FaEye, FaSearch, FaTimes, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import ArchiveButton from './ArchiveButton';
 import ArchiveListModal from './ArchiveListModal';
+import Hint from './Hint';
 import RecordActions from './RecordActions';
 import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
@@ -773,7 +774,7 @@ function AccountDirectoryGroup({
                 <th className="col-email">Email</th>
                 <th className="col-rank-role">Rank/Role</th>
                 <th className="col-status">Status</th>
-                <th className="col-leave">Leave Status</th>
+                <th className="col-leave"><Hint text="Whether this person is on approved leave today.">Leave Status</Hint></th>
                 <th className="col-actions">Actions</th>
               </tr>
             </thead>
@@ -4326,7 +4327,7 @@ const permissions = getDefaultPermissions(formData.role);
           <div className="accounts-directory-header">
             <div>
               <p className="accounts-directory-eyebrow">Personnel directory</p>
-              <h3 id="personnel-directory-title">Personnel List</h3>
+              <h3 id="personnel-directory-title"><Hint text="Everyone with a staff account, grouped by role.">Personnel List</Hint></h3>
             </div>
             <span className="accounts-directory-count">
               {filteredAccounts.length} {filteredAccounts.length === 1 ? 'account' : 'accounts'}
@@ -4403,8 +4404,8 @@ const permissions = getDefaultPermissions(formData.role);
             </select>
           </div>
 
-          <button className="accounts-clear-btn" onClick={handleClearFilters}>
-            CLEAR FILTERS
+          <button type="button" className="accounts-clear-btn" onClick={handleClearFilters}>
+            Clear Filters
           </button>
         </div>
 
@@ -4474,7 +4475,7 @@ const permissions = getDefaultPermissions(formData.role);
           <div className="accounts-directory-header">
             <div>
               <p className="accounts-directory-eyebrow">Personnel directory</p>
-              <h3 id="personnel-history-title">Personnel List History</h3>
+              <h3 id="personnel-history-title"><Hint text="A record of accounts that were added, changed, or removed.">Personnel List History</Hint></h3>
             </div>
             <span className="accounts-directory-count">
               {visiblePersonnelAccountHistory.length} of {filteredPersonnelAccountHistory.length} shown

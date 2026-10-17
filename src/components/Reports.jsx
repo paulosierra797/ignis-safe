@@ -427,9 +427,7 @@ export default function Reports() {
           <div className="create-report-header">
             <h2>Submit Administrative Report</h2>
             <p className="create-report-description">
-              Submit completed official reports directly to the administrator for review and recordkeeping.
-              Attach up to five relevant administrative report files using the supported document, spreadsheet,
-              presentation, text, or image formats.
+              Send your finished reports to the administrator for review. You can attach up to five files.
             </p>
           </div>
 
@@ -442,7 +440,7 @@ export default function Reports() {
                 value={reportTitle}
                 onChange={(event) => setReportTitle(event.target.value)}
                 placeholder="Enter report title"
-                rows={5}
+                rows={2}
                 maxLength={200}
               />
             </div>

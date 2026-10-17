@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import gsap from 'gsap';
-import { FiAlertTriangle, FiCheck, FiLock, FiSearch, FiTrash2, FiX } from 'react-icons/fi';
+import { FiAlertTriangle, FiCheck, FiLock, FiMaximize2, FiMinus, FiSearch, FiTrash2, FiX } from 'react-icons/fi';
 import { logAdminActivity, manageAccount, moveAccountToTrash } from '../utils/usersService';
 import './BulkManageModal.css';
 
@@ -64,13 +64,19 @@ const BulkManageModal = ({ accounts, protectedIds, currentAdminId, actor, onClos
   const [step, setStep] = useState('select'); // select | edit | confirm | progress
   const [mode, setMode] = useState('edit'); // edit | delete
   const [form, setForm] = useState(EMPTY_FORM);
-  const [progress, setProgress] = useState({ done: 0, total: 0, results: [], finished: false });
+  const [progress, setProgress] = useState({ done: 0, total: 0, results: [], finished: false, current: '' });
+  const [minimized, setMinimized] = useState(false);
   const overlayRef = useRef(null);
   const panelRef = useRef(null);
   const stageRef = useRef(null);
   const barRef = useRef(null);
+  const widgetRef = useRef(null);
+  const widgetBarRef = useRef(null);
+  const listRef = useRef(null);
+  const minimizingRef = useRef(false);
   const mountedRef = useRef(true);
   const processing = step === 'progress' && !progress.finished;
+  const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   useEffect(() => {
     mountedRef.current = true;
@@ -122,15 +128,58 @@ const BulkManageModal = ({ accounts, protectedIds, currentAdminId, actor, onClos
     return next;
   });
 
-  // Entrance and step transitions.
+  // Entrance (and restore after minimizing).
   useLayoutEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    if (minimized || reduceMotion()) return undefined;
     const ctx = gsap.context(() => {
       gsap.fromTo(overlayRef.current, { opacity: 0 }, { opacity: 1, duration: 0.2, ease: 'power1.out' });
       gsap.fromTo(panelRef.current, { y: 16, scale: 0.98, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.35, ease: 'power3.out' });
     });
     return () => ctx.revert();
-  }, []);
+  }, [minimized]);
+
+  // Floating widget entrance.
+  useLayoutEffect(() => {
+    if (!minimized || reduceMotion()) return undefined;
+    const ctx = gsap.context(() => {
+      gsap.fromTo(widgetRef.current, { y: 16, scale: 0.96, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.3, ease: 'power3.out' });
+    });
+    return () => ctx.revert();
+  }, [minimized]);
+
+  // Lock the page behind the full modal: no scroll, wheel or touch movement.
+  useEffect(() => {
+    if (minimized) return undefined;
+    const { body, documentElement: html } = document;
+    const prev = { body: body.style.overflow, html: html.style.overflow, pad: body.style.paddingRight };
+    const scrollbar = window.innerWidth - html.clientWidth;
+    body.style.overflow = 'hidden';
+    html.style.overflow = 'hidden';
+    if (scrollbar > 0) body.style.paddingRight = `${scrollbar}px`;
+
+    const overlay = overlayRef.current;
+    const guard = (event) => {
+      const scroller = event.target.closest?.('.bm-scroll');
+      if (!scroller || !overlay.contains(scroller)) {
+        event.preventDefault();
+        return;
+      }
+      if (event.type === 'wheel') {
+        const atTop = scroller.scrollTop <= 0;
+        const atBottom = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
+        if ((event.deltaY < 0 && atTop) || (event.deltaY > 0 && atBottom)) event.preventDefault();
+      }
+    };
+    overlay?.addEventListener('wheel', guard, { passive: false });
+    overlay?.addEventListener('touchmove', guard, { passive: false });
+    return () => {
+      body.style.overflow = prev.body;
+      html.style.overflow = prev.html;
+      body.style.paddingRight = prev.pad;
+      overlay?.removeEventListener('wheel', guard);
+      overlay?.removeEventListener('touchmove', guard);
+    };
+  }, [minimized]);
 
   useLayoutEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !stageRef.current) return undefined;
@@ -142,17 +191,49 @@ const BulkManageModal = ({ accounts, protectedIds, currentAdminId, actor, onClos
   }, [step, progress.finished]);
 
   useLayoutEffect(() => {
-    if (!barRef.current) return;
     const pct = progress.total ? (progress.done / progress.total) * 100 : 0;
-    gsap.to(barRef.current, { width: `${pct}%`, duration: 0.3, ease: 'power2.out' });
-  }, [progress.done, progress.total, progress.finished, step]);
+    [barRef.current, widgetBarRef.current].filter(Boolean).forEach((bar) => {
+      gsap.to(bar, { width: `${pct}%`, duration: 0.3, ease: 'power2.out' });
+    });
+  }, [progress.done, progress.total, progress.finished, step, minimized]);
+
+  // Newest result slides in and the list follows it.
+  useLayoutEffect(() => {
+    const list = listRef.current;
+    if (!list || !list.lastElementChild) return;
+    list.scrollTop = list.scrollHeight;
+    if (!reduceMotion()) {
+      gsap.fromTo(list.lastElementChild, { y: 6, opacity: 0 }, { y: 0, opacity: 1, duration: 0.25, ease: 'power2.out' });
+    }
+  }, [progress.results.length]);
+
+  const minimize = () => {
+    if (!processing || minimizingRef.current) return;
+    const panel = panelRef.current;
+    if (!panel || reduceMotion()) {
+      setMinimized(true);
+      return;
+    }
+    minimizingRef.current = true;
+    const rect = panel.getBoundingClientRect();
+    const dx = window.innerWidth - 24 - 160 - (rect.left + rect.width / 2);
+    const dy = window.innerHeight - 24 - 60 - (rect.top + rect.height / 2);
+    gsap.to(overlayRef.current, { opacity: 0, duration: 0.25, ease: 'power1.in' });
+    gsap.to(panel, {
+      x: dx, y: dy, scale: 0.25, opacity: 0, duration: 0.3, ease: 'power2.in',
+      onComplete: () => { minimizingRef.current = false; setMinimized(true); }
+    });
+  };
 
   const requestClose = () => {
     if (!processing) onClose();
   };
 
   useEffect(() => {
-    const onKey = (event) => { if (event.key === 'Escape') requestClose(); };
+    const onKey = (event) => {
+      if (event.key !== 'Escape' || minimized) return;
+      if (processing) minimize(); else requestClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
@@ -160,7 +241,7 @@ const BulkManageModal = ({ accounts, protectedIds, currentAdminId, actor, onClos
   const startRun = async () => {
     const items = isDelete ? selectedAccounts.map((account) => ({ account })) : actionable;
     const results = [];
-    setProgress({ done: 0, total: items.length, results: [], finished: false });
+    setProgress({ done: 0, total: items.length, results: [], finished: false, current: getName(items[0].account) });
     setStep('progress');
 
     for (const item of items) {
@@ -178,7 +259,11 @@ const BulkManageModal = ({ accounts, protectedIds, currentAdminId, actor, onClos
       }
       results.push({ id: account.admin_id, name: getName(account), error });
       if (mountedRef.current) {
-        setProgress({ done: results.length, total: items.length, results: [...results], finished: false });
+        const next = items[results.length];
+        setProgress({
+          done: results.length, total: items.length, results: [...results], finished: false,
+          current: next ? getName(next.account) : ''
+        });
       }
     }
 
@@ -194,7 +279,7 @@ const BulkManageModal = ({ accounts, protectedIds, currentAdminId, actor, onClos
       }).catch((err) => console.warn('Unable to write admin activity log:', err));
     }
     if (mountedRef.current) {
-      setProgress({ done: results.length, total: items.length, results, finished: true });
+      setProgress({ done: results.length, total: items.length, results, finished: true, current: '' });
     }
     onCompleted();
   };
@@ -328,24 +413,30 @@ const BulkManageModal = ({ accounts, protectedIds, currentAdminId, actor, onClos
     </div>
   );
 
+  const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+  const succeededCount = progress.results.length - failed.length;
+  const actionText = !progress.finished
+    ? `${isDelete ? 'Moving to Trash' : 'Updating'}: ${progress.current}`
+    : failed.length === 0
+      ? 'All done'
+      : `${succeededCount} succeeded, ${failed.length} failed`;
+
   const renderProgress = () => {
-    const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
     return (
       <div className="bm-progress">
         <div className="bm-progress-head bm-anim">
-          <h3>
-            {!progress.finished
-              ? `${isDelete ? 'Moving to Trash' : 'Updating'}… ${progress.done} of ${progress.total}`
-              : failed.length === 0
-                ? 'All done'
-                : `${progress.total - failed.length} succeeded, ${failed.length} failed`}
-          </h3>
-          <span>{pct}%</span>
+          <h3 title={actionText}>{actionText}</h3>
+          <span className="bm-figures">{progress.done} of {progress.total} · {pct}%</span>
         </div>
         <div className="bm-bar bm-anim" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
           <div className="bm-bar-fill" ref={barRef} />
         </div>
-        <ul className="bm-summary">
+        <div className="bm-stats bm-anim">
+          <span className="is-ok"><FiCheck aria-hidden="true" />{succeededCount} completed</span>
+          <span className={failed.length ? 'is-fail' : ''}><FiX aria-hidden="true" />{failed.length} failed</span>
+          <span>{progress.total - progress.done} remaining</span>
+        </div>
+        <ul className="bm-summary bm-scroll" ref={listRef}>
           {progress.results.map((result) => (
             <li className={`bm-summary-row${result.error ? ' is-failed' : ''}`} key={result.id}>
               <span className="bm-name">{result.name}</span>
@@ -359,19 +450,55 @@ const BulkManageModal = ({ accounts, protectedIds, currentAdminId, actor, onClos
     );
   };
 
-  const titles = { select: 'Bulk Manage', edit: 'Bulk Edit', confirm: 'Review changes', progress: 'Processing' };
+  const titles = { select: 'Bulk Manage', edit: 'Bulk Edit', confirm: 'Review changes', progress: progress.finished ? 'Completed' : 'Processing' };
+
+  if (minimized) {
+    return (
+      <aside className="bm-widget" ref={widgetRef} role="status" aria-live="polite" aria-label="Bulk processing progress">
+        <div className="bm-widget-head">
+          <strong>{isDelete ? 'Move to Trash' : 'Bulk update'}</strong>
+          <div className="bm-widget-actions">
+            <button type="button" className="bm-icon-btn" onClick={() => setMinimized(false)} aria-label="Expand progress window">
+              <FiMaximize2 aria-hidden="true" />
+            </button>
+            {progress.finished && (
+              <button type="button" className="bm-icon-btn" onClick={onClose} aria-label="Dismiss">
+                <FiX aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="bm-widget-action" title={actionText}>{actionText}</p>
+        <div className="bm-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+          <div className="bm-bar-fill" ref={widgetBarRef} />
+        </div>
+        <div className="bm-widget-meta">
+          <span>{progress.done} of {progress.total} · {pct}%</span>
+          <span>
+            {succeededCount} completed{failed.length ? ` · ${failed.length} failed` : ''}
+          </span>
+        </div>
+      </aside>
+    );
+  }
 
   return (
     <div className="bm-overlay" ref={overlayRef} onMouseDown={(event) => { if (event.target === event.currentTarget) requestClose(); }}>
-      <div className="bm-panel" ref={panelRef} role="dialog" aria-modal="true" aria-label="Bulk manage accounts">
+      <div className={`bm-panel${step === 'progress' ? ' is-compact' : ''}`} ref={panelRef} role="dialog" aria-modal="true" aria-label="Bulk manage accounts">
         <header className="bm-header">
           <h2>{titles[step]}</h2>
-          <button type="button" className="bm-icon-btn" onClick={requestClose} disabled={processing} aria-label="Close">
-            <FiX aria-hidden="true" />
-          </button>
+          {processing ? (
+            <button type="button" className="bm-icon-btn" onClick={minimize} aria-label="Minimize">
+              <FiMinus aria-hidden="true" />
+            </button>
+          ) : (
+            <button type="button" className="bm-icon-btn" onClick={requestClose} aria-label="Close">
+              <FiX aria-hidden="true" />
+            </button>
+          )}
         </header>
 
-        <div className="bm-body" ref={stageRef} key={step + (progress.finished ? '-done' : '')}>
+        <div className={`bm-body${step === 'progress' ? ' is-progress' : ' bm-scroll'}`} ref={stageRef} key={step + (progress.finished ? '-done' : '')}>
           {step === 'select' && renderSelect()}
           {step === 'edit' && renderEdit()}
           {step === 'confirm' && renderConfirm()}
@@ -411,7 +538,7 @@ const BulkManageModal = ({ accounts, protectedIds, currentAdminId, actor, onClos
           )}
           {step === 'progress' && (
             <>
-              <span className="bm-selected">{processing ? 'Please keep this window open' : ''}</span>
+              <span className="bm-selected">{processing ? 'You can minimize this window; it keeps running.' : ''}</span>
               <button type="button" className="bm-btn is-primary" disabled={processing} onClick={onClose}>Done</button>
             </>
           )}

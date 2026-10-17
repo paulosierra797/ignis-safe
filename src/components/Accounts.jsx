@@ -28,6 +28,7 @@ import CloseButton from './CloseButton';
 import ExpandableText from './ExpandableText';
 import ToastMessage from './ToastMessage';
 import PersonnelImportModal from './PersonnelImportModal';
+import { consumeImportModalRequest, isImportJobActive, useImportJob } from '../utils/personnelImportJobs';
 import './Accounts.css';
 import './AppDialog.css';
 import { invitePersonnel } from '../utils/authService';
@@ -915,6 +916,21 @@ export default function Accounts() {
   const [superAdminPage, setSuperAdminPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const { job: importJob, pendingOpen: importOpenRequested } = useImportJob();
+  const importFinished = Boolean(importJob) && !isImportJobActive(importJob);
+  const importCreatedCount = importJob?.created || 0;
+
+  // The floating import widget asks to reopen the dialog.
+  useEffect(() => {
+    if (!importOpenRequested) return;
+    consumeImportModalRequest();
+    setIsImportModalOpen(true);
+  }, [importOpenRequested]);
+
+  // The import runs on the server, so refresh the list once it finishes or is cancelled.
+  useEffect(() => {
+    if (importFinished && importCreatedCount > 0) fetchAccounts();
+  }, [importJob?.id, importFinished, importCreatedCount]);
   const [isAddExitConfirmOpen, setIsAddExitConfirmOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
   const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
@@ -4737,8 +4753,6 @@ const permissions = getDefaultPermissions(formData.role);
           <PersonnelImportModal
             existingEmails={accounts.map((account) => account.email)}
             isSuperAdmin={isSuperAdmin}
-            currentUser={currentUser}
-            onImported={fetchAccounts}
             onClose={() => setIsImportModalOpen(false)}
           />
         )}

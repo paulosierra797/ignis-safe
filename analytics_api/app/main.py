@@ -1599,6 +1599,11 @@ from .admin_users import router as admin_users_router
 
 app.include_router(admin_users_router)
 
+from .import_jobs import router as import_jobs_router
+
+
+app.include_router(import_jobs_router)
+
 
 @app.get("/api/knowledge-analytics/filter-options", dependencies=[Depends(require_admin)])
 def get_filter_options():

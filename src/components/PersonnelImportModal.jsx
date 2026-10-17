@@ -9,13 +9,20 @@ import {
   FiDownload,
   FiEdit2,
   FiFileText,
+  FiMinus,
   FiRefreshCw,
   FiTrash2,
   FiUploadCloud
 } from 'react-icons/fi';
 import CloseButton from './CloseButton';
-import { invitePersonnel } from '../utils/authService';
-import { getAllUsers, logAdminActivity } from '../utils/usersService';
+import {
+  cancelImportJob,
+  dismissImportJob,
+  isImportJobActive,
+  setImportModalOpen,
+  startImportJob,
+  useImportJob
+} from '../utils/personnelImportJobs';
 import { ORG_RANK_OPTIONS } from '../utils/orgChartFields';
 import {
   sanitizeContactInput,
@@ -29,7 +36,6 @@ const TEMPLATE_HEADERS = ['First Name', 'Last Name', 'Email', 'Role', 'Rank Desi
 const BOM = String.fromCharCode(0xfeff);
 const MAX_ROWS = 200;
 const MAX_FILE_BYTES = 1024 * 1024;
-const INVITE_TIMEOUT_MS = 30000;
 // Every BFP rank, highest first. Same list the Personnel pages use.
 const RANK_OPTIONS = ORG_RANK_OPTIONS.map((option) => ({ code: option.value, label: option.label }));
 const RANK_CODES = RANK_OPTIONS.map((option) => option.code);
@@ -49,15 +55,6 @@ const HEADER_ALIASES = {
   mobile: 'contact_number',
   phone: 'contact_number'
 };
-
-const getDefaultPermissions = (role) => (
-  role === 'super_admin' || role === 'admin'
-    ? [
-        'view_dashboard', 'view_reports', 'create_reports', 'view_attendance',
-        'manage_users', 'view_analytics', 'view_charts', 'view_accounts', 'view_audit_logs'
-      ]
-    : []
-);
 
 // Minimal RFC 4180 parser: quoted fields, escaped quotes, CRLF, BOM.
 const parseCsv = (input) => {
@@ -166,35 +163,22 @@ const makeRow = (values) => {
     contact_number: '',
     status: 'pending',
     error: '',
-    ambiguous: false,
     ...values
   };
 };
 
-const describeFailure = (message) => {
-  const text = String(message || '').toLowerCase();
-  if (
-    (text.includes('already') && text.includes('registered'))
-    || text.includes('duplicate key')
-    || text.includes('23505')
-  ) {
-    return { error: 'An account with this email address already exists.', ambiguous: false };
-  }
-  if (text.includes('failed to fetch') || text.includes('network') || text.includes('timed out')) {
-    return {
-      error: 'The server did not respond in time. The account may or may not have been created; retrying will check first.',
-      ambiguous: true
-    };
-  }
-  return { error: message || 'The account could not be created.', ambiguous: false };
-};
+// What the server job receives for each confirmed row.
+const toJobRow = (row) => ({
+  client_id: row.id,
+  email: row.email.trim(),
+  first_name: row.first_name.trim(),
+  last_name: row.last_name.trim(),
+  role: normalizeRole(row.role),
+  rank: row.rank.trim(),
+  contact_number: row.contact_number.trim()
+});
 
-const withTimeout = (promise) => Promise.race([
-  promise,
-  new Promise((resolve) => {
-    setTimeout(() => resolve({ data: null, error: 'Request timed out' }), INVITE_TIMEOUT_MS);
-  })
-]);
+const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -535,28 +519,44 @@ function RemoveConfirmDialog({ details, onCancel, onConfirm }) {
 export default function PersonnelImportModal({
   existingEmails = [],
   isSuperAdmin = false,
-  currentUser = null,
-  onImported,
   onClose
 }) {
-  const [phase, setPhase] = useState('upload'); // upload | review | confirm | importing | results
+  const [step, setStep] = useState('upload'); // upload | review | confirm; later steps come from the server job
   const [rows, setRows] = useState([]);
   const [fileName, setFileName] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [errorsOnly, setErrorsOnly] = useState(false);
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [pendingRemoveId, setPendingRemoveId] = useState(null);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState('');
+  const [cancelPrompt, setCancelPrompt] = useState(false);
+  const [cancelBusy, setCancelBusy] = useState(false);
 
   const overlayRef = useRef(null);
   const dialogRef = useRef(null);
   const stageRef = useRef(null);
   const barRef = useRef(null);
   const fileInputRef = useRef(null);
-  const runningRef = useRef(false);
+  const startingRef = useRef(false);
   const removeTriggerRef = useRef(null);
 
-  const isImporting = phase === 'importing';
+  // The import runs on the server; steps 4 and 5 simply reflect its real progress.
+  const { job, sourceRows, connectionLost } = useImportJob();
+  const isImporting = isImportJobActive(job);
+  const phase = job ? (isImporting ? 'importing' : 'results') : step;
+  const isCompact = phase === 'confirm' || phase === 'importing' || phase === 'results';
+
+  const jobItems = job?.items || [];
+  const createdItems = jobItems.filter((item) => item.state === 'created');
+  const failedItems = jobItems.filter((item) => item.state === 'failed');
+  const unfinishedItems = jobItems.filter((item) => item.state !== 'created' && item.state !== 'failed');
+  const retryItems = jobItems.filter((item) => item.state !== 'created');
+  const retryRows = retryItems.map((item) => sourceRows[item.id]).filter(Boolean);
+  const canRetry = retryItems.length > 0 && retryRows.length === retryItems.length;
+  const processed = job?.processed ?? 0;
+  const jobTotal = job?.total ?? 0;
+  const percent = jobTotal ? Math.floor((processed / jobTotal) * 100) : 0;
 
   // ---- Validation (derived, so edits re-validate live) ----
   const existingSet = useMemo(
@@ -613,8 +613,6 @@ export default function PersonnelImportModal({
   );
   const errorCount = activeRows.filter((row) => validation[row.id]).length;
   const validRows = activeRows.filter((row) => !validation[row.id]);
-  const createdRows = rows.filter((row) => row.status === 'created');
-  const failedRows = rows.filter((row) => row.status === 'failed');
   const visibleRows = errorsOnly ? activeRows.filter((row) => validation[row.id]) : activeRows;
   // Recomputed on every edit, so changing a rank moves the row to its new group.
   const rankGroups = useMemo(() => groupRowsByRank(visibleRows), [visibleRows]);
@@ -646,24 +644,66 @@ export default function PersonnelImportModal({
           opacity: 0, y: 8, duration: 0.25, stagger: 0.015, ease: 'power2.out', delay: 0.1
         });
       }
+      if (phase === 'confirm' || phase === 'importing') {
+        gsap.from('.pim-stage .pim-stat', {
+          opacity: 0, y: 8, duration: 0.3, stagger: 0.06, ease: 'power2.out', delay: 0.08
+        });
+      }
     }, stageRef);
     return () => ctx.revert();
   }, [phase]);
 
+  // The dialog settles into its new size when moving between the wide and compact steps.
+  const wasCompactRef = useRef(isCompact);
+  useLayoutEffect(() => {
+    if (wasCompactRef.current === isCompact) return;
+    wasCompactRef.current = isCompact;
+    if (prefersReducedMotion() || !dialogRef.current) return;
+    gsap.fromTo(
+      dialogRef.current,
+      { scale: 0.96, opacity: 0.6 },
+      { scale: 1, opacity: 1, duration: 0.35, ease: 'power3.out', clearProps: 'transform,opacity' }
+    );
+  }, [isCompact]);
+
+  // The bar only ever moves to the percentage the server reports.
   useEffect(() => {
     if (!barRef.current) return;
-    const percent = progress.total ? (progress.done / progress.total) * 100 : 0;
     if (prefersReducedMotion()) {
       barRef.current.style.width = `${percent}%`;
     } else {
-      gsap.to(barRef.current, { width: `${percent}%`, duration: 0.35, ease: 'power2.out', overwrite: true });
+      gsap.to(barRef.current, { width: `${percent}%`, duration: 0.5, ease: 'power2.out', overwrite: true });
     }
-  }, [progress, phase]);
+  }, [percent, phase]);
 
-  // ---- Close handling ----
+  // Tell the floating widget the full dialog is showing, so it stays out of the way.
+  useEffect(() => {
+    setImportModalOpen(true);
+    return () => setImportModalOpen(false);
+  }, []);
+
+  // ---- Close & minimize ----
   const handleClose = useCallback(() => {
-    if (runningRef.current) return;
+    if (isImporting) return;
     onClose?.();
+  }, [isImporting, onClose]);
+
+  // Minimizing only hides this dialog; the server keeps processing.
+  const handleMinimize = useCallback(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || prefersReducedMotion()) {
+      onClose?.();
+      return;
+    }
+    gsap.to(dialog, {
+      scale: 0.3,
+      opacity: 0,
+      x: window.innerWidth * 0.3,
+      y: window.innerHeight * 0.35,
+      duration: 0.32,
+      ease: 'power2.in',
+      onComplete: () => onClose?.()
+    });
   }, [onClose]);
 
   useEffect(() => {
@@ -672,15 +712,17 @@ export default function PersonnelImportModal({
       if (event.key !== 'Escape' || event.defaultPrevented) return;
       // The removal prompt sits on top, so Escape dismisses it first.
       if (pendingRemoveId) setPendingRemoveId(null);
+      else if (cancelPrompt) setCancelPrompt(false);
+      else if (isImporting) handleMinimize();
       else handleClose();
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [handleClose, pendingRemoveId]);
+  }, [handleClose, handleMinimize, isImporting, cancelPrompt, pendingRemoveId]);
 
   // Removing every pending row sends the user back to upload.
   useEffect(() => {
-    if (phase === 'review' && rows.length === 0) setPhase('upload');
+    if (phase === 'review' && rows.length === 0) setStep('upload');
   }, [phase, rows.length]);
 
   // ---- Template & upload ----
@@ -757,7 +799,7 @@ export default function PersonnelImportModal({
     setFileName(file.name);
     setRows(parsed);
     setErrorsOnly(false);
-    setPhase('review');
+    setStep('review');
   };
 
   const onDrop = (event) => {
@@ -829,92 +871,47 @@ export default function PersonnelImportModal({
     stageRef.current?.querySelector(`[data-rank-input="${id}"]`)?.focus();
   }, [rows]);
 
-  // ---- Import ----
-  const runImport = async (targets) => {
-    if (runningRef.current || targets.length === 0) return;
-    runningRef.current = true;
-    setPhase('importing');
-    setProgress({ done: 0, total: targets.length });
-
-    const createdEmails = [];
-    const failures = [];
-    const patch = (id, changes) =>
-      setRows((previous) => previous.map((row) => (row.id === id ? { ...row, ...changes } : row)));
-
+  // ---- Import (runs on the server) ----
+  const launchJob = async (sourceList) => {
+    if (startingRef.current || sourceList.length === 0) return;
+    startingRef.current = true;
+    setStarting(true);
+    setStartError('');
     try {
-      // Rows that timed out earlier may already exist; check before re-creating.
-      let knownEmails = new Set();
-      if (targets.some((row) => row.ambiguous)) {
-        const { data } = await getAllUsers({ includePersonnelWorkspaceProfiles: true });
-        knownEmails = new Set((data || []).map((account) => String(account.email || '').toLowerCase()));
-      }
-
-      for (let index = 0; index < targets.length; index += 1) {
-        const row = targets[index];
-        const email = row.email.trim();
-        const role = normalizeRole(row.role);
-
-        if (row.ambiguous && knownEmails.has(email.toLowerCase())) {
-          patch(row.id, { status: 'created', error: '', ambiguous: false });
-          createdEmails.push(email);
-        } else {
-          let result;
-          try {
-            result = await withTimeout(invitePersonnel(email, {
-              first_name: row.first_name.trim(),
-              last_name: row.last_name.trim(),
-              role,
-              rank: row.rank.trim(),
-              contact_number: row.contact_number.trim(),
-              permissions: getDefaultPermissions(role)
-            }));
-          } catch (error) {
-            result = { data: null, error: error?.message || 'Unexpected error' };
-          }
-
-          if (result?.error) {
-            const failure = describeFailure(result.error);
-            patch(row.id, { status: 'failed', ...failure });
-            failures.push({ email, reason: failure.error });
-          } else {
-            patch(row.id, { status: 'created', error: '', ambiguous: false });
-            createdEmails.push(email);
-          }
-        }
-        setProgress({ done: index + 1, total: targets.length });
-      }
+      await startImportJob({ rows: sourceList.map(toJobRow), sourceRows: sourceList, fileName });
+    } catch (error) {
+      setStartError(error?.message || 'The import could not be started. Nothing was created.');
     } finally {
-      logAdminActivity({
-        actorId: currentUser?.admin_id || null,
-        actorName: currentUser?.name || currentUser?.email || 'Admin User',
-        action: 'Bulk Account Import',
-        actionType: 'registration',
-        status: createdEmails.length > 0 ? 'SUCCESS' : 'FAILED',
-        details: `Bulk imported personnel from CSV: ${createdEmails.length} created, ${failures.length} failed out of ${targets.length}.`,
-        metadata: {
-          source: 'csv_import',
-          file_name: fileName,
-          attempted: targets.length,
-          created_count: createdEmails.length,
-          failed_count: failures.length,
-          created_emails: createdEmails,
-          failures
-        }
-      }).catch((error) => console.warn('Unable to write bulk import audit log:', error));
-
-      runningRef.current = false;
-      if (createdEmails.length > 0) onImported?.();
-      setPhase('results');
+      startingRef.current = false;
+      setStarting(false);
     }
   };
 
-  const startImport = () => runImport(validRows);
-  const retryFailed = () => runImport(failedRows);
+  const confirmImport = () => launchJob(validRows);
+  const retryUnfinished = () => launchJob(retryRows);
 
-  const editFailed = () => {
-    setRows(failedRows.map((row) => ({ ...row, status: 'pending' })));
+  const editUnfinished = () => {
+    setRows(retryRows.map((row) => ({ ...row, status: 'pending', error: '' })));
     setErrorsOnly(false);
-    setPhase('review');
+    dismissImportJob();
+    setStep('review');
+  };
+
+  const finishAndClose = () => {
+    dismissImportJob();
+    onClose?.();
+  };
+
+  const confirmCancelImport = async () => {
+    setCancelBusy(true);
+    try {
+      await cancelImportJob();
+      setCancelPrompt(false);
+    } catch (error) {
+      setStartError(error?.message || 'The cancellation request failed. Please try again.');
+    } finally {
+      setCancelBusy(false);
+    }
   };
 
   // ---- Render helpers ----
@@ -947,14 +944,13 @@ export default function PersonnelImportModal({
   };
 
   const superAdminCount = validRows.filter((row) => normalizeRole(row.role) === 'super_admin').length;
-  const percent = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
   const titles = {
     upload: 'Import Personnel',
     review: 'Review & Edit',
     confirm: 'Confirm Import',
-    importing: 'Importing Accounts',
-    results: 'Import Results'
+    importing: 'Creating Accounts',
+    results: job?.status === 'cancelled' ? 'Import Cancelled' : job?.status === 'lost' ? 'Import Status Unavailable' : 'Import Complete'
   };
   const stepNumber = { upload: 1, review: 2, confirm: 3, importing: 4, results: 5 }[phase];
 
@@ -979,7 +975,7 @@ export default function PersonnelImportModal({
   return (
     <div className="pim-overlay" ref={overlayRef} role="presentation">
       <div
-        className="pim-modal"
+        className={`pim-modal${isCompact ? ' is-compact' : ''}${phase === 'results' ? ' is-wide' : ''}`}
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
@@ -1162,14 +1158,14 @@ export default function PersonnelImportModal({
               </div>
 
               <footer className="pim-footer">
-                <button type="button" className="pim-btn pim-btn-ghost" onClick={() => { setRows([]); setPhase('upload'); }}>
+                <button type="button" className="pim-btn pim-btn-ghost" onClick={() => { setRows([]); setStep('upload'); }}>
                   Upload different file
                 </button>
                 <button
                   type="button"
                   className="pim-btn pim-btn-primary"
                   disabled={validRows.length === 0}
-                  onClick={() => setPhase('confirm')}
+                  onClick={() => setStep('confirm')}
                 >
                   Continue with {validRows.length} valid
                 </button>
@@ -1179,25 +1175,41 @@ export default function PersonnelImportModal({
 
           {phase === 'confirm' && (
             <>
-              {summary}
-              <ul className="pim-confirm-list">
-                <li>{validRows.length} account{validRows.length === 1 ? '' : 's'} will be created, and each person will receive an activation email to set their own password.</li>
-                {errorCount > 0 && <li>{errorCount} row{errorCount === 1 ? '' : 's'} with errors will be skipped.</li>}
-                {superAdminCount > 0 && <li>{superAdminCount} will be created as Super Admin.</li>}
-                <li>This action is recorded in the Audit Logs.</li>
-              </ul>
+              <div className="pim-confirm">
+                <h4 className="pim-confirm-question">
+                  Are you sure you want to create {validRows.length === 1 ? 'this 1 account' : `these ${validRows.length} accounts`}?
+                </h4>
+                <p className="pim-muted">
+                  Each person receives an activation email to set their own password. This action is recorded in the Audit Logs.
+                </p>
+              </div>
+              <div className="pim-summary">
+                <div className="pim-stat"><strong>{activeRows.length}</strong><span>Total Accounts</span></div>
+                <div className="pim-stat is-valid"><strong>{validRows.length}</strong><span>Valid Records</span></div>
+                <div className={`pim-stat${errorCount ? ' is-error' : ''}`}><strong>{errorCount}</strong><span>Errors</span></div>
+              </div>
+              {(errorCount > 0 || superAdminCount > 0) && (
+                <ul className="pim-confirm-list">
+                  {errorCount > 0 && <li>{plural(errorCount, 'row')} with errors will be skipped.</li>}
+                  {superAdminCount > 0 && <li>{superAdminCount} will be created as Super Admin.</li>}
+                </ul>
+              )}
+              {startError && <p className="pim-alert" role="alert"><FiAlertCircle aria-hidden="true" /> {startError}</p>}
               <footer className="pim-footer">
-                <button type="button" className="pim-btn pim-btn-ghost" onClick={() => setPhase('review')}>Back to review</button>
-                <button type="button" className="pim-btn pim-btn-primary" onClick={startImport}>
-                  Confirm &amp; import {validRows.length}
+                <button type="button" className="pim-btn pim-btn-ghost" onClick={handleClose} disabled={starting}>Cancel</button>
+                <button type="button" className="pim-btn pim-btn-primary" onClick={confirmImport} disabled={starting || validRows.length === 0}>
+                  {starting ? 'Starting…' : 'Confirm & Create'}
                 </button>
               </footer>
             </>
           )}
 
           {phase === 'importing' && (
-            <div className="pim-progress" aria-live="polite">
-              <p className="pim-progress-label">Creating accounts... {progress.done}/{progress.total}</p>
+            <div className="pim-progress">
+              <div className="pim-progress-head">
+                <span className="pim-progress-percent">{percent}%</span>
+                <span className="pim-progress-count" role="status">{processed} / {jobTotal} accounts</span>
+              </div>
               <div
                 className="pim-bar"
                 role="progressbar"
@@ -1208,43 +1220,112 @@ export default function PersonnelImportModal({
               >
                 <div className="pim-bar-fill" ref={barRef} />
               </div>
-              <p className="pim-muted">Keep this window open until the import finishes.</p>
+              <div className="pim-summary">
+                <div className="pim-stat is-valid"><strong>{job.created}</strong><span>Created</span></div>
+                <div className={`pim-stat${job.failed ? ' is-error' : ''}`}><strong>{job.failed}</strong><span>Failed</span></div>
+                <div className="pim-stat"><strong>{Math.max(jobTotal - processed, 0)}</strong><span>Remaining</span></div>
+              </div>
+              {job.status === 'cancelling' && (
+                <p className="pim-note">Stopping… records already in progress will finish, the rest will not be created.</p>
+              )}
+              {job.rate_limited && job.status !== 'cancelling' && (
+                <p className="pim-note">The email rate limit was reached. Remaining records are paused and can be retried later.</p>
+              )}
+              {connectionLost && (
+                <p className="pim-note">Reconnecting to the server… The import keeps running.</p>
+              )}
+              {startError && <p className="pim-alert" role="alert"><FiAlertCircle aria-hidden="true" /> {startError}</p>}
+              {cancelPrompt ? (
+                <div className="pim-cancel-box" role="alertdialog" aria-labelledby="pim-cancel-title" aria-describedby="pim-cancel-desc">
+                  <h4 id="pim-cancel-title">Cancel this import?</h4>
+                  <p id="pim-cancel-desc">
+                    {plural(job.created, 'account')} already created will be kept. Records not yet started will not be created.
+                  </p>
+                  <div className="pim-footer">
+                    <button type="button" className="pim-btn pim-btn-ghost" autoFocus onClick={() => setCancelPrompt(false)} disabled={cancelBusy}>
+                      Keep importing
+                    </button>
+                    <button type="button" className="pim-btn pim-btn-danger" onClick={confirmCancelImport} disabled={cancelBusy}>
+                      {cancelBusy ? 'Cancelling…' : 'Yes, cancel import'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <footer className="pim-footer">
+                  <button type="button" className="pim-btn pim-btn-ghost" onClick={handleMinimize}>
+                    <FiMinus aria-hidden="true" /> Minimize
+                  </button>
+                  <button
+                    type="button"
+                    className="pim-btn pim-btn-danger-ghost"
+                    onClick={() => { setStartError(''); setCancelPrompt(true); }}
+                    disabled={job.status === 'cancelling'}
+                  >
+                    Cancel Import
+                  </button>
+                </footer>
+              )}
             </div>
           )}
 
           {phase === 'results' && (
             <>
-              <div className="pim-summary" aria-live="polite">
-                <div className="pim-stat is-valid"><strong>{createdRows.length}</strong><span>Created</span></div>
-                <div className={`pim-stat${failedRows.length ? ' is-error' : ''}`}><strong>{failedRows.length}</strong><span>Failed</span></div>
+              <p className={`pim-banner${job.status === 'lost' || failedItems.length ? ' is-warn' : ''}`} role="status">
+                {job.status === 'cancelled' && `Import cancelled. ${plural(createdItems.length, 'account')} created and kept; ${unfinishedItems.length} not created.`}
+                {job.status === 'lost' && 'Live progress for this import is no longer available. Accounts already created are kept; check the Personnel list for the final result.'}
+                {job.status === 'completed' && (failedItems.length
+                  ? `${plural(createdItems.length, 'account')} created, ${failedItems.length} failed.`
+                  : `All ${plural(createdItems.length, 'account')} created. Activation emails were sent.`)}
+              </p>
+              <div className="pim-summary">
+                <div className="pim-stat is-valid"><strong>{createdItems.length}</strong><span>Created</span></div>
+                <div className={`pim-stat${failedItems.length ? ' is-error' : ''}`}><strong>{failedItems.length}</strong><span>Failed</span></div>
+                {unfinishedItems.length > 0 && (
+                  <div className="pim-stat"><strong>{unfinishedItems.length}</strong><span>Not created</span></div>
+                )}
               </div>
 
               <div className="pim-results">
-                {failedRows.length > 0 && (
+                {failedItems.length > 0 && (
                   <section>
                     <h4>Failed</h4>
                     <ul>
-                      {failedRows.map((row) => (
-                        <li key={row.id} className="pim-result-item is-failed">
+                      {failedItems.map((item) => (
+                        <li key={item.id} className="pim-result-item is-failed">
                           <FiAlertCircle aria-hidden="true" />
                           <div>
-                            <strong>{row.first_name} {row.last_name}</strong> <span className="pim-muted">{row.email}</span>
-                            <p>{row.error}</p>
+                            <strong>{item.first_name} {item.last_name}</strong> <span className="pim-muted">{item.email}</span>
+                            <p>{item.error}</p>
                           </div>
                         </li>
                       ))}
                     </ul>
                   </section>
                 )}
-                {createdRows.length > 0 && (
+                {unfinishedItems.length > 0 && (
+                  <section>
+                    <h4>Not created</h4>
+                    <ul>
+                      {unfinishedItems.map((item) => (
+                        <li key={item.id} className="pim-result-item is-skipped">
+                          <FiMinus aria-hidden="true" />
+                          <div>
+                            <strong>{item.first_name} {item.last_name}</strong> <span className="pim-muted">{item.email}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+                {createdItems.length > 0 && (
                   <section>
                     <h4>Created</h4>
                     <ul>
-                      {createdRows.map((row) => (
-                        <li key={row.id} className="pim-result-item is-ok">
+                      {createdItems.map((item) => (
+                        <li key={item.id} className="pim-result-item is-ok">
                           <FiCheckCircle aria-hidden="true" />
                           <div>
-                            <strong>{row.first_name} {row.last_name}</strong> <span className="pim-muted">{row.email}</span>
+                            <strong>{item.first_name} {item.last_name}</strong> <span className="pim-muted">{item.email}</span>
                             <p>Activation email sent.</p>
                           </div>
                         </li>
@@ -1254,16 +1335,17 @@ export default function PersonnelImportModal({
                 )}
               </div>
 
+              {startError && <p className="pim-alert" role="alert"><FiAlertCircle aria-hidden="true" /> {startError}</p>}
               <footer className="pim-footer">
-                {failedRows.length > 0 && (
+                {canRetry && (
                   <>
-                    <button type="button" className="pim-btn pim-btn-ghost" onClick={editFailed}>Edit failed rows</button>
-                    <button type="button" className="pim-btn pim-btn-ghost" onClick={retryFailed}>
-                      <FiRefreshCw aria-hidden="true" /> Retry {failedRows.length} failed
+                    <button type="button" className="pim-btn pim-btn-ghost" onClick={editUnfinished} disabled={starting}>Edit these rows</button>
+                    <button type="button" className="pim-btn pim-btn-ghost" onClick={retryUnfinished} disabled={starting}>
+                      <FiRefreshCw aria-hidden="true" /> {starting ? 'Starting…' : `Retry ${retryItems.length} not created`}
                     </button>
                   </>
                 )}
-                <button type="button" className="pim-btn pim-btn-primary" onClick={handleClose}>Done</button>
+                <button type="button" className="pim-btn pim-btn-primary" onClick={finishAndClose}>Done</button>
               </footer>
             </>
           )}

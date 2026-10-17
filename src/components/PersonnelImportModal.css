@@ -65,10 +65,6 @@
   overflow: hidden;
 }
 
-.pim-stage.is-importing {
-  justify-content: center;
-}
-
 .pim-stage.is-upload .pim-drop {
   flex: 1 1 auto;
   justify-content: center;
@@ -757,15 +753,29 @@ select.pim-input {
 .pim-progress {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
-  padding: 2rem 0;
+  gap: 1rem;
 }
 
-.pim-progress-label {
-  margin: 0;
-  font-size: 1.1rem;
+.pim-progress-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.pim-progress-percent {
+  font-size: 2.75rem;
   font-weight: 700;
-  color: #1f2937;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+.pim-progress-count {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #475569;
   font-variant-numeric: tabular-nums;
 }
 
@@ -905,5 +915,123 @@ select.pim-input {
   .pim-input,
   .pim-field-pencil {
     transition: none;
+  }
+}
+
+/* Steps 3-5 size to their content instead of the full-height review layout. */
+.pim-modal.is-compact {
+  width: min(95vw, 560px);
+  height: auto;
+  max-height: calc(100vh - 2.5rem);
+  max-height: calc(100dvh - 2.5rem);
+}
+
+.pim-modal.is-compact.is-wide {
+  width: min(95vw, 680px);
+}
+
+.pim-modal.is-compact .pim-stage,
+.pim-modal.is-compact .pim-stage.is-results {
+  flex: 0 1 auto;
+  overflow-y: auto;
+}
+
+.pim-modal.is-compact .pim-results {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.pim-modal.is-compact .pim-summary {
+  flex-wrap: nowrap;
+}
+
+.pim-modal.is-compact .pim-stat {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.pim-confirm {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.pim-confirm-question {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #111827;
+}
+
+.pim-confirm .pim-muted {
+  margin: 0;
+}
+
+.pim-note {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 0.85rem;
+}
+
+.pim-banner {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: #ecfdf3;
+  color: #067647;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.pim-banner.is-warn {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.pim-cancel-box {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: #fef2f2;
+}
+
+.pim-cancel-box h4 {
+  margin: 0;
+  font-size: 1rem;
+  color: #991b1b;
+}
+
+.pim-cancel-box p {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #7f1d1d;
+}
+
+.pim-btn-danger-ghost {
+  background: #ffffff;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.pim-btn-danger-ghost:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.pim-result-item.is-skipped {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+@media (max-width: 640px) {
+  .pim-modal.is-compact {
+    width: 100%;
+  }
+
+  .pim-progress-percent {
+    font-size: 2.25rem;
   }
 }

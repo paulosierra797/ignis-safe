@@ -27,6 +27,10 @@ INVITE_MAX_ATTEMPTS = 3
 INVITE_RETRY_DELAY_SECONDS = 1.5
 
 
+class InviteRateLimited(RuntimeError):
+    """Supabase Auth refused the invite because the email rate limit was reached."""
+
+
 def _invite_user_by_email(email: str, redirect_url: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
     last_error: Optional[Exception] = None
     for attempt in range(1, INVITE_MAX_ATTEMPTS + 1):
@@ -50,6 +54,12 @@ def _invite_user_by_email(email: str, redirect_url: str, metadata: Dict[str, Any
             raise RuntimeError(
                 "The invitation service took too long to respond. Please try again."
             ) from error
+
+        if response.status_code == 429:
+            if attempt < INVITE_MAX_ATTEMPTS:
+                time.sleep(INVITE_RETRY_DELAY_SECONDS * attempt * 2)
+                continue
+            raise InviteRateLimited("The email rate limit was reached.")
 
         if response.status_code >= 500 and attempt < INVITE_MAX_ATTEMPTS:
             last_error = httpx.HTTPStatusError(
@@ -175,6 +185,11 @@ def create_user(
     request: CreateUserRequest,
     caller: Dict[str, Any] = Depends(require_admin),
 ) -> Dict[str, Any]:
+    return create_account(request, caller)
+
+
+def create_account(request: CreateUserRequest, caller: Dict[str, Any]) -> Dict[str, Any]:
+    """Create one invited account. Shared by the single-create endpoint and import jobs."""
     email = str(request.email or "").strip().lower()
     first_name = str(request.first_name or "").strip()
     last_name = str(request.last_name or "").strip()
@@ -295,6 +310,11 @@ def create_user(
             except Exception:
                 pass
         raise
+    except InviteRateLimited as error:
+        raise HTTPException(
+            status_code=429,
+            detail="The email rate limit was reached. Retry this record later.",
+        ) from error
     except Exception as error:
         existing_admin = get_admin_by_email(email)
         if existing_admin:

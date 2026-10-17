@@ -19,6 +19,7 @@ import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import { archiveRecord } from '../utils/archiveService';
 import { BarangayDetailModal, BarangayOverview } from './BarangayLearning';
 import { buildLearningDetails } from '../utils/barangayLearning';
+import { formatMobileUserAge } from '../utils/mobileUserAge';
 import './Progress.css';
 import {
   buildBarangaySummary,
@@ -32,33 +33,6 @@ const prefersReducedMotion = () => (
   typeof window !== 'undefined'
   && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 );
-
-const AGE_BRACKETS = [
-  { max: 17, label: 'Under 18' },
-  { max: 24, label: '18–24' },
-  { max: 34, label: '25–34' },
-  { max: 44, label: '35–44' },
-  { max: 54, label: '45–54' },
-  { max: 64, label: '55–64' },
-  { max: Infinity, label: '65 and above' },
-];
-
-// Only an age range is shown in User Details, never the exact date of birth.
-const getAgeBracket = (user) => {
-  if (user?.ageBracket) return user.ageBracket;
-
-  const birthDate = new Date(user?.birthDate || '');
-  if (!user?.birthDate || Number.isNaN(birthDate.getTime())) return 'Not recorded';
-
-  const today = new Date();
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const hasHadBirthday = today.getMonth() > birthDate.getMonth()
-    || (today.getMonth() === birthDate.getMonth() && today.getDate() >= birthDate.getDate());
-  if (!hasHadBirthday) age -= 1;
-  if (age < 0) return 'Not recorded';
-
-  return AGE_BRACKETS.find((bracket) => age <= bracket.max).label;
-};
 
 const formatDate = (value) => {
   if (!value) return '-';
@@ -145,10 +119,10 @@ export default function Progress() {
   const [successMessage, setSuccessMessage] = useState('');
   const userModalRef = useRef(null);
   const moreDetailsRef = useRef(null);
-  const { currentUser } = useUser();
+  const { currentUser, hasPermission } = useUser();
   // Same gate as the /dashboard/users route: admin role with manage_users.
   const canViewMoreDetails = String(currentUser?.role || '').trim().toLowerCase() === 'admin'
-    && Boolean(currentUser?.permissions?.includes('manage_users'));
+    && hasPermission('manage_users');
   const requestedView = searchParams.get('view');
   const defaultView = location.pathname.endsWith('/users') ? 'users' : 'participation';
   const activeView = requestedView === 'users' || (!requestedView && defaultView === 'users')
@@ -593,8 +567,8 @@ export default function Progress() {
                     <dd>{selectedUser.barangay}</dd>
                   </div>
                   <div className="progress-user-field" data-user-detail-reveal>
-                    <dt className="progress-user-label">Age Bracket</dt>
-                    <dd>{getAgeBracket(selectedUser)}</dd>
+                    <dt className="progress-user-label">Age</dt>
+                    <dd>{selectedUser.ageUnavailable ? 'Temporarily unavailable' : formatMobileUserAge(selectedUser.age)}</dd>
                   </div>
                   <div className="progress-user-field progress-user-field-wide" data-user-detail-reveal>
                     <dt className="progress-user-label">Account Status</dt>

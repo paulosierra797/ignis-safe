@@ -7,7 +7,7 @@ import { supabase } from '../utils/supabaseClient';
 import './ProtectedRoute.css';
 
 export default function ProtectedRoute({ children, requiredPermission, allowedRoles = [] }) {
-  const { currentUser, loading } = useUser();
+  const { currentUser, loading, hasPermission } = useUser();
   const location = useLocation();
   const role = String(currentUser?.role || '').toLowerCase();
   const shouldCheckAcknowledgements = !loading
@@ -116,7 +116,7 @@ export default function ProtectedRoute({ children, requiredPermission, allowedRo
     );
   }
 
-  if (requiredPermission && !currentUser.permissions?.includes(requiredPermission)) {
+  if (requiredPermission && !hasPermission(requiredPermission)) {
     return <Navigate to={normalizedRole === 'personnel' ? '/personnel/operations' : '/dashboard'} replace />;
   }
 

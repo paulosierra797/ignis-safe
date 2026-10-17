@@ -1,3 +1,13 @@
+// A started or abandoned attempt is not a completed assessment result.
+export const isCompletedAssessmentAttempt = (attempt = {}) => {
+  const status = String(attempt.status || '').trim().toLowerCase();
+  if (status && !['submitted', 'completed'].includes(status)) return false;
+  if (!attempt.submitted_at && !['submitted', 'completed'].includes(status)) return false;
+  if (attempt.score == null || String(attempt.score).trim() === '') return false;
+  const score = Number(attempt.score);
+  return Number.isFinite(score) && score >= 0 && score <= 100;
+};
+
 // Pre and post must come from the same round when pairing a learner's scores.
 // Attempts without round_no (database not migrated yet) count as Round 1.
 export const keepLatestRoundAttempts = (attempts = [], getModuleId) => {

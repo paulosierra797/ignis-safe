@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { isAuthFlowGated } from '../utils/authFlowGate';
+import { hasWorkspacePermission } from '../utils/accountAccess';
 
 const DATA_CHANGED_EVENT = 'ignis-safe:data-changed';
 const PUBLIC_PATHS = new Set(['/', '/organizational-chart', '/send-message', '/terms', '/privacy']);
@@ -219,8 +220,7 @@ export const UserProvider = ({ children }) => {
   };
 
   const hasPermission = (permission) => {
-    if (!accountUser || !accountUser.permissions) return false;
-    return accountUser.permissions.includes(permission);
+    return hasWorkspacePermission(accountUser, permission);
   };
 
   const logout = async () => {

@@ -1,6 +1,8 @@
 import { supabase } from './supabaseClient';
 import { getMobileUserLocation, OUTSIDE_DASMARINAS_LOCATION } from './mobileUserLocation';
 import { selectAssessmentAttempts } from './assessmentAttemptsQuery';
+import { normalizeMobileUserAge } from './mobileUserAge';
+import { isCompletedAssessmentAttempt } from './assessmentHistory';
 
 const toNumber = (value, fallback = 0) => {
   const parsed = Number(value);
@@ -209,7 +211,7 @@ const buildModuleProgress = ({ profileId, module, moduleProgressRow, attemptsFor
   const tests = (attemptsForUser || [])
     .filter((attempt) => {
       const assessment = assessmentsById[attempt.assessment_id];
-      return assessment?.module_id === module.id;
+      return assessment?.module_id === module.id && isCompletedAssessmentAttempt(attempt);
     })
     .map((attempt) => {
       const assessment = assessmentsById[attempt.assessment_id] || {};
@@ -278,6 +280,7 @@ export const getProgressPageData = async () => {
       { data: adminRows, error: adminError },
       { data: barangayRows, error: barangayError },
       { data: locationRows, error: locationError },
+      { data: ageRows, error: ageError },
     ] = await Promise.all([
       supabase
         .from('profiles')
@@ -305,6 +308,7 @@ export const getProgressPageData = async () => {
         .eq('is_active', true)
         .order('display_order', { ascending: true, nullsFirst: false }),
       supabase.rpc('get_mobile_registration_locations'),
+      supabase.rpc('get_mobile_registration_ages'),
     ]);
 
     if (profilesError) throw profilesError;
@@ -315,6 +319,7 @@ export const getProgressPageData = async () => {
     if (adminError) throw adminError;
     if (barangayError) throw barangayError;
     if (locationError) throw locationError;
+    if (ageError) console.warn('User ages are temporarily unavailable:', ageError.message);
 
     const safeProfiles = profiles || [];
     const safeModules = modules || [];
@@ -325,6 +330,7 @@ export const getProgressPageData = async () => {
     const safeBarangayRows = barangayRows || [];
     const barangayLookup = buildBarangayLookup(safeBarangayRows);
     const registeredLocations = new Map((locationRows || []).map((row) => [row.user_id, row.location]));
+    const registeredAges = new Map((ageError ? [] : ageRows || []).map((row) => [row.user_id, normalizeMobileUserAge(row.age)]));
     // Internal admin and personnel accounts can also have a profiles row, but
     // the Users page is the public mobile-app user directory. Keep back-office
     // accounts in their dedicated account-management views.
@@ -401,6 +407,8 @@ export const getProgressPageData = async () => {
           profile.email ||
           'User',
         email: profile.email || '-',
+        age: registeredAges.get(profile.id) ?? null,
+        ageUnavailable: Boolean(ageError),
         username: profile.username || '-',
         avatarUrl: profile.avatar_url || null,
         registrationStatus: profile.registration_status || 'Registered',

@@ -98,9 +98,24 @@ const rpc = async <T = unknown>(name: string, args: Record<string, unknown> = {}
 // Encryption: [magic][salt] then frames of [4-byte length|last flag][data][tag]
 // ---------------------------------------------------------------------------
 
+// Reads the 32-byte key from the secret. Accepts base64 or 64-character hex, ignoring
+// stray spaces, line breaks, or wrapping quotes. Returns null when it is not a valid key.
+// Only lengths are ever logged, never the key.
+const readMasterKey = (): Buffer | null => {
+  const raw = (Deno.env.get('BACKUP_ENCRYPTION_KEY') || '').trim().replace(/^(["'])(.*)\1$/s, '$2').replace(/\s+/g, '');
+  if (!raw) return null;
+  const candidates = [
+    /^[0-9a-f]{64}$/i.test(raw) ? Buffer.from(raw, 'hex') : null,
+    Buffer.from(raw.replace(/-/g, '+').replace(/_/g, '/'), 'base64'),
+  ];
+  const key = candidates.find((candidate) => candidate && candidate.length === 32) || null;
+  if (!key) console.error(`BACKUP_ENCRYPTION_KEY is set but is not a 32-byte key (text length ${raw.length}).`);
+  return key;
+};
+
 const masterKey = () => {
-  const key = Buffer.from(Deno.env.get('BACKUP_ENCRYPTION_KEY') || '', 'base64');
-  if (key.length !== 32) throw new UserError('Backup encryption is not set up yet. Ask the system owner to finish setup.');
+  const key = readMasterKey();
+  if (!key) throw new UserError('Backup encryption is not set up yet. Ask the system owner to finish setup.');
   return key;
 };
 
@@ -802,8 +817,7 @@ Deno.serve(async (request) => {
 
     // Read-only setup check. Only reports whether the key is valid, never the key.
     if (action === 'status') {
-      const keyBytes = Buffer.from(Deno.env.get('BACKUP_ENCRYPTION_KEY') || '', 'base64');
-      return jsonResponse({ data: { encryptionReady: keyBytes.length === 32 }, error: null });
+      return jsonResponse({ data: { encryptionReady: readMasterKey() !== null }, error: null });
     }
 
     if (action === 'create') {

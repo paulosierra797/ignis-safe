@@ -1,8 +1,21 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { Line } from 'react-chartjs-2';
+import {
+  FaUsers,
+  FaRegClock,
+  FaUserCheck,
+  FaClipboardCheck,
+  FaCalendarAlt,
+  FaUserPlus,
+  FaMobileAlt,
+  FaChartLine,
+  FaGraduationCap,
+  FaBookOpen,
+  FaUserFriends,
+} from 'react-icons/fa';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -80,8 +93,6 @@ const getKnowledgeLevel = (value) => {
 
 const percentOf = (value, total) => (total > 0 ? clampPercent((toNumber(value, 0) / total) * 100) : 0);
 
-const RING_RADIUS = 32;
-
 const LINE_OPTIONS = {
   responsive: true,
   maintainAspectRatio: false,
@@ -98,6 +109,126 @@ const LINE_OPTIONS = {
     x: { ticks: { color: '#667085', font: { size: 11 } }, grid: { display: false } },
   },
 };
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Ignore keys pressed on a nested control (tooltip label, select) so they do not trigger the card.
+const activateOnKey = (event, action) => {
+  if (event.target !== event.currentTarget) return;
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    action();
+  }
+};
+
+// Number that counts up to its value; shows "..." while loading.
+function CountUp({ value, loading = false, prefix = '', suffix = '' }) {
+  const ref = useRef(null);
+  const current = useRef(0);
+  const target = toNumber(value, 0);
+  const decimals = Math.min(2, (String(target).split('.')[1] || '').length);
+  const format = useCallback((n) => `${prefix}${n.toFixed(decimals)}${suffix}`, [prefix, suffix, decimals]);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (loading || !el) return undefined;
+    if (prefersReducedMotion()) {
+      current.current = target;
+      el.textContent = format(target);
+      return undefined;
+    }
+    el.textContent = format(current.current);
+    const tween = gsap.to(current, {
+      current: target,
+      duration: 1.1,
+      ease: 'power3.out',
+      onUpdate: () => { el.textContent = format(current.current); },
+      onComplete: () => { el.textContent = format(target); },
+    });
+    return () => tween.kill();
+  }, [target, loading, format]);
+
+  return <span ref={ref}>{loading ? '...' : format(target)}</span>;
+}
+
+// Small line graph that wipes in from the left whenever its data changes.
+function Sparkline({ values }) {
+  const ref = useRef(null);
+  const series = values.length > 1 ? values : [values[0] || 0, values[0] || 0];
+  const max = Math.max(...series, 1);
+  const step = 100 / (series.length - 1);
+  const points = series.map((v, i) => [i * step, 34 - (v / max) * 30]);
+  const line = points.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+  const signature = series.join(',');
+
+  useLayoutEffect(() => {
+    if (!ref.current || prefersReducedMotion()) return undefined;
+    const tween = gsap.fromTo(
+      ref.current,
+      { clipPath: 'inset(0 100% 0 0)' },
+      { clipPath: 'inset(0 0% 0 0)', duration: 1, ease: 'power2.out', clearProps: 'clipPath' },
+    );
+    return () => tween.kill();
+  }, [signature]);
+
+  return (
+    <svg ref={ref} className="ov-spark" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+      <path className="ov-spark-area" d={`${line} L100 40 L0 40 Z`} />
+      <path className="ov-spark-line" d={line} vectorEffect="non-scaling-stroke" />
+    </svg>
+  );
+}
+
+function Meter({ percent, tone, color }) {
+  return (
+    <div className="ov-track">
+      <span
+        className={`ov-fill ${tone ? `is-${tone}` : ''}`.trim()}
+        style={{ width: `${percent}%`, ...(color ? { background: color } : null) }}
+      />
+    </div>
+  );
+}
+
+function Card({ onActivate, aria, className = '', children }) {
+  const interactive = Boolean(onActivate);
+  const interactiveProps = interactive
+    ? {
+        role: 'button',
+        tabIndex: 0,
+        onClick: onActivate,
+        onKeyDown: (event) => activateOnKey(event, onActivate),
+        'aria-label': aria,
+      }
+    : null;
+  return (
+    <div className={`ov-card ov-reveal ${interactive ? 'ov-clickable' : ''} ${className}`.trim()} {...interactiveProps}>
+      {children}
+    </div>
+  );
+}
+
+function CardHead({ label, hint, icon: Icon, title = false, children }) {
+  const text = title
+    ? <h4 className="ov-card-title">{label}</h4>
+    : <span className="ov-label">{label}</span>;
+  return (
+    <div className="ov-card-head">
+      <Hint text={hint}>{text}</Hint>
+      {children || (Icon && <span className="ov-icon" data-hint-avoid aria-hidden="true"><Icon /></span>)}
+    </div>
+  );
+}
+
+function SectionHead({ icon: Icon, title, hint }) {
+  return (
+    <header className="ov-section-head ov-reveal">
+      <span className="ov-section-icon" data-hint-avoid aria-hidden="true">{Icon && <Icon />}</span>
+      <h3 className="ov-section-title"><Hint text={hint}>{title}</Hint></h3>
+    </header>
+  );
+}
 
 
 export default function Dashboard() {
@@ -416,31 +547,56 @@ if (currentKnowledge < 40) {
 
   const knowledgeGainPrefix = analyticsStats.knowledgeGainPercent > 0 ? '+' : '';
 
-  // Ignore keys pressed on a nested control (tooltip label, select) so they do not trigger the card.
-  const handleActivateKeyDown = (event, action) => {
-    if (event.target !== event.currentTarget) return;
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      action();
-    }
-  };
-
-  const handleCardKeyDown = (event, path) => handleActivateKeyDown(event, () => navigate(path));
+  const go = (path) => () => navigate(path);
 
   const mainRef = useRef(null);
 
-  // Subtle entrance only; skipped when reduced motion is preferred.
+  // Staggered entrance, graph wipe and hover lift; all skipped when reduced motion is preferred.
   useGSAP(() => {
     const media = gsap.matchMedia();
     media.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.from('.ov-reveal', { y: 12, opacity: 0, duration: 0.5, stagger: 0.07, ease: 'power3.out', clearProps: 'transform,opacity' });
+      gsap.from('.ov-reveal', {
+        y: 22,
+        opacity: 0,
+        scale: 0.98,
+        duration: 0.7,
+        stagger: 0.05,
+        ease: 'power3.out',
+        clearProps: 'transform,opacity',
+      });
+      gsap.from('.ov-chart', {
+        clipPath: 'inset(0 100% 0 0)',
+        duration: 1.1,
+        delay: 0.6,
+        ease: 'power2.inOut',
+        clearProps: 'clipPath',
+      });
+
+      const cleanups = gsap.utils.toArray('.ov-card').map((card) => {
+        const icon = card.querySelector('.ov-icon');
+        const lift = card.classList.contains('ov-clickable');
+        const enter = () => {
+          if (lift) gsap.to(card, { y: -4, duration: 0.3, ease: 'power2.out', overwrite: 'auto' });
+          if (icon) gsap.to(icon, { scale: 1.12, rotate: -6, duration: 0.35, ease: 'back.out(2)', overwrite: 'auto' });
+        };
+        const leave = () => {
+          if (lift) gsap.to(card, { y: 0, duration: 0.3, ease: 'power2.out', overwrite: 'auto' });
+          if (icon) gsap.to(icon, { scale: 1, rotate: 0, duration: 0.3, ease: 'power2.out', overwrite: 'auto' });
+        };
+        card.addEventListener('mouseenter', enter);
+        card.addEventListener('mouseleave', leave);
+        return () => {
+          card.removeEventListener('mouseenter', enter);
+          card.removeEventListener('mouseleave', leave);
+        };
+      });
+      return () => cleanups.forEach((cleanup) => cleanup());
     });
     return () => media.revert();
   }, { scope: mainRef });
 
   const gainClass = isNegative ? 'is-negative' : 'is-positive';
   const attendance = clampPercent(personnelStats.attendancePercentage);
-  const ringCircumference = 2 * Math.PI * RING_RADIUS;
   const totalPersonnel = toNumber(personnelStats.totalPersonnel, 0);
   const show = (loading, value) => (loading ? '...' : value);
 
@@ -472,47 +628,62 @@ if (currentKnowledge < 40) {
 
   const registrationMax = Math.max(mobileStats.newRegistrationsCurrent, mobileStats.newRegistrationsPrevious, 1);
 
-  const personnelRows = [
-    {
-      key: 'onDuty',
-      label: 'On Duty',
-      hint: 'Assigned today and not on approved leave.',
-      value: todayPersonnel.onDuty.length,
+  const onDutyCount = todayPersonnel.onDuty.length;
+  const onLeaveCount = todayPersonnel.onLeave.length;
+  const activeSeries = (chartsData.userOverview.values || []).slice(-7).map((value) => toNumber(value, 0));
+  const widthOf = (loading, count) => `${loading ? 0 : percentOf(count, totalPersonnel)}%`;
+
+  // Cards that show a headcount and its share of all personnel.
+  const shareCards = {
+    shiftA: {
+      label: 'Shift A',
+      hint: 'People assigned to Shift A today.',
+      icon: FaRegClock,
+      count: shiftAssignments.shiftA.length,
+      loading: shiftAssignmentsLoading,
+      onActivate: () => setIsShiftAModalOpen(true),
+      aria: 'View personnel assigned to Shift A today',
+    },
+    shiftB: {
+      label: 'Shift B',
+      hint: 'People assigned to Shift B today.',
+      icon: FaRegClock,
+      count: shiftAssignments.shiftB.length,
+      loading: shiftAssignmentsLoading,
+      onActivate: () => setIsShiftBModalOpen(true),
+      aria: 'View personnel assigned to Shift B today',
+    },
+    onDuty: {
+      label: 'On Duty Today',
+      hint: 'Working today and not on approved leave.',
+      icon: FaClipboardCheck,
+      count: onDutyCount,
       loading: todayPersonnelLoading,
       onActivate: () => setIsOnDutyModalOpen(true),
       aria: 'View personnel on duty today',
     },
-    {
-      key: 'onLeave',
-      label: 'On Leave',
-      hint: 'Personnel on approved leave today.',
-      value: todayPersonnel.onLeave.length,
+    onLeave: {
+      label: 'On Leave Today',
+      hint: 'People away on approved leave today.',
+      icon: FaCalendarAlt,
+      count: onLeaveCount,
       loading: todayPersonnelLoading,
       tone: 'warn',
       onActivate: () => setIsOnLeaveModalOpen(true),
       aria: 'View personnel on leave today',
     },
-    {
-      key: 'shiftA',
-      label: 'Shift A',
-      hint: 'Personnel assigned to Shift A today.',
-      value: shiftAssignments.shiftA.length,
-      loading: shiftAssignmentsLoading,
-      tone: 'neutral',
-      onActivate: () => setIsShiftAModalOpen(true),
-      aria: 'View personnel assigned to Shift A today',
-    },
-    {
-      key: 'shiftB',
-      label: 'Shift B',
-      hint: 'Personnel assigned to Shift B today.',
-      value: shiftAssignments.shiftB.length,
-      loading: shiftAssignmentsLoading,
-      tone: 'neutral',
-      onActivate: () => setIsShiftBModalOpen(true),
-      aria: 'View personnel assigned to Shift B today',
-    },
-  ];
+  };
+
+  const renderShareCard = (row) => (
+    <Card onActivate={row.onActivate} aria={row.aria}>
+      <CardHead label={row.label} hint={row.hint} icon={row.icon} />
+      <strong className="ov-number"><CountUp value={row.count} loading={row.loading} /></strong>
+      <div className="ov-card-foot">
+        <Meter percent={row.loading ? 0 : percentOf(row.count, totalPersonnel)} tone={row.tone} />
+        <span className="ov-sub">{show(row.loading, `${Math.round(percentOf(row.count, totalPersonnel))}% of personnel`)}</span>
+      </div>
+    </Card>
+  );
 
   return (
     <div className="dashboard-container">
@@ -533,265 +704,168 @@ if (currentKnowledge < 40) {
 
         <div className="ov-stack">
           {/* Personnel Operations */}
-          <section className="ov-panel ov-reveal">
-            <h3 className="ov-title">
-              <Hint text="Staffing, attendance, duty and leave for today.">Personnel Operations</Hint>
-            </h3>
-            <div className="ov-personnel">
-              <div className="ov-kpis">
-                <div
-                  className="ov-kpi ov-clickable"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate('/dashboard/accounts?tab=personnel')}
-                  onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/accounts?tab=personnel')}
-                  aria-label="Open Personnel Directory"
-                >
-                  <Hint text="All registered personnel accounts."><span className="ov-label">Total Personnel</span></Hint>
-                  <strong className="ov-number">{personnelStats.totalPersonnel}</strong>
-                </div>
-
-                <div
-                  className="ov-kpi ov-ring-kpi ov-clickable"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate('/attendance-admin')}
-                  onKeyDown={(event) => handleCardKeyDown(event, '/attendance-admin')}
-                  aria-label="Open Attendance page"
-                >
-                  <svg className="ov-ring" viewBox="0 0 80 80" aria-hidden="true">
-                    <circle className="ov-ring-track" cx="40" cy="40" r={RING_RADIUS} />
-                    <circle
-                      className="ov-ring-fill"
-                      cx="40"
-                      cy="40"
-                      r={RING_RADIUS}
-                      strokeDasharray={ringCircumference}
-                      strokeDashoffset={ringCircumference * (1 - attendance / 100)}
-                    />
-                  </svg>
-                  <div>
-                    <Hint text="Share of expected personnel who logged attendance today."><span className="ov-label">Today's Attendance</span></Hint>
-                    <strong className="ov-number">{attendance}<small>%</small></strong>
+          <section className="ov-section ov-tone-personnel">
+            <SectionHead icon={FaUsers} title="Personnel Operations" hint="Staffing, attendance, duty and leave for today." />
+            <div className="ov-grid ov-grid--3">
+              <Card onActivate={go('/dashboard/accounts?tab=personnel')} aria="Open Personnel Directory">
+                <CardHead label="Total Personnel" hint="Everyone with a registered personnel account." icon={FaUsers} />
+                <strong className="ov-number"><CountUp value={personnelStats.totalPersonnel} /></strong>
+                <div className="ov-card-foot">
+                  <div className="ov-track ov-track--split">
+                    <span className="ov-fill" style={{ width: widthOf(todayPersonnelLoading, onDutyCount) }} />
+                    <span className="ov-fill is-warn" style={{ width: widthOf(todayPersonnelLoading, onLeaveCount) }} />
                   </div>
+                  <span className="ov-sub">{show(todayPersonnelLoading, `${onDutyCount} on duty · ${onLeaveCount} on leave`)}</span>
                 </div>
-              </div>
+              </Card>
 
-              <div className="ov-bars">
-                {personnelRows.map((row) => (
-                  <div
-                    key={row.key}
-                    className="ov-row ov-clickable"
-                    role="button"
-                    tabIndex={0}
-                    onClick={row.onActivate}
-                    onKeyDown={(event) => handleActivateKeyDown(event, row.onActivate)}
-                    aria-label={row.aria}
-                  >
-                    <div className="ov-row-top">
-                      <Hint text={row.hint}><span className="ov-label">{row.label}</span></Hint>
-                      <strong>{show(row.loading, row.value)}</strong>
-                    </div>
-                    <div className="ov-track">
-                      <span
-                        className={`ov-fill ${row.tone ? `is-${row.tone}` : ''}`}
-                        style={{ width: `${row.loading ? 0 : percentOf(row.value, totalPersonnel)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {renderShareCard(shareCards.shiftA)}
+              {renderShareCard(shareCards.shiftB)}
+
+              <Card onActivate={go('/attendance-admin')} aria="Open Attendance page">
+                <CardHead label="Today's Attendance" hint="How many expected people have checked in today." icon={FaUserCheck} />
+                <strong className="ov-number"><CountUp value={attendance} suffix="%" /></strong>
+                <div className="ov-card-foot">
+                  <Meter percent={attendance} />
+                  <span className="ov-sub">of expected personnel</span>
+                </div>
+              </Card>
+
+              {renderShareCard(shareCards.onDuty)}
+              {renderShareCard(shareCards.onLeave)}
             </div>
           </section>
 
-          <div className="ov-two">
-            {/* Mobile Learning Activity */}
-            <section className="ov-panel ov-reveal">
-              <h3 className="ov-title">
-                <Hint text="How many learners joined, use the app, and finish training.">Mobile Learning Activity</Hint>
-              </h3>
-              <div className="ov-kpis ov-kpis--row">
-                <div
-                  className="ov-kpi ov-clickable"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate('/dashboard/users?view=users')}
-                  onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/users?view=users')}
-                  aria-label="Open Users page"
-                >
-                  <Hint text="All learner accounts in the mobile app."><span className="ov-label">Total Registered</span></Hint>
-                  <strong className="ov-number">{show(mobileStatsLoading, mobileStats.totalRegistered)}</strong>
+          {/* Mobile Learning Activity */}
+          <section className="ov-section ov-tone-mobile">
+            <SectionHead icon={FaMobileAlt} title="Mobile Learning Activity" hint="How many learners joined, use the app and finish training." />
+            <div className="ov-grid ov-grid--4">
+              <Card onActivate={go('/dashboard/users?view=users')} aria="Open Users page">
+                <CardHead label="Total Registered" hint="All learner accounts in the mobile app." icon={FaUserFriends} />
+                <strong className="ov-number"><CountUp value={mobileStats.totalRegistered} loading={mobileStatsLoading} /></strong>
+                <div className="ov-card-foot">
+                  <Meter percent={mobileStatsLoading ? 0 : percentOf(mobileStats.registeredThisMonth, mobileStats.totalRegistered)} />
                   <span className={`ov-sub ${mobileStats.registeredThisMonth > 0 ? 'is-positive' : ''}`}>
                     {show(mobileStatsLoading, `${mobileStats.registeredThisMonth > 0 ? '+' : ''}${mobileStats.registeredThisMonth} this month`)}
                   </span>
                 </div>
-                <div
-                  className="ov-kpi ov-clickable"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate('/dashboard/analytics')}
-                  onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
-                  aria-label="Open Analytics page"
-                >
-                  <Hint text="Learners who used the app today."><span className="ov-label">Active Today</span></Hint>
-                  <strong className="ov-number">{show(mobileStatsLoading, mobileStats.activeUsersToday)}</strong>
+              </Card>
+
+              <Card onActivate={go('/dashboard/analytics')} aria="Open Analytics page">
+                <CardHead label="Active Users Today" hint="Learners who opened the app today." icon={FaMobileAlt} />
+                <strong className="ov-number"><CountUp value={mobileStats.activeUsersToday} loading={mobileStatsLoading} /></strong>
+                <div className="ov-card-foot">
+                  <Sparkline values={mobileStatsLoading ? [] : activeSeries} />
                   <span className="ov-sub">{show(mobileStatsLoading, `This week: ${mobileStats.activeUsersThisWeek}`)}</span>
                 </div>
-              </div>
+              </Card>
 
-              <div className="ov-bars">
-                <div
-                  className="ov-row ov-clickable"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate('/dashboard/users?view=users')}
-                  onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/users?view=users')}
-                  aria-label="Open Users page"
-                >
-                  <div className="ov-row-top">
-                    <Hint text="Accounts created in the last 30 days, compared with the 30 days before."><span className="ov-label">New Registrations</span></Hint>
-                  </div>
+              <Card onActivate={go('/dashboard/users?view=users')} aria="Open Users page">
+                <CardHead label="New Registrations" hint="Accounts created in the last 30 days, compared with the 30 days before." icon={FaUserPlus} />
+                <strong className="ov-number"><CountUp value={mobileStats.newRegistrationsCurrent} loading={mobileStatsLoading} /></strong>
+                <div className="ov-card-foot">
                   <div className="ov-compare">
                     <span className="ov-compare-label">Last 30 days</span>
-                    <div className="ov-track"><span className="ov-fill" style={{ width: `${mobileStatsLoading ? 0 : percentOf(mobileStats.newRegistrationsCurrent, registrationMax)}%` }} /></div>
+                    <Meter percent={mobileStatsLoading ? 0 : percentOf(mobileStats.newRegistrationsCurrent, registrationMax)} />
                     <strong>{show(mobileStatsLoading, mobileStats.newRegistrationsCurrent)}</strong>
                   </div>
                   <div className="ov-compare">
                     <span className="ov-compare-label">30 days before</span>
-                    <div className="ov-track"><span className="ov-fill is-neutral" style={{ width: `${mobileStatsLoading ? 0 : percentOf(mobileStats.newRegistrationsPrevious, registrationMax)}%` }} /></div>
+                    <Meter tone="neutral" percent={mobileStatsLoading ? 0 : percentOf(mobileStats.newRegistrationsPrevious, registrationMax)} />
                     <strong>{show(mobileStatsLoading, mobileStats.newRegistrationsPrevious)}</strong>
                   </div>
                 </div>
+              </Card>
 
-                <div
-                  className="ov-row ov-clickable"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => navigate('/dashboard/progress?view=users')}
-                  onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/progress?view=users')}
-                  aria-label="Open Progress page"
-                >
-                  <div className="ov-row-top">
-                    <Hint text="Average completion across all training modules."><span className="ov-label">Training Completion</span></Hint>
-                    <strong>{show(mobileStatsLoading, `${mobileStats.trainingCompletionPercent}%`)}</strong>
-                  </div>
-                  <div className="ov-track">
-                    <span className="ov-fill" style={{ width: `${mobileStatsLoading ? 0 : clampPercent(mobileStats.trainingCompletionPercent)}%` }} />
-                  </div>
+              <Card onActivate={go('/dashboard/progress?view=users')} aria="Open Progress page">
+                <CardHead label="Training Completion" hint="Average completion across all training modules." icon={FaGraduationCap} />
+                <strong className="ov-number"><CountUp value={mobileStats.trainingCompletionPercent} loading={mobileStatsLoading} suffix="%" /></strong>
+                <div className="ov-card-foot">
+                  <Meter percent={mobileStatsLoading ? 0 : clampPercent(mobileStats.trainingCompletionPercent)} />
+                  <span className="ov-sub">across all modules</span>
                 </div>
-              </div>
-            </section>
+              </Card>
+            </div>
+          </section>
 
-            {/* Knowledge Journey */}
-            <section className="ov-panel ov-reveal">
-              <h3 className="ov-title">
-                <Hint text="Average score before training compared with the latest score.">Knowledge Journey</Hint>
-              </h3>
-              <div
-                className="ov-journey ov-clickable"
-                role="button"
-                tabIndex={0}
-                onClick={() => navigate('/dashboard/analytics')}
-                onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
-                aria-label="Open detailed learning analytics"
-              >
-                <div className="ov-kpi">
-                  <Hint text="Change from the starting score to the latest score."><span className="ov-label">Change</span></Hint>
-                  <strong className={`ov-number ${gainClass}`}>
-                    {show(analyticsLoading, `${knowledgeGainPrefix}${knowledgeGain}%`)}
-                  </strong>
-                </div>
-                <div className="ov-row">
-                  <div className="ov-row-top">
-                    <Hint text="Average score before learners began training."><span className="ov-label">Starting</span></Hint>
-                    <strong>{show(analyticsLoading, `${startingKnowledge}%`)}</strong>
+          {/* Learning Outcome */}
+          <section className="ov-section ov-tone-outcome">
+            <SectionHead icon={FaChartLine} title="Learning Outcome" hint="How much learners have improved and how far training has progressed." />
+            <div className="ov-grid ov-grid--3 ov-grid--outcome">
+              <Card className="ov-card--tall" onActivate={go('/dashboard/analytics')} aria="Open detailed learning analytics">
+                <CardHead title label="Knowledge Journey" hint="Average score before training compared with the latest score." icon={FaBookOpen} />
+                <div className="ov-journey">
+                  <div className="ov-kpi">
+                    <Hint text="Change from the starting score to the latest score."><span className="ov-label">Change</span></Hint>
+                    <strong className={`ov-number ${gainClass}`}>
+                      <CountUp value={knowledgeGain} loading={analyticsLoading} prefix={knowledgeGainPrefix} suffix="%" />
+                    </strong>
                   </div>
-                  <div className="ov-track ov-track--lg">
-                    <span className="ov-fill" style={{ width: `${analyticsLoading ? 0 : clampPercent(startingKnowledge)}%`, background: startingColor }} />
-                  </div>
-                  <span className="ov-sub">{getKnowledgeLevel(startingKnowledge)}</span>
-                </div>
-                <div className="ov-row">
-                  <div className="ov-row-top">
-                    <Hint text="Average of the latest learner scores."><span className="ov-label">Current</span></Hint>
-                    <strong>{show(analyticsLoading, `${currentKnowledge}%`)}</strong>
-                  </div>
-                  <div className="ov-track ov-track--lg">
-                    <span className="ov-fill" style={{ width: `${analyticsLoading ? 0 : clampPercent(currentKnowledge)}%`, background: currentColor }} />
-                  </div>
-                  <span className="ov-sub">{getKnowledgeLevel(currentKnowledge)}</span>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          {/* Learning Performance */}
-          <div className="ov-two ov-two--wide">
-            <section
-              className="ov-panel ov-reveal ov-clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate('/dashboard/analytics')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/analytics')}
-              aria-label="Open Analytics page"
-            >
-              <div className="ov-title-row">
-                <h3 className="ov-title">
-                  <Hint text="Training attempts started and submitted in each period.">Learning Activity</Hint>
-                </h3>
-                <select
-                  className="ov-select"
-                  value={activityTimeframe}
-                  aria-label="Learning activity timeframe"
-                  onClick={(event) => event.stopPropagation()}
-                  onMouseDown={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
-                  onChange={(event) => {
-                    event.stopPropagation();
-                    setActivityTimeframe(event.target.value);
-                  }}
-                >
-                  {ACTIVITY_TIMEFRAME_OPTIONS.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="ov-chart">
-                <Line data={lineData} options={LINE_OPTIONS} />
-              </div>
-            </section>
-
-            <section
-              className="ov-panel ov-reveal ov-clickable"
-              role="button"
-              tabIndex={0}
-              onClick={() => navigate('/dashboard/progress?view=users')}
-              onKeyDown={(event) => handleCardKeyDown(event, '/dashboard/progress?view=users')}
-              aria-label="Open Progress page"
-            >
-              <h3 className="ov-title">
-                <Hint text="Share of learners who finished each module.">Completion by Module</Hint>
-              </h3>
-              <div className="ov-bars ov-bars--scroll">
-                {completionRows.length === 0 ? (
-                  <p className="ov-empty">{chartsLoading ? 'Loading...' : 'No module progress data yet.'}</p>
-                ) : completionRows.map((row) => (
-                  <div className="ov-row" key={row.label}>
+                  <div className="ov-row">
                     <div className="ov-row-top">
-                      <span className="ov-label">{row.label}</span>
-                      <strong>{show(chartsLoading, `${Math.round(row.value)}%`)}</strong>
+                      <Hint text="Average score before learners began training."><span className="ov-label">Starting</span></Hint>
+                      <strong>{show(analyticsLoading, `${startingKnowledge}%`)}</strong>
                     </div>
-                    <div className="ov-track">
-                      <span
-                        className={`ov-fill ${row.value >= 80 ? '' : 'is-warn'}`}
-                        style={{ width: `${chartsLoading ? 0 : clampPercent(row.value)}%` }}
-                      />
+                    <div className="ov-track ov-track--lg">
+                      <span className="ov-fill" style={{ width: `${analyticsLoading ? 0 : clampPercent(startingKnowledge)}%`, background: startingColor }} />
                     </div>
+                    <span className="ov-sub">{getKnowledgeLevel(startingKnowledge)}</span>
                   </div>
-                ))}
-              </div>
-            </section>
-          </div>
+                  <div className="ov-row">
+                    <div className="ov-row-top">
+                      <Hint text="Average of the latest learner scores."><span className="ov-label">Current</span></Hint>
+                      <strong>{show(analyticsLoading, `${currentKnowledge}%`)}</strong>
+                    </div>
+                    <div className="ov-track ov-track--lg">
+                      <span className="ov-fill" style={{ width: `${analyticsLoading ? 0 : clampPercent(currentKnowledge)}%`, background: currentColor }} />
+                    </div>
+                    <span className="ov-sub">{getKnowledgeLevel(currentKnowledge)}</span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="ov-card--tall" onActivate={go('/dashboard/analytics')} aria="Open Analytics page">
+                <CardHead title label="Learning Activity" hint="Training attempts started and submitted in each period.">
+                  <select
+                    className="ov-select"
+                    value={activityTimeframe}
+                    aria-label="Learning activity timeframe"
+                    onClick={(event) => event.stopPropagation()}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                    onChange={(event) => {
+                      event.stopPropagation();
+                      setActivityTimeframe(event.target.value);
+                    }}
+                  >
+                    {ACTIVITY_TIMEFRAME_OPTIONS.map((option) => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
+                </CardHead>
+                <div className="ov-chart">
+                  <Line data={lineData} options={LINE_OPTIONS} />
+                </div>
+              </Card>
+
+              <Card className="ov-card--tall" onActivate={go('/dashboard/progress?view=users')} aria="Open Progress page">
+                <CardHead title label="Completion by Module" hint="Share of learners who finished each module." icon={FaClipboardCheck} />
+                <div className="ov-bars ov-bars--scroll">
+                  {completionRows.length === 0 ? (
+                    <p className="ov-empty">{chartsLoading ? 'Loading...' : 'No module progress data yet.'}</p>
+                  ) : completionRows.map((row) => (
+                    <div className="ov-row" key={row.label}>
+                      <div className="ov-row-top">
+                        <span className="ov-label">{row.label}</span>
+                        <strong>{show(chartsLoading, `${Math.round(row.value)}%`)}</strong>
+                      </div>
+                      <Meter tone={row.value >= 80 ? undefined : 'warn'} percent={chartsLoading ? 0 : clampPercent(row.value)} />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </section>
         </div>
 
         <AIRecommendationsDialog />

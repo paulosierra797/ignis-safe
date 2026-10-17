@@ -8,17 +8,20 @@
 .hint:focus { outline: none; }
 .hint:focus-visible { outline: 2px solid rgba(185, 28, 28, 0.35); outline-offset: 3px; border-radius: 4px; }
 
+/* Rendered in a portal and positioned by Hint.jsx so it is never clipped or covering its anchor. */
 .hint-tip {
-  position: absolute;
+  position: fixed;
+  top: 0;
   left: 0;
-  z-index: 60;
+  z-index: 1000;
   width: max-content;
-  max-width: min(280px, 78vw);
-  padding: 0.55rem 0.7rem;
+  max-width: min(240px, 78vw);
+  padding: 0.5rem 0.7rem;
   border-radius: 8px;
   background: #1e293b;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
   color: #f8fafc;
+  font-family: inherit;
   font-size: 0.74rem;
   font-weight: 500;
   letter-spacing: 0;
@@ -27,20 +30,15 @@
   text-transform: none;
   white-space: normal;
   pointer-events: none;
-  opacity: 0;
   visibility: hidden;
-  transition: opacity 160ms ease, transform 160ms ease, visibility 160ms;
+  animation: hint-in 150ms ease-out;
 }
-.hint--top .hint-tip { bottom: calc(100% + 8px); transform: translateY(4px); }
-.hint--bottom .hint-tip { top: calc(100% + 8px); transform: translateY(-4px); }
 
-.hint:hover .hint-tip,
-.hint:focus-within .hint-tip {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
+@keyframes hint-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hint-tip { transition: none; }
+  .hint-tip { animation: none; }
 }

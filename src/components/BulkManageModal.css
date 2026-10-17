@@ -1,4 +1,6 @@
-/* Bulk Manage: compact 8px-grid layout, surfaces and spacing instead of rules. */
+/* Bulk Manage: 8px-grid layout, surfaces and spacing instead of rules.
+   --bm-pad is the single outer inset (header, body, footer); --bm-inset is the
+   shared horizontal inset of group heads and rows so their edges line up. */
 .bm-overlay {
   position: fixed;
   inset: 0;
@@ -15,6 +17,8 @@
   flex-direction: column;
   width: min(720px, 100%);
   max-height: min(86vh, 760px);
+  --bm-pad: 24px;
+  --bm-inset: 16px;
   background: #ffffff;
   border-radius: 16px;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
@@ -28,13 +32,18 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 24px;
+  padding: var(--bm-pad);
+}
+
+.bm-header {
+  padding-bottom: 16px;
 }
 
 .bm-header h2 {
   margin: 0;
   font-size: 1.15rem;
   font-weight: 700;
+  line-height: 32px;
 }
 
 .bm-footer {
@@ -44,10 +53,17 @@
 .bm-body {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   gap: 16px;
-  padding: 8px 24px 24px;
+  padding: 0 calc(var(--bm-pad) - 8px) 16px var(--bm-pad);
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-gutter: stable;
   min-height: 160px;
+}
+
+.bm-body > * {
+  flex-shrink: 0;
 }
 
 .bm-icon-btn {
@@ -108,8 +124,9 @@
 .bm-group-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 4px 8px;
+  gap: 16px;
+  min-height: 32px;
+  padding: 0 var(--bm-inset);
   cursor: pointer;
   font-weight: 700;
   font-size: 0.8rem;
@@ -130,7 +147,7 @@
 .bm-rows {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -138,10 +155,11 @@
 
 .bm-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 64px 104px;
+  grid-template-columns: 16px minmax(0, 1fr) 64px 104px;
   align-items: center;
-  gap: 12px;
-  padding: 8px;
+  gap: 16px;
+  min-height: 56px;
+  padding: 8px var(--bm-inset);
   border-radius: 10px;
   background: #f8fafc;
   cursor: pointer;
@@ -206,7 +224,8 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 4px 8px;
+  min-height: 24px;
+  padding: 0 8px;
   border-radius: 999px;
   background: #e2e8f0;
   color: #475569;
@@ -227,7 +246,7 @@
 
 .bm-empty {
   margin: 0;
-  padding: 8px;
+  padding: 0 var(--bm-inset);
   font-size: 0.85rem;
   color: #94a3b8;
 }
@@ -240,7 +259,7 @@
 
 .bm-actions {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
 /* Buttons */
@@ -456,17 +475,26 @@
     padding: 8px;
   }
 
-  .bm-header,
-  .bm-footer {
-    padding: 12px 16px;
+  .bm-panel {
+    --bm-pad: 16px;
+    --bm-inset: 12px;
+  }
+
+  .bm-header {
+    padding-bottom: 12px;
   }
 
   .bm-body {
-    padding: 8px 16px 16px;
+    padding: 0 calc(var(--bm-pad) - 8px) 12px var(--bm-pad);
+  }
+
+  .bm-group-head,
+  .bm-row {
+    gap: 12px;
   }
 
   .bm-row {
-    grid-template-columns: auto minmax(0, 1fr) 92px;
+    grid-template-columns: 16px minmax(0, 1fr) 92px;
   }
 
   .bm-rank {

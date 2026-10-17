@@ -133,6 +133,10 @@
 }
 
 .archive-dialog-error {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
   margin: 0;
   padding: 9px 12px;
   border-radius: 8px;

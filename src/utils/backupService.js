@@ -55,6 +55,19 @@ export async function getBackups() {
   return data || [];
 }
 
+export const isEncryptionSetupError = (message) => /encryption is not set up/i.test(message || '');
+
+// Asks the backend whether the encryption key is configured (never returns the key).
+// Resolves to null when it can't be determined, so callers keep the current state.
+export async function checkEncryptionReady() {
+  try {
+    const data = await callBackupFunction({ action: 'status' }, "Couldn't check the setup.");
+    return typeof data?.data?.encryptionReady === 'boolean' ? data.data.encryptionReady : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function createBackup(note = '') {
   return callBackupFunction({ action: 'create', note: String(note || '').trim() }, "Couldn't start the backup.");
 }

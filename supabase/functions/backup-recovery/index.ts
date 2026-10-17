@@ -800,6 +800,12 @@ Deno.serve(async (request) => {
     const admin = await authenticateSuperAdmin(request);
     if (!admin) return jsonResponse({ error: 'Only an active Super Admin can manage backups.' }, 403);
 
+    // Read-only setup check. Only reports whether the key is valid, never the key.
+    if (action === 'status') {
+      const keyBytes = Buffer.from(Deno.env.get('BACKUP_ENCRYPTION_KEY') || '', 'base64');
+      return jsonResponse({ data: { encryptionReady: keyBytes.length === 32 }, error: null });
+    }
+
     if (action === 'create') {
       const note = String(body?.note || '').trim();
       if (note.length > MAX_NOTE_LENGTH) return jsonResponse({ error: `The note must be ${MAX_NOTE_LENGTH} characters or fewer.` }, 400);

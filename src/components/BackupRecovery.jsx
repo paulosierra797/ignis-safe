@@ -7,10 +7,12 @@ import {
 import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import Pagination from './Pagination';
 import Tip from './ArchiveTip';
+import BackupSetupHelp from './BackupSetupHelp';
 import usePagination from '../hooks/usePagination';
 import { formatBytes } from '../utils/archiveService';
 import {
-  createBackup, downloadBackup, downloadRecordsCsv, getBackups, isStaleRun, restoreBackup
+  checkEncryptionReady, createBackup, downloadBackup, downloadRecordsCsv, getBackups, isEncryptionSetupError,
+  isStaleRun, restoreBackup
 } from '../utils/backupService';
 import './BackupRecovery.css';
 
@@ -146,6 +148,31 @@ export default function BackupRecovery({ isSuperAdmin, onToast, onChanged }) {
     });
     return () => media.revert();
   }, { scope, dependencies: [working] });
+
+  // While the setup warning is showing, re-ask the backend until the key is verified,
+  // then clear the warning by itself. The key is never read or shown here.
+  const setupIssue = dialog?.kind === 'create' && isEncryptionSetupError(dialogError);
+  const [setupChecking, setSetupChecking] = useState(false);
+
+  const recheckSetup = useCallback(async () => {
+    setSetupChecking(true);
+    const ready = await checkEncryptionReady();
+    setSetupChecking(false);
+    if (ready) {
+      setDialogError('');
+      onToast?.({ type: 'success', text: 'Backup encryption is set up. You can create a backup now.' });
+    }
+  }, [onToast]);
+
+  useEffect(() => {
+    if (!setupIssue) return undefined;
+    const timer = window.setInterval(recheckSetup, 6000);
+    window.addEventListener('focus', recheckSetup);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', recheckSetup);
+    };
+  }, [setupIssue, recheckSetup]);
 
   const closeDialog = () => {
     if (dialogBusy) return;
@@ -373,6 +400,7 @@ export default function BackupRecovery({ isSuperAdmin, onToast, onChanged }) {
         busyLabel="Starting…"
         busy={dialogBusy}
         error={dialogError}
+        errorHelp={setupIssue ? <BackupSetupHelp checking={setupChecking} onRecheck={recheckSetup} /> : null}
         onConfirm={runDialog}
         onClose={closeDialog}
       />

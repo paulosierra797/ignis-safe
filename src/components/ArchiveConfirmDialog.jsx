@@ -34,6 +34,7 @@ function ArchiveConfirmPanel({
   busyLabel = 'Working…',
   busy = false,
   error = '',
+  errorHelp = null,
   onConfirm,
   onClose
 }) {
@@ -178,7 +179,12 @@ function ArchiveConfirmPanel({
             </>
           )}
 
-          {error && <p className="archive-dialog-error" role="alert">{error}</p>}
+          {error && (
+            <div className="archive-dialog-error" role="alert">
+              <span>{error}</span>
+              {errorHelp}
+            </div>
+          )}
         </div>
 
         <footer className="archive-dialog-footer">

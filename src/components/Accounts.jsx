@@ -21,6 +21,7 @@ import {
   FiSmartphone,
   FiUpload,
   FiUser,
+  FiUsers,
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -28,6 +29,7 @@ import CloseButton from './CloseButton';
 import ExpandableText from './ExpandableText';
 import ToastMessage from './ToastMessage';
 import PersonnelImportModal from './PersonnelImportModal';
+import BulkManageModal from './BulkManageModal';
 import { consumeImportModalRequest, isImportJobActive, useImportJob } from '../utils/personnelImportJobs';
 import './Accounts.css';
 import './AppDialog.css';
@@ -41,6 +43,7 @@ import {
   updatePersonnelWorkspaceProfile,
   updateUser,
   setSuperAdminPrivilege,
+  manageAccount,
   getShiftScheduleConfig,
   saveShiftScheduleConfig
 } from '../utils/usersService';
@@ -916,6 +919,7 @@ export default function Accounts() {
   const [superAdminPage, setSuperAdminPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isBulkManageOpen, setIsBulkManageOpen] = useState(false);
   const { job: importJob, pendingOpen: importOpenRequested } = useImportJob();
   const importFinished = Boolean(importJob) && !isImportJobActive(importJob);
   const importCreatedCount = importJob?.created || 0;
@@ -1929,8 +1933,8 @@ export default function Accounts() {
       setIsProtectedNoticeOpen(true);
       return;
     }
-    if (String(targetAccount?.role || '').trim().toLowerCase() === 'admin') {
-      setDeleteMessage({ type: 'error', text: "Admin accounts can't be deleted." });
+    if (String(targetAccount?.role || '').trim().toLowerCase() === 'admin' && !isSuperAdmin) {
+      setDeleteMessage({ type: 'error', text: 'Only a Super Admin can delete Admin accounts.' });
       return;
     }
 
@@ -3305,6 +3309,34 @@ const permissions = getDefaultPermissions(formData.role);
     setIsConfirmActionModalOpen(true);
   };
 
+  const handlePromoteToAdmin = (account) => {
+    if (!account?.admin_id) {
+      return;
+    }
+
+    const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || account.email || 'this account';
+    setPendingConfirmAction({
+      action: 'promote-to-admin',
+      payload: { account },
+      title: 'Promote to Admin',
+      message: `Are you sure you want to promote ${accountName} to Admin? They will gain administrator access.`,
+      confirmLabel: 'Promote to Admin'
+    });
+    setIsConfirmActionModalOpen(true);
+  };
+
+  const executePromoteToAdmin = async (account) => {
+    setSuperAdminMessage({ type: '', text: '' });
+    const { error } = await manageAccount(account.admin_id, { role: 'admin' });
+    if (error) {
+      setSuperAdminMessage({ type: 'error', text: error });
+      return;
+    }
+
+    await fetchAccounts();
+    setSuperAdminMessage({ type: 'success', text: 'Account promoted to Admin.' });
+  };
+
   // The audit log entry is written server-side by the RPC.
   const executeSuperAdminPrivilege = async (account, grant) => {
     setSuperAdminMessage({ type: '', text: '' });
@@ -3356,6 +3388,10 @@ const permissions = getDefaultPermissions(formData.role);
         pendingConfirmAction.payload.type,
         pendingConfirmAction.payload.request
       );
+    }
+
+    if (pendingConfirmAction.action === 'promote-to-admin') {
+      await executePromoteToAdmin(pendingConfirmAction.payload.account);
     }
 
     if (pendingConfirmAction.action === 'super-admin-privilege') {
@@ -3425,6 +3461,12 @@ const permissions = getDefaultPermissions(formData.role);
       : []),
     { key: 'edit', label: 'Edit Details', onSelect: () => openEditModal(account) },
     ...(isSuperAdmin
+      && isPersonnelAccount(account)
+      && !account.is_personnel_workspace_profile
+      && String(account.status || '').trim().toLowerCase() === 'active'
+      ? [{ key: 'promote-admin', label: 'Promote to Admin', onSelect: () => handlePromoteToAdmin(account) }]
+      : []),
+    ...(isSuperAdmin
       && !isSuperAdminAccount(account)
       && !account.is_personnel_workspace_profile
       && String(account.role || '').trim().toLowerCase() === 'admin'
@@ -3449,8 +3491,10 @@ const permissions = getDefaultPermissions(formData.role);
         onSelect: () => setIsProtectedNoticeOpen(true)
       }]
       : []),
-    ...(String(account.role || '').trim().toLowerCase() !== 'admin'
+    ...(!isProtectedAccount(account)
       && !account.is_personnel_workspace_profile
+      && account.admin_id !== currentUser?.admin_id
+      && (isSuperAdmin || String(account.role || '').trim().toLowerCase() !== 'admin')
       ? [{
         key: 'delete',
         label: 'Move to Trash',
@@ -3528,6 +3572,12 @@ const permissions = getDefaultPermissions(formData.role);
             )}
             {activeAccountsTab === 'personnel' && (
               <>
+                {isSuperAdmin && (
+                  <button className="import-personnel-btn" onClick={() => setIsBulkManageOpen(true)}>
+                    <FiUsers aria-hidden="true" />
+                    Bulk Manage
+                  </button>
+                )}
                 <button className="import-personnel-btn" onClick={() => setIsImportModalOpen(true)}>
                   <FiUpload aria-hidden="true" />
                   Import Personnel
@@ -4655,7 +4705,7 @@ const permissions = getDefaultPermissions(formData.role);
       <label>Role</label>
       <select
         value={editFormData.role}
-        disabled={isSuperAdminAccount(selectedEditAccount)}
+        disabled={!isSuperAdmin || !isPersonnelAccount(selectedEditAccount)}
         onChange={(e) =>
           setEditFormData({
             ...editFormData,
@@ -4748,6 +4798,17 @@ const permissions = getDefaultPermissions(formData.role);
     </div>
   </div>
 )}
+
+        {isBulkManageOpen && isSuperAdmin && (
+          <BulkManageModal
+            accounts={accounts.filter((account) => !account.is_personnel_workspace_profile)}
+            protectedIds={protectedAccountIds}
+            currentAdminId={currentUser?.admin_id || null}
+            actor={{ id: currentUser?.admin_id || null, name: currentUser?.name || currentUser?.email }}
+            onClose={() => setIsBulkManageOpen(false)}
+            onCompleted={fetchAccounts}
+          />
+        )}
 
         {isImportModalOpen && (
           <PersonnelImportModal

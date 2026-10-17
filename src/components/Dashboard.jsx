@@ -572,7 +572,30 @@ if (currentKnowledge < 40) {
         clearProps: 'clipPath',
       });
 
+      gsap.from('.ov-fill', {
+        scaleX: 0,
+        transformOrigin: 'left center',
+        duration: 1,
+        delay: 0.45,
+        stagger: 0.03,
+        ease: 'power3.out',
+        clearProps: 'transform',
+      });
+      gsap.from('.ov-section-icon', {
+        scale: 0.6,
+        rotate: -12,
+        duration: 0.7,
+        stagger: 0.12,
+        ease: 'back.out(2)',
+        clearProps: 'transform',
+      });
+
       const cleanups = gsap.utils.toArray('.ov-card').map((card) => {
+        const track = (event) => {
+          const box = card.getBoundingClientRect();
+          card.style.setProperty('--mx', `${event.clientX - box.left}px`);
+          card.style.setProperty('--my', `${event.clientY - box.top}px`);
+        };
         const icon = card.querySelector('.ov-icon');
         const lift = card.classList.contains('ov-clickable');
         const enter = () => {
@@ -585,7 +608,9 @@ if (currentKnowledge < 40) {
         };
         card.addEventListener('mouseenter', enter);
         card.addEventListener('mouseleave', leave);
+        card.addEventListener('mousemove', track);
         return () => {
+          card.removeEventListener('mousemove', track);
           card.removeEventListener('mouseenter', enter);
           card.removeEventListener('mouseleave', leave);
         };

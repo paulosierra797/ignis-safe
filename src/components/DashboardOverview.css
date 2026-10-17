@@ -13,15 +13,17 @@
 /* Section identity: one accent colour per section. */
 .ov-section {
   --tone: #b91c1c;
+  --tone-2: #ef4444;
   --tone-soft: #fdecec;
+  --tone-glow: rgba(185, 28, 28, 0.14);
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
   min-width: 0;
 }
-.ov-tone-personnel { --tone: #b91c1c; --tone-soft: #fdecec; }
-.ov-tone-mobile { --tone: #4f46e5; --tone-soft: #eceefe; }
-.ov-tone-outcome { --tone: #0f8f6f; --tone-soft: #e1f4ec; }
+.ov-tone-personnel { --tone: #b91c1c; --tone-2: #ef4444; --tone-soft: #fdecec; --tone-glow: rgba(185, 28, 28, 0.14); }
+.ov-tone-mobile { --tone: #4f46e5; --tone-2: #818cf8; --tone-soft: #eceefe; --tone-glow: rgba(79, 70, 229, 0.14); }
+.ov-tone-outcome { --tone: #0f8f6f; --tone-2: #34d399; --tone-soft: #e1f4ec; --tone-glow: rgba(15, 143, 111, 0.14); }
 
 .ov-section-head {
   display: flex;
@@ -32,19 +34,28 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: var(--tone-soft);
-  color: var(--tone);
-  font-size: 0.85rem;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--tone-2), var(--tone));
+  color: #fff;
+  font-size: 0.95rem;
+  box-shadow: 0 6px 14px var(--tone-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 .ov-section-title {
   margin: 0;
   color: #172033;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
+}
+/* Fading divider that fills the rest of the heading row. */
+.ov-section-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  margin-left: 0.35rem;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tone) 28%, transparent), transparent);
 }
 
 /* Grids: every card in a grid shares one width, and every row one height. */
@@ -64,22 +75,39 @@
   min-width: 0;
   min-height: 176px;
   padding: var(--ov-pad);
-  border: 1px solid var(--insight-border, #e5e7eb);
-  border-radius: 14px;
-  background: var(--insight-surface, #fff);
-  box-shadow: var(--insight-shadow, 0 3px 10px rgba(15, 23, 42, 0.045));
-  transition: box-shadow 200ms ease, border-color 200ms ease;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--tone) 10%, #e5e7eb);
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, var(--tone-glow), transparent 55%),
+    var(--insight-surface, #fff);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 22px rgba(15, 23, 42, 0.05);
+  transition: box-shadow 250ms ease, border-color 250ms ease;
 }
+/* Soft spotlight that follows the pointer (position set by the dashboard script). */
+.ov-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 0%), var(--tone-glow), transparent 70%);
+  opacity: 0;
+  transition: opacity 250ms ease;
+  pointer-events: none;
+}
+.ov-card:hover::before { opacity: 1; }
 .ov-card--tall { height: 360px; }
 
 .ov-clickable { cursor: pointer; }
 .ov-clickable:focus-visible {
-  outline: 2px solid rgba(185, 28, 28, 0.45);
+  outline: 2px solid var(--tone);
   outline-offset: 2px;
 }
 .ov-card.ov-clickable:hover {
-  border-color: color-mix(in srgb, var(--tone) 30%, #e5e7eb);
-  box-shadow: var(--insight-shadow-hover, 0 11px 24px rgba(15, 23, 42, 0.09));
+  border-color: color-mix(in srgb, var(--tone) 35%, #e5e7eb);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.04), 0 18px 36px color-mix(in srgb, var(--tone) 16%, transparent);
 }
 
 .ov-card-head {
@@ -101,25 +129,28 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
-  background: var(--tone-soft);
+  width: 40px;
+  height: 40px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--tone-soft), color-mix(in srgb, var(--tone) 16%, #fff));
   color: var(--tone);
-  font-size: 0.95rem;
+  font-size: 1rem;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 14%, transparent);
 }
 
 .ov-label {
-  color: #667085;
-  font-size: 0.82rem;
+  color: #5b6577;
+  font-size: 0.8rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .ov-number {
   color: #111827;
-  font-size: 2rem;
+  font-size: 2.2rem;
   font-weight: 700;
   line-height: 1.1;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .ov-number.is-positive { color: var(--ov-green); }
@@ -145,7 +176,8 @@
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: #eef0f3;
+  background: color-mix(in srgb, var(--tone) 8%, #eef0f3);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 .ov-track--lg { height: 12px; }
 .ov-track--split { display: flex; gap: 2px; }
@@ -155,11 +187,11 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--tone);
+  background: linear-gradient(90deg, var(--tone), var(--tone-2));
   transition: width 900ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-.ov-fill.is-warn { background: var(--ov-amber); }
-.ov-fill.is-neutral { background: var(--ov-slate); }
+.ov-fill.is-warn { background: linear-gradient(90deg, var(--ov-amber), #fbbf24); }
+.ov-fill.is-neutral { background: linear-gradient(90deg, var(--ov-slate), #cbd5e1); }
 
 /* Sparkline */
 .ov-spark {
@@ -171,11 +203,11 @@
 .ov-spark-line {
   fill: none;
   stroke: var(--tone);
-  stroke-width: 2;
+  stroke-width: 2.25;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.ov-spark-area { fill: var(--tone); opacity: 0.1; }
+.ov-spark-area { fill: var(--tone); opacity: 0.14; }
 
 /* New registrations comparison */
 .ov-compare {
@@ -208,8 +240,8 @@
   gap: 0.2rem;
   min-width: 0;
   padding: 0.65rem 0.9rem;
-  border-radius: 10px;
-  background: #f8fafc;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--tone-soft), #f8fafc);
 }
 
 .ov-bars {
@@ -253,8 +285,8 @@
 .ov-select {
   max-width: 100%;
   padding: 0.35rem 0.6rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--tone) 22%, #d1d5db);
+  border-radius: 10px;
   background: #fff;
   color: #374151;
   font: inherit;
@@ -262,7 +294,7 @@
   cursor: pointer;
 }
 .ov-select:focus-visible {
-  outline: 2px solid rgba(185, 28, 28, 0.45);
+  outline: 2px solid var(--tone);
   outline-offset: 1px;
 }
 
@@ -297,5 +329,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ov-fill,
-  .ov-card { transition: none; }
+  .ov-card,
+  .ov-card::before { transition: none; }
 }

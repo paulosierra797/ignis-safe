@@ -378,6 +378,31 @@ export const setSuperAdminPrivilege = async (targetAdminId, grant) => {
   }
 };
 
+// Changes one account's role ('personnel' | 'admin' | 'super_admin'), rank and/or
+// status. Super Admin only; promotion rules, the protected official account and
+// the audit log entry are all enforced by the manage_account RPC.
+export const manageAccount = async (targetAdminId, changes) => {
+  try {
+    const { data, error } = await supabase.rpc('manage_account', {
+      p_target_admin_id: targetAdminId,
+      p_changes: changes
+    });
+
+    if (error) throw error;
+    if (data?.ok === false) {
+      return { data: null, error: data.message || 'The change was rejected.' };
+    }
+
+    if (data?.changed) {
+      emitDataChanged('users', { action: 'manage', admin_id: targetAdminId });
+    }
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error managing account:', error);
+    return { data: null, error: error.message };
+  }
+};
+
 // Get admin by email
 export const getUserByEmail = async (email) => {
   try {

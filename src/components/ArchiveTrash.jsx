@@ -69,6 +69,9 @@ const TIPS = {
   action: 'What happened to the item.',
   protected: 'A legally required record. It is kept for a set time before it can be deleted.',
   restore: 'Put this item back where it came from.',
+  selectPage: 'Select or clear every item on this page.',
+  bulkRestore: 'Put all selected items back where they came from.',
+  bulkDelete: 'Permanently erase the selected items. You will be asked to confirm first.',
   delete: 'Permanently erase this item and its files. This cannot be undone.',
   exportCsv: 'Download the history shown here as a spreadsheet.',
   when: 'The date and time (Philippine time).',
@@ -113,6 +116,19 @@ const daysLeftLabel = (days) => {
   if (days === 0) return 'Deleting soon';
   return `${days} ${days === 1 ? 'day' : 'days'} left`;
 };
+
+// At 0 days the restore window is over, so say what is actually happening
+// to the item (the server decides whether it may be erased).
+const countdownLabel = (item) => {
+  const key = item.lifecycle.key;
+  if (key === 'purging') return 'Deleting now';
+  if (key === 'queued') return 'Deleting soon';
+  if (key === 'blocked') return 'On hold';
+  if (key === 'due') return 'Restore window ended';
+  return daysLeftLabel(item.remainingDays);
+};
+
+const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
 // Mirrors the server's purge checks that the page can see, so the Delete
 // button explains itself up front. The server still runs every check.
@@ -195,6 +211,25 @@ export default function ArchiveTrash() {
   const [policyDrafts, setPolicyDrafts] = useState({});
   const [savingPolicy, setSavingPolicy] = useState('');
   const [now, setNow] = useState(() => Date.now());
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkProgress, setBulkProgress] = useState(0);
+
+  // Keep the day countdown current while the page stays open: re-check every
+  // minute and whenever the tab becomes visible again.
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    const timer = window.setInterval(tick, 60 * 1000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', tick);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', tick);
+    };
+  }, []);
 
   const loadAll = useCallback(async () => {
     setLoadError('');
@@ -265,6 +300,54 @@ export default function ArchiveTrash() {
   }, [events, historySearch, historyType, historyModule, moduleLabel]);
 
   const itemPages = usePagination(filteredItems, `${search}|${moduleFilter}|${statusFilter}|${sort}`);
+
+  // A changed search or filter starts a fresh selection, so nothing hidden is ever acted on.
+  useEffect(() => {
+    setSelectedIds((current) => (current.size ? new Set() : current));
+  }, [search, moduleFilter, statusFilter]);
+
+  const selectableItems = useMemo(
+    () => filteredItems.filter((item) => item.lifecycle.key !== 'purging'),
+    [filteredItems]
+  );
+  const selectedItems = useMemo(
+    () => selectableItems.filter((item) => selectedIds.has(item.item_id)),
+    [selectableItems, selectedIds]
+  );
+  const pageSelectable = useMemo(
+    () => itemPages.items.filter((item) => item.lifecycle.key !== 'purging'),
+    [itemPages.items]
+  );
+  const pageSelectedCount = pageSelectable.filter((item) => selectedIds.has(item.item_id)).length;
+  const allPageSelected = pageSelectable.length > 0 && pageSelectedCount === pageSelectable.length;
+
+  const deletableSelected = useMemo(
+    () => selectedItems.filter((item) => !getDeleteBlock(item, policyByModule.get(item.module), isSuperAdmin, now)),
+    [selectedItems, policyByModule, isSuperAdmin, now]
+  );
+
+  const toggleItem = (itemId) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  };
+
+  const togglePage = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      pageSelectable.forEach((item) => {
+        if (allPageSelected) next.delete(item.item_id);
+        else next.add(item.item_id);
+      });
+      return next;
+    });
+  };
+
+  const selectAllMatching = () => setSelectedIds(new Set(selectableItems.map((item) => item.item_id)));
+  const clearSelection = () => setSelectedIds(new Set());
   const eventPages = usePagination(filteredEvents, `${historySearch}|${historyType}|${historyModule}`);
 
   const eventsByItem = useMemo(() => {
@@ -344,8 +427,71 @@ export default function ArchiveTrash() {
     setDialogError('');
   };
 
+  const openBulkRestore = () => {
+    if (!selectedItems.length) return;
+    openDialog({ kind: 'bulk-restore', items: selectedItems });
+  };
+
+  const openBulkPurge = () => {
+    if (!deletableSelected.length) return;
+    const skipped = selectedItems.filter((item) => !deletableSelected.includes(item));
+    openDialog({ kind: 'bulk-purge', items: deletableSelected, skipped });
+  };
+
+  // Runs one item at a time so a failure never stops the rest, then reports both counts.
+  const runBulkAction = async (reason) => {
+    const restoring = dialog.kind === 'bulk-restore';
+    const targets = dialog.items;
+    const done = [];
+    const failed = [];
+    setDialogBusy(true);
+    setDialogError('');
+    setBulkProgress(0);
+    for (const item of targets) {
+      try {
+        if (restoring) await restoreArchiveItem(item.item_id, reason);
+        else await purgeArchiveItem(item.item_id, reason);
+        done.push(item);
+      } catch (error) {
+        failed.push({ item, message: error.message });
+      }
+      setBulkProgress(done.length + failed.length);
+    }
+    if (done.length === 0) {
+      setDialogError(failed[0]?.message || "Couldn't finish this action.");
+      setDialogBusy(false);
+      return;
+    }
+    setDialog(null);
+    setSelectedIds(new Set(failed.map(({ item }) => item.item_id)));
+    const verb = restoring ? 'restored' : 'deleted forever';
+    if (failed.length) {
+      setToast({
+        type: 'error',
+        text: `${plural(done.length, 'item')} ${verb}. ${failed.length} couldn't be finished: ${failed[0].message}`
+      });
+    } else {
+      setToast({ type: 'success', text: `${plural(done.length, 'item')} ${verb}.` });
+    }
+    try {
+      await loadAll();
+    } finally {
+      setDialogBusy(false);
+    }
+  };
+
+  const bulkBreakdown = (items) => {
+    const counts = new Map();
+    items.forEach((item) => counts.set(item.module, (counts.get(item.module) || 0) + 1));
+    return [...counts].map(([module, count]) => `${moduleLabel(module)} ×${count}`).join(' · ');
+  };
+
   const runDialogAction = async (reason) => {
     if (!dialog) return;
+    if (dialog.kind === 'bulk-restore' || dialog.kind === 'bulk-purge') {
+      await runBulkAction(reason);
+      return;
+    }
     setDialogBusy(true);
     setDialogError('');
     try {
@@ -525,6 +671,56 @@ export default function ArchiveTrash() {
                 <p className="at-note"><FiLock aria-hidden="true" /> Only a Super Admin can delete items for good.</p>
               )}
 
+              {!loading && filteredItems.length > 0 && (
+                <div className={`at-bulkbar${selectedItems.length ? ' is-active' : ''}`} role="toolbar" aria-label="Actions for selected items">
+                  <Tip text={TIPS.selectPage}>
+                    <label className="at-check at-check--all">
+                      <input
+                        type="checkbox"
+                        ref={(node) => { if (node) node.indeterminate = pageSelectedCount > 0 && !allPageSelected; }}
+                        checked={allPageSelected}
+                        onChange={togglePage}
+                        disabled={pageSelectable.length === 0}
+                        aria-label="Select all items on this page"
+                      />
+                    </label>
+                  </Tip>
+                  <div className="at-bulk-count" aria-live="polite">
+                    {selectedItems.length ? (
+                      <strong>{selectedItems.length} selected</strong>
+                    ) : (
+                      <span>Select items to restore or delete several at once</span>
+                    )}
+                    {allPageSelected && selectedItems.length < selectableItems.length && (
+                      <button type="button" className="at-link" onClick={selectAllMatching}>
+                        Select all {selectableItems.length}
+                      </button>
+                    )}
+                    {selectedItems.length > 0 && (
+                      <button type="button" className="at-link" onClick={clearSelection}>Clear</button>
+                    )}
+                  </div>
+                  <div className="at-bulk-actions">
+                    <Tip text={selectedItems.length ? TIPS.bulkRestore : 'Select at least one item first.'}>
+                      <button type="button" className="at-button at-button--primary" onClick={openBulkRestore} disabled={!selectedItems.length}>
+                        <FiRotateCcw aria-hidden="true" /> Restore{selectedItems.length ? ` (${selectedItems.length})` : ''}
+                      </button>
+                    </Tip>
+                    <Tip
+                      text={!selectedItems.length
+                        ? 'Select at least one item first.'
+                        : !deletableSelected.length
+                          ? (isSuperAdmin ? "None of the selected items can be deleted yet. Hover a single item's Delete button to see why." : 'Only a Super Admin can delete for good.')
+                          : TIPS.bulkDelete}
+                    >
+                      <button type="button" className="at-button at-button--danger" onClick={openBulkPurge} disabled={!deletableSelected.length}>
+                        <FiTrash2 aria-hidden="true" /> Delete{deletableSelected.length ? ` (${deletableSelected.length})` : ''}
+                      </button>
+                    </Tip>
+                  </div>
+                </div>
+              )}
+
               {loading ? (
                 <div className="at-empty">Loading…</div>
               ) : filteredItems.length === 0 ? (
@@ -543,8 +739,19 @@ export default function ArchiveTrash() {
                     const deleteBlock = getDeleteBlock(item, policy, isSuperAdmin, now);
                     const hintId = `at-hint-${item.item_id}`;
                     return (
-                      <li key={item.item_id} className={`at-item at-item--${item.lifecycle.key}`}>
-                        <CountdownRing days={item.remainingDays} total={item.recoveryDays} />
+                      <li key={item.item_id} className={`at-item at-item--${item.lifecycle.key}${selectedIds.has(item.item_id) ? ' is-selected' : ''}`}>
+                        <div className="at-item-lead">
+                          <label className="at-check">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(item.item_id)}
+                              onChange={() => toggleItem(item.item_id)}
+                              disabled={purging}
+                              aria-label={`Select ${item.record_label}`}
+                            />
+                          </label>
+                          <CountdownRing days={item.remainingDays} total={item.recoveryDays} />
+                        </div>
                         <div className="at-item-main">
                           <div className="at-item-title">
                             <strong>{item.record_label}</strong>
@@ -565,9 +772,9 @@ export default function ArchiveTrash() {
                         </div>
                         <div className="at-item-when">
                           <strong className={`at-days at-days--${item.remainingDays != null && item.remainingDays <= 7 ? 'soon' : 'later'}`}>
-                            {daysLeftLabel(item.remainingDays)}
+                            {countdownLabel(item)}
                           </strong>
-                          <span>Deletes {formatDate(item.purge_after)}</span>
+                          <span>{item.remainingDays === 0 ? 'Window ended' : 'Deletes'} {formatDate(item.purge_after)}</span>
                           <span className="at-item-by">
                             {item.disposition === 'soft_deleted' ? 'Deleted' : 'Archived'} {formatDate(item.archived_at)} by <Actor type={item.actor_type} name={item.archived_by_name} />
                           </span>
@@ -787,7 +994,7 @@ export default function ArchiveTrash() {
           title="Restore this item?"
           description={<p>It goes back to {dialog?.item ? moduleLabel(dialog.item.module) : 'its section'} and won&apos;t be deleted.</p>}
           recordLabel={dialog?.item?.record_label}
-          recordMeta={dialog?.item ? daysLeftLabel(dialog.item.remainingDays) : ''}
+          recordMeta={dialog?.item ? countdownLabel(dialog.item) : ''}
           showReason={false}
           confirmLabel="Restore"
           busyLabel="Restoring…"
@@ -809,6 +1016,54 @@ export default function ArchiveTrash() {
           confirmPhrase="DELETE"
           confirmLabel="Delete forever"
           busyLabel="Deleting…"
+          busy={dialogBusy}
+          error={dialogError}
+          onConfirm={runDialogAction}
+          onClose={closeDialog}
+        />
+        <ArchiveConfirmDialog
+          open={dialog?.kind === 'bulk-restore'}
+          tone="restore"
+          title={`Restore ${plural(dialog?.items?.length || 0, 'item')}?`}
+          description={(
+            <>
+              <p>Every selected item goes back to the section it came from. None of them will be deleted.</p>
+              <p>You can archive or delete them again later.</p>
+            </>
+          )}
+          recordLabel={plural(dialog?.items?.length || 0, 'item')}
+          recordMeta={dialog?.items ? bulkBreakdown(dialog.items) : ''}
+          showReason={false}
+          confirmLabel={`Restore ${dialog?.items?.length || 0}`}
+          busyLabel={`Restoring ${bulkProgress}/${dialog?.items?.length || 0}…`}
+          busy={dialogBusy}
+          error={dialogError}
+          onConfirm={runDialogAction}
+          onClose={closeDialog}
+        />
+        <ArchiveConfirmDialog
+          open={dialog?.kind === 'bulk-purge'}
+          tone="danger"
+          title={`Delete ${plural(dialog?.items?.length || 0, 'item')} forever?`}
+          description={(
+            <>
+              <p><strong>This can&apos;t be undone.</strong> These items and all their files will be erased for good.</p>
+              {dialog?.skipped?.length > 0 && (
+                <p>
+                  {plural(dialog.skipped.length, 'selected item')} can&apos;t be deleted yet and will be left in
+                  Archive &amp; Trash untouched.
+                </p>
+              )}
+            </>
+          )}
+          recordLabel={plural(dialog?.items?.length || 0, 'item')}
+          recordMeta={dialog?.items ? `${bulkBreakdown(dialog.items)} · ${dialog.items.reduce((total, item) => total + (item.storage_objects?.length || 0), 0)} file(s)` : ''}
+          reasonLabel="Reason"
+          reasonPlaceholder="e.g. Duplicate records"
+          reasonRequired
+          confirmPhrase="DELETE"
+          confirmLabel={`Delete ${dialog?.items?.length || 0} forever`}
+          busyLabel={`Deleting ${bulkProgress}/${dialog?.items?.length || 0}…`}
           busy={dialogBusy}
           error={dialogError}
           onConfirm={runDialogAction}

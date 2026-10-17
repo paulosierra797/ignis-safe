@@ -1,0 +1,300 @@
+/* Live backup / restore progress, shared by the floating widget and the Backup page. */
+
+.bpv {
+  --bpv-ink: #111827;
+  --bpv-ink-2: #475569;
+  --bpv-ink-3: #94a3b8;
+  --bpv-line: #e2e8f0;
+  --bpv-accent: #f59e0b;
+  --bpv-accent-deep: #ea580c;
+  --bpv-accent-soft: #fef3c7;
+  --bpv-done: #16a34a;
+  --bpv-warn-bg: #fff7ed;
+  --bpv-warn-ink: #9a3412;
+
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  color: var(--bpv-ink-2);
+}
+
+.bpv-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.bpv-activity {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  color: var(--bpv-ink);
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.bpv-activity > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Pulses only to say "live"; the bar alone shows how far along it is. */
+.bpv-live {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bpv-accent);
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
+  animation: bpv-pulse 1.8s ease-out infinite;
+}
+
+.bpv--stalled .bpv-live {
+  background: var(--bpv-ink-3);
+  box-shadow: none;
+  animation: none;
+}
+
+@keyframes bpv-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+  70%, 100% { box-shadow: 0 0 0 7px rgba(245, 158, 11, 0); }
+}
+
+.bpv-percent {
+  flex: none;
+  color: var(--bpv-ink);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.bpv-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--bpv-line);
+}
+
+.bpv-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--bpv-accent), var(--bpv-accent-deep));
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.bpv--stalled .bpv-fill {
+  background: var(--bpv-ink-3);
+}
+
+.bpv-stages {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bpv-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+  color: var(--bpv-ink-3);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: center;
+  transition: color 0.3s ease;
+}
+
+.bpv-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--bpv-line);
+  border-radius: 50%;
+  background: #fff;
+  color: #fff;
+  font-size: 0.65rem;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.bpv-stage--active {
+  color: var(--bpv-ink);
+}
+
+.bpv-stage--active .bpv-dot {
+  border-color: var(--bpv-accent);
+  box-shadow: 0 0 0 4px var(--bpv-accent-soft);
+}
+
+.bpv-stage--done {
+  color: var(--bpv-ink-2);
+}
+
+.bpv-stage--done .bpv-dot {
+  border-color: var(--bpv-done);
+  background: var(--bpv-done);
+}
+
+.bpv-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.bpv-meta dt {
+  color: var(--bpv-ink-3);
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.bpv-meta dd {
+  margin: 0.1rem 0 0;
+  color: var(--bpv-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bpv-meta dd.bpv-muted {
+  color: var(--bpv-ink-3);
+  font-weight: 600;
+}
+
+.bpv-stall {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.5rem 0.6rem;
+  padding: 0.7rem 0.75rem;
+  border-radius: 10px;
+  background: var(--bpv-warn-bg);
+  color: var(--bpv-warn-ink);
+  font-size: 0.78rem;
+}
+
+.bpv-stall > svg {
+  margin-top: 0.1rem;
+}
+
+.bpv-stall p {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.bpv-stall strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.bpv-error {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.bpv-btn {
+  grid-column: 2;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 34px;
+  padding: 0 0.9rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--bpv-warn-ink);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bpv-btn:hover:not(:disabled) {
+  background: #7c2d12;
+}
+
+.bpv-btn:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.bpv-btn:focus-visible {
+  outline: 2px solid var(--bpv-accent);
+  outline-offset: 2px;
+}
+
+.bpv-spin {
+  animation: bpv-rotate 0.9s linear infinite;
+}
+
+@keyframes bpv-rotate {
+  to { transform: rotate(360deg); }
+}
+
+.bpv-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Floating widget */
+.bpv--compact {
+  gap: 0.6rem;
+}
+
+.bpv--compact .bpv-percent {
+  font-size: 1.3rem;
+}
+
+.bpv--compact .bpv-track {
+  height: 6px;
+}
+
+.bpv--compact .bpv-stage {
+  font-size: 0.64rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bpv-live,
+  .bpv-spin {
+    animation: none;
+  }
+
+  .bpv-stage,
+  .bpv-dot {
+    transition: none;
+  }
+}
+
+@media (max-width: 380px) {
+  .bpv-meta {
+    padding: 0.5rem;
+  }
+
+  .bpv-meta dd {
+    font-size: 0.76rem;
+  }
+}

@@ -68,6 +68,7 @@ const LandingPageEditorView = lazy(loadLandingPageEditor);
 const ArchiveTrash = lazy(loadArchiveTrash);
 const AppSessionTracker = lazy(() => import('./components/AppSessionTracker'));
 const ImportProgressWidget = lazy(() => import('./components/ImportProgressWidget'));
+const BackupProgressWidget = lazy(() => import('./components/BackupProgressWidget'));
 const LandingPageSections = lazy(() => import('./components/LandingPageSections'));
 const FloatingContactButton = lazy(() => import('./components/FloatingContactButton'));
 const Footer = lazy(() => import('./components/Footer'));
@@ -316,6 +317,7 @@ function App() {
       <RoutePreloader />
       <SessionTrackerGate />
       <Suspense fallback={null}><ImportProgressWidget /></Suspense>
+      <Suspense fallback={null}><BackupProgressWidget /></Suspense>
       <LayoutProvider>
         <LandingContentProvider>
           <div className="app">

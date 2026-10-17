@@ -1,39 +1,70 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.97.0';
 import { Buffer } from 'node:buffer';
-import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, hkdfSync, randomBytes, timingSafeEqual } from 'node:crypto';
+import * as zlib from 'node:zlib';
 import { corsHeaders } from '../_shared/cors.ts';
 
 // Backup & Recovery for the Super Admin Archive & Trash page.
 //
 // A backup is a ZIP (manifest, database records as JSON, uploaded files) that
-// is encrypted in 1 MiB AES-256-GCM frames and stored as a few parts in the
-// private `system-backups` bucket. A backup is reported as complete only after
-// every part has been downloaded again, hash-checked, decrypted, and read back
-// as a valid ZIP (see verifyBackup), and the database has confirmed the parts
-// exist (backup_complete). Restores only add what is missing.
+// is stored as encrypted parts in the private `system-backups` bucket.
+//
+// An edge function request gets about 2 seconds of CPU, which is far less than
+// a whole backup needs. So backups and restores run as a chain of short steps:
+// each step writes (or checks) one part, saves its place in system_backups.job,
+// reports what it really did in `progress` / `restore_progress`, then calls the
+// next step. A step that dies leaves the saved place untouched, so the run can
+// be resumed; a run that stops reporting is marked failed by the database.
+//
+// A backup is reported complete only after every part has been downloaded
+// again, hash-checked, decrypted, and read back as valid ZIP entries
+// (verifyPart), and the database has confirmed the parts exist (backup_complete).
+// Restores check every part first, then only add what is missing.
+//
+// Part format: [IGNISBK2][part index u32][salt] then frames of
+// [u32 length | flags][AES-256-GCM data][tag]. Each part has its own key (HKDF
+// of the master key and the part's random salt). The part index and frame
+// header are authenticated, the last frame of each part is flagged, and the
+// last frame of the whole backup has a second flag, so parts cannot be
+// swapped, cut short, or reordered. Parts end on ZIP entry boundaries, so the
+// decrypted parts joined in order form one standard ZIP.
 //
 // Callers:
 //   * scheduled: the monthly pg_cron job, authenticated by a vault token.
-//   * create / download / csv / restore: a signed-in Super Admin.
+//   * step: this function calling itself, authenticated by the job's token.
+//   * create / resume / download / csv / restore / status: a signed-in Super Admin.
 
 declare const EdgeRuntime: { waitUntil(promise: Promise<unknown>): void };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const SELF_URL = `${SUPABASE_URL}/functions/v1/backup-recovery`;
 
 const BUCKET = 'system-backups';
-const MAGIC = Buffer.from('IGNISBK1');
+const MAGIC = Buffer.from('IGNISBK2');
 const SALT_LENGTH = 16;
+const HEADER_LENGTH = MAGIC.length + 4 + SALT_LENGTH;
 const TAG_LENGTH = 16;
 const FRAME_SIZE = 1024 * 1024;
-const PART_TARGET = 24 * 1024 * 1024;
-const LAST_FRAME_FLAG = 0x80000000;
+const PART_END = 0x80000000;
+const BACKUP_END = 0x40000000;
+const LENGTH_MASK = 0x3FFFFFFF;
 const TABLE_PAGE_SIZE = 500;
 const MAX_DATABASE_BYTES = 100 * 1024 * 1024;
 const RESTORE_CHUNK_BYTES = 2 * 1024 * 1024;
-const FILE_BATCH_BYTES = 24 * 1024 * 1024;
-const FILE_BATCH_COUNT = 6;
+
+// Work per step. Kept well under the CPU limit; a single larger file gets a step of its own.
+const RECORDS_STEP_BYTES = 8 * 1024 * 1024;
+const FILES_STEP_BYTES = 16 * 1024 * 1024;
+const FILES_STEP_COUNT = 60;
+const FILES_PARALLEL = 6;
+const VERIFY_STEP_BYTES = 32 * 1024 * 1024;
+const APPLY_STEP_BYTES = 16 * 1024 * 1024;
+const STEP_RETRIES = 2;
+const RESUME_AFTER_MS = 45 * 1000;
+const MAX_RESUMES = 3;
+
 const KEEP_SCHEDULED_BACKUPS = 3;
 const DOWNLOAD_LINK_SECONDS = 900;
 const MAX_NOTE_LENGTH = 500;
@@ -44,11 +75,64 @@ const serviceClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 
 class UserError extends Error {}
 
-type TableInfo = { table: string; parents: string[] };
+type Mode = 'backup' | 'restore';
+type TableInfo = { table: string; parents: string[]; est_bytes?: number };
 type FileInfo = { bucket: string; name: string; size: number; mimetype: string | null };
-type PartInfo = { path: string; bytes: number; sha256: string };
-type Manifest = { format?: string; backupId?: string; files?: FileInfo[] };
+type PartInfo = { path: string; bytes: number; sha256: string; plain_bytes: number; plain_sha256: string };
+type ZipEntry = { n: string; c: number; s: number; o: number };
 type Admin = { admin_id: string };
+
+type BaseJob = {
+  mode: Mode;
+  step: number;
+  token: string;
+  retries: number;
+  resumes: number;
+  verifyCursor: number;
+  verifiedBytes: number;
+  verifiedEntries: number;
+  directoryEntries: number | null;
+};
+type BackupJob = BaseJob & {
+  mode: 'backup';
+  stage: 'prepare' | 'records' | 'files' | 'finish' | 'verify';
+  kind: string;
+  startedAt: string;
+  workStartedAt: string | null;
+  tables: TableInfo[];
+  tableCursor: number;
+  counts: Record<string, number>;
+  recordBytes: number;
+  files: FileInfo[];
+  fileCursor: number;
+  fileBytes: number;
+  filesSaved: number;
+  filesSkipped: number;
+  entries: ZipEntry[];
+  offset: number;
+  parts: PartInfo[];
+};
+type RestoreTotals = {
+  records_added: number; records_already_there: number; records_failed: number;
+  files_added: number; files_already_there: number; files_failed: number;
+};
+type RestoreJob = BaseJob & {
+  mode: 'restore';
+  stage: 'verify' | 'apply';
+  actor: string;
+  workStartedAt: string;
+  applyCursor: number;
+  appliedBytes: number;
+  allowed: Record<string, string | null>;
+  totals: RestoreTotals;
+  problems: string[];
+};
+type Job = BackupJob | RestoreJob;
+type BackupRow = {
+  backup_id: string; kind: string; status: string; restore_status: string | null; started_at: string;
+  job: Job | Record<string, never>; progress: Record<string, unknown> | null;
+  restore_progress: Record<string, unknown> | null; parts: PartInfo[];
+};
 
 const jsonResponse = (payload: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -94,8 +178,13 @@ const rpc = async <T = unknown>(name: string, args: Record<string, unknown> = {}
   return data as T;
 };
 
+const sha256 = (data: Uint8Array | string) => createHash('sha256').update(data).digest('hex');
+
+const sameHash = (a: string, b: string) =>
+  a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+
 // ---------------------------------------------------------------------------
-// Encryption: [magic][salt] then frames of [4-byte length|last flag][data][tag]
+// Encryption
 // ---------------------------------------------------------------------------
 
 // Reads the 32-byte key from the secret. Accepts base64 or 64-character hex, ignoring
@@ -119,8 +208,8 @@ const masterKey = () => {
   return key;
 };
 
-const deriveKey = (salt: Buffer) =>
-  Buffer.from(hkdfSync('sha256', masterKey(), salt, 'ignis-safe-backup-v1', 32));
+const partKey = (salt: Buffer) =>
+  Buffer.from(hkdfSync('sha256', masterKey(), salt, 'ignis-safe-backup-v2', 32));
 
 const frameNonce = (index: number) => {
   const nonce = Buffer.alloc(12);
@@ -128,151 +217,75 @@ const frameNonce = (index: number) => {
   return nonce;
 };
 
-const sha256 = (data: Uint8Array) => createHash('sha256').update(data).digest('hex');
-
-// Turns the ZIP byte stream into encrypted parts uploaded to Storage. Parts
-// always end on a frame boundary, so they can be joined back into one file.
-class EncryptedPartWriter {
-  readonly parts: PartInfo[] = [];
-  totalBytes = 0;
-  plainBytes = 0;
-  plainSha256 = '';
-  private plainHash = createHash('sha256');
-  private pending: Buffer = Buffer.alloc(0);
-  private out: Buffer[] = [];
-  private outLength = 0;
-  private frameIndex = 0;
-  private key: Buffer;
-
-  constructor(private backupId: string) {
-    const salt = randomBytes(SALT_LENGTH);
-    this.key = deriveKey(salt);
-    this.push(Buffer.concat([MAGIC, salt]));
-  }
-
-  private push(buffer: Buffer) {
-    this.out.push(buffer);
-    this.outLength += buffer.length;
-  }
-
-  private encryptFrame(plain: Buffer, last: boolean) {
-    const head = Buffer.alloc(4);
-    head.writeUInt32BE((plain.length | (last ? LAST_FRAME_FLAG : 0)) >>> 0);
-    const cipher = createCipheriv('aes-256-gcm', this.key, frameNonce(this.frameIndex++));
-    cipher.setAAD(head);
-    const encrypted = Buffer.concat([cipher.update(plain), cipher.final()]);
-    this.push(head);
-    this.push(encrypted);
-    this.push(cipher.getAuthTag());
-  }
-
-  async write(chunk: Uint8Array) {
-    if (!chunk.length) return;
-    this.plainHash.update(chunk);
-    this.plainBytes += chunk.length;
-    const incoming = Buffer.from(chunk.buffer, chunk.byteOffset, chunk.length);
-    this.pending = this.pending.length ? Buffer.concat([this.pending, incoming]) : incoming;
-
-    let offset = 0;
-    // Strictly greater: at least one byte stays back for the final frame.
-    while (this.pending.length - offset > FRAME_SIZE) {
-      this.encryptFrame(this.pending.subarray(offset, offset + FRAME_SIZE), false);
-      offset += FRAME_SIZE;
-      if (this.outLength >= PART_TARGET) await this.flushPart();
-    }
-    this.pending = this.pending.subarray(offset);
-  }
-
-  async finish() {
-    this.encryptFrame(this.pending, true);
-    this.pending = Buffer.alloc(0);
-    this.plainSha256 = this.plainHash.digest('hex');
-    await this.flushPart();
-  }
-
-  private async flushPart() {
-    if (!this.out.length) return;
-    const data = Buffer.concat(this.out);
-    this.out = [];
-    this.outLength = 0;
-    const path = `${this.backupId}/part-${String(this.parts.length + 1).padStart(4, '0')}.bin`;
-
-    let lastError: unknown = null;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const { error } = await serviceClient.storage.from(BUCKET).upload(path, data, {
-        contentType: 'application/octet-stream',
-        upsert: true,
-      });
-      if (!error) {
-        this.parts.push({ path, bytes: data.length, sha256: sha256(data) });
-        this.totalBytes += data.length;
-        return;
-      }
-      lastError = error;
-    }
-    throw lastError;
-  }
-}
-
-const downloadPart = async (part: PartInfo): Promise<Buffer> => {
-  const { data, error } = await serviceClient.storage.from(BUCKET).download(part.path);
-  if (error || !data) throw new Error(`Could not read ${part.path}: ${error?.message || 'missing'}`);
-  const buffer = Buffer.from(await data.arrayBuffer());
-  if (buffer.length !== part.bytes || sha256(buffer) !== part.sha256) {
-    throw new UserError('This backup is damaged: a stored file does not match its checksum.');
-  }
-  return buffer;
+const frameAad = (partIndex: number, head: Buffer) => {
+  const aad = Buffer.alloc(8);
+  aad.writeUInt32BE(partIndex, 0);
+  head.copy(aad, 4);
+  return aad;
 };
 
-// Yields the decrypted ZIP bytes. Any change, reordering, or missing frame fails.
-async function* decryptParts(parts: PartInfo[]): AsyncGenerator<Buffer> {
-  let key: Buffer | null = null;
-  let frameIndex = 0;
-  let sawLast = false;
+const encryptPart = (plain: Buffer, partIndex: number, finalPart: boolean) => {
+  const salt = randomBytes(SALT_LENGTH);
+  const key = partKey(salt);
+  const header = Buffer.alloc(HEADER_LENGTH);
+  MAGIC.copy(header, 0);
+  header.writeUInt32BE(partIndex, MAGIC.length);
+  salt.copy(header, MAGIC.length + 4);
 
-  for (let partIndex = 0; partIndex < parts.length; partIndex += 1) {
-    const data = await downloadPart(parts[partIndex]);
-    let offset = 0;
-    if (partIndex === 0) {
-      if (data.length < MAGIC.length + SALT_LENGTH || !data.subarray(0, MAGIC.length).equals(MAGIC)) {
-        throw new UserError('This is not a valid IGNIS SAFE backup.');
-      }
-      key = deriveKey(data.subarray(MAGIC.length, MAGIC.length + SALT_LENGTH));
-      offset = MAGIC.length + SALT_LENGTH;
-    }
-    if (!key) throw new UserError('This is not a valid IGNIS SAFE backup.');
-
-    while (offset < data.length) {
-      if (sawLast) throw new UserError('This backup is damaged: it has extra data at the end.');
-      if (offset + 4 > data.length) throw new UserError('This backup is damaged.');
-      const head = data.subarray(offset, offset + 4);
-      const raw = head.readUInt32BE(0);
-      const last = (raw & LAST_FRAME_FLAG) !== 0;
-      const length = (raw & ~LAST_FRAME_FLAG) >>> 0;
-      offset += 4;
-      if (length > FRAME_SIZE || offset + length + TAG_LENGTH > data.length) {
-        throw new UserError('This backup is damaged.');
-      }
-      const encrypted = data.subarray(offset, offset + length);
-      const tag = data.subarray(offset + length, offset + length + TAG_LENGTH);
-      offset += length + TAG_LENGTH;
-
-      let plain: Buffer;
-      try {
-        const decipher = createDecipheriv('aes-256-gcm', key, frameNonce(frameIndex));
-        decipher.setAAD(head);
-        decipher.setAuthTag(tag);
-        plain = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-      } catch {
-        throw new UserError('This backup could not be unlocked. It may be damaged, or the backup key has changed.');
-      }
-      frameIndex += 1;
-      sawLast = last;
-      yield plain;
-    }
+  const out: Buffer[] = [header];
+  for (let frame = 0, offset = 0; ; frame += 1, offset += FRAME_SIZE) {
+    const chunk = plain.subarray(offset, offset + FRAME_SIZE);
+    const last = offset + FRAME_SIZE >= plain.length;
+    const head = Buffer.alloc(4);
+    head.writeUInt32BE((chunk.length | (last ? PART_END : 0) | (last && finalPart ? BACKUP_END : 0)) >>> 0);
+    const cipher = createCipheriv('aes-256-gcm', key, frameNonce(frame));
+    cipher.setAAD(frameAad(partIndex, head));
+    out.push(head, cipher.update(chunk), cipher.final(), cipher.getAuthTag());
+    if (last) break;
   }
-  if (!sawLast) throw new UserError('This backup is incomplete.');
-}
+  return Buffer.concat(out);
+};
+
+// Any change, reordering, truncation, or part from another position fails.
+const decryptPart = (data: Buffer, partIndex: number, finalPart: boolean) => {
+  if (
+    data.length < HEADER_LENGTH
+    || !data.subarray(0, MAGIC.length).equals(MAGIC)
+    || data.readUInt32BE(MAGIC.length) !== partIndex
+  ) throw new UserError('This is not a valid IGNIS SAFE backup.');
+  const key = partKey(data.subarray(MAGIC.length + 4, HEADER_LENGTH));
+  const damaged = () => new UserError('This backup is damaged.');
+
+  const chunks: Buffer[] = [];
+  let offset = HEADER_LENGTH;
+  let ended = false;
+  for (let frame = 0; offset < data.length; frame += 1) {
+    if (ended || offset + 4 + TAG_LENGTH > data.length) throw damaged();
+    const head = data.subarray(offset, offset + 4);
+    const raw = head.readUInt32BE(0);
+    const length = raw & LENGTH_MASK;
+    const partEnd = (raw & PART_END) !== 0;
+    const backupEnd = (raw & BACKUP_END) !== 0;
+    if (length > FRAME_SIZE || offset + 4 + length + TAG_LENGTH > data.length) throw damaged();
+    if (backupEnd && !partEnd) throw damaged();
+    if (partEnd && backupEnd !== finalPart) throw new UserError('This backup is incomplete.');
+
+    const encrypted = data.subarray(offset + 4, offset + 4 + length);
+    const tag = data.subarray(offset + 4 + length, offset + 4 + length + TAG_LENGTH);
+    try {
+      const decipher = createDecipheriv('aes-256-gcm', key, frameNonce(frame));
+      decipher.setAAD(frameAad(partIndex, head));
+      decipher.setAuthTag(tag);
+      chunks.push(decipher.update(encrypted), decipher.final());
+    } catch {
+      throw new UserError('This backup could not be unlocked. It may be damaged, or the backup key has changed.');
+    }
+    offset += 4 + length + TAG_LENGTH;
+    ended = partEnd;
+  }
+  if (!ended) throw new UserError('This backup is incomplete.');
+  return Buffer.concat(chunks);
+};
 
 // ---------------------------------------------------------------------------
 // Minimal ZIP (stored, no compression) writer and reader
@@ -288,22 +301,29 @@ const CRC_TABLE = (() => {
   return table;
 })();
 
-const crc32 = (data: Uint8Array) => {
+const jsCrc32 = (data: Uint8Array) => {
   let c = 0xFFFFFFFF;
   for (let i = 0; i < data.length; i += 1) c = CRC_TABLE[(c ^ data[i]) & 0xFF] ^ (c >>> 8);
   return (c ^ 0xFFFFFFFF) >>> 0;
 };
 
-type ZipSink = { write(chunk: Uint8Array): Promise<void> | void };
+// The runtime's native CRC-32 is much cheaper on CPU; it is used only if it gives the standard result.
+const nativeCrc32 = (zlib as unknown as { crc32?: (data: Uint8Array) => number }).crc32;
+const crc32 = (() => {
+  try {
+    if (nativeCrc32 && nativeCrc32(Buffer.from('123456789')) >>> 0 === 0xCBF43926) {
+      return (data: Uint8Array) => nativeCrc32(data) >>> 0;
+    }
+  } catch { /* use the JavaScript version */ }
+  return jsCrc32;
+})();
 
-class ZipWriter {
-  private entries: { name: Buffer; crc: number; size: number; offset: number }[] = [];
-  private offset = 0;
-  count = 0;
+type ZipState = { entries: ZipEntry[]; offset: number };
 
-  constructor(private sink: ZipSink) {}
-
-  async add(name: string, data: Uint8Array) {
+// Local file entries for `items`, placed at the state's current offset.
+const zipEntries = (items: { name: string; data: Buffer }[], state: ZipState) => {
+  const pieces: Buffer[] = [];
+  for (const { name, data } of items) {
     if (data.length >= 0xFFFFFFFF) throw new UserError('A file is too large to back up.');
     const nameBytes = Buffer.from(name, 'utf8');
     const crc = crc32(data);
@@ -319,117 +339,173 @@ class ZipWriter {
     header.writeUInt32LE(data.length, 22);
     header.writeUInt16LE(nameBytes.length, 26);
     header.writeUInt16LE(0, 28);
-    await this.sink.write(header);
-    await this.sink.write(nameBytes);
-    await this.sink.write(data);
-    this.entries.push({ name: nameBytes, crc, size: data.length, offset: this.offset });
-    this.offset += 30 + nameBytes.length + data.length;
-    this.count += 1;
+    pieces.push(header, nameBytes, data);
+    state.entries.push({ n: name, c: crc, s: data.length, o: state.offset });
+    state.offset += 30 + nameBytes.length + data.length;
   }
+  if (state.offset >= 0xFFFFFFFF) throw new UserError('The backup is too large for one file.');
+  return Buffer.concat(pieces);
+};
 
-  async finish() {
-    if (this.entries.length > 0xFFFE) throw new UserError('Too many files to back up in one backup.');
-    const directoryStart = this.offset;
-    let directorySize = 0;
-    for (const entry of this.entries) {
-      const header = Buffer.alloc(46);
-      header.writeUInt32LE(0x02014b50, 0);
-      header.writeUInt16LE(20, 4);
-      header.writeUInt16LE(20, 6);
-      header.writeUInt16LE(0x0800, 8);
-      header.writeUInt16LE(0, 10);
-      header.writeUInt16LE(0, 12);
-      header.writeUInt16LE(0x21, 14);
-      header.writeUInt32LE(entry.crc, 16);
-      header.writeUInt32LE(entry.size, 20);
-      header.writeUInt32LE(entry.size, 24);
-      header.writeUInt16LE(entry.name.length, 28);
-      header.writeUInt32LE(entry.offset, 42);
-      await this.sink.write(header);
-      await this.sink.write(entry.name);
-      directorySize += 46 + entry.name.length;
-    }
-    const end = Buffer.alloc(22);
-    end.writeUInt32LE(0x06054b50, 0);
-    end.writeUInt16LE(this.entries.length, 8);
-    end.writeUInt16LE(this.entries.length, 10);
-    end.writeUInt32LE(directorySize, 12);
-    end.writeUInt32LE(directoryStart, 16);
-    await this.sink.write(end);
+const zipDirectory = (state: ZipState) => {
+  if (state.entries.length > 0xFFFE) throw new UserError('Too many files to back up in one backup.');
+  const pieces: Buffer[] = [];
+  let size = 0;
+  for (const entry of state.entries) {
+    const name = Buffer.from(entry.n, 'utf8');
+    const header = Buffer.alloc(46);
+    header.writeUInt32LE(0x02014b50, 0);
+    header.writeUInt16LE(20, 4);
+    header.writeUInt16LE(20, 6);
+    header.writeUInt16LE(0x0800, 8);
+    header.writeUInt16LE(0, 10);
+    header.writeUInt16LE(0, 12);
+    header.writeUInt16LE(0x21, 14);
+    header.writeUInt32LE(entry.c, 16);
+    header.writeUInt32LE(entry.s, 20);
+    header.writeUInt32LE(entry.s, 24);
+    header.writeUInt16LE(name.length, 28);
+    header.writeUInt32LE(entry.o, 42);
+    pieces.push(header, name);
+    size += 46 + name.length;
   }
-}
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(state.entries.length, 8);
+  end.writeUInt16LE(state.entries.length, 10);
+  end.writeUInt32LE(size, 12);
+  end.writeUInt32LE(state.offset, 16);
+  pieces.push(end);
+  return Buffer.concat(pieces);
+};
 
-class ByteReader {
-  private queue: Buffer[] = [];
-  private length = 0;
-  private ended = false;
+const damagedZip = () => new UserError('This backup is damaged: its contents cannot be read.');
 
-  constructor(private source: AsyncIterator<Buffer>) {}
-
-  private async fill(count: number) {
-    while (this.length < count && !this.ended) {
-      const next = await this.source.next();
-      if (next.done) this.ended = true;
-      else {
-        this.queue.push(next.value);
-        this.length += next.value.length;
-      }
-    }
-    return this.length >= count;
+// Reads the whole local entries in one decrypted part, checking each CRC.
+const readEntries = (plain: Buffer) => {
+  const entries: { name: string; data: Buffer }[] = [];
+  let offset = 0;
+  while (offset < plain.length) {
+    if (offset + 30 > plain.length || plain.readUInt32LE(offset) !== 0x04034b50) throw damagedZip();
+    const flags = plain.readUInt16LE(offset + 6);
+    const method = plain.readUInt16LE(offset + 8);
+    const crc = plain.readUInt32LE(offset + 14);
+    const compressed = plain.readUInt32LE(offset + 18);
+    const size = plain.readUInt32LE(offset + 22);
+    const nameLength = plain.readUInt16LE(offset + 26);
+    const extraLength = plain.readUInt16LE(offset + 28);
+    if (method !== 0 || (flags & 8) !== 0 || compressed !== size) throw damagedZip();
+    const nameStart = offset + 30;
+    const dataStart = nameStart + nameLength + extraLength;
+    const dataEnd = dataStart + size;
+    if (dataEnd > plain.length) throw damagedZip();
+    const data = plain.subarray(dataStart, dataEnd);
+    if (crc32(data) !== crc) throw damagedZip();
+    entries.push({ name: plain.subarray(nameStart, nameStart + nameLength).toString('utf8'), data });
+    offset = dataEnd;
   }
+  return entries;
+};
 
-  async take(count: number): Promise<Buffer | null> {
-    if (count === 0) return Buffer.alloc(0);
-    if (!(await this.fill(count))) return null;
-    const joined = this.queue.length === 1 ? this.queue[0] : Buffer.concat(this.queue);
-    const rest = joined.subarray(count);
-    this.queue = rest.length ? [rest] : [];
-    this.length = rest.length;
-    return joined.subarray(0, count);
+// The last part holds only the central directory. Returns how many entries it lists.
+const readDirectoryCount = (plain: Buffer) => {
+  const end = plain.length - 22;
+  if (end < 0 || plain.readUInt32LE(end) !== 0x06054b50) throw damagedZip();
+  if (plain.readUInt32LE(end + 12) !== end) throw damagedZip();
+  if (end > 0 && plain.readUInt32LE(0) !== 0x02014b50) throw damagedZip();
+  return plain.readUInt16LE(end + 10);
+};
+
+// ---------------------------------------------------------------------------
+// Storage helpers
+// ---------------------------------------------------------------------------
+
+const uploadWithRetry = async (path: string, data: Buffer) => {
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { error } = await serviceClient.storage.from(BUCKET).upload(path, data, {
+      contentType: 'application/octet-stream',
+      upsert: true,
+    });
+    if (!error) return;
+    lastError = error;
   }
+  throw lastError;
+};
 
-  // Reads the remaining bytes so the whole stream is authenticated.
-  async drain() {
-    while (!this.ended) {
-      const next = await this.source.next();
-      if (next.done) this.ended = true;
-    }
+// Encrypts one part and stores it. The path is unique per attempt, so a retried
+// step never overwrites a part that another attempt already recorded.
+const storePart = async (backupId: string, index: number, plain: Buffer, finalPart: boolean): Promise<PartInfo> => {
+  const data = encryptPart(plain, index, finalPart);
+  const path = `${backupId}/part-${String(index + 1).padStart(4, '0')}-${randomBytes(4).toString('hex')}.bin`;
+  await uploadWithRetry(path, data);
+  return { path, bytes: data.length, sha256: sha256(data), plain_bytes: plain.length, plain_sha256: sha256(plain) };
+};
+
+const downloadPart = async (part: PartInfo): Promise<Buffer> => {
+  const { data, error } = await serviceClient.storage.from(BUCKET).download(part.path);
+  if (error || !data) throw new Error(`Could not read ${part.path}: ${error?.message || 'missing'}`);
+  const buffer = Buffer.from(await data.arrayBuffer());
+  if (buffer.length !== part.bytes || sha256(buffer) !== part.sha256) {
+    throw new UserError('This backup is damaged: a stored file does not match its checksum.');
   }
-}
+  return buffer;
+};
 
-const readZip = async (
-  source: AsyncIterator<Buffer>,
-  onEntry: (name: string, data: Buffer) => Promise<void>,
-) => {
-  const reader = new ByteReader(source);
-  const damaged = () => new UserError('This backup is damaged: its contents cannot be read.');
-
-  for (;;) {
-    const signature = await reader.take(4);
-    if (!signature) throw damaged();
-    const value = signature.readUInt32LE(0);
-    if (value === 0x02014b50 || value === 0x06054b50) break;
-    if (value !== 0x04034b50) throw damaged();
-
-    const header = await reader.take(26);
-    if (!header) throw damaged();
-    const flags = header.readUInt16LE(2);
-    const method = header.readUInt16LE(4);
-    const crc = header.readUInt32LE(10);
-    const compressed = header.readUInt32LE(14);
-    const size = header.readUInt32LE(18);
-    const nameLength = header.readUInt16LE(22);
-    const extraLength = header.readUInt16LE(24);
-    if (method !== 0 || (flags & 8) !== 0 || compressed !== size) throw damaged();
-
-    const name = await reader.take(nameLength);
-    const extra = await reader.take(extraLength);
-    const data = await reader.take(size);
-    if (!name || !extra || !data) throw damaged();
-    if (crc32(data) !== crc) throw damaged();
-    await onEntry(name.toString('utf8'), data);
+const openPart = async (parts: PartInfo[], index: number) => {
+  const part = parts[index];
+  const plain = decryptPart(await downloadPart(part), index, index === parts.length - 1);
+  if (plain.length !== part.plain_bytes || sha256(plain) !== part.plain_sha256) {
+    throw new UserError('The backup could not be verified.');
   }
-  await reader.drain();
+  return plain;
+};
+
+// Proves one stored part is whole. Returns its manifest when it is the first part.
+const verifyPart = async (job: BaseJob, parts: PartInfo[], index: number, backupId: string) => {
+  const plain = await openPart(parts, index);
+  if (index === parts.length - 1) {
+    job.directoryEntries = readDirectoryCount(plain);
+    return null;
+  }
+  const entries = readEntries(plain);
+  job.verifiedEntries += entries.length;
+  if (index !== 0) return null;
+  const manifestEntry = entries[0];
+  if (manifestEntry?.name !== 'manifest.json') throw damagedZip();
+  const manifest = JSON.parse(manifestEntry.data.toString('utf8'));
+  if (manifest.format !== 'ignis-safe-backup' || manifest.version !== 2 || manifest.backupId !== backupId) {
+    throw new UserError('This backup does not match its record.');
+  }
+  return manifest as { files?: FileInfo[] };
+};
+
+const removePaths = async (paths: string[]) => {
+  for (let index = 0; index < paths.length; index += 100) {
+    const { error } = await serviceClient.storage.from(BUCKET).remove(paths.slice(index, index + 100));
+    if (error) console.error('Could not remove backup files:', error.message);
+  }
+};
+
+// Removes stored parts of a backup, except those in `keep`.
+const cleanBackupFolder = async (backupId: string, keep: Set<string> = new Set()) => {
+  const { data, error } = await serviceClient.storage.from(BUCKET).list(backupId, { limit: 1000 });
+  if (error || !data) return;
+  await removePaths(data.map((item) => `${backupId}/${item.name}`).filter((path) => !keep.has(path)));
+};
+
+// Failed or stopped runs can leave parts behind; remove them before a new backup.
+const cleanFailedBackups = async () => {
+  const { data } = await serviceClient
+    .from('system_backups')
+    .select('backup_id')
+    .eq('status', 'failed')
+    .is('job->>cleaned', null)
+    .limit(20);
+  for (const row of data || []) {
+    await cleanBackupFolder(row.backup_id);
+    await serviceClient.from('system_backups').update({ job: { cleaned: true } }).eq('backup_id', row.backup_id);
+  }
 };
 
 // ---------------------------------------------------------------------------
@@ -475,8 +551,86 @@ const toUserMessage = (error: unknown, fallback: string) => {
 };
 
 // ---------------------------------------------------------------------------
-// Create a backup
+// Job chain
 // ---------------------------------------------------------------------------
+
+const newToken = () => {
+  const token = randomBytes(32).toString('hex');
+  return { token, hash: sha256(token) };
+};
+
+const loadRow = async (backupId: string): Promise<BackupRow | null> => {
+  const { data, error } = await serviceClient
+    .from('system_backups')
+    .select('backup_id, kind, status, restore_status, started_at, job, progress, restore_progress, parts')
+    .eq('backup_id', backupId)
+    .maybeSingle();
+  if (error) throw error;
+  return data as BackupRow | null;
+};
+
+const saveStep = (backupId: string, mode: Mode, expectedStep: number, job: Job | null, progress: Record<string, unknown> | null) =>
+  rpc<boolean>('backup_step_save', {
+    p_backup_id: backupId, p_mode: mode, p_expected_step: expectedStep, p_job: job, p_progress: progress,
+  });
+
+// Starts the next step as its own request (and so with its own CPU allowance).
+const kick = async (backupId: string, token: string) => {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(SELF_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ANON_KEY}`, apikey: ANON_KEY },
+        body: JSON.stringify({ action: 'step', backupId, token }),
+        signal: AbortSignal.timeout(15000),
+      });
+      await response.body?.cancel();
+      if (response.status === 202) return true;
+      console.error(`Next backup step was refused (${response.status}).`);
+    } catch (error) {
+      console.error('Could not start the next backup step:', error);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+  }
+  return false;
+};
+
+const backupProgress = (job: BackupJob, activity: string) => {
+  const remainingRecords = job.tables.slice(job.tableCursor).reduce((total, table) => total + Number(table.est_bytes || 0), 0);
+  const remainingFiles = job.files.slice(job.fileCursor).reduce((total, file) => total + Number(file.size || 0), 0);
+  const planned = job.stage === 'verify'
+    ? job.parts.reduce((total, part) => total + part.plain_bytes, 0)
+    : job.offset + remainingRecords + remainingFiles;
+  return {
+    stage: job.stage,
+    activity,
+    step: job.step,
+    done_bytes: (job.stage === 'verify' ? planned : job.offset) + job.verifiedBytes,
+    total_bytes: 2 * planned,
+    tables_done: job.tableCursor,
+    tables_total: job.tables.length,
+    files_done: job.fileCursor,
+    files_total: job.files.length,
+    parts_written: job.parts.length,
+    parts_done: job.verifyCursor,
+    parts_total: job.stage === 'verify' ? job.parts.length : null,
+    work_started_at: job.workStartedAt,
+  };
+};
+
+const restoreProgress = (job: RestoreJob, parts: PartInfo[], activity: string) => {
+  const planned = parts.reduce((total, part) => total + part.plain_bytes, 0);
+  return {
+    stage: job.stage,
+    activity,
+    step: job.step,
+    done_bytes: job.verifiedBytes + job.appliedBytes,
+    total_bytes: 2 * planned,
+    parts_done: job.stage === 'verify' ? job.verifyCursor : job.applyCursor,
+    parts_total: parts.length,
+    work_started_at: job.workStartedAt,
+  };
+};
 
 const README_TEXT = [
   'IGNIS SAFE backup',
@@ -489,256 +643,413 @@ const README_TEXT = [
   'Login passwords are managed by Supabase Auth and are not part of this backup.',
 ].join('\n');
 
-// Re-reads the stored backup from Storage and proves it is whole.
-const verifyBackup = async (parts: PartInfo[], expectedBytes: number, expectedSha: string, expectedEntries?: number) => {
-  const hash = createHash('sha256');
-  let plainBytes = 0;
-  const source = (async function* () {
-    for await (const chunk of decryptParts(parts)) {
-      hash.update(chunk);
-      plainBytes += chunk.length;
-      yield chunk;
-    }
-  })();
+type StepResult = { job: Job; activity: string; written?: PartInfo; finished?: boolean };
 
-  let entries = 0;
-  let manifestSeen = false;
-  await readZip(source, async (name, data) => {
-    entries += 1;
-    if (name === 'manifest.json') {
-      JSON.parse(data.toString('utf8'));
-      manifestSeen = true;
-    }
-  });
-
-  if (
-    !manifestSeen
-    || plainBytes !== expectedBytes
-    || hash.digest('hex') !== expectedSha
-    || (expectedEntries !== undefined && entries !== expectedEntries)
-  ) {
-    throw new UserError('The backup could not be verified, so it was not saved.');
-  }
+// Encrypts and stores one part, telling the page first so "Encrypting" is shown while it happens.
+const writeBackupPart = async (backupId: string, job: BackupJob, plain: Buffer, finalPart = false) => {
+  await saveStep(backupId, 'backup', job.step, null, backupProgress(job, 'encrypting'));
+  const part = await storePart(backupId, job.parts.length, plain, finalPart);
+  job.parts.push(part);
+  return part;
 };
 
-const removeBackupParts = async (parts: PartInfo[]) => {
-  const paths = parts.map((part) => part.path);
-  for (let index = 0; index < paths.length; index += 100) {
-    const { error } = await serviceClient.storage.from(BUCKET).remove(paths.slice(index, index + 100));
-    if (error) console.error('Could not remove backup files:', error.message);
+const backupStep = async (row: BackupRow, job: BackupJob): Promise<StepResult> => {
+  const backupId = row.backup_id;
+
+  if (job.stage === 'prepare') {
+    const tables = sortTables(await rpc<TableInfo[]>('backup_table_info'));
+    const files = await rpc<FileInfo[]>('backup_file_list');
+    job.tables = tables;
+    job.files = files;
+    const manifest = {
+      format: 'ignis-safe-backup',
+      version: 2,
+      backupId,
+      kind: job.kind,
+      startedAt: job.startedAt,
+      tables: tables.map((table) => ({ name: table.table, parents: table.parents })),
+      files,
+    };
+    const plain = zipEntries([
+      { name: 'manifest.json', data: Buffer.from(JSON.stringify(manifest), 'utf8') },
+      { name: 'README.txt', data: Buffer.from(README_TEXT, 'utf8') },
+    ], job);
+    const written = await writeBackupPart(backupId, job, plain);
+    job.stage = 'records';
+    job.workStartedAt = new Date().toISOString();
+    return { job, activity: 'records', written };
   }
+
+  if (job.stage === 'records') {
+    const items: { name: string; data: Buffer }[] = [];
+    let bytes = 0;
+    while (job.tableCursor < job.tables.length && (items.length === 0 || bytes < RECORDS_STEP_BYTES)) {
+      const info = job.tables[job.tableCursor];
+      const rows = await readTable(info.table);
+      const json = Buffer.from(JSON.stringify(rows), 'utf8');
+      job.recordBytes += json.length;
+      if (job.recordBytes > MAX_DATABASE_BYTES) throw new UserError('The database is too large to back up in one backup.');
+      job.counts[info.table] = rows.length;
+      items.push({ name: `database/${info.table}.json`, data: json });
+      bytes += json.length;
+      job.tableCursor += 1;
+    }
+    const written = items.length ? await writeBackupPart(backupId, job, zipEntries(items, job)) : undefined;
+    if (job.tableCursor >= job.tables.length) job.stage = job.files.length ? 'files' : 'finish';
+    return { job, activity: job.stage === 'records' ? 'records' : job.stage === 'files' ? 'files' : 'encrypting', written };
+  }
+
+  if (job.stage === 'files') {
+    const batch: FileInfo[] = [];
+    let batchBytes = 0;
+    while (
+      job.fileCursor + batch.length < job.files.length
+      && batch.length < FILES_STEP_COUNT
+      && (batch.length === 0 || batchBytes + job.files[job.fileCursor + batch.length].size <= FILES_STEP_BYTES)
+    ) {
+      const file = job.files[job.fileCursor + batch.length];
+      batch.push(file);
+      batchBytes += file.size;
+    }
+
+    const items: { name: string; data: Buffer }[] = [];
+    for (let start = 0; start < batch.length; start += FILES_PARALLEL) {
+      const group = batch.slice(start, start + FILES_PARALLEL);
+      const downloaded = await Promise.all(group.map(async (file) => {
+        const { data, error } = await serviceClient.storage.from(file.bucket).download(file.name);
+        if (error || !data) {
+          // Deleted while the backup ran: the backup reflects that, as it would a moment later.
+          if (isMissingObject(error)) return null;
+          throw new Error(`Could not read ${file.bucket}/${file.name}: ${error?.message}`);
+        }
+        return Buffer.from(await data.arrayBuffer());
+      }));
+      group.forEach((file, position) => {
+        const data = downloaded[position];
+        if (!data) {
+          job.filesSkipped += 1;
+          return;
+        }
+        items.push({ name: `files/${file.bucket}/${file.name}`, data });
+        job.fileBytes += data.length;
+        job.filesSaved += 1;
+      });
+    }
+    job.fileCursor += batch.length;
+    const written = items.length ? await writeBackupPart(backupId, job, zipEntries(items, job)) : undefined;
+    if (job.fileCursor >= job.files.length) job.stage = 'finish';
+    return { job, activity: job.stage === 'files' ? 'files' : 'encrypting', written };
+  }
+
+  if (job.stage === 'finish') {
+    const written = await writeBackupPart(backupId, job, zipDirectory(job), true);
+    job.stage = 'verify';
+    return { job, activity: 'verifying', written };
+  }
+
+  // verify
+  let bytes = 0;
+  while (job.verifyCursor < job.parts.length && (bytes === 0 || bytes < VERIFY_STEP_BYTES)) {
+    await verifyPart(job, job.parts, job.verifyCursor, backupId);
+    const size = job.parts[job.verifyCursor].plain_bytes;
+    bytes += size;
+    job.verifiedBytes += size;
+    job.verifyCursor += 1;
+  }
+  if (job.verifyCursor < job.parts.length) return { job, activity: 'verifying' };
+  if (job.verifiedEntries !== job.entries.length || job.directoryEntries !== job.entries.length) {
+    throw new UserError('The backup could not be verified, so it was not saved.');
+  }
+  return { job, activity: 'completing', finished: true };
+};
+
+const completeBackup = async (row: BackupRow, job: BackupJob) => {
+  const countOf = (name: string) => job.counts[name] ?? 0;
+  const contents = {
+    tables: job.tables.length,
+    records: Object.values(job.counts).reduce((total, count) => total + count, 0),
+    files: job.filesSaved,
+    files_skipped: job.filesSkipped,
+    file_bytes: job.fileBytes,
+    assessment_attempts: countOf('assessment_attempts'),
+    attendance_records: countOf('attendance_records'),
+    reports: countOf('reports'),
+    learners: countOf('profiles'),
+    staff_accounts: countOf('admin'),
+  };
+  await rpc('backup_complete', {
+    p_backup_id: row.backup_id,
+    p_parts: job.parts,
+    p_size: job.parts.reduce((total, part) => total + part.bytes, 0),
+    p_plain_bytes: job.parts.reduce((total, part) => total + part.plain_bytes, 0),
+    // One hash over every part's checked plaintext hash, in order.
+    p_plain_sha256: sha256(job.parts.map((part) => part.plain_sha256).join('')),
+    p_contents: contents,
+  });
+  // Parts from retried steps that were never recorded.
+  await cleanBackupFolder(row.backup_id, new Set(job.parts.map((part) => part.path)));
+  if (job.kind === 'scheduled') await pruneScheduledBackups();
 };
 
 const pruneScheduledBackups = async () => {
   const { data, error } = await serviceClient
     .from('system_backups')
-    .select('backup_id, parts')
+    .select('backup_id')
     .eq('kind', 'scheduled')
     .eq('status', 'completed')
     .order('started_at', { ascending: false });
   if (error || !data) return;
   for (const old of data.slice(KEEP_SCHEDULED_BACKUPS)) {
-    await removeBackupParts((old.parts || []) as PartInfo[]);
+    await cleanBackupFolder(old.backup_id);
     await serviceClient.from('system_backups').delete().eq('backup_id', old.backup_id);
   }
 };
 
-const runBackup = async (backupId: string, kind: string, startedAt: string) => {
-  const writer = new EncryptedPartWriter(backupId);
-  try {
-    const tableInfo = sortTables(await rpc<TableInfo[]>('backup_table_info'));
-    const tables: { name: string; parents: string[]; rows: number; json: Buffer }[] = [];
-    let databaseBytes = 0;
-    for (const info of tableInfo) {
-      const rows = await readTable(info.table);
-      const json = Buffer.from(JSON.stringify(rows), 'utf8');
-      databaseBytes += json.length;
-      if (databaseBytes > MAX_DATABASE_BYTES) throw new UserError('The database is too large to back up in one step.');
-      tables.push({ name: info.table, parents: info.parents, rows: rows.length, json });
-    }
-    const files = await rpc<FileInfo[]>('backup_file_list');
+const restoreStep = async (row: BackupRow, job: RestoreJob): Promise<StepResult> => {
+  const parts = row.parts;
 
-    const manifest = {
-      format: 'ignis-safe-backup',
-      version: 1,
-      backupId,
-      kind,
-      startedAt,
-      tables: tables.map((table) => ({ name: table.name, rows: table.rows, parents: table.parents })),
-      files,
-    };
-
-    const zip = new ZipWriter(writer);
-    await zip.add('manifest.json', Buffer.from(JSON.stringify(manifest), 'utf8'));
-    await zip.add('README.txt', Buffer.from(README_TEXT, 'utf8'));
-    for (const table of tables) await zip.add(`database/${table.name}.json`, table.json);
-
-    let fileBytes = 0;
-    for (let index = 0; index < files.length;) {
-      const batch: FileInfo[] = [];
-      let batchBytes = 0;
-      while (
-        index < files.length
-        && batch.length < FILE_BATCH_COUNT
-        && (batch.length === 0 || batchBytes + files[index].size <= FILE_BATCH_BYTES)
-      ) {
-        batch.push(files[index]);
-        batchBytes += files[index].size;
-        index += 1;
+  if (job.stage === 'verify') {
+    // Pass 1: prove the whole backup is intact before touching any data.
+    let bytes = 0;
+    while (job.verifyCursor < parts.length && (bytes === 0 || bytes < VERIFY_STEP_BYTES)) {
+      const manifest = await verifyPart(job, parts, job.verifyCursor, row.backup_id);
+      if (manifest) {
+        job.allowed = Object.fromEntries((manifest.files || []).map((file) => [`files/${file.bucket}/${file.name}`, file.mimetype]));
       }
-      const downloaded = await Promise.all(batch.map(async (file) => {
-        const { data, error } = await serviceClient.storage.from(file.bucket).download(file.name);
-        if (error || !data) {
-          // A file removed while the backup runs would make the manifest wrong: retry later.
-          if (isMissingObject(error)) throw new UserError('Some files changed while the backup was running. Please try again.');
-          throw new Error(`Could not read ${file.bucket}/${file.name}: ${error?.message}`);
-        }
-        return Buffer.from(await data.arrayBuffer());
-      }));
-      for (let position = 0; position < batch.length; position += 1) {
-        await zip.add(`files/${batch[position].bucket}/${batch[position].name}`, downloaded[position]);
-        fileBytes += downloaded[position].length;
-      }
+      bytes += parts[job.verifyCursor].plain_bytes;
+      job.verifiedBytes += parts[job.verifyCursor].plain_bytes;
+      job.verifyCursor += 1;
     }
-
-    await zip.finish();
-    await writer.finish();
-
-    await verifyBackup(writer.parts, writer.plainBytes, writer.plainSha256, zip.count);
-
-    const countOf = (name: string) => tables.find((table) => table.name === name)?.rows ?? 0;
-    const contents = {
-      tables: tables.length,
-      records: tables.reduce((total, table) => total + table.rows, 0),
-      files: files.length,
-      file_bytes: fileBytes,
-      assessment_attempts: countOf('assessment_attempts'),
-      attendance_records: countOf('attendance_records'),
-      reports: countOf('reports'),
-      learners: countOf('profiles'),
-      staff_accounts: countOf('admin'),
-    };
-
-    await rpc('backup_complete', {
-      p_backup_id: backupId,
-      p_parts: writer.parts,
-      p_size: writer.totalBytes,
-      p_plain_bytes: writer.plainBytes,
-      p_plain_sha256: writer.plainSha256,
-      p_contents: contents,
-    });
-
-    if (kind === 'scheduled') await pruneScheduledBackups();
-  } catch (error) {
-    console.error('Backup failed:', error);
-    await removeBackupParts(writer.parts);
-    await rpc('backup_fail', {
-      p_backup_id: backupId,
-      p_error: toUserMessage(error, 'Something went wrong while saving the backup. Please try again.'),
-    }).catch((failError) => console.error('Could not record the failed backup:', failError));
+    if (job.verifyCursor < parts.length) return { job, activity: 'verifying' };
+    if (job.directoryEntries !== job.verifiedEntries) throw new UserError('The backup could not be verified.');
+    job.stage = 'apply';
+    return { job, activity: 'restoring' };
   }
+
+  // Pass 2: add whatever is missing. Records come first, in dependency order.
+  let bytes = 0;
+  while (job.applyCursor < parts.length - 1 && (bytes === 0 || bytes < APPLY_STEP_BYTES)) {
+    for (const { name, data } of readEntries(await openPart(parts, job.applyCursor))) {
+      if (name.startsWith('database/') && name.endsWith('.json')) {
+        await restoreRows(job, name.slice('database/'.length, -'.json'.length), data);
+        continue;
+      }
+      if (!(name in job.allowed)) continue;
+      const slash = name.indexOf('/', 'files/'.length);
+      const bucket = name.slice('files/'.length, slash);
+      const path = name.slice(slash + 1);
+      const { error } = await serviceClient.storage.from(bucket).upload(path, data, {
+        contentType: job.allowed[name] || 'application/octet-stream',
+        upsert: false,
+      });
+      if (!error) job.totals.files_added += 1;
+      else if (/already exists|duplicate/i.test(error.message) || (error as { statusCode?: string }).statusCode === '409') {
+        job.totals.files_already_there += 1;
+      } else {
+        job.totals.files_failed += 1;
+        if (job.problems.length < 5) job.problems.push(`${bucket}/${path}: ${error.message}`);
+      }
+    }
+    bytes += parts[job.applyCursor].plain_bytes;
+    job.appliedBytes += parts[job.applyCursor].plain_bytes;
+    job.applyCursor += 1;
+  }
+  if (job.applyCursor < parts.length - 1) return { job, activity: 'restoring' };
+  job.appliedBytes += parts[parts.length - 1].plain_bytes; // the directory part has nothing to add
+  job.applyCursor = parts.length;
+  return { job, activity: 'completing', finished: true };
+};
+
+const restoreRows = async (job: RestoreJob, table: string, data: Buffer) => {
+  const rows = JSON.parse(data.toString('utf8')) as Record<string, unknown>[];
+  let chunk: Record<string, unknown>[] = [];
+  let chunkBytes = 0;
+  const flush = async () => {
+    if (!chunk.length) return;
+    const result = await rpc<{ added: number; already_there: number; failed: number; error: string | null }>(
+      'backup_restore_rows', { p_table: table, p_rows: chunk },
+    );
+    job.totals.records_added += result.added;
+    job.totals.records_already_there += result.already_there;
+    job.totals.records_failed += result.failed;
+    if (result.failed && job.problems.length < 5) job.problems.push(`${table}: ${result.error || 'some records could not be restored'}`);
+    chunk = [];
+    chunkBytes = 0;
+  };
+  for (const row of rows) {
+    chunk.push(row);
+    chunkBytes += JSON.stringify(row).length;
+    if (chunkBytes >= RESTORE_CHUNK_BYTES || chunk.length >= 500) await flush();
+  }
+  await flush();
+};
+
+const failJob = async (row: BackupRow, job: Job, error: unknown) => {
+  if (job.mode === 'backup') {
+    const message = toUserMessage(error, 'Something went wrong while saving the backup. Please try again.');
+    const failed = await rpc<boolean>('backup_fail', { p_backup_id: row.backup_id, p_error: message })
+      .catch((failError) => { console.error('Could not record the failed backup:', failError); return false; });
+    // Only remove files of a run this call really ended.
+    if (failed) {
+      await cleanBackupFolder(row.backup_id);
+      await serviceClient.from('system_backups').update({ job: { cleaned: true } }).eq('backup_id', row.backup_id);
+    }
+    return;
+  }
+  await rpc('backup_restore_finish', {
+    p_backup_id: row.backup_id,
+    p_actor: job.actor,
+    p_ok: false,
+    p_summary: {
+      ...job.totals,
+      problems: job.problems,
+      error: toUserMessage(error, 'Something went wrong while restoring. Nothing that exists now was changed or replaced.'),
+    },
+  }).catch((finishError) => console.error('Could not record the failed restore:', finishError));
+};
+
+const isActive = (row: BackupRow, job: Job) =>
+  job.mode === 'backup' ? row.status === 'running' : row.restore_status === 'running';
+
+// Runs one step, saves it, then starts the next one.
+const runStep = async (backupId: string, token: string) => {
+  const row = await loadRow(backupId).catch((error) => { console.error('Could not load the backup job:', error); return null; });
+  const job = row?.job as Job | undefined;
+  if (!row || !job?.mode || !isActive(row, job) || !sameHash(job.token, sha256(token))) return;
+
+  const startedFrom = job.step;
+  let result: StepResult;
+  try {
+    const working = structuredClone(job);
+    result = working.mode === 'backup' ? await backupStep(row, working) : await restoreStep(row, working);
+  } catch (error) {
+    if (!(error instanceof UserError) && job.retries < STEP_RETRIES) {
+      console.error('Backup step failed; trying it again:', error);
+      const saved = await saveStep(backupId, job.mode, startedFrom, { ...job, retries: job.retries + 1 }, null).catch(() => false);
+      if (saved && await kick(backupId, token)) return;
+    }
+    console.error('Backup step failed:', error);
+    await failJob(row, job, error);
+    return;
+  }
+
+  const next = result.job;
+  next.step = startedFrom + 1;
+  next.retries = 0;
+  const progress = next.mode === 'backup'
+    ? backupProgress(next, result.activity)
+    : restoreProgress(next, row.parts, result.activity);
+
+  let saved = false;
+  try {
+    saved = await saveStep(backupId, next.mode, startedFrom, next, progress);
+  } catch (error) {
+    console.error('Could not save the backup step:', error);
+  }
+  if (!saved) {
+    // Another attempt already moved on (or the run was stopped): drop this attempt's part.
+    if (result.written) await removePaths([result.written.path]);
+    return;
+  }
+
+  if (result.finished) {
+    try {
+      if (next.mode === 'backup') await completeBackup(row, next);
+      else {
+        await rpc('backup_restore_finish', {
+          p_backup_id: backupId, p_actor: next.actor, p_ok: true, p_summary: { ...next.totals, problems: next.problems },
+        });
+      }
+    } catch (error) {
+      console.error('Could not finish the backup job:', error);
+      await failJob(row, next, error);
+    }
+    return;
+  }
+
+  if (!(await kick(backupId, token))) {
+    await failJob(row, next, new UserError('The backup could not continue. Please try again.'));
+  }
+};
+
+// Saves a new job and starts its first step. Returns false when the step could not be started.
+const beginJob = async (backupId: string, mode: Mode, job: Job, progress: Record<string, unknown>, token: string) => {
+  const saved = await saveStep(backupId, mode, -1, job, progress);
+  if (!saved) throw new UserError('This could not be started. Please try again.');
+  return kick(backupId, token);
 };
 
 const startBackup = async (kind: 'manual' | 'scheduled', actorId: string | null, note: string | null) => {
   const backupId = await rpc<string>('backup_start', { p_kind: kind, p_actor: actorId, p_note: note });
+  // After backup_start, so runs it just marked as stopped are cleaned too.
+  await cleanFailedBackups().catch((error) => console.error('Could not clean old backup files:', error));
   const { data } = await serviceClient.from('system_backups').select('started_at').eq('backup_id', backupId).single();
-  EdgeRuntime.waitUntil(runBackup(backupId, kind, data?.started_at || new Date().toISOString()));
+  const { token, hash } = newToken();
+  const job: BackupJob = {
+    mode: 'backup', stage: 'prepare', step: 0, token: hash, retries: 0, resumes: 0,
+    kind, startedAt: data?.started_at || new Date().toISOString(), workStartedAt: null,
+    tables: [], tableCursor: 0, counts: {}, recordBytes: 0,
+    files: [], fileCursor: 0, fileBytes: 0, filesSaved: 0, filesSkipped: 0,
+    entries: [], offset: 0, parts: [],
+    verifyCursor: 0, verifiedBytes: 0, verifiedEntries: 0, directoryEntries: null,
+  };
+  const row = { backup_id: backupId } as BackupRow;
+  try {
+    if (!(await beginJob(backupId, 'backup', job, backupProgress(job, 'preparing'), token))) {
+      throw new UserError('The backup could not be started. Please try again.');
+    }
+  } catch (error) {
+    await failJob(row, job, error);
+    throw error;
+  }
   return backupId;
 };
 
-// ---------------------------------------------------------------------------
-// Restore a backup (adds what is missing; never overwrites)
-// ---------------------------------------------------------------------------
-
-const runRestore = async (backupId: string, actorId: string) => {
-  const totals = {
-    records_added: 0, records_already_there: 0, records_failed: 0,
-    files_added: 0, files_already_there: 0, files_failed: 0,
+const startRestore = async (backupId: string, actorId: string) => {
+  await rpc('backup_restore_begin', { p_backup_id: backupId, p_actor: actorId });
+  const row = await loadRow(backupId);
+  if (!row) throw new UserError('Backup not found.');
+  const { token, hash } = newToken();
+  const job: RestoreJob = {
+    mode: 'restore', stage: 'verify', step: 0, token: hash, retries: 0, resumes: 0, actor: actorId,
+    workStartedAt: new Date().toISOString(),
+    verifyCursor: 0, verifiedBytes: 0, verifiedEntries: 0, directoryEntries: null,
+    applyCursor: 0, appliedBytes: 0, allowed: {},
+    totals: { records_added: 0, records_already_there: 0, records_failed: 0, files_added: 0, files_already_there: 0, files_failed: 0 },
+    problems: [],
   };
-  const problems: string[] = [];
   try {
-    const { data: backup, error } = await serviceClient
-      .from('system_backups')
-      .select('parts, plain_bytes, plain_sha256')
-      .eq('backup_id', backupId)
-      .single();
-    if (error || !backup) throw new UserError('Backup not found.');
-    const parts = backup.parts as PartInfo[];
-
-    // Pass 1: prove the whole backup is intact before touching any data.
-    await verifyBackup(parts, Number(backup.plain_bytes), String(backup.plain_sha256));
-
-    // Pass 2: add whatever is missing. Tables come first, in dependency order.
-    let ready = false;
-    const allowedFiles = new Map<string, FileInfo>();
-
-    await readZip(decryptParts(parts), async (name, data) => {
-      if (name === 'manifest.json') {
-        const manifest = JSON.parse(data.toString('utf8')) as Manifest;
-        if (manifest.format !== 'ignis-safe-backup' || manifest.backupId !== backupId) {
-          throw new UserError('This backup does not match its record.');
-        }
-        for (const file of manifest.files || []) allowedFiles.set(`files/${file.bucket}/${file.name}`, file);
-        ready = true;
-        return;
-      }
-      if (!ready) throw new UserError('This backup is damaged: its contents cannot be read.');
-
-      if (name.startsWith('database/') && name.endsWith('.json')) {
-        const table = name.slice('database/'.length, -'.json'.length);
-        const rows = JSON.parse(data.toString('utf8')) as Record<string, unknown>[];
-        let chunk: Record<string, unknown>[] = [];
-        let chunkBytes = 0;
-        const flush = async () => {
-          if (!chunk.length) return;
-          const result = await rpc<{ added: number; already_there: number; failed: number; error: string | null }>(
-            'backup_restore_rows', { p_table: table, p_rows: chunk },
-          );
-          totals.records_added += result.added;
-          totals.records_already_there += result.already_there;
-          totals.records_failed += result.failed;
-          if (result.failed && problems.length < 5) problems.push(`${table}: ${result.error || 'some records could not be restored'}`);
-          chunk = [];
-          chunkBytes = 0;
-        };
-        for (const row of rows) {
-          chunk.push(row);
-          chunkBytes += JSON.stringify(row).length;
-          if (chunkBytes >= RESTORE_CHUNK_BYTES || chunk.length >= 500) await flush();
-        }
-        await flush();
-        return;
-      }
-
-      const file = allowedFiles.get(name);
-      if (!file) return;
-      const { error: uploadError } = await serviceClient.storage.from(file.bucket).upload(file.name, data, {
-        contentType: file.mimetype || 'application/octet-stream',
-        upsert: false,
-      });
-      if (!uploadError) totals.files_added += 1;
-      else if (/already exists|duplicate/i.test(uploadError.message) || (uploadError as { statusCode?: string }).statusCode === '409') {
-        totals.files_already_there += 1;
-      } else {
-        totals.files_failed += 1;
-        if (problems.length < 5) problems.push(`${file.bucket}/${file.name}: ${uploadError.message}`);
-      }
-    });
-
-    await rpc('backup_restore_finish', { p_backup_id: backupId, p_actor: actorId, p_ok: true, p_summary: { ...totals, problems } });
+    if (!(await beginJob(backupId, 'restore', job, restoreProgress(job, row.parts, 'verifying'), token))) {
+      throw new UserError('The restore could not be started. Please try again.');
+    }
   } catch (error) {
-    console.error('Restore failed:', error);
-    await rpc('backup_restore_finish', {
-      p_backup_id: backupId,
-      p_actor: actorId,
-      p_ok: false,
-      p_summary: {
-        ...totals,
-        problems,
-        error: toUserMessage(error, 'Something went wrong while restoring. Existing data was not changed.'),
-      },
-    }).catch((finishError) => console.error('Could not record the failed restore:', finishError));
+    await failJob(row, job, error);
+    throw error;
   }
+};
+
+// Continues a run whose step stopped without reporting back. Steps are safe to
+// repeat: a step only counts once it is saved, and every attempt writes its own part.
+const resumeJob = async (backupId: string) => {
+  const row = await loadRow(backupId);
+  const job = row?.job as Job | undefined;
+  if (!row || !job?.mode || !isActive(row, job)) throw new UserError('This backup or restore is no longer running.');
+  const progress = (job.mode === 'backup' ? row.progress : row.restore_progress) || {};
+  const quietMs = Date.now() - new Date(String(progress.updated_at || row.started_at)).getTime();
+  if (quietMs < RESUME_AFTER_MS) return { resumed: false };
+  if (job.resumes >= MAX_RESUMES) {
+    await failJob(row, job, new UserError('It kept stopping, so it was stopped. Please try again.'));
+    return { resumed: false, stopped: true };
+  }
+  // A new token also retires any earlier step chain that is still running somewhere.
+  const { token, hash } = newToken();
+  const saved = await saveStep(backupId, job.mode, job.step, { ...job, token: hash, retries: 0, resumes: job.resumes + 1 }, null);
+  if (!saved) return { resumed: false };
+  if (!(await kick(backupId, token))) {
+    await failJob(row, job, new UserError('It could not be continued. Please try again.'));
+    return { resumed: false, stopped: true };
+  }
+  return { resumed: true };
 };
 
 // ---------------------------------------------------------------------------
@@ -756,16 +1067,9 @@ const csvCell = (value: unknown) => {
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 };
 
-class MemorySink implements ZipSink {
-  chunks: Buffer[] = [];
-  write(chunk: Uint8Array) {
-    this.chunks.push(Buffer.from(chunk));
-  }
-}
-
 const buildCsvZip = async () => {
-  const sink = new MemorySink();
-  const zip = new ZipWriter(sink);
+  const state: ZipState = { entries: [], offset: 0 };
+  const pieces: Buffer[] = [];
   const empty: string[] = [];
 
   for (const info of await rpc<TableInfo[]>('backup_table_info')) {
@@ -777,18 +1081,21 @@ const buildCsvZip = async () => {
     const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))].filter((column) => !SENSITIVE_COLUMN.test(column));
     const lines = [columns.map(csvCell).join(',')];
     for (const row of rows) lines.push(columns.map((column) => csvCell(row[column])).join(','));
-    await zip.add(`${info.table}.csv`, Buffer.from(`﻿${lines.join('\r\n')}\r\n`, 'utf8'));
+    pieces.push(zipEntries([{ name: `${info.table}.csv`, data: Buffer.from(`﻿${lines.join('\r\n')}\r\n`, 'utf8') }], state));
   }
-  await zip.add('README.txt', Buffer.from([
-    'IGNIS SAFE records (CSV)',
-    '',
-    'One spreadsheet file per table, with the records as they are right now.',
-    'Passwords, one-time codes, and other secrets are left out.',
-    'This is for reading only. It is not a full backup and cannot restore uploaded files.',
-    empty.length ? `\nNo records yet: ${empty.join(', ')}` : '',
-  ].join('\n'), 'utf8'));
-  await zip.finish();
-  return Buffer.concat(sink.chunks);
+  pieces.push(zipEntries([{
+    name: 'README.txt',
+    data: Buffer.from([
+      'IGNIS SAFE records (CSV)',
+      '',
+      'One spreadsheet file per table, with the records as they are right now.',
+      'Passwords, one-time codes, and other secrets are left out.',
+      'This is for reading only. It is not a full backup and cannot restore uploaded files.',
+      empty.length ? `\nNo records yet: ${empty.join(', ')}` : '',
+    ].join('\n'), 'utf8'),
+  }], state));
+  pieces.push(zipDirectory(state));
+  return Buffer.concat(pieces);
 };
 
 // ---------------------------------------------------------------------------
@@ -802,6 +1109,18 @@ Deno.serve(async (request) => {
   try {
     const body = await request.json().catch(() => ({}));
     const action = body?.action;
+
+    // The next step of a running job, sent by this function itself.
+    if (action === 'step') {
+      if (!isUuid(body?.backupId) || typeof body?.token !== 'string' || !body.token) {
+        return jsonResponse({ error: 'Invalid step.' }, 400);
+      }
+      const row = await loadRow(body.backupId);
+      const job = row?.job as Job | undefined;
+      if (!row || !job?.token || !sameHash(job.token, sha256(body.token))) return jsonResponse({ error: 'Unauthorized.' }, 401);
+      EdgeRuntime.waitUntil(runStep(body.backupId, body.token));
+      return jsonResponse({ data: { accepted: true }, error: null }, 202);
+    }
 
     if (action === 'scheduled') {
       const token = request.headers.get('x-maintenance-token') || '';
@@ -826,6 +1145,12 @@ Deno.serve(async (request) => {
       masterKey();
       const backupId = await startBackup('manual', admin.admin_id, note || null);
       return jsonResponse({ data: { backupId }, error: null }, 202);
+    }
+
+    if (action === 'resume') {
+      if (!isUuid(body?.backupId)) return jsonResponse({ error: 'Invalid backup.' }, 400);
+      masterKey();
+      return jsonResponse({ data: await resumeJob(body.backupId), error: null });
     }
 
     if (action === 'download') {
@@ -866,8 +1191,7 @@ Deno.serve(async (request) => {
       if (!isUuid(body?.backupId)) return jsonResponse({ error: 'Invalid backup.' }, 400);
       if (body?.confirm !== 'RESTORE') return jsonResponse({ error: 'Please type RESTORE to confirm.' }, 400);
       masterKey();
-      await rpc('backup_restore_begin', { p_backup_id: body.backupId, p_actor: admin.admin_id });
-      EdgeRuntime.waitUntil(runRestore(body.backupId, admin.admin_id));
+      await startRestore(body.backupId, admin.admin_id);
       return jsonResponse({ data: { backupId: body.backupId }, error: null }, 202);
     }
 

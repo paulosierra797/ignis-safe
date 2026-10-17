@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 import {
@@ -195,7 +196,13 @@ export default function ArchiveTrash() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [toast, setToast] = useState({ type: '', text: '' });
-  const [activeTab, setActiveTab] = useState('items');
+  const location = useLocation();
+  const [activeTab, setActiveTab] = useState(location.state?.tab === 'settings' ? 'settings' : 'items');
+
+  // The floating backup widget links straight to the Settings tab.
+  useEffect(() => {
+    if (location.state?.tab === 'settings') setActiveTab('settings');
+  }, [location.state]);
   const [showCharts, setShowCharts] = useState(false);
   const [search, setSearch] = useState('');
   const [moduleFilter, setModuleFilter] = useState('all');

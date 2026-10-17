@@ -10,14 +10,17 @@ import Tip from './ArchiveTip';
 import usePagination from '../hooks/usePagination';
 import { formatBytes } from '../utils/archiveService';
 import {
-  checkEncryptionReady, createBackup, downloadBackup, downloadRecordsCsv, getBackups, isEncryptionSetupError,
-  isStaleRun, restoreBackup
+  checkEncryptionReady, createBackup, downloadBackup, downloadRecordsCsv, isEncryptionSetupError, restoreBackup
 } from '../utils/backupService';
+import {
+  isRunningBackup, isRunningRestore, onBackupFinished, refreshBackups, resumeJob, retryBackup, useBackupJobs, watchBackups
+} from '../utils/backupJobs';
+import BackupProgressView from './BackupProgressView';
+import { percentOf } from '../utils/backupProgress';
 import './BackupRecovery.css';
 
 gsap.registerPlugin(useGSAP);
 
-const POLL_MS = 4000;
 const number = (value) => Number(value || 0).toLocaleString('en-PH');
 const formatDateTime = (value) => (value
   ? new Date(value).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })
@@ -32,15 +35,15 @@ const nextMonthlyBackup = (now = new Date()) => {
   return thisMonth > now ? thisMonth : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 18));
 };
 
-// What a backup row means to an admin, including runs that stopped silently.
+// What a backup row means to an admin. Runs that stop reporting are failed by the server.
 const describeStatus = (backup) => {
   if (backup.status === 'completed') return { key: 'verified', label: 'Verified' };
-  if (backup.status === 'running' && !isStaleRun(backup.started_at)) return { key: 'creating', label: 'Creating…' };
+  if (backup.status === 'running') return { key: 'creating', label: `Creating · ${percentOf(backup.progress)}%` };
   return { key: 'failed', label: 'Failed' };
 };
 
 const describeRestore = (backup) => {
-  if (backup.restore_status === 'running' && !isStaleRun(backup.restore_started_at)) return 'Restoring now…';
+  if (backup.restore_status === 'running') return `Restoring now · ${percentOf(backup.restore_progress)}%`;
   const summary = backup.restore_summary || {};
   if (backup.restore_status === 'completed') {
     const left = Number(summary.records_failed || 0) + Number(summary.files_failed || 0);
@@ -55,62 +58,38 @@ const describeRestore = (backup) => {
 export default function BackupRecovery({ isSuperAdmin, onToast, onChanged }) {
   const scope = useRef(null);
   const seen = useRef(new Map());
-  const [backups, setBackups] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const { backups, loaded, loadError } = useBackupJobs();
   const [dialog, setDialog] = useState(null);
   const [dialogBusy, setDialogBusy] = useState(false);
   const [dialogError, setDialogError] = useState('');
   const [downloadingId, setDownloadingId] = useState('');
   const [csvBusy, setCsvBusy] = useState(false);
 
-  const load = useCallback(async () => {
-    try {
-      setBackups(await getBackups());
-      setLoadError('');
-    } catch (error) {
-      setLoadError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loading = isSuperAdmin && !loaded;
 
-  useEffect(() => {
-    if (isSuperAdmin) load();
-    else setLoading(false);
-  }, [isSuperAdmin, load]);
+  // The shared watcher reads (and polls, while one runs) the real backup rows, so progress
+  // stays in sync after leaving this page or refreshing.
+  useEffect(() => (isSuperAdmin ? watchBackups() : undefined), [isSuperAdmin]);
 
-  const running = backups.find((backup) => backup.status === 'running' && !isStaleRun(backup.started_at));
-  const restoring = backups.find((backup) => backup.restore_status === 'running' && !isStaleRun(backup.restore_started_at));
+  const running = backups.find(isRunningBackup);
+  const restoring = backups.find(isRunningRestore);
   const latest = backups.find((backup) => backup.status === 'completed');
   const working = Boolean(running || restoring);
 
-  // Keep the list fresh while a backup or restore is in progress.
-  useEffect(() => {
-    if (!working) return undefined;
-    const timer = window.setInterval(load, POLL_MS);
-    return () => window.clearInterval(timer);
-  }, [working, load]);
+  // Refresh the rest of Archive & Trash when a backup finishes while this page is open.
+  useEffect(() => onBackupFinished((result) => { if (result.status === 'success') onChanged?.(); }), [onChanged]);
 
-  // Tell the admin when a backup or restore they started finishes.
+  // Tell the admin when a restore they started finishes. Backup results come from the floating widget.
   useEffect(() => {
     const previous = seen.current;
     const next = new Map();
     backups.forEach((backup) => {
-      const key = `${backup.status}|${backup.restore_status || ''}`;
-      next.set(backup.backup_id, key);
-      const before = previous.get(backup.backup_id);
-      if (!before || before === key) return;
-      const [beforeStatus, beforeRestore] = before.split('|');
-      if (beforeStatus === 'running' && backup.status === 'completed') {
-        onToast?.({ type: 'success', text: 'Backup created and checked. It is ready to download.' });
-        onChanged?.();
-      } else if (beforeStatus === 'running' && backup.status === 'failed') {
-        onToast?.({ type: 'error', text: `The backup didn't finish. ${backup.error || ''}`.trim() });
-      } else if (beforeRestore === 'running' && backup.restore_status === 'completed') {
+      next.set(backup.backup_id, backup.restore_status || '');
+      if (previous.get(backup.backup_id) !== 'running') return;
+      if (backup.restore_status === 'completed') {
         onToast?.({ type: 'success', text: describeRestore(backup) });
         onChanged?.();
-      } else if (beforeRestore === 'running' && backup.restore_status === 'failed') {
+      } else if (backup.restore_status === 'failed') {
         onToast?.({ type: 'error', text: describeRestore(backup) });
       }
     });
@@ -139,14 +118,32 @@ export default function BackupRecovery({ isSuperAdmin, onToast, onChanged }) {
     return () => media.revert();
   }, { scope, dependencies: [loading, rowKey] });
 
+  // The live panel slides in when a backup or restore starts.
+  const liveKey = running?.backup_id || restoring?.backup_id || '';
   useGSAP(() => {
-    if (!working) return undefined;
+    if (!liveKey) return undefined;
     const media = gsap.matchMedia();
     media.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.fromTo('.br-progress-bar', { xPercent: -100 }, { xPercent: 250, duration: 1.4, ease: 'power1.inOut', repeat: -1 });
+      gsap.from('.br-live', { y: 14, opacity: 0, duration: 0.55, ease: 'power3.out', clearProps: 'transform,opacity' });
     });
     return () => media.revert();
-  }, { scope, dependencies: [working] });
+  }, { scope, dependencies: [liveKey] });
+
+  const [jobBusy, setJobBusy] = useState('');
+  const [jobError, setJobError] = useState('');
+  const runJobAction = async (kind, action) => {
+    setJobBusy(kind);
+    setJobError('');
+    try {
+      const result = await action();
+      if (result?.stopped) onToast?.({ type: 'error', text: 'It could not be continued, so it was stopped. Please try again.' });
+    } catch (error) {
+      setJobError(error.message);
+      onToast?.({ type: 'error', text: error.message });
+    } finally {
+      setJobBusy('');
+    }
+  };
 
   // While the setup warning is showing, re-ask the backend until the key is verified,
   // then clear the warning by itself. The key is never read or shown here.
@@ -177,7 +174,11 @@ export default function BackupRecovery({ isSuperAdmin, onToast, onChanged }) {
   };
 
   const runDialog = async (note) => {
-    if (!dialog) return;
+    if (!dialog || dialogBusy) return;
+    if (working) {
+      setDialogError('A backup or restore is already running. Please wait for it to finish.');
+      return;
+    }
     setDialogBusy(true);
     setDialogError('');
     try {
@@ -189,7 +190,7 @@ export default function BackupRecovery({ isSuperAdmin, onToast, onChanged }) {
         onToast?.({ type: 'info', text: 'Restore started. This can take a few minutes.' });
       }
       setDialog(null);
-      await load();
+      await refreshBackups();
     } catch (error) {
       setDialogError(error.message);
     } finally {
@@ -295,11 +296,34 @@ export default function BackupRecovery({ isSuperAdmin, onToast, onChanged }) {
           </Tip>
         </div>
 
-        {working && (
-          <div className="br-progress" role="status" aria-live="polite">
-            <span>{restoring ? 'Restoring from your backup…' : 'Creating your backup…'}</span>
-            <small>{restoring ? 'Checking the backup, then adding back anything that is missing.' : 'Saving records and files, then checking the saved copy.'}</small>
-            <div className="br-progress-track" aria-hidden="true"><div className="br-progress-bar" /></div>
+        {running && (
+          <div className="br-live" role="region" aria-label="Backup in progress">
+            <div className="br-live-head">
+              <strong>Creating backup</strong>
+              <small>You can leave this page. Progress also shows in the corner of every page.</small>
+            </div>
+            <BackupProgressView
+              backup={running}
+              onResume={() => runJobAction('resume', () => resumeJob(running.backup_id))}
+              resuming={jobBusy === 'resume'}
+              resumeError={jobError}
+            />
+          </div>
+        )}
+
+        {restoring && (
+          <div className="br-live" role="region" aria-label="Restore in progress">
+            <div className="br-live-head">
+              <strong>Restoring from your backup</strong>
+              <small>Checks the whole backup first, then adds back only what is missing.</small>
+            </div>
+            <BackupProgressView
+              kind="restore"
+              backup={restoring}
+              onResume={() => runJobAction('resume', () => resumeJob(restoring.backup_id))}
+              resuming={jobBusy === 'resume'}
+              resumeError={jobError}
+            />
           </div>
         )}
       </div>
@@ -360,6 +384,20 @@ export default function BackupRecovery({ isSuperAdmin, onToast, onChanged }) {
                       </td>
                       <td data-label="Location">{backup.storage_location}</td>
                       <td data-label="">
+                        {status.key === 'failed' && backup.backup_id === backups[0]?.backup_id && (
+                          <div className="br-row-actions">
+                            <Tip text="Start a new backup. It begins again from the start.">
+                              <button
+                                type="button"
+                                className="at-button at-button--ghost"
+                                onClick={() => runJobAction('retry', () => retryBackup(backup.note || ''))}
+                                disabled={working || Boolean(jobBusy)}
+                              >
+                                <FiRotateCcw aria-hidden="true" /> {jobBusy === 'retry' ? 'Starting…' : 'Try again'}
+                              </button>
+                            </Tip>
+                          </div>
+                        )}
                         {status.key === 'verified' && (
                           <div className="br-row-actions">
                             <Tip text="Download your saved backup.">

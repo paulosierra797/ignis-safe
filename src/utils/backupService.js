@@ -5,8 +5,6 @@ import { supabase } from './supabaseClient';
 // an active Super Admin. Backup files never pass through the browser unless
 // they are downloaded, and then only through short-lived private links.
 
-const STALE_MINUTES = 45;
-
 const toMessage = (error, fallback) => error?.message || error?.error_description || fallback;
 
 const readFunctionError = async (error) => {
@@ -39,13 +37,12 @@ const saveBlob = (blob, filename) => {
 export const BACKUP_COLUMNS = [
   'backup_id', 'kind', 'status', 'created_by_name', 'note', 'started_at', 'completed_at', 'verified_at',
   'size_bytes', 'contents', 'storage_location', 'error', 'restore_status', 'restore_started_at',
-  'restore_completed_at', 'restored_by_name', 'restore_summary'
+  'restore_completed_at', 'restored_by_name', 'restore_summary', 'progress', 'restore_progress'
 ].join(', ');
 
-// A run that stopped without reporting back should not look "in progress" forever.
-export const isStaleRun = (startedAt) => Date.now() - new Date(startedAt).getTime() > STALE_MINUTES * 60 * 1000;
-
 export async function getBackups() {
+  // Marks runs that stopped reporting as failed first, so nothing looks busy forever.
+  await supabase.rpc('backup_expire_stalled');
   const { data, error } = await supabase
     .from('system_backups')
     .select(BACKUP_COLUMNS)
@@ -70,6 +67,12 @@ export async function checkEncryptionReady() {
 
 export async function createBackup(note = '') {
   return callBackupFunction({ action: 'create', note: String(note || '').trim() }, "Couldn't start the backup.");
+}
+
+// Continues a backup or restore whose last step stopped without reporting back.
+export async function resumeBackupJob(backupId) {
+  const data = await callBackupFunction({ action: 'resume', backupId }, "Couldn't continue.");
+  return data?.data || {};
 }
 
 export async function restoreBackup(backupId) {

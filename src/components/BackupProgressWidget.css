@@ -1,0 +1,250 @@
+.bw-root {
+  position: fixed;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  z-index: 1890;
+  display: flex;
+  justify-content: flex-end;
+  /* Never swallow clicks around the card. */
+  pointer-events: none;
+}
+
+/* Sit above the personnel import widget when both are showing. */
+body:has(.iw-card) .bw-root {
+  bottom: 11.5rem;
+}
+
+.bw-card,
+.bw-pill {
+  pointer-events: auto;
+}
+
+.bw-card {
+  display: grid;
+  gap: 0.7rem;
+  width: min(360px, calc(100vw - 2rem));
+  padding: 0.85rem 0.9rem 0.8rem;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.06);
+  color: #334155;
+}
+
+.bw-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.bw-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 1.05rem;
+}
+
+.bw-card--success .bw-icon {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.bw-card--failed .bw-icon {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.bw-main {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  gap: 0.1rem;
+  padding: 0.15rem 0.25rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+
+.bw-main:hover {
+  background: #f8fafc;
+}
+
+.bw-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.bw-detail {
+  overflow: hidden;
+  font-size: 0.78rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bw-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.bw-icon-btn:hover {
+  background: #f1f5f9;
+  color: #111827;
+}
+
+.bw-card--stalled .bw-icon {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.bw-error {
+  margin: 0;
+  padding: 0.6rem 0.7rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.bw-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.bw-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 36px;
+  padding: 0 0.95rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.bw-btn:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.bw-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.bw-btn:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.bw-btn--primary {
+  border-color: #111827;
+  background: #111827;
+  color: #ffffff;
+}
+
+.bw-btn--primary:hover:not(:disabled) {
+  background: #1f2937;
+}
+
+.bw-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding: 0.4rem 0.9rem 0.4rem 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.06);
+  color: #111827;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.bw-pill:hover {
+  background: #fffbeb;
+}
+
+.bw-pill--stalled {
+  background: #fff7ed;
+}
+
+.bw-pill-warn {
+  color: #c2410c;
+}
+
+.bw-time {
+  color: #64748b;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.bw-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fde68a;
+  border-top-color: #f59e0b;
+  border-radius: 50%;
+  animation: bw-spin 0.9s linear infinite;
+}
+
+@keyframes bw-spin {
+  to { transform: rotate(360deg); }
+}
+
+.bw-main:focus-visible,
+.bw-icon-btn:focus-visible,
+.bw-btn:focus-visible,
+.bw-pill:focus-visible {
+  outline: 2px solid #f59e0b;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bw-spinner {
+    animation-duration: 2.4s;
+  }
+}
+
+@media (max-width: 640px) {
+  .bw-root {
+    right: 1rem;
+    left: 1rem;
+    bottom: 1rem;
+  }
+
+  body:has(.iw-card) .bw-root {
+    bottom: 12.5rem;
+  }
+
+  .bw-card {
+    width: 100%;
+  }
+}

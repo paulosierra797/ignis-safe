@@ -25,6 +25,21 @@ import { getLearningMaterialsAdminView } from '../utils/learningMaterialsService
 
 const AI_OPTION_KEYS = ['A', 'B', 'C', 'D'];
 const AI_DRAFT_PREFIX = 'ai-question-draft';
+// Matches the edge function's questionCount cap.
+const MAX_AI_REQUEST_COUNT = 14;
+
+// Ticks on its own so the long question list doesn't re-render every second.
+const ElapsedSeconds = ({ startedAt }) => {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, []);
+
+  if (!startedAt) return null;
+  return <span className="assessment-generate-elapsed">({Math.max(0, Math.floor((now - startedAt) / 1000))}s)</span>;
+};
 const MODULE_TITLE_FALLBACKS = {
   1: 'Fire Extinguisher: Basics, Types, and How to Use',
   2: 'House Fire: How to Get Out Safely During a Fire',
@@ -383,6 +398,16 @@ export default function AssessmentQuestions() {
   const moduleContextCacheRef = useRef(new Map());
   const [generationProgress, setGenerationProgress] = useState(null);
   const [generatingRowProgress, setGeneratingRowProgress] = useState({});
+  // Synchronous locks: React state updates too late to stop a fast double click from
+  // starting a second (duplicate, billed) generation.
+  const bulkGenerationLockRef = useRef(false);
+  const rowGenerationLocksRef = useRef(new Set());
+  // Lets a finished generation detect that the admin switched assessments meanwhile.
+  const activeAssessmentIdRef = useRef('');
+
+  useEffect(() => {
+    activeAssessmentIdRef.current = selectedAssessmentId;
+  }, [selectedAssessmentId]);
 
   const isDirty = dirtyQuestionIds.size > 0;
   const shouldBlockNavigation = useCallback(({ currentLocation, nextLocation }) => {
@@ -838,64 +863,85 @@ export default function AssessmentQuestions() {
   }) => {
     const acceptedQuestions = [];
     let lastGenerateError = null;
-    const oldPrompt = String(targetQuestion?.prompt || '').trim();
-    // Requesting a duplicate-absorbing buffer in one call (instead of looping more
-    // requests whenever the AI returns a near-duplicate) is what keeps this to a
-    // single AI round trip in the common case. maxAttempts is now only a true
-    // fallback for the rare case the buffer wasn't enough.
-    const maxAttempts = 2;
-    const requestBuffer = 4;
-    const maxRequestCount = 14;
+    const assessmentTypeLabel = getAssessmentTypeLabel(assessment);
+    const basePayload = {
+      assessmentId: selectedAssessmentId,
+      assessmentTitle: assessment?.title || selectedAssessmentLabel || `Module ${moduleNo}`,
+      assessmentType: assessment?.type_label || assessment?.type || '',
+      moduleNo,
+      targetQuestionNo: targetQuestion ? Number(targetQuestion.question_no) : undefined,
+      existingPrompt: String(targetQuestion?.prompt || '').trim(),
+      difficultyGuidance: getAssessmentDifficultyGuidance(assessment),
+      context: learningContext,
+    };
 
-    for (let attempt = 1; attempt <= maxAttempts && acceptedQuestions.length < count; attempt += 1) {
-      onProgress?.({
-        attempt,
-        maxAttempts,
-        label: attempt === 1
-          ? 'Generating questions with AI (English + Filipino)...'
-          : `Requesting additional unique questions (attempt ${attempt} of ${maxAttempts})...`,
-      });
-
-      const acceptedPool = acceptedQuestions.map((question, index) => ({
-        ...question,
-        question_no: targetQuestion?.question_no || index + 1,
-        assessment_type_label: getAssessmentTypeLabel(assessment),
-      }));
-      const avoidancePool = [...moduleQuestionPool, ...acceptedPool];
-      const remainingCount = count - acceptedQuestions.length;
-      const requestedCount = Math.min(maxRequestCount, remainingCount + requestBuffer);
-      const { data: generatedPayload, error: generateError } = await generateAssessmentQuestions({
-        assessmentId: selectedAssessmentId,
-        assessmentTitle: assessment?.title || selectedAssessmentLabel || `Module ${moduleNo}`,
-        assessmentType: assessment?.type_label || assessment?.type || '',
-        moduleNo,
-        questionCount: requestedCount,
-        targetQuestionNo: targetQuestion ? Number(targetQuestion.question_no) : undefined,
-        existingPrompt: oldPrompt,
-        difficultyGuidance: getAssessmentDifficultyGuidance(assessment),
-        existingQuestions: buildExistingQuestionReferences(avoidancePool),
-        context: learningContext,
-      });
-
-      if (generateError) {
-        lastGenerateError = generateError;
-        break;
-      }
-
-      const generatedQuestions = generatedPayload?.questions || [];
+    // Checks each candidate against the module pool AND the drafts already accepted,
+    // since parallel batches cannot see each other's questions.
+    const acceptCandidates = (generatedQuestions = []) => {
       generatedQuestions.forEach((generatedQuestion) => {
         if (acceptedQuestions.length >= count) return;
 
-        const candidate = {
-          ...generatedQuestion,
-          assessment_type_label: getAssessmentTypeLabel(assessment),
-        };
-        const similarQuestion = findSimilarQuestion(candidate, avoidancePool);
-
-        if (!similarQuestion) {
+        const candidate = { ...generatedQuestion, assessment_type_label: assessmentTypeLabel };
+        if (!findSimilarQuestion(candidate, [...moduleQuestionPool, ...acceptedQuestions])) {
           acceptedQuestions.push(candidate);
         }
       });
+    };
+
+    // AI latency grows with the number of questions written, so a full set is split
+    // into two parallel batches (10 -> 6 + 6, a 2-question duplicate buffer) that each
+    // favour a different half of the material. A single replacement asks for 2.
+    const firstRoundTotal = Math.min(MAX_AI_REQUEST_COUNT, count + (count === 1 ? 1 : 2));
+    const batchSizes = firstRoundTotal > 6
+      ? [Math.ceil(firstRoundTotal / 2), Math.floor(firstRoundTotal / 2)]
+      : [firstRoundTotal];
+    const existingQuestions = buildExistingQuestionReferences(moduleQuestionPool);
+    let completedBatches = 0;
+    const describeRound = () => (batchSizes.length > 1
+      ? `Writing questions with AI (English + Filipino): ${completedBatches} of ${batchSizes.length} batches done...`
+      : 'Writing questions with AI (English + Filipino)...');
+
+    onProgress?.({ label: describeRound() });
+    const batchResults = await Promise.all(batchSizes.map((questionCount, batchIndex) => (
+      generateAssessmentQuestions({
+        ...basePayload,
+        questionCount,
+        existingQuestions,
+        batchFocus: batchSizes.length > 1
+          ? `Batch ${batchIndex + 1} of ${batchSizes.length}: draw mainly from the ${batchIndex === 0 ? 'first' : 'second'} half of the source material.`
+          : '',
+      }).then((result) => {
+        completedBatches += 1;
+        onProgress?.({ label: describeRound() });
+        return result;
+      })
+    )));
+
+    batchResults.forEach(({ data, error }) => {
+      if (error) {
+        lastGenerateError = error;
+        return;
+      }
+      acceptCandidates(data?.questions || []);
+    });
+
+    // One small top-up only for the shortfall (duplicates filtered, or one batch
+    // failed). Skipped when every batch failed, e.g. quota errors, to avoid a second
+    // guaranteed failure.
+    const remainingCount = count - acceptedQuestions.length;
+    const anyBatchSucceeded = batchResults.some(({ error }) => !error);
+    if (remainingCount > 0 && anyBatchSucceeded) {
+      onProgress?.({ label: `Writing ${remainingCount} more unique question${remainingCount === 1 ? '' : 's'}...` });
+      const { data, error } = await generateAssessmentQuestions({
+        ...basePayload,
+        questionCount: Math.min(MAX_AI_REQUEST_COUNT, remainingCount + 1),
+        existingQuestions: buildExistingQuestionReferences([...acceptedQuestions, ...moduleQuestionPool]),
+      });
+      if (error) {
+        lastGenerateError = error;
+      } else {
+        acceptCandidates(data?.questions || []);
+      }
     }
 
     onProgress?.({ label: 'Finalizing question drafts...' });
@@ -942,7 +988,7 @@ export default function AssessmentQuestions() {
   };
 
   const handleGenerateQuestions = async () => {
-    if (isGenerating) return;
+    if (isGenerating || bulkGenerationLockRef.current) return;
     if (!selectedAssessmentId) return;
     if (isDirty) {
       setMessage({
@@ -952,8 +998,12 @@ export default function AssessmentQuestions() {
       return;
     }
 
+    bulkGenerationLockRef.current = true;
     setIsGenerating(true);
     setMessage({ type: '', text: '' });
+    const generationAssessmentId = selectedAssessmentId;
+    const startedAt = Date.now();
+    const reportProgress = (progress) => setGenerationProgress({ ...progress, startedAt });
 
     try {
       const selectedAssessment = assessments.find((row) => row.id === selectedAssessmentId);
@@ -966,7 +1016,7 @@ export default function AssessmentQuestions() {
 
       const safeCount = 10;
 
-      setGenerationProgress({ label: 'Preparing module materials...' });
+      reportProgress({ label: 'Preparing module materials...' });
 
       const [
         { context: learningContext, error: materialError },
@@ -1001,8 +1051,16 @@ export default function AssessmentQuestions() {
         moduleQuestionPool,
         count: safeCount,
         existingQuestionsByNumber,
-        onProgress: setGenerationProgress,
+        onProgress: reportProgress,
       });
+
+      if (activeAssessmentIdRef.current !== generationAssessmentId) {
+        setMessage({
+          type: 'error',
+          text: 'Generated drafts were discarded because a different assessment was selected. Generate again for this assessment.',
+        });
+        return;
+      }
 
       if (generateError || generatedDrafts.length === 0) {
         setMessage({
@@ -1015,20 +1073,24 @@ export default function AssessmentQuestions() {
       const generatedQuestionNumbers = new Set(
         generatedDrafts.map((question) => Number(question.question_no))
       );
-      const preservedQuestions = questions.filter(
-        (question) => !generatedQuestionNumbers.has(Number(question.question_no))
-      );
-      const nextQuestions = [...generatedDrafts, ...preservedQuestions]
-        .sort((a, b) => a.question_no - b.question_no);
-
-      setQuestions(nextQuestions);
-      setDirtyQuestionIds(new Set(generatedDrafts.map((question) => question.id)));
+      // Merge into the latest list (not the click-time snapshot) so edits made to
+      // other questions while the AI was working are kept.
+      setQuestions((current) => [
+        ...generatedDrafts,
+        ...current.filter((question) => !generatedQuestionNumbers.has(Number(question.question_no))),
+      ].sort((a, b) => a.question_no - b.question_no));
+      setDirtyQuestionIds((current) => {
+        const next = new Set(current);
+        generatedDrafts.forEach((question) => next.add(question.id));
+        return next;
+      });
       setMessage({
         type: 'success',
-        text: `Generated ${generatedDrafts.length} unsaved question draft${generatedDrafts.length === 1 ? '' : 's'} from Module ${moduleNo}. Review them, then use Save question or Save all changes.`,
+        text: `Generated ${generatedDrafts.length} unsaved question draft${generatedDrafts.length === 1 ? '' : 's'} from Module ${moduleNo} in ${Math.round((Date.now() - startedAt) / 1000)}s. Review them, then use Save question or Save all changes.`,
       });
 
-      await logAdminActivity({
+      // Audit log runs in the background; it must not keep the generator spinning.
+      void logAdminActivity({
         actorId: currentUser?.admin_id || null,
         actorName: currentUser?.name || currentUser?.email || 'Admin User',
         action: 'AI Assessment Drafts Generated',
@@ -1041,13 +1103,15 @@ export default function AssessmentQuestions() {
         },
       });
     } finally {
+      bulkGenerationLockRef.current = false;
       setIsGenerating(false);
       setGenerationProgress(null);
     }
   };
 
   const handleGenerateSingleQuestion = async (question) => {
-    if (!question?.id || isGenerating || generatingRowIds[question.id]) return;
+    if (!question?.id || isGenerating || bulkGenerationLockRef.current
+      || generatingRowIds[question.id] || rowGenerationLocksRef.current.has(question.id)) return;
     if (dirtyQuestionIds.has(question.id) && !question._isAiGenerated) {
       setMessage({
         type: 'error',
@@ -1056,8 +1120,11 @@ export default function AssessmentQuestions() {
       return;
     }
 
+    rowGenerationLocksRef.current.add(question.id);
     setGeneratingRowIds((current) => ({ ...current, [question.id]: true }));
     setMessage({ type: '', text: '' });
+    const generationAssessmentId = selectedAssessmentId;
+    const startedAt = Date.now();
 
     try {
       const moduleNo = Number(selectedAssessment?.module_no || 0);
@@ -1068,7 +1135,7 @@ export default function AssessmentQuestions() {
 
       const setRowProgress = (progress) => setGeneratingRowProgress((current) => ({
         ...current,
-        [question.id]: progress,
+        [question.id]: { ...progress, startedAt },
       }));
 
       setRowProgress({ label: 'Preparing module materials...' });
@@ -1106,6 +1173,8 @@ export default function AssessmentQuestions() {
         onProgress: setRowProgress,
       });
 
+      if (activeAssessmentIdRef.current !== generationAssessmentId) return;
+
       const generatedDraft = generatedDrafts[0];
       if (generateError || !generatedDraft) {
         setMessage({ type: 'error', text: generateError || 'The AI did not return a usable replacement question.' });
@@ -1118,9 +1187,10 @@ export default function AssessmentQuestions() {
       markQuestionDirty(question.id);
       setMessage({
         type: 'success',
-        text: `AI generated an unsaved draft for question ${question.question_no}. Review it, then save the question.`,
+        text: `AI generated an unsaved draft for question ${question.question_no} in ${Math.round((Date.now() - startedAt) / 1000)}s. Review it, then save the question.`,
       });
     } finally {
+      rowGenerationLocksRef.current.delete(question.id);
       setGeneratingRowIds((current) => {
         const next = { ...current };
         delete next[question.id];
@@ -1490,6 +1560,7 @@ export default function AssessmentQuestions() {
                 {isGenerating && (
                   <div className="assessment-generate-progress" role="status" aria-live="polite">
                     {generationProgress?.label || 'Generating questions with AI...'}
+                    <ElapsedSeconds startedAt={generationProgress?.startedAt} />
                   </div>
                 )}
               </div>
@@ -1569,6 +1640,7 @@ export default function AssessmentQuestions() {
                     {isGeneratingRow && (
                       <span className="assessment-generate-progress assessment-generate-progress-inline" role="status" aria-live="polite">
                         {generatingRowProgress[question.id]?.label || 'Generating...'}
+                        <ElapsedSeconds startedAt={generatingRowProgress[question.id]?.startedAt} />
                       </span>
                     )}
                   </div>

@@ -26,6 +26,52 @@ type ExistingQuestionReference = {
 };
 
 const DEFAULT_MODEL = Deno.env.get('GEMINI_MODEL') || 'gemini-2.5-flash';
+// Measured: with default "thinking", gemini-2.5-flash spent 7-10k hidden reasoning
+// tokens per request (~50-60 s) and once overflowed maxOutputTokens, truncating the
+// JSON. Grounded MCQ drafting doesn't need it, so it is switched off for 2.5 Flash
+// models (the only family that accepts a zero thinking budget).
+const SUPPORTS_ZERO_THINKING = /^gemini-2\.5-flash/i.test(DEFAULT_MODEL);
+// Keeps the edge function well under its wall-clock limit so the admin gets a
+// clear error instead of an indefinite spinner.
+const GEMINI_TIMEOUT_MS = 55000;
+
+// Structured output: Gemini must return exactly this shape, so no prompt tokens are
+// spent describing it and no output tokens on constant fields (question_type,
+// display_order are filled in by normalizeQuestions).
+const RESPONSE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    questions: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          prompt: { type: 'STRING' },
+          prompt_tl: { type: 'STRING' },
+          options: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: {
+                option_key: { type: 'STRING' },
+                option_text: { type: 'STRING' },
+                option_text_tl: { type: 'STRING' },
+                is_correct: { type: 'BOOLEAN' },
+              },
+              required: ['option_key', 'option_text', 'option_text_tl', 'is_correct'],
+              propertyOrdering: ['option_key', 'option_text', 'option_text_tl', 'is_correct'],
+            },
+          },
+          explanation: { type: 'STRING' },
+          explanation_tl: { type: 'STRING' },
+        },
+        required: ['prompt', 'prompt_tl', 'options', 'explanation', 'explanation_tl'],
+        propertyOrdering: ['prompt', 'prompt_tl', 'options', 'explanation', 'explanation_tl'],
+      },
+    },
+  },
+  required: ['questions'],
+};
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
@@ -236,7 +282,11 @@ const normalizeQuestions = (payload: unknown): GeneratedQuestion[] => {
         })).filter((option) => option.option_key && option.option_text)
         : [],
     }))
-    .filter((item) => item.prompt.length > 0);
+    // Drop incomplete items (no stem, too few choices, not exactly one correct answer)
+    // so only reviewable drafts reach the admin; the client tops up any shortfall.
+    .filter((item) => item.prompt.length > 0
+      && item.options.length >= 2
+      && item.options.filter((option) => option.is_correct).length === 1);
 
   return questions;
 };
@@ -273,6 +323,7 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
 
+  const startedAt = Date.now();
   try {
     if (!(await authenticateAdmin(request))) {
       return jsonResponse({ error: 'Administrator access is required.' }, 403);
@@ -292,6 +343,9 @@ Deno.serve(async (request) => {
     const targetQuestionNo = Number(body?.targetQuestionNo || 0);
     const existingPrompt = String(body?.existingPrompt || '').trim();
     const difficultyGuidance = String(body?.difficultyGuidance || '').trim();
+    // Set when the client splits one generation into parallel batches, so each batch
+    // explores different topics instead of converging on the same questions.
+    const batchFocus = String(body?.batchFocus || '').trim();
     const existingQuestions = normalizeExistingQuestions(body?.existingQuestions);
     const existingQuestionText = existingQuestions
       .map((question, index) => {
@@ -299,7 +353,9 @@ Deno.serve(async (request) => {
           question.assessmentType || 'Assessment',
           question.question_no ? `Q${question.question_no}` : `Item ${index + 1}`,
         ].filter(Boolean).join(' ');
-        return `${label}: ${question.prompt}${question.prompt_tl ? ` / ${question.prompt_tl}` : ''}`;
+        // English only: the model just needs the topic to avoid; the Filipino text is
+        // still used by the server-side similarity filter below.
+        return `${label}: ${question.prompt || question.prompt_tl}`;
       })
       .join('\n');
 
@@ -316,47 +372,32 @@ Deno.serve(async (request) => {
     }
     if (context.length > 50000 || assessmentTitle.length > 240
       || assessmentType.length > 80 || existingPrompt.length > 5000
-      || difficultyGuidance.length > 5000) {
+      || difficultyGuidance.length > 5000 || batchFocus.length > 500) {
       return jsonResponse({ error: 'The assessment input is too large.' }, 413);
     }
 
     const prompt = [
-      `You are generating assessment questions for Module ${moduleNo}.`,
-      assessmentTitle ? `Assessment title: ${assessmentTitle}.` : '',
-      assessmentType ? `Assessment type: ${assessmentType}.` : '',
-      targetQuestionNo ? `Generate a replacement draft specifically for question ${targetQuestionNo}.` : '',
+      `Write fire safety assessment questions for Module ${moduleNo}${assessmentTitle ? ` (${assessmentTitle})` : ''}${assessmentType ? `, ${assessmentType}` : ''}.`,
+      targetQuestionNo ? `This is a replacement for question ${targetQuestionNo}.` : '',
       existingPrompt ? `Use a different angle and wording from this existing question: ${existingPrompt}` : '',
       difficultyGuidance,
-      `Create exactly ${questionCount} multiple-choice questions grounded only in the source material below.`,
-      'Do not generate any question that is identical, lightly reworded, or semantically near-duplicate to any existing module question or to another question in this response.',
-      'Use different wording, examples, answer choices, scenarios, and question structures across the entire response.',
-      'Keep the correct answer unambiguous and vary the correct option position instead of using a predictable pattern.',
-      'Every question must include both English and Tagalog (Filipino) content.',
-      'The prompt_tl, explanation_tl, and option_text_tl fields are required and must be natural Tagalog translations of the same English question, choices, answer, and explanation.',
-      'Do not create a separate Tagalog question with different meaning, different choices, or a different correct answer.',
-      'Do not leave any *_tl field blank, and do not copy the English text into the Tagalog fields.',
-      'Return JSON only, with this exact shape: {"questions":[{"question_type":"multiple_choice","prompt":"...","prompt_tl":"...","explanation":"...","explanation_tl":"...","options":[{"option_key":"A","option_text":"...","option_text_tl":"...","is_correct":true,"display_order":1},{"option_key":"B",...},{"option_key":"C",...},{"option_key":"D",...}]}]}',
-      'Each question must have exactly 4 answer choices, with exactly 1 correct answer.',
-      'Keep options plausible and avoid duplicate wording.',
+      batchFocus,
       [
-        'Writing style (applies to prompt, prompt_tl, every option, and both explanations). Questions are read on mobile phones, so be brief:',
-        '- Keep each question stem short and direct: aim for 15-25 words or fewer, and never exceed 30 words.',
-        '- Ask exactly one thing. If a situation is needed, state it in one short clause, not a multi-sentence story. Example: write "If the fire does not weaken after 5-7 seconds of using an extinguisher, what should you do?" instead of "An individual is attempting to extinguish a small fire using the PASS method. After approximately 5-7 seconds of applying the extinguishing agent, the fire does not show any signs of diminishing. What immediate action should be taken?"',
-        '- Remove filler such as "According to the module", "Based on the source material", "An individual is attempting to", or repeating details the learner does not need.',
-        '- Use simple, everyday words a student understands, but keep fire safety terms accurate (PASS, Class A/B/C/D/K, extinguisher, nozzle).',
-        '- Keep answer options short (ideally under 12 words), grammatically parallel, and similar in length. The correct option must not be noticeably longer or more detailed than the others.',
-        '- Do not reveal the answer in the stem: do not repeat the key word or phrase of the correct option in the question.',
-        '- Being short must not make the question easier: keep the same learning objective, difficulty, and correct answer.',
-        '- Keep each explanation to 1-2 short sentences.',
-        '- Filipino (prompt_tl, option_text_tl, explanation_tl): write natural, conversational Tagalog that a Filipino student would actually say, not formal or word-for-word translation. Keep English fire safety terms that Filipinos commonly use as-is (extinguisher, PASS, Class C, nozzle). The Filipino stem should be about as short as the English one and test exactly the same knowledge.',
+        `Rules:`,
+        `- Create exactly ${questionCount} multiple-choice questions grounded only in the source material.`,
+        '- Each has exactly 4 options (keys A-D), exactly 1 correct, unambiguous answer. Vary the correct option position.',
+        '- No question may be identical or a near-duplicate of an existing question or another question in this response; vary wording, scenarios, and structure.',
+        '- Options must be plausible, short (under 12 words), parallel, and similar in length; the correct one must not stand out as longer or more detailed.',
+        '- Do not reveal the answer in the stem.',
+        '- Stems are read on phones: one direct question, 15-25 words (max 30). State any situation in one short clause. No filler such as "According to the module" or "An individual is attempting to".',
+        '- Simple everyday words, but keep fire safety terms accurate (PASS, Class A/B/C/D/K, extinguisher, nozzle). Brevity must not lower the difficulty.',
+        '- Explanation: 1-2 short sentences.',
+        '- *_tl fields: the same question, options, correct answer, and explanation in natural, conversational Tagalog (not word-for-word, never blank, never copied English). Keep common English fire terms (extinguisher, PASS, Class C, nozzle). About as short as the English.',
       ].join('\n'),
-      'Do not use markdown, code fences, or explanations outside the JSON.',
-      existingQuestionText ? `Existing module questions to avoid:\n${existingQuestionText}` : '',
-      'Source material:',
-      context,
+      existingQuestionText ? `Existing questions to avoid:\n${existingQuestionText}` : '',
+      `Source material:\n${context}`,
     ].filter(Boolean).join('\n\n');
 
-    console.log(`Calling Gemini API with model: ${DEFAULT_MODEL}, context length: ${context.length}`);
     const geminiRequest = {
       method: 'POST',
       headers: {
@@ -371,19 +412,36 @@ Deno.serve(async (request) => {
         ],
         generationConfig: {
           temperature: 0.72,
-          // Raised alongside the questionCount cap (10 -> 14) so a bilingual batch
-          // with explanations and 4 options per question doesn't get truncated.
-          maxOutputTokens: 16384,
+          // ~500 output tokens per bilingual question; 8192 leaves ample headroom for
+          // the 14-question cap now that no thinking tokens share this budget.
+          maxOutputTokens: 8192,
           responseMimeType: 'application/json',
+          responseSchema: RESPONSE_SCHEMA,
+          ...(SUPPORTS_ZERO_THINKING ? { thinkingConfig: { thinkingBudget: 0 } } : {}),
         },
       }),
     };
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(DEFAULT_MODEL)}:generateContent?key=${encodeURIComponent(API_KEY)}`;
     let response: Response | null = null;
+    const authMs = Date.now() - startedAt;
+    const geminiStartedAt = Date.now();
 
     for (let attempt = 1; attempt <= 2; attempt += 1) {
-      response = await fetch(geminiUrl, geminiRequest);
-      if (![502, 503, 504].includes(response.status) || attempt === 2) break;
+      try {
+        response = await fetch(geminiUrl, {
+          ...geminiRequest,
+          signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS - (Date.now() - geminiStartedAt)),
+        });
+      } catch (fetchError) {
+        if (fetchError instanceof DOMException && fetchError.name === 'TimeoutError') {
+          console.error(`[timing] Gemini timed out after ${Date.now() - geminiStartedAt} ms`);
+          return jsonResponse({ error: 'The AI took too long to respond. Please try again.' }, 504);
+        }
+        throw fetchError;
+      }
+      // Only retry quick transient failures; a retry must still fit inside the timeout.
+      if (![502, 503].includes(response.status) || attempt === 2
+        || Date.now() - geminiStartedAt > GEMINI_TIMEOUT_MS / 2) break;
 
       console.warn(`Temporary Gemini ${response.status}; retrying once.`);
       await new Promise((resolve) => setTimeout(resolve, 750));
@@ -393,7 +451,6 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'The AI question service is temporarily unavailable.' }, 503);
     }
 
-    console.log(`Gemini API response status: ${response.status}`);
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Gemini request failed', { status: response.status });
@@ -408,7 +465,8 @@ Deno.serve(async (request) => {
     }
 
     const result = await response.json();
-    console.log('Parsed Gemini response successfully');
+    const usage = result?.usageMetadata || {};
+    console.log(`[timing] model=${DEFAULT_MODEL} count=${questionCount} authMs=${authMs} geminiMs=${Date.now() - geminiStartedAt} promptTokens=${usage.promptTokenCount ?? '-'} thoughtTokens=${usage.thoughtsTokenCount ?? 0} outputTokens=${usage.candidatesTokenCount ?? '-'} finish=${result?.candidates?.[0]?.finishReason ?? '-'}`);
     const text = result?.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part?.text || '').join('') || '';
 
     if (!text) {

@@ -52,7 +52,9 @@ const normalizeFunctionError = (error, data = null) => {
 
   if (Number(status) === 429) {
     message = formatQuotaMessage(retryAfterSeconds);
-  } else if ([502, 503, 504].includes(Number(status))) {
+  } else if (Number(status) === 504) {
+    message = 'The AI took too long to respond. Please try again.';
+  } else if ([502, 503].includes(Number(status))) {
     message = 'The AI question service is temporarily unavailable. Please try again.';
   }
 
@@ -85,7 +87,8 @@ const readFunctionErrorPayload = async (error) => {
 
 const isRetryableFunctionError = (error) => {
   const status = Number(error?.status || 0);
-  if ([502, 503, 504].includes(status)) return true;
+  // 504 means the AI already ran out the server timeout; retrying would double the wait.
+  if ([502, 503].includes(status)) return true;
 
   return status === 0 && /network|failed to fetch|temporarily unavailable/i.test(
     String(error?.technicalMessage || error?.message || '')
@@ -449,15 +452,30 @@ export const deactivateAssessmentQuestions = async (assessmentId) => {
   }
 };
 
+// The edge function stops waiting on the AI after 55 s; this client cap only covers
+// a stalled connection so the admin never sees an unlimited spinner.
+const GENERATE_TIMEOUT_MS = 65000;
+
 export const generateAssessmentQuestions = async (payload) => {
   const maximumAttempts = 2;
 
   for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), GENERATE_TIMEOUT_MS);
     try {
       const { data, error } = await supabase.functions.invoke(
         'generate-assessment-questions',
-        { body: payload }
+        { body: payload, signal: controller.signal }
       );
+
+      if (controller.signal.aborted) {
+        // A timed-out generation is not retried: a second full wait is worse than
+        // letting the admin decide.
+        return {
+          data: null,
+          error: { message: 'The AI took too long to respond. Please try again.', status: 504, technicalMessage: 'Client timeout' },
+        };
+      }
 
       if (!error) {
         return {
@@ -486,6 +504,8 @@ export const generateAssessmentQuestions = async (payload) => {
       }
 
       return { data: null, error: normalizedError };
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   }
 

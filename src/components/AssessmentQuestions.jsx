@@ -191,6 +191,7 @@ const getAssessmentDifficultyGuidance = (assessment = {}) => {
     return [
       'Post-Assessment difficulty: clearly harder than Pre-Assessment.',
       'Ask application-based, situational, analytical, or scenario-based questions that test deeper understanding.',
+      'Make questions harder through the thinking required, not through length: state any situation in one short clause and keep each question within about 15-25 words.',
       'Do not rephrase Pre-Assessment questions; use new situations, examples, and decision-making contexts.',
     ].join(' ');
   }

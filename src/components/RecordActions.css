@@ -2,7 +2,7 @@
 .account-action-menu-trigger.account-action-menu-trigger,
 .admin-report-action-trigger.admin-report-action-trigger {
   display: inline-flex; align-items: center; justify-content: center;
-  flex: 0 0 44px; width: 44px; min-width: 44px; height: 44px;
+  flex: 0 0 32px; width: 32px; min-width: 32px; height: 32px;
   padding: 0; border: 1px solid #cbd5e1; border-radius: 8px;
   background: #fff; color: #475569; box-shadow: none; cursor: pointer;
 }
@@ -13,7 +13,7 @@
   color: #b91c1c; border-color: #f97316; background: #fff7ed;
   box-shadow: 0 0 0 3px #ffedd5;
 }
-.record-actions-trigger svg { width: 20px; height: 20px; }
+.record-actions-trigger svg { width: 16px; height: 16px; }
 .record-actions-menu.record-actions-menu,
 .account-action-menu.account-action-menu,
 .admin-report-action-menu.admin-report-action-menu {
@@ -26,7 +26,7 @@
 .account-action-menu > .account-action-menu-item,
 .admin-report-action-menu > .admin-report-action-menu-item {
   display: flex; align-items: center; justify-content: flex-start; gap: 12px;
-  box-sizing: border-box; width: 100%; min-height: 44px; height: auto;
+  box-sizing: border-box; width: 100%; min-height: 36px; height: auto;
   padding: 10px 12px; margin: 0; border: 0; border-radius: 4px; background: transparent;
   box-shadow: none; color: #334155; font: inherit; font-size: 14px; font-weight: 600;
   letter-spacing: 0; text-align: left; text-transform: none; text-decoration: none; white-space: normal; cursor: pointer;
@@ -43,3 +43,12 @@
 .record-actions-menu > .record-actions-item[data-locked]:hover { background: #f1f5f9; }
 .record-actions-trigger:focus-visible, .record-actions-menu > .record-actions-item:focus-visible { outline: 2px solid #b91c1c; outline-offset: 2px; }
 .record-actions-trigger:disabled, .record-actions-menu > button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (pointer: coarse) {
+  .record-actions-trigger.record-actions-trigger,
+  .account-action-menu-trigger.account-action-menu-trigger,
+  .admin-report-action-trigger.admin-report-action-trigger {
+    flex-basis: 44px; width: 44px; min-width: 44px; height: 44px;
+  }
+  .record-actions-menu > .record-actions-item { min-height: 44px; }
+}

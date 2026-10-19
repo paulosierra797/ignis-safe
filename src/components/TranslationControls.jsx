@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import Hint from './Hint';
 import TranslatorRegistryContext from '../context/TranslatorRegistryContext';
-import { FiArrowRight, FiRefreshCw } from 'react-icons/fi';
+import TranslationMenu from './TranslationMenu';
 import { translateContent } from '../utils/translationClient';
 import {
   applyTranslationResults,
@@ -39,10 +39,11 @@ export default function TranslationControls({
   compact = false,
   bare = false,
   bulkLabel,
+  actionLabel,
   // Renders only the status and review UI; a page-level action drives it
   // through TranslatorRegistryContext instead of its own buttons.
   headless = false,
-  scopeLabel = 'Translation assistant',
+  scopeLabel = 'Translation',
   helperText,
   summarizeAffected,
 }) {
@@ -200,28 +201,15 @@ export default function TranslationControls({
           className="translation-assistant-kicker"
           text={helperText || 'Fills blank fields with a draft. Edited source text can refresh its translation after you confirm. Nothing is saved until you save.'}
         >
-          <FiRefreshCw aria-hidden="true" /> {scopeLabel}
+          {scopeLabel}
         </Hint>
       </div>}
       {!headless && <div className="translation-assistant-actions">
-        {DIRECTIONS.map((direction) => {
-          const key = `${direction.sourceLanguage}-${direction.targetLanguage}`;
-          return (
-            <button
-              key={key}
-              type="button"
-              className={direction.sourceLanguage === 'en' ? 'is-primary' : ''}
-              onClick={() => handleTranslate(direction)}
-              disabled={Boolean(busyDirection)}
-            >
-              {busyDirection === key ? <span className="translation-assistant-spinner" aria-hidden="true" /> : null}
-              {bulkLabel ? <span>{bulkLabel}</span> : null}
-              <span>{bulkLabel ? direction.sourceCode : direction.sourceLabel}</span>
-              <FiArrowRight aria-hidden="true" />
-              <span>{bulkLabel ? direction.targetCode : direction.targetLabel}</span>
-            </button>
-          );
-        })}
+        <TranslationMenu
+          label={actionLabel || (bulkLabel ? 'Translate all' : 'Translate tab')}
+          busy={Boolean(busyDirection)}
+          onSelect={(key) => handleTranslate(DIRECTIONS.find((direction) => `${direction.sourceLanguage}-${direction.targetLanguage}` === key))}
+        />
       </div>}
       {status && (
         <div

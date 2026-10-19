@@ -1,46 +1,21 @@
 import React, { useEffect } from 'react';
 import { useBlocker } from 'react-router-dom';
+import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import './UnsavedChangesPrompt.css';
 import './AppDialog.css';
 
 export function UnsavedChangesDialog({
   title = 'Leave without saving?',
-  message = 'You have unsaved changes. Are you sure you want to leave?',
-  stayLabel = 'Keep Editing',
-  leaveLabel = 'Leave Page',
+  message = 'Your unsaved changes will be lost.',
+  stayLabel = 'Stay',
+  leaveLabel = 'Leave',
   onStay,
   onLeave,
 }) {
   return (
-    <div
-      className="unsaved-changes-overlay app-unsaved-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="unsavedChangesTitle"
-      aria-describedby="unsavedChangesDescription"
-    >
-      <div className="unsaved-changes-modal app-unsaved-dialog">
-        <div className="unsaved-changes-icon app-unsaved-icon" aria-hidden="true">!</div>
-        <h2 id="unsavedChangesTitle" className="app-unsaved-title">{title}</h2>
-        <p id="unsavedChangesDescription" className="app-unsaved-message">{message}</p>
-        <div className="unsaved-changes-actions app-unsaved-actions">
-          <button
-            type="button"
-            className="unsaved-changes-stay app-unsaved-button app-unsaved-button--cancel"
-            onClick={onStay}
-          >
-            {stayLabel}
-          </button>
-          <button
-            type="button"
-            className="unsaved-changes-leave app-unsaved-button app-unsaved-button--discard"
-            onClick={onLeave}
-          >
-            {leaveLabel}
-          </button>
-        </div>
-      </div>
-    </div>
+    <ArchiveConfirmDialog open tone="danger" title={title} description={message}
+      showReason={false} cancelLabel={stayLabel} confirmLabel={leaveLabel}
+      onClose={onStay} onConfirm={onLeave} />
   );
 }
 

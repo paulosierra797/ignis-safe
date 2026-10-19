@@ -1,8 +1,8 @@
 :root {
-  --workspace-gutter-x: 1.5rem;
-  --workspace-gutter-y: 1.25rem;
-  --workspace-section-gap: 1rem;
-  --workspace-card-padding: 1rem;
+  --workspace-gutter-x: 1.25rem;
+  --workspace-gutter-y: 1rem;
+  --workspace-section-gap: 0.85rem;
+  --workspace-card-padding: 0.9rem;
 }
 
 :is(
@@ -28,7 +28,8 @@
   .audit-logs-main,
   .announcements-main,
   .aboutus-main,
-  .visitor-messages-main
+  .visitor-messages-main,
+  .archive-trash-main
 ) {
   --page-content-gutter-x: var(--workspace-gutter-x);
   --page-content-gutter-y: var(--workspace-gutter-y);
@@ -127,7 +128,7 @@
   .aboutus-main,
   .visitor-messages-main
 ) > .page-header .page-title {
-  font-size: 1.45rem !important;
+  font-size: 1.25rem !important;
 }
 
 :is(
@@ -181,7 +182,11 @@
   .shift-summary-card,
   .admin-reports-card,
   .analytics-card,
-  .analytics-summary-card
+  .analytics-summary-card,
+  .analytics-stat-card,
+  .progress-stat-card,
+  .progress-table-card,
+  .at-chart
 ) {
   padding: var(--workspace-card-padding) !important;
   border-radius: 8px !important;
@@ -211,7 +216,7 @@
 }
 
 .main-number {
-  font-size: 1.65rem !important;
+  font-size: 1.5rem !important;
 }
 
 .accounts-tab {
@@ -227,6 +232,57 @@
 .reports-content .create-report-description {
   margin-bottom: 1rem;
   font-size: 0.86rem;
+}
+
+/* The same control rhythm is shared by all three workspace roles. */
+.app :is(.accounts-filters, .progress-filters, .analytics-filters, .audit-logs-filters,
+  .attendance-filters-box, .history-filters, .announcements-filter-bar, .at-toolbar)
+  :is(input:not([type='checkbox']):not([type='radio']), select) {
+  min-height: 38px;
+  height: auto;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.app :is(.accounts-filters, .progress-filters, .audit-logs-filters, .attendance-filters-box) label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+:is(.accounts-filters, .progress-filters, .audit-logs-filters, .attendance-filters-box) {
+  padding: 12px 16px !important;
+  gap: 12px;
+  border-radius: 8px !important;
+  box-shadow: none;
+}
+
+.app .analytics-filters .filter-pill {
+  border-radius: 8px;
+  box-shadow: none;
+  padding: 4px 10px;
+}
+
+:is(.progress-stat-card, .analytics-stat-card) :is(h2, h3, strong) {
+  letter-spacing: 0;
+}
+
+.accounts-main :is(.add-user-btn, .import-personnel-btn, .bulk-manage-btn),
+.aboutus-toolbar-actions .aboutus-btn,
+.aboutus-panel-actions .aboutus-btn {
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+@media (pointer: coarse) {
+  .app :is(.accounts-filters, .progress-filters, .analytics-filters, .audit-logs-filters,
+    .attendance-filters-box, .history-filters, .at-toolbar) :is(input, select, button) {
+    min-height: 44px;
+  }
 }
 
 @media (max-width: 900px) {

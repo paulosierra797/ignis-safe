@@ -5,6 +5,7 @@ import usePagination from '../hooks/usePagination';
 import RecordActions from './RecordActions';
 import ArchiveButton from './ArchiveButton';
 import ArchiveListModal from './ArchiveListModal';
+import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
 import Hint from './Hint';
@@ -510,18 +511,11 @@ const AttendanceAdmin = () => {
           )}
         </ArchiveListModal>
 
-        {archiveTarget && <div className="attendance-details-overlay attendance-archive-confirm-overlay">
-          <section className="attendance-details-modal attendance-archive-dialog" role="alertdialog" aria-modal="true" aria-labelledby="attendanceArchiveTitle">
-            <header className="attendance-details-header"><h2 id="attendanceArchiveTitle">Archive this attendance?</h2><CloseButton label="Close archive confirmation" disabled={archiveBusy} onClick={() => setArchiveTarget(null)} /></header>
-            <div style={{padding: 24}}><p><strong>{archiveTarget.name}</strong> · {archiveTarget.date}</p><p>It will be hidden from the list. You can restore it anytime.</p>
-              {archiveError && <p role="alert">{archiveError}</p>}
-              <div className="attendance-archive-confirm-actions">
-                <button type="button" disabled={archiveBusy} onClick={() => setArchiveTarget(null)}>Cancel</button>
-                <ArchiveButton showLabel label="Archive" busy={archiveBusy} onClick={confirmArchive} />
-              </div>
-            </div>
-          </section>
-        </div>}
+        <ArchiveConfirmDialog open={Boolean(archiveTarget)} tone="archive" title="Archive this attendance?"
+          description="You can restore it from Archive & Trash."
+          recordLabel={archiveTarget?.name} recordMeta={archiveTarget?.date}
+          showReason={false} confirmLabel="Archive" busyLabel="Archiving..."
+          busy={archiveBusy} error={archiveError} onClose={() => setArchiveTarget(null)} onConfirm={confirmArchive} />
         {selectedRecord && (
           <div
             className={`attendance-details-overlay${archiveOpen ? ' attendance-archive-detail-overlay' : ''}`}

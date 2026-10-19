@@ -3,7 +3,7 @@ import { gsap } from 'gsap';
 import RecordActions from './RecordActions';
 import {
   FiEdit2, FiSave, FiX,
-  FiChevronDown, FiChevronRight, FiGlobe
+  FiChevronDown, FiChevronRight
 } from 'react-icons/fi';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
@@ -15,12 +15,14 @@ import { logAdminActivity } from '../utils/usersService';
 import * as aboutUsService from '../utils/aboutUsService';
 import UnsavedChangesPrompt from './UnsavedChangesPrompt';
 import TranslationControls from './TranslationControls';
+import TranslateMenu from './TranslationMenu';
+import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import Hint from './Hint';
 import TranslatorRegistryContext from '../context/TranslatorRegistryContext';
 
 const SAVE_SUCCESS_MESSAGE = 'Changes saved successfully.';
-const UNSAVED_TITLE = 'Unsaved Changes';
-const UNSAVED_MESSAGE = 'You have unsaved changes. If you leave this page, your changes will be lost.';
+const UNSAVED_TITLE = 'Leave without saving?';
+const UNSAVED_MESSAGE = 'Your unsaved changes will be lost.';
 
 // A NULL column and a field the admin cleared both render as an empty input
 // (every field here is bound as `value || ''`), so treat them as equal -
@@ -955,39 +957,10 @@ function WebsiteContentCard({ notify, reportDirty, registerSave }) {
 
 function ConfirmSaveModal({ busy, title, onCancel, onConfirm }) {
   return (
-    <div
-      className="app-unsaved-overlay"
-      role="alertdialog"
-      aria-modal="true"
-      aria-labelledby="aboutusSaveTitle"
-      aria-describedby="aboutusSaveMessage"
-    >
-      <div className="app-unsaved-dialog">
-        <div className="app-unsaved-icon" aria-hidden="true">?</div>
-        <h2 id="aboutusSaveTitle" className="app-unsaved-title">{title}</h2>
-        <p id="aboutusSaveMessage" className="app-unsaved-message">
-          Are you sure you want to save these changes? The updated content will be reflected in the IGNIS SAFE mobile app.
-        </p>
-        <div className="app-unsaved-actions">
-          <button
-            type="button"
-            className="app-unsaved-button app-unsaved-button--cancel"
-            onClick={onCancel}
-            disabled={busy}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="app-unsaved-button app-unsaved-button--save"
-            onClick={onConfirm}
-            disabled={busy}
-          >
-            {busy ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-    </div>
+    <ArchiveConfirmDialog open tone="neutral" title={title}
+      description="Your updates will appear in the mobile app."
+      showReason={false} confirmLabel="Save changes" busyLabel="Saving..."
+      busy={busy} onClose={onCancel} onConfirm={onConfirm} />
   );
 }
 
@@ -997,64 +970,6 @@ const TABS = [
   { id: 'cavite-directory', label: 'Cavite BFP Directory', hint: 'Directory heading, districts, fire stations, emails, and phone numbers.' },
   { id: 'general-texts', label: 'Website Content', hint: 'Section titles and subtitles shown on the About Us page.' },
 ];
-
-const TRANSLATE_DIRECTIONS = [
-  { key: 'en-fil', label: 'English → Filipino' },
-  { key: 'fil-en', label: 'Filipino → English' },
-];
-
-// One "Translate" button that asks for a direction, so the same control works
-// for the whole page and for a single tab.
-function TranslateMenu({ label, busy, disabled, onSelect, className = '' }) {
-  const [open, setOpen] = useState(false);
-  const rootRef = useRef(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const close = (event) => {
-      if (event.type === 'keydown' && event.key !== 'Escape') return;
-      if (event.type === 'mousedown' && rootRef.current?.contains(event.target)) return;
-      setOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    document.addEventListener('keydown', close);
-    return () => {
-      document.removeEventListener('mousedown', close);
-      document.removeEventListener('keydown', close);
-    };
-  }, [open]);
-
-  return (
-    <div className="aboutus-menu" ref={rootRef}>
-      <button
-        type="button"
-        className={`aboutus-btn aboutus-btn-secondary ${className}`.trim()}
-        onClick={() => setOpen((current) => !current)}
-        disabled={disabled || busy}
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        {busy ? <span className="aboutus-spinner" aria-hidden="true" /> : <FiGlobe aria-hidden="true" />}
-        {busy ? 'Translating...' : label}
-        <FiChevronDown aria-hidden="true" />
-      </button>
-      {open && (
-        <div className="aboutus-menu-list" role="menu">
-          {TRANSLATE_DIRECTIONS.map((direction) => (
-            <button
-              key={direction.key}
-              type="button"
-              role="menuitem"
-              onClick={() => { setOpen(false); onSelect(direction.key); }}
-            >
-              {direction.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function AboutUsContent() {
   const { currentUser } = useUser();
@@ -1261,7 +1176,7 @@ export default function AboutUsContent() {
           </div>
           <div className="aboutus-toolbar-actions">
             <TranslateMenu
-              label="Translate All"
+              label="Translate all"
               busy={translating}
               onSelect={(directionKey) => translateTabs(TABS.map((tab) => tab.id), directionKey)}
             />
@@ -1281,8 +1196,7 @@ export default function AboutUsContent() {
             <h2><Hint text={activeMeta.hint} placement="bottom">{activeMeta.label}</Hint></h2>
             <div className="aboutus-panel-actions">
               <TranslateMenu
-                label="Translate Tab"
-                className="aboutus-btn-small"
+                label="Translate tab"
                 busy={translating}
                 onSelect={(directionKey) => translateTabs([activeTab], directionKey)}
               />

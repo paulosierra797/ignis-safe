@@ -1,0 +1,49 @@
+.translation-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  max-width: 100%;
+  padding: 7px 12px;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.translation-menu-trigger svg { width: 15px; height: 15px; flex-shrink: 0; }
+.translation-menu-trigger:hover:not(:disabled) { background: #f8fafc; border-color: #98a2b3; }
+.translation-menu-trigger:disabled { opacity: 0.6; cursor: wait; }
+.translation-menu-trigger:focus-visible,
+.translation-menu-list button:focus-visible { outline: 2px solid #b91c1c; outline-offset: 2px; }
+.translation-menu-list {
+  position: fixed;
+  z-index: 7500;
+  padding: 5px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+}
+.translation-menu-list button {
+  display: block;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: transparent;
+  color: #344054;
+  font: inherit;
+  font-size: 0.8rem;
+  text-align: left;
+  cursor: pointer;
+}
+.translation-menu-list button:hover,
+.translation-menu-list button:focus { background: #f8fafc; }
+@media (pointer: coarse) {
+  .translation-menu-trigger, .translation-menu-list button { min-height: 44px; }
+}

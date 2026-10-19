@@ -522,3 +522,29 @@
     font-size: 1.05rem;
   }
 }
+
+.profile-actions-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-actions-row .save-changes-btn {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.profile-summary-card,
+.profile-info-card {
+  border-radius: 8px;
+}
+
+@media (max-width: 480px) {
+  .profile-actions-row .save-changes-btn {
+    flex-basis: 100%;
+    min-height: 44px;
+  }
+}

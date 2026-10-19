@@ -13,6 +13,14 @@ export async function installResponsiveFixtures(context) {
     return route.abort();
   });
   await context.route('**/api/**', route => route.fulfill({ contentType: 'application/json', body: '{"data":null}' }));
+  await context.route('**/rest/v1/rpc/get_public_trends', route => route.fulfill({
+    contentType: 'application/json', body: JSON.stringify({
+      generated_at: '2026-10-19T00:00:00Z', min_group_size: 1, registered_learners: 8,
+      registrations_by_month: [{ month: '2026-09', total: 5 }, { month: '2026-10', total: 8 }],
+      barangays: { represented: 2, official_total: 2, represented_names: ['Salawag', 'San Francisco I'], by_month: [{ month: '2026-09', total: 1 }, { month: '2026-10', total: 2 }] },
+      participation_by_month: [{ month: '2026-09', activities: 4, active_learners: 2 }, { month: '2026-10', activities: 12, active_learners: 8 }],
+    }),
+  }));
   await context.addInitScript(({ id }) => {
     sessionStorage.setItem('attendanceAuth', JSON.stringify({ admin_id: id, id, name: 'Juan Miguel Dela Cruz-Santos', rank: 'FO2', email: 'officer@example.test', timestamp: Date.now(), sessionId: 'audit-attendance' }));
   }, { id: AUDIT_USER_ID });

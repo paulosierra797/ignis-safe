@@ -1,5 +1,6 @@
 import { Bar, Line } from 'react-chartjs-2';
 import { formatBytes } from '../utils/archiveService';
+import { storageLabel } from '../utils/storageLabels';
 import {
   Chart as ChartJS,
   BarElement,
@@ -131,13 +132,13 @@ export function StorageGrowthChart({ growth = [] }) {
 export function StorageCompositionChart({ databaseBytes = 0, buckets = [] }) {
   const rows = [
     { label: 'Database', bytes: Number(databaseBytes) || 0 },
-    ...buckets.map((bucket) => ({ label: bucket.bucket, bytes: Number(bucket.bytes) || 0, objects: bucket.objects }))
+    ...buckets.map((bucket) => ({ label: storageLabel(bucket.bucket), bytes: Number(bucket.bytes) || 0, objects: bucket.objects }))
   ].sort((left, right) => right.bytes - left.bytes);
 
   return (
     <ChartFigure
-      title="Where storage is used"
-      caption="Database size and each Storage bucket"
+      title="Storage usage"
+      caption="Space used by records, backups, and uploaded files"
       table={<DataTable head={['Location', 'Size', 'Files']} rows={rows.map((row) => [row.label, formatBytes(row.bytes), row.objects ?? '—'])} />}
     >
       <Bar

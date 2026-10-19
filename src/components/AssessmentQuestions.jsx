@@ -1573,6 +1573,7 @@ export default function AssessmentQuestions() {
                     onChange={applyAllTranslations}
                     section="assessment_questions"
                     scopeLabel="Translate All Questions"
+                    actionLabel="Translate all"
                     helperText="Translates every question, answer choice and explanation in this assessment. Existing translations are kept unless you edited the source text, and you confirm those first. Correct answers are preserved. Nothing is saved until you save."
                     bulkLabel="Translate All"
                     bare
@@ -1686,6 +1687,7 @@ export default function AssessmentQuestions() {
                     onChange={(translatedQuestion) => applyQuestionTranslations(question.id, translatedQuestion)}
                     section="assessment_questions"
                     compact
+                    actionLabel="Translate question"
                   />
                   <section className="assessment-edit-section">
                     <h3 className="assessment-section-heading"><Hint text="The question shown to personnel during the assessment.">Question prompt</Hint></h3>

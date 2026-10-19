@@ -5,12 +5,13 @@ import {
 export const SAMPLE_USER_ID = fixtureTables.profiles[0].id;
 export const PROTECTED_ID = '00000000-0000-4000-8000-000000000901';
 
-export async function installRevisionFixtures(context, { superAdmin = true, ageError = false, actorPermissions } = {}) {
+export async function installRevisionFixtures(context, { superAdmin = true, ageError = false, actorPermissions, extraAdmin = false } = {}) {
   await installResponsiveFixtures(context);
   const seed = {
     admin: [
       { ...fixtureTables.admin[0], is_super_admin: superAdmin },
       { ...fixtureTables.admin[1] },
+      ...(extraAdmin ? [{ ...fixtureTables.admin[0], admin_id: '00000000-0000-4000-8000-000000000903', id: '00000000-0000-4000-8000-000000000903', first_name: 'Ordinary', last_name: 'Admin', email: 'ordinary.admin@example.test', is_super_admin: false }] : []),
       { ...fixtureTables.admin[0], admin_id: PROTECTED_ID, id: PROTECTED_ID, first_name: 'Official', last_name: 'Protected Account', is_super_admin: true },
     ],
     profiles: fixtureTables.profiles,
@@ -52,8 +53,12 @@ export async function installRevisionFixtures(context, { superAdmin = true, ageE
     window.__revisionCalls.push({ kind: 'rpc', name, args });
     if (name === 'get_mobile_registration_ages') return ${ageError ? "Promise.resolve({data:null,error:{code:'PGRST202',message:'Sample unavailable age service'}})" : `success(tables.profiles.map((p,i) => ({user_id:p.id, age:i===0?22:null})))`};
     if (name === 'get_protected_account_ids') return success([${JSON.stringify(PROTECTED_ID)}]);
-    if (name === 'get_storage_overview') return success({database_bytes:1024,buckets:[],growth:[]});
-    if (name === 'manage_account') return success({ok:true,changed:true});
+    if (name === 'get_storage_overview') return success({database_bytes:1024,buckets:[{bucket:'system-backups',bytes:4096,objects:1},{bucket:'profile_pic',bytes:2048,objects:2}],growth:[]});
+    if (name === 'manage_account') {
+      const target = tables.admin.find(row => row.admin_id === args.p_target_admin_id);
+      if (target && args.p_changes?.role === 'personnel') { target.role='personnel'; target.is_super_admin=false; target.permissions=[]; }
+      return success({ok:true,changed:true});
+    }
     if (name === 'restore_archive_item') return success(null);
   `;
   const functions = `

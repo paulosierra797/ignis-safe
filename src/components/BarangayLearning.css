@@ -84,7 +84,7 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  cursor: help;
+  cursor: default;
 }
 
 .bgy-tip:focus-visible {

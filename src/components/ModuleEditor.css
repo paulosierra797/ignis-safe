@@ -1,6 +1,6 @@
 .module-editor-shell {
-  --editor-accent: #0f766e;
-  --editor-accent-dark: #115e59;
+  --editor-accent: #b91c1c;
+  --editor-accent-dark: #991b1b;
   --editor-border: #dbe3ec;
   --editor-border-strong: #cbd5e1;
   --editor-muted: #64748b;
@@ -20,11 +20,11 @@
   justify-content: space-between;
   gap: 1.25rem;
   margin: 1rem 0;
-  padding: 1.15rem 1.25rem;
-  border: 1px solid var(--editor-border);
-  border-radius: 18px;
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+  padding: 0.5rem 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .module-editor-toolbar-main {
@@ -45,14 +45,14 @@
   color: var(--editor-accent);
   font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .module-editor-heading h2 {
   margin: 0;
   color: var(--editor-text);
-  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+  font-size: 1.15rem;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
@@ -141,10 +141,10 @@
 
 .module-editor-section {
   margin-bottom: 0.9rem;
-  border: 1px solid var(--editor-border);
-  border-radius: 16px;
-  background: var(--editor-surface);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.045);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   overflow: clip;
 }
 
@@ -153,9 +153,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1.1rem;
+  padding: 12px 0;
   border-bottom: 1px solid #edf1f5;
-  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  background: transparent;
 }
 
 .module-editor-section-heading h3 {
@@ -175,7 +175,7 @@
 }
 
 .module-editor-section-body {
-  padding: 1rem 1.1rem;
+  padding: 12px 0;
 }
 
 .module-editor-section-collapsible > summary {
@@ -331,9 +331,9 @@
   margin: 0 0 0.9rem;
   padding: 0.6rem;
   border: 1px solid var(--editor-border);
-  border-radius: 14px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
   backdrop-filter: blur(12px);
 }
 
@@ -344,9 +344,9 @@
   gap: 0.45rem;
   min-height: 40px;
   padding: 0.52rem 0.75rem;
-  border: 1px solid #99f6e4;
-  border-radius: 9px;
-  background: #f0fdfa;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
   color: var(--editor-accent-dark);
   font: inherit;
   font-size: 0.8rem;
@@ -363,8 +363,8 @@
 }
 
 .module-editor-page-nav button:hover:not(:disabled) {
-  border-color: #5eead4;
-  background: #ccfbf1;
+  border-color: #fecaca;
+  background: #fef2f2;
 }
 
 .module-editor-page-nav button:disabled {
@@ -444,7 +444,7 @@
 .module-editor-item-card {
   min-width: 0;
   border: 1px solid var(--editor-border);
-  border-radius: 14px;
+  border-radius: 8px;
   background: #ffffff;
   overflow: hidden;
 }

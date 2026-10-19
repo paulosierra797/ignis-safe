@@ -1019,7 +1019,7 @@ export default function ArchiveTrash() {
           recordMeta={dialog?.item ? `${moduleLabel(dialog.item.module)} · ${dialog.item.storage_objects?.length || 0} file(s)` : ''}
           reasonLabel="Reason"
           reasonPlaceholder="e.g. Duplicate record"
-          reasonRequired
+          reasonRequired={false}
           confirmPhrase="DELETE"
           confirmLabel="Delete forever"
           busyLabel="Deleting…"
@@ -1067,7 +1067,7 @@ export default function ArchiveTrash() {
           recordMeta={dialog?.items ? `${bulkBreakdown(dialog.items)} · ${dialog.items.reduce((total, item) => total + (item.storage_objects?.length || 0), 0)} file(s)` : ''}
           reasonLabel="Reason"
           reasonPlaceholder="e.g. Duplicate records"
-          reasonRequired
+          reasonRequired={false}
           confirmPhrase="DELETE"
           confirmLabel={`Delete ${dialog?.items?.length || 0} forever`}
           busyLabel={`Deleting ${bulkProgress}/${dialog?.items?.length || 0}…`}

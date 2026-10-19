@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import gsap from 'gsap';
 import { FiAlertTriangle, FiCheck, FiLock, FiMaximize2, FiMinus, FiSearch, FiTrash2, FiX } from 'react-icons/fi';
 import { logAdminActivity, manageAccount, moveAccountToTrash } from '../utils/usersService';
+import { getAccountTier as getTier, planAccountRoleChange as planRole } from '../utils/accountRoleChanges';
 import './BulkManageModal.css';
 
 const RANKS = ['FDIR', 'DFDIR', 'SSUPT', 'SUPT', 'CINSP', 'SINSP', 'INSP', 'SFO4', 'SFO3', 'SFO2', 'SFO1', 'FO3', 'FO2', 'FO1'];
@@ -14,28 +15,8 @@ const TIERS = [
 const TIER_LABEL = Object.fromEntries(TIERS.map((tier) => [tier.key, tier.label]));
 const EMPTY_FORM = { rank: '', role: '', status: '' };
 
-const getTier = (account) => {
-  if (account.is_super_admin) return 'super_admin';
-  return String(account.role || '').trim().toLowerCase() === 'admin' ? 'admin' : 'personnel';
-};
-
 const getName = (account) =>
   `${account.first_name || ''} ${account.last_name || ''}`.trim() || account.email || 'Unnamed account';
-
-// Mirrors the manage_account rules; the database remains the authority.
-const planRole = (account, target) => {
-  const from = getTier(account);
-  if (!target || target === from) return { kind: 'none' };
-  if (from === 'personnel' && target === 'admin') return { kind: 'promote', label: 'Personnel → Admin' };
-  if (from === 'admin' && target === 'super_admin') return { kind: 'promote', label: 'Admin → Super Admin' };
-  if (from === 'super_admin' && target === 'admin') return { kind: 'demote', label: 'Super Admin → Admin' };
-  return {
-    kind: 'invalid',
-    reason: target === 'super_admin' && from === 'personnel'
-      ? 'Personnel must be promoted to Admin first'
-      : 'Role change not allowed'
-  };
-};
 
 const buildEditPlan = (accounts, form) => accounts.map((account) => {
   const role = planRole(account, form.role);
@@ -372,6 +353,7 @@ const BulkManageModal = ({ accounts, protectedIds, currentAdminId, actor, onClos
         <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
           <option value="">No change</option>
           <option value="admin">Admin (promote Personnel / demote Super Admin)</option>
+          <option value="personnel">Personnel (demote Admin)</option>
           <option value="super_admin">Super Admin (promote Admin)</option>
         </select>
       </label>

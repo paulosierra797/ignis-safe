@@ -231,10 +231,10 @@
 /* ---------------------------------------------------------------- surface */
 
 .aboutus-surface {
-  padding: 1.75rem 2rem 2rem;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
+  padding: 1rem 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .aboutus-panel-head {
@@ -243,20 +243,20 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .aboutus-panel-head h2 {
   margin: 0;
   color: #172033;
-  font-size: clamp(1.1rem, 2vw, 1.3rem);
+  font-size: 1rem;
   font-weight: 700;
 }
 
 .aboutus-body {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.25rem;
 }
 
 /* Sections are separated by space and one hairline, not nested boxes. */
@@ -265,7 +265,7 @@
 }
 
 .aboutus-body > .aboutus-subsection + .aboutus-subsection {
-  padding-top: 1.75rem;
+  padding-top: 1.25rem;
   border-top: 1px solid #eef0f4;
 }
 

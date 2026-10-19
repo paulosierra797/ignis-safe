@@ -18,7 +18,7 @@
   border-radius: 50%;
   background: transparent;
   color: #6b7280;
-  cursor: help;
+  cursor: default;
   transition: background-color 160ms ease, color 160ms ease;
 }
 

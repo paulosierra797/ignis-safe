@@ -147,12 +147,11 @@ Deno.serve(async (request) => {
       const itemId = body?.itemId;
       const reason = String(body?.reason || '').trim();
       if (!isUuid(itemId)) return jsonResponse({ error: 'Invalid item.' }, 400);
-      if (!reason) return jsonResponse({ error: 'A reason is required for permanent deletion.' }, 400);
       if (reason.length > MAX_REASON_LENGTH) {
         return jsonResponse({ error: `The reason must be ${MAX_REASON_LENGTH} characters or fewer.` }, 400);
       }
 
-      const result = await purgeItem(itemId, admin.admin_id, true, reason);
+      const result = await purgeItem(itemId, admin.admin_id, true, reason || null);
       if (!result.ok) return jsonResponse({ error: result.reason }, 409);
       return jsonResponse({ data: { itemId, purged: true }, error: null });
     }

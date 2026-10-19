@@ -3,6 +3,7 @@ import { useBlocker, useLocation, useNavigate } from 'react-router-dom';
 import { FiBell, FiFileText, FiCheckCircle, FiClock, FiEdit2, FiSearch, FiTrash2 } from 'react-icons/fi';
 import ArchiveButton from './ArchiveButton';
 import ArchiveListModal from './ArchiveListModal';
+import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import Hint from './Hint';
@@ -1704,29 +1705,11 @@ export default function Announcements() {
       )}
 
       {archiveModalId && (
-        <div className="announcement-confirm-modal-overlay">
-          <div className="announcement-confirm-modal-card" role="alertdialog" aria-modal="true" aria-labelledby="archiveAnnouncementTitle">
-            <div className="history-confirm-heading"><h3 id="archiveAnnouncementTitle">Archive this announcement?</h3><CloseButton label="Close archive confirmation" onClick={() => setArchiveModalId('')} disabled={archiving} /></div>
-            <p className="history-selected-title">{announcements.find(row => row.announcement_id === archiveModalId)?.title}</p>
-            <p>You can restore it anytime.</p>
-            <div className="announcement-confirm-modal-actions">
-              <button
-                type="button"
-                className="announcement-confirm-modal-cancel"
-                onClick={() => setArchiveModalId('')}
-                disabled={archiving}
-              >
-                Cancel
-              </button>
-              <ArchiveButton
-                showLabel
-                busy={archiving}
-                onClick={handleArchiveAnnouncement}
-                disabled={archiving}
-              />
-            </div>
-          </div>
-        </div>
+        <ArchiveConfirmDialog open tone="archive" title="Archive this announcement?"
+          description="You can restore it from Archive & Trash."
+          recordLabel={announcements.find(row => row.announcement_id === archiveModalId)?.title}
+          showReason={false} confirmLabel="Archive" busyLabel="Archiving..."
+          busy={archiving} onClose={() => setArchiveModalId('')} onConfirm={handleArchiveAnnouncement} />
       )}
 
       {editAnnouncement && (

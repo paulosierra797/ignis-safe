@@ -1462,3 +1462,23 @@
     display: none;
   }
 }
+.personnel-modal.leave-confirm-modal {
+  width: min(440px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  border-radius: 8px;
+}
+
+.leave-confirm-modal .personnel-modal-header,
+.leave-confirm-modal .personnel-modal-body,
+.leave-confirm-modal .personnel-modal-footer {
+  padding: 14px 16px;
+}
+
+.leave-confirm-modal .personnel-modal-header h3 { font-size: 1rem; }
+.leave-confirm-modal .leave-summary-value { font-size: 0.82rem; }
+.leave-confirm-modal .personnel-modal-footer button {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}

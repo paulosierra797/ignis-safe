@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import Pagination from './Pagination';
 import usePagination from '../hooks/usePagination';
 import PageHeader from './PageHeader';
+import CloseButton from './CloseButton';
 import ExpandableText from './ExpandableText';
 import ToastMessage from './ToastMessage';
 import { useUser } from '../context/UserContext';
@@ -1151,15 +1152,12 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
             >
               <div className="personnel-modal-header">
                 <h3>Confirm Leave Request</h3>
-                <button
-                  type="button"
+                <CloseButton
                   className="personnel-modal-close"
                   onClick={closeLeaveConfirm}
-                  aria-label="Close confirmation"
+                  label="Close confirmation"
                   disabled={leaveSaving}
-                >
-                  &times;
-                </button>
+                />
               </div>
 
               <div className="personnel-modal-body">
@@ -1256,14 +1254,11 @@ const [leaveRes, scheduleRes, myAssignmentsRes, relieverRes] = await Promise.all
             >
               <div className="personnel-modal-header">
                 <h3>{formatDate(selectedDayIso)}</h3>
-                <button
-                  type="button"
+                <CloseButton
                   className="personnel-modal-close"
                   onClick={closeDayDetail}
-                  aria-label="Close day detail"
-                >
-                  &times;
-                </button>
+                  label="Close day detail"
+                />
               </div>
 
               <div className="personnel-modal-body">

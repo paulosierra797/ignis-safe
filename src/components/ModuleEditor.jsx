@@ -3,6 +3,7 @@ import MetadataEditor from './MetadataEditors/MetadataEditor';
 import FireClassDetailsEditor from './MetadataEditors/FireClassDetailsEditor';
 import LearningMaterialsTextEditor from './MetadataEditors/LearningMaterialsTextEditor';
 import TranslationControls from './TranslationControls';
+import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import {
   BilingualGrid,
   EditorField,
@@ -169,7 +170,8 @@ export default function ModuleEditor({
         value={moduleTranslationValue}
         onChange={applyModuleTranslations}
         section="learning_materials"
-        scopeLabel="Module-wide translation"
+        scopeLabel="Entire module"
+        actionLabel="Translate all"
         helperText="Translates blank fields across every page and collapsed section in this module. Review each affected area before saving."
         summarizeAffected={summarizeModuleTranslationAreas}
       />
@@ -239,6 +241,16 @@ export default function ModuleEditor({
 
       {page ? (
         <div className="module-editor-page-content">
+          {editedPage && <TranslationControls
+            key={`page-translation-${page.id || page.page_no}`}
+            value={{ page: editedPage, learningTexts: pageTexts }}
+            onChange={(next) => {
+              setEditedModule((current) => ({ ...current, pages: current.pages.map((entry) => entry.page_no === page.page_no ? next.page : entry) }));
+              setLearningTexts((current) => mergeTranslatedRows(current, next.learningTexts));
+            }}
+            section="learning_materials" scopeLabel={`Page ${page.page_no}`} actionLabel="Translate tab"
+            helperText="Translates text on the selected page. Review the draft before saving." bare
+          />}
           <EditorSection
             eyebrow={`Page ${page.page_no}`}
             title="Page details"
@@ -403,32 +415,13 @@ export default function ModuleEditor({
         </button>
       </div>
 
-      {showConfirm && (
-        <div className="confirm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="saveModuleTitle">
-          <div className="confirm-modal">
-            <div className="confirm-icon" aria-hidden="true">✓</div>
-            <h3 id="saveModuleTitle">Save Changes?</h3>
-            <p>
-              This will update the learning module and make your latest edits available to users.
-            </p>
-            <div className="confirm-buttons">
-              <button type="button" className="cancel-btn" onClick={() => setShowConfirm(false)}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="confirm-btn"
-                onClick={() => {
-                  setShowConfirm(false);
-                  handleSaveModule();
-                }}
-              >
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ArchiveConfirmDialog open={showConfirm} tone="neutral" title="Save changes?"
+        description="Your updates will appear in the learning module."
+        showReason={false} confirmLabel="Save changes" busy={saving}
+        onClose={() => setShowConfirm(false)} onConfirm={() => {
+          setShowConfirm(false);
+          handleSaveModule();
+        }} />
     </div>
   );
 }

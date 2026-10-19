@@ -186,7 +186,7 @@
   color: inherit;
   font: inherit;
   letter-spacing: inherit;
-  cursor: help;
+  cursor: default;
   border-radius: 8px;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.2s ease;
@@ -499,7 +499,7 @@
   color: inherit;
   font: inherit;
   letter-spacing: inherit;
-  cursor: help;
+  cursor: default;
   border-radius: 8px;
   -webkit-tap-highlight-color: transparent;
   transition: color 0.2s ease;

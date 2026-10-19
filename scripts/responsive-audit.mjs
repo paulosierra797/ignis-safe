@@ -81,6 +81,18 @@ try {
           const clipped = [...document.querySelectorAll('h1, h2, h3, h4, label, button, .responsive-select-label')].filter(visible).filter(el => {
             const css = getComputedStyle(el);
             if (inScroller(el) || css.textOverflow === 'ellipsis' || css.clip !== 'auto' || css.clipPath !== 'none') return false;
+            // Absolutely positioned tooltip content is not heading text overflow.
+            if (el.querySelector('[role="tooltip"]')) {
+              const box = el.getBoundingClientRect();
+              const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+              for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+                if (!node.textContent.trim() || node.parentElement.closest('[role="tooltip"]') || !visible(node.parentElement)) continue;
+                const range = document.createRange();
+                range.selectNodeContents(node);
+                if ([...range.getClientRects()].some(rect => rect.right > box.right + 2 || rect.left < box.left - 2)) return true;
+              }
+              return false;
+            }
             return el.scrollWidth > el.clientWidth + 2;
           }).map(label);
           const dialogs = [...document.querySelectorAll('[role="dialog"]')].filter(visible).map(el => {

@@ -1,14 +1,15 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import gsap from 'gsap';
-import { FiAlertTriangle, FiArchive, FiRotateCcw } from 'react-icons/fi';
+import { FiAlertTriangle, FiArchive, FiCheck, FiRotateCcw } from 'react-icons/fi';
 import CloseButton from './CloseButton';
 import './ArchiveConfirmDialog.css';
 
 const TONE_ICONS = {
   archive: FiArchive,
   restore: FiRotateCcw,
-  danger: FiAlertTriangle
+  danger: FiAlertTriangle,
+  neutral: FiCheck
 };
 
 // Shared confirmation for archive, restore, and irreversible deletion.
@@ -31,6 +32,8 @@ function ArchiveConfirmPanel({
   showReason = true,
   confirmPhrase = '',
   confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
+  showCancel = true,
   busyLabel = 'Working…',
   busy = false,
   error = '',
@@ -66,10 +69,12 @@ function ArchiveConfirmPanel({
     });
 
     const focusTimer = window.setTimeout(() => {
-      (firstFieldRef.current || confirmRef.current)?.focus();
+      dialogRef.current?.querySelector('button')?.focus();
     }, 30);
 
     const onKeyDown = (event) => {
+      const activeDialog = event.target instanceof Element ? event.target.closest('[aria-modal="true"]') : null;
+      if (activeDialog && activeDialog !== dialogRef.current) return;
       if (event.key === 'Escape' && !busyRef.current) {
         event.stopPropagation();
         onCloseRef.current?.();
@@ -188,7 +193,7 @@ function ArchiveConfirmPanel({
         </div>
 
         <footer className="archive-dialog-footer">
-          <button type="button" className="archive-dialog-cancel" onClick={onClose} disabled={busy}>Cancel</button>
+          {showCancel && <button type="button" className="archive-dialog-cancel" onClick={onClose} disabled={busy}>{cancelLabel}</button>}
           <button ref={confirmRef} type="submit" className="archive-dialog-confirm" disabled={!canConfirm} aria-busy={busy || undefined}>
             {busy ? busyLabel : confirmLabel}
           </button>

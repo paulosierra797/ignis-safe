@@ -132,7 +132,7 @@ try {
     });
     await check('About Us translation drafts and save confirmation', async () => {
       await ready('/dashboard/about-us');
-      await page.getByRole('button', { name: 'Translate Tab', exact: true }).click();
+      await page.getByRole('button', { name: 'Translate tab', exact: true }).click();
       await page.getByRole('menuitem', { name: /English.*Filipino/ }).click();
       await page.waitForFunction(() => [...document.querySelectorAll('input')].some(el => el.value === 'Salin: Learn fire safety'));
       assert.equal(await page.evaluate(() => (window.__revisionCalls || []).filter(call => call.kind === 'update').length), 0);

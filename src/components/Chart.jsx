@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBlocker } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
+import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import './AppDialog.css';
 import { useUser } from '../context/UserContext';
 import {
@@ -789,39 +790,16 @@ export default function Chart() {
       )}
 
       {isConfirmModalOpen && !hasPendingNavigation && !errorInfo && (
-        <div className="org-modal-overlay" role="dialog" aria-modal="true">
-          <div className="org-modal org-confirm-modal">
-            <h3 className="org-modal-title">Confirm Organizational Chart Changes</h3>
-            <p className="org-modal-subtitle">Are you sure you want to save the following changes?</p>
-
-            <ul className="org-change-list">
+        <ArchiveConfirmDialog open tone="neutral" title="Save chart changes?"
+          description={<ul className="org-change-list">
               {pendingChanges.map((change, index) => (
                 <li className="org-change-item" key={`${change.nodeId}-${change.field}-${index}`}>
                   <OrgChangeLine change={change} />
                 </li>
               ))}
-            </ul>
-
-            <div className="org-modal-actions">
-              <button
-                type="button"
-                className="org-modal-btn org-modal-btn-cancel"
-                onClick={handleCancelConfirm}
-                disabled={isSaving}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="org-modal-btn org-modal-btn-save"
-                onClick={handleConfirmSave}
-                disabled={isSaving}
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
+            </ul>}
+          showReason={false} confirmLabel="Save changes" busyLabel="Saving..."
+          busy={isSaving} onClose={handleCancelConfirm} onConfirm={handleConfirmSave} />
       )}
 
       {successSummary && !hasPendingNavigation && !errorInfo && (

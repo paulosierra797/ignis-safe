@@ -3,7 +3,7 @@
   display: inline-flex;
   align-items: center;
   max-width: 100%;
-  cursor: help;
+  cursor: default;
 }
 .hint:focus { outline: none; }
 .hint:focus-visible { outline: 2px solid rgba(185, 28, 28, 0.35); outline-offset: 3px; border-radius: 4px; }

@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import { FaCheckCircle, FaChevronDown, FaEye, FaSearch, FaTimes, FaTimesCircle, FaUndo } from 'react-icons/fa';
 import ArchiveButton from './ArchiveButton';
 import ArchiveListModal from './ArchiveListModal';
+import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import Hint from './Hint';
 import RecordActions from './RecordActions';
 import Pagination from './Pagination';
@@ -3338,6 +3339,31 @@ const permissions = getDefaultPermissions(formData.role);
     setSuperAdminMessage({ type: 'success', text: 'Account promoted to Admin.' });
   };
 
+  const handleDemoteToPersonnel = (account) => {
+    if (!isSuperAdmin || !account?.admin_id || isProtectedAccount(account)
+      || isSuperAdminAccount(account) || account.admin_id === currentUser?.admin_id) return;
+    const accountName = `${account.first_name || ''} ${account.last_name || ''}`.trim() || account.email;
+    setPendingConfirmAction({
+      action: 'demote-to-personnel',
+      payload: { account },
+      title: 'Demote to Personnel?',
+      message: `${accountName} will lose Admin access. Their personnel records will stay.`,
+      confirmLabel: 'Demote',
+    });
+    setIsConfirmActionModalOpen(true);
+  };
+
+  const executeDemoteToPersonnel = async (account) => {
+    setSuperAdminMessage({ type: '', text: '' });
+    const { error } = await manageAccount(account.admin_id, { role: 'personnel' });
+    if (error) {
+      setSuperAdminMessage({ type: 'error', text: error });
+      return;
+    }
+    await fetchAccounts();
+    setSuperAdminMessage({ type: 'success', text: 'Account changed to Personnel.' });
+  };
+
   // The audit log entry is written server-side by the RPC.
   const executeSuperAdminPrivilege = async (account, grant) => {
     setSuperAdminMessage({ type: '', text: '' });
@@ -3393,6 +3419,10 @@ const permissions = getDefaultPermissions(formData.role);
 
     if (pendingConfirmAction.action === 'promote-to-admin') {
       await executePromoteToAdmin(pendingConfirmAction.payload.account);
+    }
+
+    if (pendingConfirmAction.action === 'demote-to-personnel') {
+      await executeDemoteToPersonnel(pendingConfirmAction.payload.account);
     }
 
     if (pendingConfirmAction.action === 'super-admin-privilege') {
@@ -3473,6 +3503,11 @@ const permissions = getDefaultPermissions(formData.role);
       && String(account.role || '').trim().toLowerCase() === 'admin'
       && String(account.status || '').trim().toLowerCase() === 'active'
       ? [{ key: 'grant-super-admin', label: 'Grant Super Admin', onSelect: () => handleSuperAdminPrivilege(account, true) }]
+      : []),
+    ...(isSuperAdmin && !isSuperAdminAccount(account) && !isProtectedAccount(account)
+      && !account.is_personnel_workspace_profile && account.admin_id !== currentUser?.admin_id
+      && String(account.role || '').trim().toLowerCase() === 'admin'
+      ? [{ key: 'demote-personnel', label: 'Demote to Personnel', destructive: true, onSelect: () => handleDemoteToPersonnel(account) }]
       : []),
     ...(isSuperAdmin && isSuperAdminAccount(account) && !isProtectedAccount(account)
       ? [{
@@ -6050,47 +6085,11 @@ const permissions = getDefaultPermissions(formData.role);
         )}
 
         {isConfirmActionModalOpen && pendingConfirmAction && (
-          <div className="accounts-modal-overlay" role="dialog" aria-modal="true">
-            <div className="accounts-modal accounts-confirm-modal">
-              <div className="accounts-modal-header">
-                <h3>{pendingConfirmAction.title}</h3>
-                <CloseButton
-                  className="accounts-modal-close"
-                  onClick={closeConfirmActionModal}
-                  label="Close confirmation modal"
-                  disabled={isConfirmActionProcessing}
-                />
-              </div>
-
-              <div className="accounts-modal-body">
-                <p>{pendingConfirmAction.message}</p>
-              </div>
-
-              <div className="accounts-modal-footer">
-                <button className="accounts-modal-draft" onClick={closeConfirmActionModal} disabled={isConfirmActionProcessing}>
-                  Cancel
-                </button>
-        {pendingConfirmAction.action === 'archive-request-history' ? (
-          <ArchiveButton showLabel onClick={confirmActionModal} busy={isConfirmActionProcessing} />
-        ) : <button
-          className={
-            ['remove-shift-assignment', 'save-cleared-shift-schedule'].includes(pendingConfirmAction.action)
-              || (pendingConfirmAction.action === 'super-admin-privilege' && pendingConfirmAction.payload.grant)
-              ? 'accounts-modal-add'
-              : 'leave-reject-btn'
-          }
-          onClick={confirmActionModal}
-          disabled={isConfirmActionProcessing}
-        >
-                  {isConfirmActionProcessing
-                    ? pendingConfirmAction.action === 'save-cleared-shift-schedule'
-                      ? 'Saving...'
-                      : 'Processing...'
-                    : pendingConfirmAction.confirmLabel}
-                </button>}
-              </div>
-            </div>
-          </div>
+          <ArchiveConfirmDialog open
+            tone={pendingConfirmAction.action === 'demote-to-personnel' ? 'danger' : 'neutral'}
+            title={pendingConfirmAction.title} description={pendingConfirmAction.message}
+            showReason={false} confirmLabel={pendingConfirmAction.confirmLabel}
+            busy={isConfirmActionProcessing} onClose={closeConfirmActionModal} onConfirm={confirmActionModal} />
         )}
 
         {isDayDetailModalOpen && (

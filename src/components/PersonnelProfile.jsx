@@ -4,6 +4,7 @@ import { useUser } from '../context/UserContext';
 import Sidebar from './Sidebar';
 import PageHeader from './PageHeader';
 import CloseButton from './CloseButton';
+import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import { uploadProfileImage } from '../utils/imageService';
 import { AVATAR_MAX_SIZE, AVATAR_ALLOWED_TYPES } from '../utils/avatarCrop';
 import AvatarCropModal from './AvatarCropModal';
@@ -825,47 +826,15 @@ const handleChangePassword = () => {
         </div>
 
                {modal.open && (
-  <div className="modal-overlay" role="dialog" aria-modal="true">
-    <div className={`modal modal-${modal.type}`}>
-
-      <div className={`modal-icon modal-icon-${modal.type}`}>
-        {modal.type === 'success' ? '✓' : modal.type === 'error' ? '!' : modal.type === 'confirm' ? '?' : 'i'}
-      </div>
-
-      <p>{modal.message}</p>
-
-      <div className="modal-actions">
-        {modal.type === "confirm" ? (
-          <>
-            <button
-              className="cancel-btn"
-              onClick={() => setModal({ ...modal, open: false })}
-            >
-              Cancel
-            </button>
-
-            <button
-              className="save-btn"
-              onClick={() => {
-                modal.onConfirm?.();
-                setModal({ ...modal, open: false });
-              }}
-            >
-              Replace
-            </button>
-          </>
-        ) : (
-          <button
-            className="save-btn"
-            onClick={() => setModal({ ...modal, open: false })}
-          >
-            OK
-          </button>
-        )}
-      </div>
-
-    </div>
-  </div>
+  <ArchiveConfirmDialog open tone={modal.type === 'error' ? 'danger' : 'neutral'}
+    title={modal.type === 'success' ? 'Saved' : modal.type === 'error' ? 'Unable to continue' : modal.type === 'confirm' ? 'Replace existing details?' : 'Account notice'}
+    description={modal.message} showReason={false} showCancel={modal.type === 'confirm'}
+    confirmLabel={modal.type === 'confirm' ? 'Replace' : 'OK'}
+    onClose={() => setModal({ ...modal, open: false })}
+    onConfirm={() => {
+      if (modal.type === 'confirm') modal.onConfirm?.();
+      setModal({ ...modal, open: false });
+    }} />
 )}
 
         <AvatarCropModal

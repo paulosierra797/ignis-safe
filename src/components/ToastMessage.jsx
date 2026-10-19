@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { FiAlertCircle, FiCheckCircle, FiInfo, FiX } from 'react-icons/fi';
+import { FiAlertCircle, FiCheckCircle, FiInfo } from 'react-icons/fi';
+import CloseButton from './CloseButton';
 import './ToastMessage.css';
 
 const ICONS = {
@@ -26,9 +27,7 @@ function ToastEntry({ message, type, duration }) {
     <div className={`app-toast app-toast-${normalizedType}`} role={normalizedType === 'error' ? 'alert' : 'status'}>
       <Icon className="app-toast-icon" aria-hidden="true" />
       <p>{message}</p>
-      <button type="button" className="app-toast-close" onClick={() => setVisible(false)} aria-label="Dismiss message">
-        <FiX aria-hidden="true" />
-      </button>
+      <CloseButton className="app-toast-close" onClick={() => setVisible(false)} label="Dismiss message" />
     </div>
   );
 }

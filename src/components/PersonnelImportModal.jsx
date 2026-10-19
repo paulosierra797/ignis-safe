@@ -975,7 +975,7 @@ export default function PersonnelImportModal({
   return (
     <div className="pim-overlay" ref={overlayRef} role="presentation">
       <div
-        className={`pim-modal${isCompact ? ' is-compact' : ''}${phase === 'results' ? ' is-wide' : ''}`}
+        className={`pim-modal${isCompact ? ' is-compact' : ''}${phase === 'upload' ? ' is-upload' : ''}${phase === 'results' ? ' is-wide' : ''}`}
         ref={dialogRef}
         role="dialog"
         aria-modal="true"

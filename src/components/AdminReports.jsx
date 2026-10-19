@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import RecordActions from './RecordActions';
 import ArchiveButton from './ArchiveButton';
 import ArchiveListModal from './ArchiveListModal';
+import ArchiveConfirmDialog from './ArchiveConfirmDialog';
 import CloseButton from './CloseButton';
 import { FiAlertTriangle, FiArchive, FiCheckCircle, FiEye, FiRotateCcw, FiSearch, FiX, FiXCircle } from 'react-icons/fi';
 import Sidebar from './Sidebar';
@@ -713,27 +714,12 @@ export default function AdminReports() {
           </ArchiveListModal>
 
           {archiveReport && (
-            <div className="report-archive-confirm-overlay">
-              <section className="report-archive-confirm" role="alertdialog" aria-modal="true" aria-labelledby="archiveReportTitle">
-                <div className="report-archive-confirm-heading">
-                  <div>
-                    <span>Archive</span>
-                    <h3 id="archiveReportTitle">Archive this report?</h3>
-                  </div>
-                  <CloseButton
-                    label="Close archive confirmation"
-                    onClick={() => { setArchiveReport(null); setArchiveError(''); }}
-                    disabled={Boolean(processingId)}
-                  />
-                </div>
-                <p><strong>{archiveReport.title || 'Untitled report'}</strong> will be hidden from the list. You can restore it anytime.</p>
-                {archiveError && <p className="report-archive-confirm-error" role="alert">{archiveError}</p>}
-                <div className="report-archive-confirm-actions">
-                  <button type="button" onClick={() => { setArchiveReport(null); setArchiveError(''); }} disabled={Boolean(processingId)}>Cancel</button>
-                  <ArchiveButton showLabel label="Archive" busy={processingId === archiveReport.report_id} onClick={confirmArchiveReport} />
-                </div>
-              </section>
-            </div>
+            <ArchiveConfirmDialog open title="Archive this report?" tone="archive"
+              description="You can restore it from Archive & Trash."
+              recordLabel={archiveReport.title || 'Untitled report'}
+              showReason={false} confirmLabel="Archive" busyLabel="Archiving..."
+              busy={Boolean(processingId)} error={archiveError}
+              onClose={() => { setArchiveReport(null); setArchiveError(''); }} onConfirm={confirmArchiveReport} />
           )}
         </div>
       </div>

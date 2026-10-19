@@ -1,5 +1,5 @@
 export const MOBILE_APP_RELEASE = {
-  downloadUrl: 'https://github.com/andreii2404/ignis-safe-mobile-releases/releases/download/v1.0.6/IGNIS-SAFE.apk',
+  downloadUrl: 'https://github.com/andreii2404/ignis-safe-mobile-releases/releases/download/v1.1.2/IGNIS-SAFE.apk',
   fileName: 'IGNIS-SAFE.apk',
   technicalVersion: '1.0.6',
   build: 7,

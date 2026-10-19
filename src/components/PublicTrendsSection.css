@@ -209,22 +209,86 @@
   line-height: 1.45;
 }
 
-/* Graph grid */
-.trends-grid {
+/* A single scrollable row, with native touch swiping and mouse dragging. */
+.trends-carousel {
+  min-width: 0;
+  margin-top: 1.5rem;
+}
+
+.trends-carousel-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+
+.trends-carousel-controls button {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(2.5rem, 4vw, 3.5rem) clamp(2rem, 4vw, 3.5rem);
-  margin-top: clamp(2rem, 4vw, 3rem);
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid #d7dde6;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #172033;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.trends-carousel-controls button:hover:not(:disabled) {
+  color: #a8171c;
+  border-color: #a8171c;
+  background: #fff5f5;
+}
+
+.trends-carousel-controls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.trends-carousel-controls svg {
+  width: 20px;
+  height: 20px;
+}
+
+.trends-carousel-controls button:focus-visible,
+.trends-grid:focus-visible {
+  outline: 3px solid rgba(168, 23, 28, 0.3);
+  outline-offset: 3px;
+}
+
+.trends-grid {
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: min(100%, 28rem);
+  gap: 1.25rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: #c0c7d2 transparent;
+  padding-bottom: 0.75rem;
+  cursor: grab;
+}
+
+.trends-grid.is-dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  user-select: none;
 }
 
 .trends-figure {
   min-width: 0;
-  padding-top: 1.4rem;
+  padding-top: 1rem;
   border-top: 1px solid #d7dde6;
+  scroll-snap-align: start;
 }
 
-.trends-figure:first-child {
-  grid-column: 1 / -1;
+.trends-figure:not(:first-child) .trends-chart,
+.trends-figure:not(:first-child) .trends-empty {
+  margin-top: 3rem;
 }
 
 .trends-figure-header {
@@ -232,6 +296,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.85rem;
   align-items: baseline;
+  min-height: 4.75rem;
 }
 
 .trends-figure-index {
@@ -245,7 +310,7 @@
 .trends-figure-header h3 {
   margin: 0;
   color: #172033;
-  font-size: 1.08rem;
+  font-size: 1rem;
   line-height: 1.3;
 }
 
@@ -259,8 +324,9 @@
 .trends-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem 1.25rem;
-  margin: 1rem 0 0;
+  gap: 0.25rem 1rem;
+  min-height: 2rem;
+  margin: 0;
   padding: 0;
   list-style: none;
   color: #475467;
@@ -324,12 +390,8 @@
 
 .trends-chart {
   position: relative;
-  height: 260px;
+  height: 210px;
   margin-top: 1rem;
-}
-
-.trends-figure:first-child .trends-chart {
-  height: 300px;
 }
 
 .trends-chart canvas {
@@ -450,18 +512,22 @@
 }
 
 .trends-tip-bubble {
-  position: absolute;
-  top: 100%;
+  position: fixed;
+  top: 0;
   left: 0;
-  z-index: 30;
+  z-index: 1200;
   width: max-content;
   max-width: min(20rem, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.5rem 0.75rem;
   border-radius: 10px;
   background: #172033;
   box-shadow: 0 12px 32px -8px rgba(16, 24, 40, 0.35);
   color: rgba(255, 255, 255, 0.92);
   font-size: 0.74rem;
+  font-family: 'Poppins', sans-serif;
   font-weight: 450;
   line-height: 1.5;
   letter-spacing: 0;
@@ -479,12 +545,7 @@
 
 .trends-tip-bubble.is-info {
   width: min(21rem, calc(100vw - 16px));
-  margin-top: 8px;
   padding: 0.9rem 1rem;
-}
-
-.trends-tip-bubble.is-small {
-  margin-top: 6px;
 }
 
 /* Heading trigger: plain text that warms to the brand red; no underline */
@@ -541,7 +602,6 @@
 
 .trends-tip-bubble.is-brand {
   width: min(22rem, calc(100vw - 16px));
-  margin-top: 10px;
   padding: 1rem 1.1rem;
   font-weight: 450;
 }
@@ -616,7 +676,6 @@
 
 .trends-tip-bubble.is-list {
   width: min(19rem, calc(100vw - 16px));
-  margin-top: 8px;
   padding: 0.9rem 1rem;
 }
 
@@ -776,9 +835,6 @@
     justify-content: flex-start;
   }
 
-  .trends-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 /* Mobile */
@@ -792,9 +848,8 @@
     grid-template-columns: 1fr;
   }
 
-  .trends-chart,
-  .trends-figure:first-child .trends-chart {
-    height: 230px;
+  .trends-chart {
+    height: 200px;
   }
 }
 

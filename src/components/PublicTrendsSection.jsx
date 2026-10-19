@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -17,6 +18,7 @@ import { getPublicTrends } from '../utils/publicContentService';
 import { MOBILE_APP_RELEASE } from '../utils/mobileAppRelease';
 import { MANILA_TIME_ZONE } from '../utils/dateUtils';
 import './PublicTrendsSection.css';
+import PublicTrendsCarousel from './PublicTrendsCarousel';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 gsap.registerPlugin(useGSAP);
@@ -292,6 +294,7 @@ function TrendsTip({ content, className = '', bubbleClassName = '', expandable =
   const id = useId();
   const rootRef = useRef(null);
   const bubbleRef = useRef(null);
+  const hoverTimer = useRef(null);
   const wasOpen = useRef(false);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -308,7 +311,7 @@ function TrendsTip({ content, className = '', bubbleClassName = '', expandable =
     if (!open) return undefined;
 
     const onPointerDown = (event) => {
-      if (rootRef.current && !rootRef.current.contains(event.target)) close();
+      if (!rootRef.current?.contains(event.target) && !bubbleRef.current?.contains(event.target)) close();
     };
     const onKeyDown = (event) => {
       if (event.key === 'Escape') close();
@@ -316,15 +319,22 @@ function TrendsTip({ content, className = '', bubbleClassName = '', expandable =
     const onOtherOpen = (event) => {
       if (event.detail !== id) close();
     };
+    const onScroll = (event) => {
+      if (!bubbleRef.current?.contains(event.target)) close();
+    };
 
     document.addEventListener('pointerdown', onPointerDown);
     document.addEventListener('keydown', onKeyDown);
     window.addEventListener(TIP_OPEN_EVENT, onOtherOpen);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', close);
     window.dispatchEvent(new CustomEvent(TIP_OPEN_EVENT, { detail: id }));
     return () => {
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
       window.removeEventListener(TIP_OPEN_EVENT, onOtherOpen);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', close);
     };
   }, [open, close, id]);
 
@@ -339,13 +349,16 @@ function TrendsTip({ content, className = '', bubbleClassName = '', expandable =
     gsap.killTweensOf(bubble);
 
     if (open) {
-      bubble.style.marginLeft = '0px';
+      const trigger = rootRef.current.getBoundingClientRect();
+      bubble.style.left = `${TIP_EDGE}px`;
+      bubble.style.top = '0px';
       const rect = bubble.getBoundingClientRect();
       const maxRight = document.documentElement.clientWidth - TIP_EDGE;
-      let shift = 0;
-      if (rect.right > maxRight) shift = maxRight - rect.right;
-      if (rect.left + shift < TIP_EDGE) shift = TIP_EDGE - rect.left;
-      bubble.style.marginLeft = `${Math.round(shift)}px`;
+      bubble.style.left = `${Math.max(TIP_EDGE, Math.min(trigger.left, maxRight - rect.width))}px`;
+      const below = trigger.bottom + 8;
+      const top = below + rect.height <= window.innerHeight - TIP_EDGE
+        ? below : Math.max(TIP_EDGE, trigger.top - rect.height - 8);
+      bubble.style.top = `${top}px`;
 
       gsap.fromTo(
         bubble,
@@ -357,6 +370,23 @@ function TrendsTip({ content, className = '', bubbleClassName = '', expandable =
     }
     return () => gsap.killTweensOf(bubble);
   }, [open]);
+
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
+
+  const enter = (event) => {
+    clearTimeout(hoverTimer.current);
+    if (event.pointerType === 'mouse') setHovered(true);
+  };
+  const leave = (event) => {
+    if (event.pointerType === 'mouse') {
+      hoverTimer.current = setTimeout(() => setHovered(false), 140);
+    }
+  };
+  const blur = (event) => {
+    if (!rootRef.current?.contains(event.relatedTarget) && !bubbleRef.current?.contains(event.relatedTarget)) {
+      setFocused(false);
+    }
+  };
 
   // Focus is tracked on the wrapper, so tabbing from the trigger into a link
   // inside the bubble keeps it open instead of closing it first.
@@ -373,17 +403,17 @@ function TrendsTip({ content, className = '', bubbleClassName = '', expandable =
     <span
       ref={rootRef}
       className={`trends-tip ${className}`.trim()}
-      onPointerEnter={(event) => { if (event.pointerType === 'mouse') setHovered(true); }}
-      onPointerLeave={(event) => { if (event.pointerType === 'mouse') setHovered(false); }}
+      onPointerEnter={enter}
+      onPointerLeave={leave}
       onFocus={() => setFocused(true)}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false);
-      }}
+      onBlur={blur}
     >
       {children(triggerProps)}
-      <span ref={bubbleRef} id={id} role="tooltip" className={`trends-tip-bubble ${bubbleClassName}`.trim()}>
+      {createPortal(<span ref={bubbleRef} id={id} role="tooltip"
+        onPointerEnter={enter} onPointerLeave={leave} onFocus={() => setFocused(true)} onBlur={blur}
+        className={`trends-tip-bubble ${bubbleClassName}`.trim()}>
         {content}
-      </span>
+      </span>, document.body)}
     </span>
   );
 }
@@ -462,7 +492,7 @@ function TrendsEmpty({ title, text }) {
 // Screen-reader table view of each graph, so the numbers never depend on the canvas.
 function TrendsTable({ caption, columns, rows }) {
   return (
-    <table className="trends-sr-only">
+    <div className="trends-sr-only"><table>
       <caption>{caption}</caption>
       <thead>
         <tr>{columns.map((column) => <th key={column} scope="col">{column}</th>)}</tr>
@@ -475,7 +505,7 @@ function TrendsTable({ caption, columns, rows }) {
           </tr>
         ))}
       </tbody>
-    </table>
+    </table></div>
   );
 }
 
@@ -804,7 +834,7 @@ export default function PublicTrendsSection() {
               />
             </dl>
 
-            <div className="trends-grid">
+            <PublicTrendsCarousel language={language}>
               <TrendsFigure
                 index={1}
                 title={copy.participation.title}
@@ -902,7 +932,7 @@ export default function PublicTrendsSection() {
                   rows={monthRows(data.barangays.byMonth, ['total'])}
                 />
               </TrendsFigure>
-            </div>
+            </PublicTrendsCarousel>
           </>
         ) : null}
       </div>

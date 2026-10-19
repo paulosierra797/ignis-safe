@@ -5,6 +5,7 @@
   border-bottom: 1px solid #e0e5ec;
   color: #172033;
   scroll-margin-top: 108px;
+  cursor: default;
 }
 
 .trends-container {
@@ -233,7 +234,7 @@
   background: #ffffff;
   color: #172033;
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
 }
 
 .trends-carousel-controls button:hover:not(:disabled) {
@@ -250,6 +251,28 @@
 .trends-carousel-controls svg {
   width: 20px;
   height: 20px;
+  pointer-events: none;
+  transition: transform 0.2s ease;
+}
+
+.trends-carousel-controls button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.trends-carousel-position {
+  height: 3px;
+  margin-top: 0.35rem;
+  overflow: hidden;
+  border-radius: 2px;
+  background: #e0e5ec;
+}
+
+.trends-carousel-position span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #b42318;
+  transform-origin: left center;
 }
 
 .trends-carousel-controls button:focus-visible,
@@ -267,23 +290,68 @@
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
-  scrollbar-width: thin;
-  scrollbar-color: #c0c7d2 transparent;
+  scrollbar-width: none;
   padding-bottom: 0.75rem;
-  cursor: grab;
+  cursor: default;
+}
+
+.trends-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .trends-grid.is-dragging {
-  cursor: grabbing;
+  cursor: default;
   scroll-snap-type: none;
   user-select: none;
 }
 
 .trends-figure {
+  position: relative;
   min-width: 0;
   padding-top: 1rem;
   border-top: 1px solid #d7dde6;
   scroll-snap-align: start;
+  transition: background-color 0.25s ease;
+}
+
+.trends-figure::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #b42318;
+  pointer-events: none;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.3s ease;
+}
+
+.trends-figure:focus-within {
+  background-color: #ffffff;
+}
+
+.trends-figure:focus-within::before {
+  transform: scaleX(1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .trends-figure:hover {
+    background-color: #ffffff;
+  }
+
+  .trends-figure:hover::before {
+    transform: scaleX(1);
+  }
+
+  .trends-carousel-controls button:first-child:hover:not(:disabled) svg {
+    transform: translateX(-2px);
+  }
+
+  .trends-carousel-controls button:last-child:hover:not(:disabled) svg {
+    transform: translateX(2px);
+  }
 }
 
 .trends-figure:not(:first-child) .trends-chart,
@@ -396,6 +464,7 @@
 
 .trends-chart canvas {
   max-width: 100%;
+  cursor: default;
 }
 
 .trends-empty {
@@ -854,6 +923,18 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .trends-figure,
+  .trends-figure::before,
+  .trends-carousel-controls button,
+  .trends-carousel-controls svg {
+    transition: none;
+  }
+
+  .trends-carousel-controls button:active:not(:disabled),
+  .trends-carousel-controls button:hover:not(:disabled) svg {
+    transform: none;
+  }
+
   .trends-live-dot::after,
   .trends-skeleton-stats span,
   .trends-skeleton-chart {

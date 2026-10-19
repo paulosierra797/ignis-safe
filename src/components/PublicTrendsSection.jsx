@@ -30,6 +30,31 @@ const INK = '#172033';
 const MUTED = '#667085';
 const GRID = 'rgba(23, 32, 51, 0.07)';
 
+// Keep the inspection guide inside the plot, below Chart.js's existing tooltip.
+const readingGuide = {
+  id: 'trendsReadingGuide',
+  afterDatasetsDraw(chart) {
+    const active = chart.tooltip?.getActiveElements();
+    if (!active?.length) return;
+    const { ctx, chartArea: { top, bottom, left, right } } = chart;
+    const x = active[0].element.x;
+    if (x < left || x > right) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, top, right - left, bottom - top);
+    ctx.clip();
+    ctx.beginPath();
+    ctx.setLineDash([3, 4]);
+    ctx.strokeStyle = 'rgba(71, 84, 103, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+    ctx.restore();
+  },
+};
+const chartPlugins = [readingGuide];
+
 const COPY = {
   english: {
     locale: 'en-PH',
@@ -851,6 +876,7 @@ export default function PublicTrendsSection() {
                 ) : null}
                 {renderChart(charts.participation.hasData, (
                   <Line
+                    plugins={chartPlugins}
                     data={charts.participation.data}
                     options={charts.lineOptions}
                     role="img"
@@ -873,6 +899,7 @@ export default function PublicTrendsSection() {
               >
                 {renderChart(charts.registrations.hasData, (
                   <Line
+                    plugins={chartPlugins}
                     data={charts.registrations.data}
                     options={charts.lineOptions}
                     role="img"
@@ -895,6 +922,7 @@ export default function PublicTrendsSection() {
               >
                 {renderChart(charts.barangays.hasData, (
                   <Line
+                    plugins={chartPlugins}
                     data={charts.barangays.data}
                     options={charts.lineOptions}
                     role="img"

@@ -8,7 +8,7 @@ export default function PublicTrendsCarousel({ language, children }) {
   const trackRef = useRef(null);
   const dragRef = useRef(null);
   const suppressClick = useRef(false);
-  const [position, setPosition] = useState({ previous: false, next: false });
+  const [position, setPosition] = useState({ previous: false, next: false, progress: 0, offset: 0, visible: 1 });
   const filipino = language === 'tagalog';
   const previousLabel = filipino ? 'Nakaraang graph' : 'Previous graph';
   const nextLabel = filipino ? 'Susunod na graph' : 'Next graph';
@@ -20,7 +20,13 @@ export default function PublicTrendsCarousel({ language, children }) {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         const max = track.scrollWidth - track.clientWidth;
-        setPosition({ previous: track.scrollLeft > 2, next: track.scrollLeft < max - 2 });
+        setPosition({
+          previous: track.scrollLeft > 2,
+          next: track.scrollLeft < max - 2,
+          progress: max > 0 ? Math.round(track.scrollLeft / max * 100) : 0,
+          offset: track.scrollLeft / track.scrollWidth * 100,
+          visible: track.clientWidth / track.scrollWidth,
+        });
       });
     };
     const observer = new ResizeObserver(update);
@@ -133,6 +139,11 @@ export default function PublicTrendsCarousel({ language, children }) {
           event.stopPropagation();
         }}>
         {children}
+      </div>
+      <div className="trends-carousel-position" role="progressbar"
+        aria-label={filipino ? 'Posisyon ng mga graph' : 'Graph scroll position'}
+        aria-valuemin={0} aria-valuemax={100} aria-valuenow={position.progress}>
+        <span style={{ transform: `translateX(${position.offset}%) scaleX(${position.visible})` }} />
       </div>
     </div>
   );

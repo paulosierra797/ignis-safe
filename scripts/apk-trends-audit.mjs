@@ -40,6 +40,15 @@ try {
     const track = page.locator('.trends-grid');
     const previous = page.getByRole('button', { name: 'Previous graph', exact: true });
     const next = page.getByRole('button', { name: 'Next graph', exact: true });
+    const position = page.getByRole('progressbar', { name: 'Graph scroll position' });
+    assert.equal(await position.getAttribute('aria-valuenow'), '0');
+    const cursors = await page.locator('#trends, .trends-grid, .trends-chart canvas').evaluateAll(elements => (
+      elements.map(element => getComputedStyle(element).cursor)
+    ));
+    assert(cursors.every(cursor => cursor === 'default'), 'The ordinary mouse cursor must remain visible');
+    assert.equal(await page.locator('.trends-figure').first().evaluate(element => (
+      getComputedStyle(element, '::before').transitionDuration
+    )), '0s', 'Reduced-motion settings must disable the hover sweep');
 
     const layout = await page.locator('.trends-figure').evaluateAll(cards => cards.map(card => {
       const rect = card.getBoundingClientRect();
@@ -60,6 +69,7 @@ try {
       await page.waitForTimeout(80);
     }
     assert(await next.isDisabled(), 'Next arrow must stop at the final graph');
+    assert.equal(await position.getAttribute('aria-valuenow'), '100');
     assert(await previous.isEnabled());
     const end = await track.evaluate(element => element.scrollLeft);
     assert(end > 10);
@@ -83,11 +93,29 @@ try {
 
     await track.scrollIntoViewIfNeeded();
     const dragBox = await page.locator('.trends-chart').first().boundingBox();
+    await page.mouse.move(dragBox.x + dragBox.width / 2, dragBox.y + dragBox.height / 2);
+    await page.waitForTimeout(100);
+    const guide = await page.evaluate(async () => {
+      const { Chart } = await import('/node_modules/.vite/deps/chart__js.js');
+      const canvas = document.querySelector('#trends canvas');
+      const chart = Chart.getChart(canvas);
+      let strokes = 0;
+      const stroke = chart.ctx.stroke;
+      chart.ctx.stroke = function (...args) {
+        if (this.getLineDash().join(',') === '3,4') strokes++;
+        return stroke.apply(this, args);
+      };
+      try { chart.draw(); } finally { chart.ctx.stroke = stroke; }
+      return { strokes, active: chart.tooltip.getActiveElements().length };
+    });
+    assert(guide.active > 0 && guide.strokes > 0, 'The reading guide must render on chart hover');
+    await page.screenshot({ path: path.join(output, `${viewport.width}-hover-guide.png`) });
     const startX = Math.min(viewport.width - 35, dragBox.x + dragBox.width - 30);
     const y = dragBox.y + dragBox.height / 2;
     await page.mouse.move(startX, y);
     await page.mouse.down();
     await page.mouse.move(35, y, { steps: 15 });
+    assert.equal(await track.evaluate(element => getComputedStyle(element).cursor), 'default');
     await page.mouse.up();
     await page.waitForFunction(() => document.querySelector('.trends-grid').scrollLeft > 10);
     assert.equal(await track.evaluate(element => element.classList.contains('is-dragging')), false);
@@ -176,6 +204,14 @@ try {
         await next.click();
         await page.waitForTimeout(1000);
       }
+    }
+    if (width === 1440) {
+      await page.locator('.trends-figure').nth(2).locator('canvas').hover({ position: { x: 120, y: 70 } });
+      await page.waitForFunction(() => {
+        const figure = document.querySelectorAll('.trends-figure')[2];
+        return getComputedStyle(figure).backgroundColor === 'rgb(255, 255, 255)'
+          && getComputedStyle(figure, '::before').transform === 'matrix(1, 0, 0, 1, 0, 0)';
+      });
     }
     await page.screenshot({ path: path.join(output, `${width}-normal-motion.png`) });
     console.log(`PASS ${width} normal-motion reveal${width === 390 ? ' and Filipino layout' : ''}`);
